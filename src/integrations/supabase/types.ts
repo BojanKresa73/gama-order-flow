@@ -52,6 +52,121 @@ export type Database = {
           },
         ]
       }
+      checklist_activity_log: {
+        Row: {
+          checklist_item_id: string
+          created_at: string
+          created_by: string
+          id: string
+          new_status: Database["public"]["Enums"]["checklist_item_status"]
+          note: string | null
+          old_status:
+            | Database["public"]["Enums"]["checklist_item_status"]
+            | null
+        }
+        Insert: {
+          checklist_item_id: string
+          created_at?: string
+          created_by: string
+          id?: string
+          new_status: Database["public"]["Enums"]["checklist_item_status"]
+          note?: string | null
+          old_status?:
+            | Database["public"]["Enums"]["checklist_item_status"]
+            | null
+        }
+        Update: {
+          checklist_item_id?: string
+          created_at?: string
+          created_by?: string
+          id?: string
+          new_status?: Database["public"]["Enums"]["checklist_item_status"]
+          note?: string | null
+          old_status?:
+            | Database["public"]["Enums"]["checklist_item_status"]
+            | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "checklist_activity_log_checklist_item_id_fkey"
+            columns: ["checklist_item_id"]
+            isOneToOne: false
+            referencedRelation: "work_order_checklist_items"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      checklist_template_items: {
+        Row: {
+          created_at: string
+          default_assignee_role: string | null
+          display_order: number
+          id: string
+          is_per_file: boolean
+          is_required: boolean
+          sla_hours: number | null
+          template_id: string
+          title: string
+        }
+        Insert: {
+          created_at?: string
+          default_assignee_role?: string | null
+          display_order?: number
+          id?: string
+          is_per_file?: boolean
+          is_required?: boolean
+          sla_hours?: number | null
+          template_id: string
+          title: string
+        }
+        Update: {
+          created_at?: string
+          default_assignee_role?: string | null
+          display_order?: number
+          id?: string
+          is_per_file?: boolean
+          is_required?: boolean
+          sla_hours?: number | null
+          template_id?: string
+          title?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "checklist_template_items_template_id_fkey"
+            columns: ["template_id"]
+            isOneToOne: false
+            referencedRelation: "checklist_templates"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      checklist_templates: {
+        Row: {
+          created_at: string
+          id: string
+          is_default: boolean
+          name: string
+          order_type: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          is_default?: boolean
+          name: string
+          order_type: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          is_default?: boolean
+          name?: string
+          order_type?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       clients: {
         Row: {
           created_at: string
@@ -107,6 +222,57 @@ export type Database = {
         Relationships: [
           {
             foreignKeyName: "email_log_work_order_id_fkey"
+            columns: ["work_order_id"]
+            isOneToOne: false
+            referencedRelation: "work_orders"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      file_entries: {
+        Row: {
+          created_at: string
+          file_type: string
+          filename: string
+          id: string
+          notes: string | null
+          plate_format_id: string | null
+          quantity: number | null
+          updated_at: string
+          work_order_id: string
+        }
+        Insert: {
+          created_at?: string
+          file_type: string
+          filename: string
+          id?: string
+          notes?: string | null
+          plate_format_id?: string | null
+          quantity?: number | null
+          updated_at?: string
+          work_order_id: string
+        }
+        Update: {
+          created_at?: string
+          file_type?: string
+          filename?: string
+          id?: string
+          notes?: string | null
+          plate_format_id?: string | null
+          quantity?: number | null
+          updated_at?: string
+          work_order_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "file_entries_plate_format_id_fkey"
+            columns: ["plate_format_id"]
+            isOneToOne: false
+            referencedRelation: "plate_formats"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "file_entries_work_order_id_fkey"
             columns: ["work_order_id"]
             isOneToOne: false
             referencedRelation: "work_orders"
@@ -239,6 +405,117 @@ export type Database = {
             columns: ["user_id"]
             isOneToOne: false
             referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      work_order_checklist_items: {
+        Row: {
+          assignee_user_id: string | null
+          blocker_reason: string | null
+          checklist_id: string
+          comment: string | null
+          completed_at: string | null
+          created_at: string
+          due_at: string | null
+          file_entry_id: string | null
+          id: string
+          is_required: boolean
+          started_at: string | null
+          status: Database["public"]["Enums"]["checklist_item_status"]
+          title: string
+          updated_at: string
+          updated_by: string | null
+        }
+        Insert: {
+          assignee_user_id?: string | null
+          blocker_reason?: string | null
+          checklist_id: string
+          comment?: string | null
+          completed_at?: string | null
+          created_at?: string
+          due_at?: string | null
+          file_entry_id?: string | null
+          id?: string
+          is_required?: boolean
+          started_at?: string | null
+          status?: Database["public"]["Enums"]["checklist_item_status"]
+          title: string
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Update: {
+          assignee_user_id?: string | null
+          blocker_reason?: string | null
+          checklist_id?: string
+          comment?: string | null
+          completed_at?: string | null
+          created_at?: string
+          due_at?: string | null
+          file_entry_id?: string | null
+          id?: string
+          is_required?: boolean
+          started_at?: string | null
+          status?: Database["public"]["Enums"]["checklist_item_status"]
+          title?: string
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "work_order_checklist_items_checklist_id_fkey"
+            columns: ["checklist_id"]
+            isOneToOne: false
+            referencedRelation: "work_order_checklists"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "work_order_checklist_items_file_entry_id_fkey"
+            columns: ["file_entry_id"]
+            isOneToOne: false
+            referencedRelation: "file_entries"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      work_order_checklists: {
+        Row: {
+          created_at: string
+          id: string
+          progress_pct: number
+          template_id: string
+          updated_at: string
+          work_order_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          progress_pct?: number
+          template_id: string
+          updated_at?: string
+          work_order_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          progress_pct?: number
+          template_id?: string
+          updated_at?: string
+          work_order_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "work_order_checklists_template_id_fkey"
+            columns: ["template_id"]
+            isOneToOne: false
+            referencedRelation: "checklist_templates"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "work_order_checklists_work_order_id_fkey"
+            columns: ["work_order_id"]
+            isOneToOne: true
+            referencedRelation: "work_orders"
             referencedColumns: ["id"]
           },
         ]
@@ -400,6 +677,12 @@ export type Database = {
     }
     Enums: {
       app_role: "admin" | "accounting" | "operator"
+      checklist_item_status:
+        | "Pending"
+        | "InProgress"
+        | "Blocked"
+        | "Done"
+        | "NA"
       work_order_status: "open" | "closed"
       work_order_type: "ctp" | "digital" | "other"
     }
@@ -530,6 +813,7 @@ export const Constants = {
   public: {
     Enums: {
       app_role: ["admin", "accounting", "operator"],
+      checklist_item_status: ["Pending", "InProgress", "Blocked", "Done", "NA"],
       work_order_status: ["open", "closed"],
       work_order_type: ["ctp", "digital", "other"],
     },
