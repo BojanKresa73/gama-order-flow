@@ -4,15 +4,28 @@ import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { ArrowLeft, Package, AlertTriangle } from "lucide-react";
+import { ArrowLeft, Package, AlertTriangle, Plus } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
-import { Button as ButtonIcon } from "@/components/ui/button";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
+import { Label } from "@/components/ui/label";
 
 const Inventory = () => {
   const [plateFormats, setPlateFormats] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  const [dialogOpen, setDialogOpen] = useState(false);
+  const [newFormatName, setNewFormatName] = useState("");
+  const [newLowStockThreshold, setNewLowStockThreshold] = useState(10);
+  const [newCurrentStock, setNewCurrentStock] = useState(0);
   const navigate = useNavigate();
   const { toast } = useToast();
 
@@ -76,6 +89,46 @@ const Inventory = () => {
     return format.current_stock <= format.low_stock_threshold;
   };
 
+  const addNewFormat = async () => {
+    if (!newFormatName.trim()) {
+      toast({
+        title: "Greška",
+        description: "Naziv formata je obavezan",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    try {
+      const { error } = await supabase
+        .from("plate_formats")
+        .insert({
+          format_name: newFormatName.trim(),
+          low_stock_threshold: newLowStockThreshold,
+          current_stock: newCurrentStock,
+        });
+
+      if (error) throw error;
+
+      toast({
+        title: "Uspeh",
+        description: "Format je uspešno dodat",
+      });
+
+      setDialogOpen(false);
+      setNewFormatName("");
+      setNewLowStockThreshold(10);
+      setNewCurrentStock(0);
+      fetchPlateFormats();
+    } catch (error: any) {
+      toast({
+        title: "Greška",
+        description: error.message,
+        variant: "destructive",
+      });
+    }
+  };
+
   if (loading) {
     return <div className="flex items-center justify-center min-h-screen">Učitavanje...</div>;
   }
@@ -96,10 +149,63 @@ const Inventory = () => {
       <main className="container mx-auto px-4 py-8">
         <Card>
           <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Package className="h-5 w-5" />
-              Stanje zaliha
-            </CardTitle>
+            <div className="flex items-center justify-between">
+              <CardTitle className="flex items-center gap-2">
+                <Package className="h-5 w-5" />
+                Stanje zaliha
+              </CardTitle>
+              <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
+                <DialogTrigger asChild>
+                  <Button className="gap-2">
+                    <Plus className="h-4 w-4" />
+                    Dodaj novi format
+                  </Button>
+                </DialogTrigger>
+                <DialogContent>
+                  <DialogHeader>
+                    <DialogTitle>Dodaj novi format ploče</DialogTitle>
+                    <DialogDescription>
+                      Unesite podatke za novi format ploče
+                    </DialogDescription>
+                  </DialogHeader>
+                  <div className="grid gap-4 py-4">
+                    <div className="grid gap-2">
+                      <Label htmlFor="format-name">Naziv formata</Label>
+                      <Input
+                        id="format-name"
+                        value={newFormatName}
+                        onChange={(e) => setNewFormatName(e.target.value)}
+                        placeholder="npr. 70x100"
+                      />
+                    </div>
+                    <div className="grid gap-2">
+                      <Label htmlFor="current-stock">Trenutno stanje</Label>
+                      <Input
+                        id="current-stock"
+                        type="number"
+                        value={newCurrentStock}
+                        onChange={(e) => setNewCurrentStock(parseInt(e.target.value) || 0)}
+                      />
+                    </div>
+                    <div className="grid gap-2">
+                      <Label htmlFor="low-stock">Minimalno stanje</Label>
+                      <Input
+                        id="low-stock"
+                        type="number"
+                        value={newLowStockThreshold}
+                        onChange={(e) => setNewLowStockThreshold(parseInt(e.target.value) || 10)}
+                      />
+                    </div>
+                  </div>
+                  <DialogFooter>
+                    <Button variant="outline" onClick={() => setDialogOpen(false)}>
+                      Otkaži
+                    </Button>
+                    <Button onClick={addNewFormat}>Dodaj</Button>
+                  </DialogFooter>
+                </DialogContent>
+              </Dialog>
+            </div>
           </CardHeader>
           <CardContent>
             <Table>
