@@ -238,6 +238,7 @@ export type Database = {
           notes: string | null
           plate_format_id: string | null
           quantity: number | null
+          status: string
           updated_at: string
           work_order_id: string
         }
@@ -249,6 +250,7 @@ export type Database = {
           notes?: string | null
           plate_format_id?: string | null
           quantity?: number | null
+          status?: string
           updated_at?: string
           work_order_id: string
         }
@@ -260,6 +262,7 @@ export type Database = {
           notes?: string | null
           plate_format_id?: string | null
           quantity?: number | null
+          status?: string
           updated_at?: string
           work_order_id?: string
         }

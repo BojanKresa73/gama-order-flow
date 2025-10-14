@@ -78,6 +78,7 @@ const ChecklistView = ({ orderType }: ChecklistViewProps) => {
               filename,
               quantity,
               file_type,
+              status,
               plate_formats(format_name)
             `)
             .eq("work_order_id", order.id);
@@ -102,7 +103,7 @@ const ChecklistView = ({ orderType }: ChecklistViewProps) => {
             filename: file.filename,
             quantity: file.quantity ?? (orderType === "ctp" ? 4 : 0),
             plate_format_name: file.plate_formats?.format_name || null,
-            status: "open", // TODO: Add actual status from file_entries table
+            status: file.status || "open",
           }));
 
           const totalPlates = fileEntries.reduce((sum, file) => sum + file.quantity, 0);
@@ -173,12 +174,19 @@ const ChecklistView = ({ orderType }: ChecklistViewProps) => {
 
   const closeFileEntry = async (fileId: string, workOrderId: string) => {
     try {
-      // TODO: Implement file-specific closure logic
-      // This might require adding a status field to file_entries table
+      const { error } = await supabase
+        .from("file_entries")
+        .update({ status: "closed" })
+        .eq("id", fileId);
+
+      if (error) throw error;
+
       toast({
-        title: "U razvoju",
-        description: "Zatvaranje pojedinačnih fajlova će biti implementirano uskoro",
+        title: "Uspešno",
+        description: "Fajl je zatvoren",
       });
+
+      fetchWorkOrders();
     } catch (error) {
       console.error("Error closing file:", error);
       toast({
