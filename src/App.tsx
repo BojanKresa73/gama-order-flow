@@ -7,6 +7,7 @@ import Index from "./pages/Index";
 import Register from "./pages/Register";
 import Dashboard from "./pages/Dashboard";
 import WorkOrders from "./pages/WorkOrders";
+import NewWorkOrder from "./pages/NewWorkOrder";
 import Clients from "./pages/Clients";
 import Inventory from "./pages/Inventory";
 import NotFound from "./pages/NotFound";
@@ -24,6 +25,7 @@ const App = () => (
           <Route path="/register" element={<Register />} />
           <Route path="/dashboard" element={<Dashboard />} />
           <Route path="/work-orders" element={<WorkOrders />} />
+          <Route path="/work-orders/new" element={<NewWorkOrder />} />
           <Route path="/clients" element={<Clients />} />
           <Route path="/inventory" element={<Inventory />} />
           {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}

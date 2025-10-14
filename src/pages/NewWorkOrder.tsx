@@ -1,0 +1,438 @@
+import { useEffect, useState } from "react";
+import { useNavigate } from "react-router-dom";
+import { supabase } from "@/integrations/supabase/client";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { ArrowLeft } from "lucide-react";
+import { useToast } from "@/hooks/use-toast";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Label } from "@/components/ui/label";
+import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Checkbox } from "@/components/ui/checkbox";
+
+const NewWorkOrder = () => {
+  const [clients, setClients] = useState<any[]>([]);
+  const [plateFormats, setPlateFormats] = useState<any[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [orderType, setOrderType] = useState<"ctp" | "digital" | "other">("ctp");
+  const navigate = useNavigate();
+  const { toast } = useToast();
+
+  const [formData, setFormData] = useState({
+    client_id: "",
+    notes: "",
+    // CTP fields
+    trial_print: false,
+    trial_sheets: 0,
+    // Digital fields
+    job_name: "",
+    run_quantity: 0,
+    pages: 0,
+    print_format: "",
+    binding: "",
+    print_spec: "",
+    paper_gsm_text: 0,
+    paper_gsm_cover: 0,
+    lamination: "",
+    sheets_used: 0,
+    clicks_count: 0,
+    test_clicks: 0,
+  });
+
+  const [ctpItems, setCtpItems] = useState<Array<{ file_name: string; plate_format_id: string; quantity: number }>>([
+    { file_name: "", plate_format_id: "", quantity: 1 },
+  ]);
+
+  useEffect(() => {
+    checkAuth();
+    fetchClients();
+    fetchPlateFormats();
+  }, []);
+
+  const checkAuth = async () => {
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) {
+      navigate("/");
+    }
+  };
+
+  const fetchClients = async () => {
+    const { data } = await supabase.from("clients").select("*").order("name");
+    setClients(data || []);
+  };
+
+  const fetchPlateFormats = async () => {
+    const { data } = await supabase.from("plate_formats").select("*").order("format_name");
+    setPlateFormats(data || []);
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setLoading(true);
+
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error("Niste prijavljeni");
+
+      // Generate order number
+      const { data: orderNumberData } = await supabase.rpc("generate_order_number");
+      
+      const workOrderData: any = {
+        order_number: orderNumberData,
+        client_id: formData.client_id,
+        order_type: orderType,
+        created_by: user.id,
+        notes: formData.notes,
+      };
+
+      if (orderType === "ctp") {
+        workOrderData.trial_print = formData.trial_print;
+        workOrderData.trial_sheets = formData.trial_sheets;
+      } else if (orderType === "digital") {
+        workOrderData.job_name = formData.job_name;
+        workOrderData.run_quantity = formData.run_quantity;
+        workOrderData.pages = formData.pages;
+        workOrderData.print_format = formData.print_format;
+        workOrderData.binding = formData.binding;
+        workOrderData.print_spec = formData.print_spec;
+        workOrderData.paper_gsm_text = formData.paper_gsm_text;
+        workOrderData.paper_gsm_cover = formData.paper_gsm_cover;
+        workOrderData.lamination = formData.lamination;
+        workOrderData.sheets_used = formData.sheets_used;
+        workOrderData.clicks_count = formData.clicks_count;
+        workOrderData.test_clicks = formData.test_clicks;
+      }
+
+      const { data: workOrder, error: orderError } = await supabase
+        .from("work_orders")
+        .insert([workOrderData])
+        .select()
+        .single();
+
+      if (orderError) throw orderError;
+
+      // Insert CTP items
+      if (orderType === "ctp" && ctpItems.length > 0) {
+        const items = ctpItems
+          .filter(item => item.file_name && item.plate_format_id)
+          .map(item => ({
+            work_order_id: workOrder.id,
+            file_name: item.file_name,
+            plate_format_id: item.plate_format_id,
+            quantity: item.quantity,
+          }));
+
+        if (items.length > 0) {
+          const { error: itemsError } = await supabase
+            .from("work_order_items")
+            .insert(items);
+
+          if (itemsError) throw itemsError;
+        }
+      }
+
+      toast({
+        title: "Uspeh",
+        description: `Radni nalog ${workOrder.order_number} je kreiran`,
+      });
+
+      navigate("/work-orders");
+    } catch (error: any) {
+      toast({
+        title: "Greška",
+        description: error.message,
+        variant: "destructive",
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const addCtpItem = () => {
+    setCtpItems([...ctpItems, { file_name: "", plate_format_id: "", quantity: 1 }]);
+  };
+
+  const removeCtpItem = (index: number) => {
+    setCtpItems(ctpItems.filter((_, i) => i !== index));
+  };
+
+  const updateCtpItem = (index: number, field: string, value: any) => {
+    const updated = [...ctpItems];
+    updated[index] = { ...updated[index], [field]: value };
+    setCtpItems(updated);
+  };
+
+  return (
+    <div className="min-h-screen bg-background">
+      <header className="border-b bg-card">
+        <div className="container mx-auto px-4 py-4 flex items-center gap-4">
+          <Button variant="ghost" size="icon" onClick={() => navigate("/work-orders")}>
+            <ArrowLeft className="h-5 w-5" />
+          </Button>
+          <h1 className="text-2xl font-bold">Novi radni nalog</h1>
+        </div>
+      </header>
+
+      <main className="container mx-auto px-4 py-8">
+        <form onSubmit={handleSubmit}>
+          <Card>
+            <CardHeader>
+              <CardTitle>Osnovni podaci</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-6">
+              <div className="space-y-2">
+                <Label htmlFor="client">Klijent *</Label>
+                <Select
+                  value={formData.client_id}
+                  onValueChange={(value) => setFormData({ ...formData, client_id: value })}
+                  required
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Izaberite klijenta" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {clients.map((client) => (
+                      <SelectItem key={client.id} value={client.id}>
+                        {client.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <Tabs value={orderType} onValueChange={(v) => setOrderType(v as any)}>
+                <TabsList className="grid w-full grid-cols-3">
+                  <TabsTrigger value="ctp">CTP</TabsTrigger>
+                  <TabsTrigger value="digital">Digital</TabsTrigger>
+                  <TabsTrigger value="other">Ostalo</TabsTrigger>
+                </TabsList>
+
+                <TabsContent value="ctp" className="space-y-4 mt-4">
+                  <div className="flex items-center space-x-2">
+                    <Checkbox
+                      id="trial_print"
+                      checked={formData.trial_print}
+                      onCheckedChange={(checked) => 
+                        setFormData({ ...formData, trial_print: checked as boolean })
+                      }
+                    />
+                    <Label htmlFor="trial_print">Probna štampa</Label>
+                  </div>
+
+                  {formData.trial_print && (
+                    <div className="space-y-2">
+                      <Label htmlFor="trial_sheets">Broj probnih tabaka</Label>
+                      <Input
+                        id="trial_sheets"
+                        type="number"
+                        value={formData.trial_sheets}
+                        onChange={(e) => setFormData({ ...formData, trial_sheets: parseInt(e.target.value) })}
+                      />
+                    </div>
+                  )}
+
+                  <div className="space-y-4">
+                    <div className="flex items-center justify-between">
+                      <Label>Fajlovi</Label>
+                      <Button type="button" variant="outline" size="sm" onClick={addCtpItem}>
+                        Dodaj fajl
+                      </Button>
+                    </div>
+
+                    {ctpItems.map((item, index) => (
+                      <div key={index} className="grid grid-cols-12 gap-2">
+                        <div className="col-span-5">
+                          <Input
+                            placeholder="Naziv fajla"
+                            value={item.file_name}
+                            onChange={(e) => updateCtpItem(index, "file_name", e.target.value)}
+                          />
+                        </div>
+                        <div className="col-span-4">
+                          <Select
+                            value={item.plate_format_id}
+                            onValueChange={(value) => updateCtpItem(index, "plate_format_id", value)}
+                          >
+                            <SelectTrigger>
+                              <SelectValue placeholder="Format" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              {plateFormats.map((format) => (
+                                <SelectItem key={format.id} value={format.id}>
+                                  {format.format_name}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                        </div>
+                        <div className="col-span-2">
+                          <Input
+                            type="number"
+                            placeholder="Količina"
+                            value={item.quantity}
+                            onChange={(e) => updateCtpItem(index, "quantity", parseInt(e.target.value))}
+                            min="1"
+                          />
+                        </div>
+                        <div className="col-span-1">
+                          {ctpItems.length > 1 && (
+                            <Button
+                              type="button"
+                              variant="ghost"
+                              size="icon"
+                              onClick={() => removeCtpItem(index)}
+                            >
+                              ✕
+                            </Button>
+                          )}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </TabsContent>
+
+                <TabsContent value="digital" className="space-y-4 mt-4">
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="job_name">Naziv posla</Label>
+                      <Input
+                        id="job_name"
+                        value={formData.job_name}
+                        onChange={(e) => setFormData({ ...formData, job_name: e.target.value })}
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="run_quantity">Tiraž</Label>
+                      <Input
+                        id="run_quantity"
+                        type="number"
+                        value={formData.run_quantity}
+                        onChange={(e) => setFormData({ ...formData, run_quantity: parseInt(e.target.value) })}
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="pages">Strane</Label>
+                      <Input
+                        id="pages"
+                        type="number"
+                        value={formData.pages}
+                        onChange={(e) => setFormData({ ...formData, pages: parseInt(e.target.value) })}
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="print_format">Format</Label>
+                      <Input
+                        id="print_format"
+                        value={formData.print_format}
+                        onChange={(e) => setFormData({ ...formData, print_format: e.target.value })}
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="binding">Povez</Label>
+                      <Input
+                        id="binding"
+                        value={formData.binding}
+                        onChange={(e) => setFormData({ ...formData, binding: e.target.value })}
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="print_spec">Specifikacija</Label>
+                      <Input
+                        id="print_spec"
+                        value={formData.print_spec}
+                        onChange={(e) => setFormData({ ...formData, print_spec: e.target.value })}
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="paper_gsm_text">Papir tekst (gsm)</Label>
+                      <Input
+                        id="paper_gsm_text"
+                        type="number"
+                        value={formData.paper_gsm_text}
+                        onChange={(e) => setFormData({ ...formData, paper_gsm_text: parseInt(e.target.value) })}
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="paper_gsm_cover">Papir korice (gsm)</Label>
+                      <Input
+                        id="paper_gsm_cover"
+                        type="number"
+                        value={formData.paper_gsm_cover}
+                        onChange={(e) => setFormData({ ...formData, paper_gsm_cover: parseInt(e.target.value) })}
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="lamination">Laminacija</Label>
+                      <Input
+                        id="lamination"
+                        value={formData.lamination}
+                        onChange={(e) => setFormData({ ...formData, lamination: e.target.value })}
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="sheets_used">Utrošeni tabaci</Label>
+                      <Input
+                        id="sheets_used"
+                        type="number"
+                        value={formData.sheets_used}
+                        onChange={(e) => setFormData({ ...formData, sheets_used: parseInt(e.target.value) })}
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="clicks_count">Broj klikova</Label>
+                      <Input
+                        id="clicks_count"
+                        type="number"
+                        value={formData.clicks_count}
+                        onChange={(e) => setFormData({ ...formData, clicks_count: parseInt(e.target.value) })}
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="test_clicks">Test klikovi</Label>
+                      <Input
+                        id="test_clicks"
+                        type="number"
+                        value={formData.test_clicks}
+                        onChange={(e) => setFormData({ ...formData, test_clicks: parseInt(e.target.value) })}
+                      />
+                    </div>
+                  </div>
+                </TabsContent>
+
+                <TabsContent value="other" className="space-y-4 mt-4">
+                  <p className="text-sm text-muted-foreground">
+                    Dodajte napomene za ostale usluge.
+                  </p>
+                </TabsContent>
+              </Tabs>
+
+              <div className="space-y-2">
+                <Label htmlFor="notes">Napomene</Label>
+                <Textarea
+                  id="notes"
+                  value={formData.notes}
+                  onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
+                  rows={4}
+                  placeholder="Dodatne informacije..."
+                />
+              </div>
+
+              <div className="flex gap-4 justify-end">
+                <Button type="button" variant="outline" onClick={() => navigate("/work-orders")}>
+                  Otkaži
+                </Button>
+                <Button type="submit" disabled={loading}>
+                  {loading ? "Kreiranje..." : "Kreiraj nalog"}
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+        </form>
+      </main>
+    </div>
+  );
+};
+
+export default NewWorkOrder;
