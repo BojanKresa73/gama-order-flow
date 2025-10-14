@@ -55,15 +55,15 @@ const Checklist = () => {
             <CardTitle>Pregled radnih naloga po tipu</CardTitle>
           </CardHeader>
           <CardContent>
-            <Tabs defaultValue="checklist" className="w-full">
+            <Tabs defaultValue="ctp" className="w-full">
               <TabsList className="grid w-full grid-cols-4">
-                <TabsTrigger value="checklist">Checklist</TabsTrigger>
+                <TabsTrigger value="search">Pretraga i Statistika</TabsTrigger>
                 <TabsTrigger value="ctp">CTP Usluge</TabsTrigger>
                 <TabsTrigger value="digital">Digitalna Štampa</TabsTrigger>
                 <TabsTrigger value="other">Ostale Usluge</TabsTrigger>
               </TabsList>
               
-              <TabsContent value="checklist">
+              <TabsContent value="search">
                 <SearchAndStats />
               </TabsContent>
               

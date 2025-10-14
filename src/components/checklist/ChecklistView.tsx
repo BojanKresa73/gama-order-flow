@@ -215,7 +215,7 @@ const ChecklistView = ({ orderType }: ChecklistViewProps) => {
   };
 
   const openSearchTab = () => {
-    const tabsTrigger = document.querySelector('[value="checklist"]') as HTMLElement;
+    const tabsTrigger = document.querySelector('[value="search"]') as HTMLElement;
     if (tabsTrigger) {
       tabsTrigger.click();
     }
