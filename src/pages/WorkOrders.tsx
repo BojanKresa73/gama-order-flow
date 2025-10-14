@@ -1,0 +1,142 @@
+import { useEffect, useState } from "react";
+import { useNavigate } from "react-router-dom";
+import { supabase } from "@/integrations/supabase/client";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { Badge } from "@/components/ui/badge";
+import { ArrowLeft, Plus, FileText } from "lucide-react";
+import { useToast } from "@/hooks/use-toast";
+
+const WorkOrders = () => {
+  const [workOrders, setWorkOrders] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+  const navigate = useNavigate();
+  const { toast } = useToast();
+
+  useEffect(() => {
+    checkAuth();
+    fetchWorkOrders();
+  }, []);
+
+  const checkAuth = async () => {
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) {
+      navigate("/");
+    }
+  };
+
+  const fetchWorkOrders = async () => {
+    try {
+      const { data, error } = await supabase
+        .from("work_orders")
+        .select(`
+          *,
+          clients (name),
+          profiles (full_name)
+        `)
+        .order("created_at", { ascending: false });
+
+      if (error) throw error;
+      setWorkOrders(data || []);
+    } catch (error: any) {
+      toast({
+        title: "Greška",
+        description: error.message,
+        variant: "destructive",
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const getOrderTypeLabel = (type: string) => {
+    switch (type) {
+      case "ctp": return "CTP";
+      case "digital": return "Digital";
+      case "other": return "Ostalo";
+      default: return type;
+    }
+  };
+
+  const getStatusBadge = (status: string) => {
+    return status === "open" ? (
+      <Badge variant="default">Otvoren</Badge>
+    ) : (
+      <Badge variant="secondary">Zatvoren</Badge>
+    );
+  };
+
+  if (loading) {
+    return <div className="flex items-center justify-center min-h-screen">Učitavanje...</div>;
+  }
+
+  return (
+    <div className="min-h-screen bg-background">
+      <header className="border-b bg-card">
+        <div className="container mx-auto px-4 py-4 flex justify-between items-center">
+          <div className="flex items-center gap-4">
+            <Button variant="ghost" size="icon" onClick={() => navigate("/dashboard")}>
+              <ArrowLeft className="h-5 w-5" />
+            </Button>
+            <h1 className="text-2xl font-bold">Radni nalozi</h1>
+          </div>
+          <Button onClick={() => navigate("/work-orders/new")}>
+            <Plus className="h-4 w-4 mr-2" />
+            Novi nalog
+          </Button>
+        </div>
+      </header>
+
+      <main className="container mx-auto px-4 py-8">
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <FileText className="h-5 w-5" />
+              Svi radni nalozi
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            {workOrders.length === 0 ? (
+              <div className="text-center py-12 text-muted-foreground">
+                <FileText className="h-12 w-12 mx-auto mb-4 opacity-50" />
+                <p>Nema radnih naloga. Kreirajte prvi nalog.</p>
+              </div>
+            ) : (
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Broj naloga</TableHead>
+                    <TableHead>Klijent</TableHead>
+                    <TableHead>Tip</TableHead>
+                    <TableHead>Status</TableHead>
+                    <TableHead>Kreirao</TableHead>
+                    <TableHead>Datum</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {workOrders.map((order) => (
+                    <TableRow
+                      key={order.id}
+                      className="cursor-pointer hover:bg-muted/50"
+                      onClick={() => navigate(`/work-orders/${order.id}`)}
+                    >
+                      <TableCell className="font-medium">{order.order_number}</TableCell>
+                      <TableCell>{order.clients?.name}</TableCell>
+                      <TableCell>{getOrderTypeLabel(order.order_type)}</TableCell>
+                      <TableCell>{getStatusBadge(order.status)}</TableCell>
+                      <TableCell>{order.profiles?.full_name}</TableCell>
+                      <TableCell>{new Date(order.created_at).toLocaleDateString('sr-RS')}</TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            )}
+          </CardContent>
+        </Card>
+      </main>
+    </div>
+  );
+};
+
+export default WorkOrders;

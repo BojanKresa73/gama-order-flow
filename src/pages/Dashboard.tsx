@@ -72,7 +72,10 @@ const Dashboard = () => {
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-          <Card className="hover:shadow-lg transition-shadow cursor-pointer">
+          <Card 
+            className="hover:shadow-lg transition-shadow cursor-pointer"
+            onClick={() => navigate("/dashboard")}
+          >
             <CardHeader>
               <LayoutDashboard className="h-8 w-8 mb-2 text-primary" />
               <CardTitle>Dashboard</CardTitle>
@@ -83,7 +86,10 @@ const Dashboard = () => {
             </CardContent>
           </Card>
 
-          <Card className="hover:shadow-lg transition-shadow cursor-pointer">
+          <Card 
+            className="hover:shadow-lg transition-shadow cursor-pointer"
+            onClick={() => navigate("/work-orders")}
+          >
             <CardHeader>
               <FileText className="h-8 w-8 mb-2 text-primary" />
               <CardTitle>Radni nalozi</CardTitle>
@@ -94,7 +100,10 @@ const Dashboard = () => {
             </CardContent>
           </Card>
 
-          <Card className="hover:shadow-lg transition-shadow cursor-pointer">
+          <Card 
+            className="hover:shadow-lg transition-shadow cursor-pointer"
+            onClick={() => navigate("/clients")}
+          >
             <CardHeader>
               <Users className="h-8 w-8 mb-2 text-primary" />
               <CardTitle>Klijenti</CardTitle>
@@ -105,7 +114,10 @@ const Dashboard = () => {
             </CardContent>
           </Card>
 
-          <Card className="hover:shadow-lg transition-shadow cursor-pointer">
+          <Card 
+            className="hover:shadow-lg transition-shadow cursor-pointer"
+            onClick={() => navigate("/inventory")}
+          >
             <CardHeader>
               <Package className="h-8 w-8 mb-2 text-primary" />
               <CardTitle>Inventar</CardTitle>
