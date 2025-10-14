@@ -68,6 +68,17 @@ const NewWorkOrder = () => {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    
+    // Validate client selection
+    if (!formData.client_id) {
+      toast({
+        title: "Greška",
+        description: "Molimo odaberite klijenta pre kreiranja naloga.",
+        variant: "destructive",
+      });
+      return;
+    }
+    
     setLoading(true);
 
     try {
