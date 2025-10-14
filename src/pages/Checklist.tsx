@@ -6,6 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ArrowLeft } from "lucide-react";
 import ChecklistView from "@/components/checklist/ChecklistView";
+import SearchAndStats from "@/components/checklist/SearchAndStats";
 
 const Checklist = () => {
   const [loading, setLoading] = useState(true);
@@ -54,12 +55,17 @@ const Checklist = () => {
             <CardTitle>Pregled radnih naloga po tipu</CardTitle>
           </CardHeader>
           <CardContent>
-            <Tabs defaultValue="ctp" className="w-full">
-              <TabsList className="grid w-full grid-cols-3">
+            <Tabs defaultValue="checklist" className="w-full">
+              <TabsList className="grid w-full grid-cols-4">
+                <TabsTrigger value="checklist">Checklist</TabsTrigger>
                 <TabsTrigger value="ctp">CTP Usluge</TabsTrigger>
                 <TabsTrigger value="digital">Digitalna Štampa</TabsTrigger>
                 <TabsTrigger value="other">Ostale Usluge</TabsTrigger>
               </TabsList>
+              
+              <TabsContent value="checklist">
+                <SearchAndStats />
+              </TabsContent>
               
               <TabsContent value="ctp">
                 <ChecklistView orderType="ctp" />

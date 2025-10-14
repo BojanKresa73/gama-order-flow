@@ -1,4 +1,4 @@
-import { useEffect, useState, useMemo } from "react";
+import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -11,10 +11,8 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { ChevronDown, ChevronRight, CheckCircle, XCircle } from "lucide-react";
+import { ChevronDown, ChevronRight, CheckCircle, XCircle, Search } from "lucide-react";
 import { format } from "date-fns";
-import ChecklistStats from "./ChecklistStats";
-import ChecklistFilters from "./ChecklistFilters";
 
 interface WorkOrder {
   id: string;
@@ -44,14 +42,6 @@ const ChecklistView = ({ orderType }: ChecklistViewProps) => {
   const [expandedOrders, setExpandedOrders] = useState<Set<string>>(new Set());
   const [loading, setLoading] = useState(true);
   const { toast } = useToast();
-
-  // Filter states
-  const [searchTerm, setSearchTerm] = useState("");
-  const [selectedClient, setSelectedClient] = useState("all");
-  const [selectedFormat, setSelectedFormat] = useState("all");
-  const [selectedStatus, setSelectedStatus] = useState("all");
-  const [dateFrom, setDateFrom] = useState("");
-  const [dateTo, setDateTo] = useState("");
 
   useEffect(() => {
     fetchWorkOrders();
@@ -224,95 +214,11 @@ const ChecklistView = ({ orderType }: ChecklistViewProps) => {
     );
   };
 
-  // Get unique clients and formats for filters
-  const uniqueClients = useMemo(() => {
-    return Array.from(new Set(workOrders.map((order) => order.client_name))).sort();
-  }, [workOrders]);
-
-  const uniqueFormats = useMemo(() => {
-    if (orderType !== "ctp") return [];
-    const formats = new Set<string>();
-    workOrders.forEach((order) => {
-      order.file_entries?.forEach((file) => {
-        if (file.plate_format_name) {
-          formats.add(file.plate_format_name);
-        }
-      });
-    });
-    return Array.from(formats).sort();
-  }, [workOrders, orderType]);
-
-  // Filter and search logic
-  const filteredOrders = useMemo(() => {
-    return workOrders.filter((order) => {
-      // Search term filter
-      if (searchTerm) {
-        const searchLower = searchTerm.toLowerCase();
-        const matchesOrderNumber = order.order_number.toLowerCase().includes(searchLower);
-        const matchesFileName = order.file_entries?.some((file) =>
-          file.filename.toLowerCase().includes(searchLower)
-        );
-        if (!matchesOrderNumber && !matchesFileName) return false;
-      }
-
-      // Client filter
-      if (selectedClient !== "all" && order.client_name !== selectedClient) {
-        return false;
-      }
-
-      // Status filter
-      if (selectedStatus !== "all" && order.status !== selectedStatus) {
-        return false;
-      }
-
-      // Format filter (CTP only)
-      if (orderType === "ctp" && selectedFormat !== "all") {
-        const hasFormat = order.file_entries?.some(
-          (file) => file.plate_format_name === selectedFormat
-        );
-        if (!hasFormat) return false;
-      }
-
-      // Date from filter
-      if (dateFrom) {
-        const orderDate = new Date(order.created_at);
-        const fromDate = new Date(dateFrom);
-        if (orderDate < fromDate) return false;
-      }
-
-      // Date to filter
-      if (dateTo) {
-        const orderDate = new Date(order.created_at);
-        const toDate = new Date(dateTo);
-        toDate.setHours(23, 59, 59, 999); // Include the entire day
-        if (orderDate > toDate) return false;
-      }
-
-      return true;
-    });
-  }, [workOrders, searchTerm, selectedClient, selectedFormat, selectedStatus, dateFrom, dateTo, orderType]);
-
-  // Calculate statistics
-  const stats = useMemo(() => {
-    const openOrders = filteredOrders.filter((o) => o.status === "open").length;
-    const closedOrders = filteredOrders.filter((o) => o.status === "closed").length;
-    const totalPlates = filteredOrders.reduce((sum, order) => sum + order.total_plates, 0);
-
-    return {
-      totalOrders: filteredOrders.length,
-      openOrders,
-      closedOrders,
-      totalPlates,
-    };
-  }, [filteredOrders]);
-
-  const clearFilters = () => {
-    setSearchTerm("");
-    setSelectedClient("all");
-    setSelectedFormat("all");
-    setSelectedStatus("all");
-    setDateFrom("");
-    setDateTo("");
+  const openSearchTab = () => {
+    const tabsTrigger = document.querySelector('[value="checklist"]') as HTMLElement;
+    if (tabsTrigger) {
+      tabsTrigger.click();
+    }
   };
 
   if (loading) {
@@ -321,36 +227,16 @@ const ChecklistView = ({ orderType }: ChecklistViewProps) => {
 
   return (
     <div className="mt-4">
-      <ChecklistStats
-        totalOrders={stats.totalOrders}
-        openOrders={stats.openOrders}
-        closedOrders={stats.closedOrders}
-        totalPlates={stats.totalPlates}
-        orderType={orderType}
-      />
+      <div className="mb-6 flex justify-end">
+        <Button onClick={openSearchTab} className="gap-2">
+          <Search className="h-4 w-4" />
+          Pretraga i Statistika
+        </Button>
+      </div>
 
-      <ChecklistFilters
-        searchTerm={searchTerm}
-        onSearchChange={setSearchTerm}
-        selectedClient={selectedClient}
-        onClientChange={setSelectedClient}
-        selectedFormat={selectedFormat}
-        onFormatChange={setSelectedFormat}
-        selectedStatus={selectedStatus}
-        onStatusChange={setSelectedStatus}
-        dateFrom={dateFrom}
-        onDateFromChange={setDateFrom}
-        dateTo={dateTo}
-        onDateToChange={setDateTo}
-        clients={uniqueClients}
-        formats={uniqueFormats}
-        onClearFilters={clearFilters}
-        orderType={orderType}
-      />
-
-      {filteredOrders.length === 0 ? (
+      {workOrders.length === 0 ? (
         <div className="p-8 text-center text-muted-foreground">
-          Nema radnih naloga koji odgovaraju filterima
+          Nema radnih naloga
         </div>
       ) : (
         <Table>
@@ -367,7 +253,7 @@ const ChecklistView = ({ orderType }: ChecklistViewProps) => {
           </TableRow>
         </TableHeader>
         <TableBody>
-          {filteredOrders.map((order) => (
+          {workOrders.map((order) => (
             <>
               <TableRow key={order.id} className="cursor-pointer hover:bg-muted/50">
                 <TableCell onClick={() => toggleExpand(order.id)}>
