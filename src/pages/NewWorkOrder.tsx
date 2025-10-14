@@ -41,9 +41,7 @@ const NewWorkOrder = () => {
     test_clicks: 0,
   });
 
-  const [ctpItems, setCtpItems] = useState<Array<{ file_name: string; plate_format_id: string; quantity: number }>>([
-    { file_name: "", plate_format_id: "", quantity: 1 },
-  ]);
+  const [ctpItems, setCtpItems] = useState<Array<{ file_name: string; plate_format_id: string; quantity: number }>>([]);
 
   useEffect(() => {
     checkAuth();
@@ -150,10 +148,6 @@ const NewWorkOrder = () => {
     }
   };
 
-  const addCtpItem = () => {
-    setCtpItems([...ctpItems, { file_name: "", plate_format_id: "", quantity: 1 }]);
-  };
-
   const removeCtpItem = (index: number) => {
     setCtpItems(ctpItems.filter((_, i) => i !== index));
   };
@@ -236,48 +230,119 @@ const NewWorkOrder = () => {
                   <div className="space-y-4">
                     <div className="flex items-center justify-between">
                       <Label>Fajlovi</Label>
-                      <Button type="button" variant="outline" size="sm" onClick={addCtpItem}>
-                        Dodaj fajl
+                      <Input
+                        type="file"
+                        multiple
+                        onChange={(e) => {
+                          const files = Array.from(e.target.files || []);
+                          const newItems = files.map(file => ({
+                            file_name: file.name,
+                            plate_format_id: "",
+                            quantity: 1
+                          }));
+                          setCtpItems([...ctpItems, ...newItems]);
+                        }}
+                        className="hidden"
+                        id="file-upload-ctp"
+                      />
+                      <Button 
+                        type="button" 
+                        variant="outline" 
+                        size="sm" 
+                        onClick={() => document.getElementById('file-upload-ctp')?.click()}
+                      >
+                        Dodaj fajlove
                       </Button>
                     </div>
 
-                    {ctpItems.map((item, index) => (
-                      <div key={index} className="grid grid-cols-12 gap-2">
-                        <div className="col-span-5">
-                          <Input
-                            placeholder="Naziv fajla"
-                            value={item.file_name}
-                            onChange={(e) => updateCtpItem(index, "file_name", e.target.value)}
-                          />
-                        </div>
-                        <div className="col-span-4">
-                          <Select
-                            value={item.plate_format_id}
-                            onValueChange={(value) => updateCtpItem(index, "plate_format_id", value)}
-                          >
-                            <SelectTrigger>
-                              <SelectValue placeholder="Format" />
-                            </SelectTrigger>
-                            <SelectContent>
-                              {plateFormats.map((format) => (
-                                <SelectItem key={format.id} value={format.id}>
-                                  {format.format_name}
-                                </SelectItem>
-                              ))}
-                            </SelectContent>
-                          </Select>
-                        </div>
-                        <div className="col-span-2">
-                          <Input
-                            type="number"
-                            placeholder="Količina"
-                            value={item.quantity}
-                            onChange={(e) => updateCtpItem(index, "quantity", parseInt(e.target.value))}
-                            min="1"
-                          />
-                        </div>
-                        <div className="col-span-1">
-                          {ctpItems.length > 1 && (
+                    {ctpItems.length > 0 && (
+                      <div className="space-y-2">
+                        {ctpItems.map((item, index) => (
+                          <div key={index} className="grid grid-cols-12 gap-2 items-center p-2 border rounded">
+                            <div className="col-span-5">
+                              <p className="text-sm truncate" title={item.file_name}>
+                                {item.file_name || "Naziv fajla"}
+                              </p>
+                            </div>
+                            <div className="col-span-4">
+                              <Select
+                                value={item.plate_format_id}
+                                onValueChange={(value) => updateCtpItem(index, "plate_format_id", value)}
+                              >
+                                <SelectTrigger>
+                                  <SelectValue placeholder="Format" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                  {plateFormats.map((format) => (
+                                    <SelectItem key={format.id} value={format.id}>
+                                      {format.format_name}
+                                    </SelectItem>
+                                  ))}
+                                </SelectContent>
+                              </Select>
+                            </div>
+                            <div className="col-span-2">
+                              <Input
+                                type="number"
+                                placeholder="Količina"
+                                value={item.quantity}
+                                onChange={(e) => updateCtpItem(index, "quantity", parseInt(e.target.value))}
+                                min="1"
+                              />
+                            </div>
+                            <div className="col-span-1">
+                              <Button
+                                type="button"
+                                variant="ghost"
+                                size="icon"
+                                onClick={() => removeCtpItem(index)}
+                              >
+                                ✕
+                              </Button>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                </TabsContent>
+
+                <TabsContent value="digital" className="space-y-4 mt-4">
+                  <div className="space-y-4">
+                    <div className="flex items-center justify-between">
+                      <Label>Fajlovi</Label>
+                      <Input
+                        type="file"
+                        multiple
+                        onChange={(e) => {
+                          const files = Array.from(e.target.files || []);
+                          const newItems = files.map(file => ({
+                            file_name: file.name,
+                            plate_format_id: "",
+                            quantity: 1
+                          }));
+                          setCtpItems([...ctpItems, ...newItems]);
+                        }}
+                        className="hidden"
+                        id="file-upload-digital"
+                      />
+                      <Button 
+                        type="button" 
+                        variant="outline" 
+                        size="sm" 
+                        onClick={() => document.getElementById('file-upload-digital')?.click()}
+                      >
+                        Dodaj fajlove
+                      </Button>
+                    </div>
+
+                    {ctpItems.length > 0 && (
+                      <div className="space-y-2">
+                        {ctpItems.map((item, index) => (
+                          <div key={index} className="flex items-center gap-2 p-2 border rounded">
+                            <p className="text-sm flex-1 truncate" title={item.file_name}>
+                              {item.file_name || "Naziv fajla"}
+                            </p>
                             <Button
                               type="button"
                               variant="ghost"
@@ -286,14 +351,12 @@ const NewWorkOrder = () => {
                             >
                               ✕
                             </Button>
-                          )}
-                        </div>
+                          </div>
+                        ))}
                       </div>
-                    ))}
+                    )}
                   </div>
-                </TabsContent>
 
-                <TabsContent value="digital" className="space-y-4 mt-4">
                   <div className="grid grid-cols-2 gap-4">
                     <div className="space-y-2">
                       <Label htmlFor="job_name">Naziv posla</Label>
@@ -402,6 +465,55 @@ const NewWorkOrder = () => {
                 </TabsContent>
 
                 <TabsContent value="other" className="space-y-4 mt-4">
+                  <div className="space-y-4">
+                    <div className="flex items-center justify-between">
+                      <Label>Fajlovi</Label>
+                      <Input
+                        type="file"
+                        multiple
+                        onChange={(e) => {
+                          const files = Array.from(e.target.files || []);
+                          const newItems = files.map(file => ({
+                            file_name: file.name,
+                            plate_format_id: "",
+                            quantity: 1
+                          }));
+                          setCtpItems([...ctpItems, ...newItems]);
+                        }}
+                        className="hidden"
+                        id="file-upload-other"
+                      />
+                      <Button 
+                        type="button" 
+                        variant="outline" 
+                        size="sm" 
+                        onClick={() => document.getElementById('file-upload-other')?.click()}
+                      >
+                        Dodaj fajlove
+                      </Button>
+                    </div>
+
+                    {ctpItems.length > 0 && (
+                      <div className="space-y-2">
+                        {ctpItems.map((item, index) => (
+                          <div key={index} className="flex items-center gap-2 p-2 border rounded">
+                            <p className="text-sm flex-1 truncate" title={item.file_name}>
+                              {item.file_name || "Naziv fajla"}
+                            </p>
+                            <Button
+                              type="button"
+                              variant="ghost"
+                              size="icon"
+                              onClick={() => removeCtpItem(index)}
+                            >
+                              ✕
+                            </Button>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                  
                   <p className="text-sm text-muted-foreground">
                     Dodajte napomene za ostale usluge.
                   </p>
