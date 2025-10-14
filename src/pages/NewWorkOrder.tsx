@@ -122,7 +122,85 @@ const NewWorkOrder = () => {
 
       if (orderError) throw orderError;
 
-      // Insert CTP items
+      // Insert file entries
+      if (ctpItems.length > 0) {
+        const fileEntries = ctpItems.map(item => ({
+          work_order_id: workOrder.id,
+          filename: item.file_name,
+          file_type: orderType === "ctp" ? "CTP" : orderType === "digital" ? "Digital" : "Other",
+          plate_format_id: item.plate_format_id || null,
+          quantity: item.quantity || null,
+        }));
+
+        const { data: insertedFiles, error: filesError } = await supabase
+          .from("file_entries")
+          .insert(fileEntries)
+          .select();
+
+        if (filesError) throw filesError;
+
+        // Get default template for this order type
+        const { data: template } = await supabase
+          .from("checklist_templates")
+          .select("id, checklist_template_items(*)")
+          .eq("order_type", orderType)
+          .eq("is_default", true)
+          .single();
+
+        if (template) {
+          // Create checklist for this work order
+          const { data: checklist, error: checklistError } = await supabase
+            .from("work_order_checklists")
+            .insert({
+              work_order_id: workOrder.id,
+              template_id: template.id,
+            })
+            .select()
+            .single();
+
+          if (checklistError) throw checklistError;
+
+          // Create checklist items
+          const checklistItems = [];
+          for (const templateItem of template.checklist_template_items) {
+            if (templateItem.is_per_file) {
+              // Create one item per file
+              for (const file of insertedFiles || []) {
+                checklistItems.push({
+                  checklist_id: checklist.id,
+                  file_entry_id: file.id,
+                  title: templateItem.title,
+                  is_required: templateItem.is_required,
+                  due_at: templateItem.sla_hours 
+                    ? new Date(Date.now() + templateItem.sla_hours * 60 * 60 * 1000).toISOString()
+                    : null,
+                });
+              }
+            } else {
+              // Create one item for the whole order
+              checklistItems.push({
+                checklist_id: checklist.id,
+                file_entry_id: null,
+                title: templateItem.title,
+                is_required: templateItem.is_required,
+                due_at: templateItem.sla_hours 
+                  ? new Date(Date.now() + templateItem.sla_hours * 60 * 60 * 1000).toISOString()
+                  : null,
+              });
+            }
+          }
+
+          if (checklistItems.length > 0) {
+            const { error: itemsError } = await supabase
+              .from("work_order_checklist_items")
+              .insert(checklistItems);
+
+            if (itemsError) throw itemsError;
+          }
+        }
+      }
+
+      // Insert CTP items (legacy compatibility)
       if (orderType === "ctp" && ctpItems.length > 0) {
         const items = ctpItems
           .filter(item => item.file_name && item.plate_format_id)
