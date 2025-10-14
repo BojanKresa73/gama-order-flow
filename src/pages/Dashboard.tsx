@@ -4,7 +4,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { LayoutDashboard, FileText, Users, Package } from "lucide-react";
+import { LayoutDashboard, FileText, Users, Package, ClipboardList } from "lucide-react";
 
 const Dashboard = () => {
   const [loading, setLoading] = useState(true);
@@ -68,10 +68,10 @@ const Dashboard = () => {
       <main className="container mx-auto px-4 py-8">
         <div className="mb-8">
           <h2 className="text-3xl font-bold mb-2">Dobrodošli, {profile?.full_name}!</h2>
-          <p className="text-muted-foreground">Upravljajte radnim nalozima iInventarom</p>
+          <p className="text-muted-foreground">Upravljajte radnim nalozima i inventarom</p>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-6">
           <Card 
             className="hover:shadow-lg transition-shadow cursor-pointer"
             onClick={() => navigate("/dashboard")}
@@ -97,6 +97,20 @@ const Dashboard = () => {
             </CardHeader>
             <CardContent>
               <p className="text-sm text-muted-foreground">Upravljanje nalozima</p>
+            </CardContent>
+          </Card>
+
+          <Card 
+            className="hover:shadow-lg transition-shadow cursor-pointer"
+            onClick={() => navigate("/checklist")}
+          >
+            <CardHeader>
+              <ClipboardList className="h-8 w-8 mb-2 text-primary" />
+              <CardTitle>Checklist</CardTitle>
+              <CardDescription>Praćenje statusa</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <p className="text-sm text-muted-foreground">Pregled naloga po tipu</p>
             </CardContent>
           </Card>
 

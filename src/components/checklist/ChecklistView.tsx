@@ -1,320 +1,322 @@
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Progress } from "@/components/ui/progress";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Textarea } from "@/components/ui/textarea";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
-import { CheckCircle2, Circle, Clock, AlertCircle, Lock } from "lucide-react";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
+import { ChevronDown, ChevronRight, CheckCircle, XCircle } from "lucide-react";
+import { format } from "date-fns";
 
-interface ChecklistItem {
+interface WorkOrder {
   id: string;
-  title: string;
-  status: "Pending" | "InProgress" | "Blocked" | "Done" | "NA";
-  is_required: boolean;
-  file_entry_id: string | null;
-  due_at: string | null;
-  blocker_reason: string | null;
-  comment: string | null;
-  started_at: string | null;
-  completed_at: string | null;
-  file_entries?: {
-    filename: string;
-  } | null;
+  order_number: string;
+  client_name: string;
+  created_at: string;
+  closed_at: string | null;
+  status: string;
+  total_plates: number;
+  file_entries?: FileEntry[];
+}
+
+interface FileEntry {
+  id: string;
+  filename: string;
+  quantity: number;
+  plate_format_name: string | null;
+  status: string;
 }
 
 interface ChecklistViewProps {
-  workOrderId: string;
+  orderType: "ctp" | "digital" | "other";
 }
 
-export const ChecklistView = ({ workOrderId }: ChecklistViewProps) => {
-  const [items, setItems] = useState<ChecklistItem[]>([]);
-  const [progress, setProgress] = useState(0);
-  const [selectedItem, setSelectedItem] = useState<ChecklistItem | null>(null);
-  const [comment, setComment] = useState("");
-  const [blockerReason, setBlockerReason] = useState("");
+const ChecklistView = ({ orderType }: ChecklistViewProps) => {
+  const [workOrders, setWorkOrders] = useState<WorkOrder[]>([]);
+  const [expandedOrders, setExpandedOrders] = useState<Set<string>>(new Set());
+  const [loading, setLoading] = useState(true);
   const { toast } = useToast();
 
   useEffect(() => {
-    fetchChecklist();
-  }, [workOrderId]);
+    fetchWorkOrders();
+  }, [orderType]);
 
-  const fetchChecklist = async () => {
-    const { data: checklist } = await supabase
-      .from("work_order_checklists")
-      .select(`
-        id,
-        progress_pct,
-        work_order_checklist_items(
+  const fetchWorkOrders = async () => {
+    try {
+      setLoading(true);
+      
+      // Fetch work orders based on type
+      const { data: orders, error } = await supabase
+        .from("work_orders")
+        .select(`
           id,
-          title,
+          order_number,
+          created_at,
+          closed_at,
           status,
-          is_required,
-          file_entry_id,
-          due_at,
-          blocker_reason,
-          comment,
-          started_at,
-          completed_at,
-          file_entries(filename)
-        )
-      `)
-      .eq("work_order_id", workOrderId)
-      .single();
+          order_type,
+          clients!inner(name)
+        `)
+        .eq("order_type", orderType)
+        .order("created_at", { ascending: false });
 
-    if (checklist) {
-      setItems(checklist.work_order_checklist_items as any);
-      setProgress(checklist.progress_pct);
+      if (error) throw error;
+
+      // For each work order, fetch file entries and calculate total plates
+      const ordersWithDetails = await Promise.all(
+        (orders || []).map(async (order) => {
+          const { data: files, error: filesError } = await supabase
+            .from("file_entries")
+            .select(`
+              id,
+              filename,
+              quantity,
+              file_type,
+              plate_formats(format_name)
+            `)
+            .eq("work_order_id", order.id);
+
+          if (filesError) {
+            console.error("Error fetching files:", filesError);
+            return {
+              id: order.id,
+              order_number: order.order_number,
+              client_name: order.clients.name,
+              created_at: order.created_at,
+              closed_at: order.closed_at,
+              status: order.status,
+              total_plates: 0,
+              file_entries: [],
+            };
+          }
+
+          // Calculate total plates and format file entries
+          const fileEntries = (files || []).map((file) => ({
+            id: file.id,
+            filename: file.filename,
+            quantity: file.quantity || 0,
+            plate_format_name: file.plate_formats?.format_name || null,
+            status: "open", // TODO: Add actual status from file_entries table
+          }));
+
+          const totalPlates = fileEntries.reduce((sum, file) => sum + file.quantity, 0);
+
+          return {
+            id: order.id,
+            order_number: order.order_number,
+            client_name: order.clients.name,
+            created_at: order.created_at,
+            closed_at: order.closed_at,
+            status: order.status,
+            total_plates: totalPlates,
+            file_entries: fileEntries,
+          };
+        })
+      );
+
+      setWorkOrders(ordersWithDetails);
+    } catch (error) {
+      console.error("Error fetching work orders:", error);
+      toast({
+        title: "Greška",
+        description: "Greška pri učitavanju radnih naloga",
+        variant: "destructive",
+      });
+    } finally {
+      setLoading(false);
     }
   };
 
-  const updateItemStatus = async (itemId: string, newStatus: string) => {
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) return;
+  const toggleExpand = (orderId: string) => {
+    const newExpanded = new Set(expandedOrders);
+    if (newExpanded.has(orderId)) {
+      newExpanded.delete(orderId);
+    } else {
+      newExpanded.add(orderId);
+    }
+    setExpandedOrders(newExpanded);
+  };
 
-    const item = items.find(i => i.id === itemId);
-    if (!item) return;
+  const closeWorkOrder = async (workOrderId: string) => {
+    try {
+      const { error } = await supabase
+        .from("work_orders")
+        .update({
+          status: "closed",
+          closed_at: new Date().toISOString(),
+        })
+        .eq("id", workOrderId);
 
-    // Validate: Can't mark as Done/Blocked without comment for certain statuses
-    if (newStatus === "Blocked" && !blockerReason) {
+      if (error) throw error;
+
+      toast({
+        title: "Uspešno",
+        description: "Radni nalog je zatvoren",
+      });
+
+      fetchWorkOrders();
+    } catch (error) {
+      console.error("Error closing work order:", error);
       toast({
         title: "Greška",
-        description: "Morate uneti razlog blokiranja",
+        description: "Greška pri zatvaranju radnog naloga",
         variant: "destructive",
       });
-      return;
     }
+  };
 
-    const updates: any = {
-      status: newStatus,
-      updated_by: user.id,
-    };
-
-    if (newStatus === "InProgress" && !item.started_at) {
-      updates.started_at = new Date().toISOString();
-    }
-
-    if (newStatus === "Done") {
-      updates.completed_at = new Date().toISOString();
-    }
-
-    if (newStatus === "Blocked") {
-      updates.blocker_reason = blockerReason;
-    }
-
-    if (comment) {
-      updates.comment = comment;
-    }
-
-    const { error } = await supabase
-      .from("work_order_checklist_items")
-      .update(updates)
-      .eq("id", itemId);
-
-    if (error) {
+  const closeFileEntry = async (fileId: string, workOrderId: string) => {
+    try {
+      // TODO: Implement file-specific closure logic
+      // This might require adding a status field to file_entries table
+      toast({
+        title: "U razvoju",
+        description: "Zatvaranje pojedinačnih fajlova će biti implementirano uskoro",
+      });
+    } catch (error) {
+      console.error("Error closing file:", error);
       toast({
         title: "Greška",
-        description: error.message,
+        description: "Greška pri zatvaranju fajla",
         variant: "destructive",
       });
-      return;
     }
-
-    // Log activity
-    await supabase.from("checklist_activity_log").insert([{
-      checklist_item_id: itemId,
-      old_status: item.status,
-      new_status: newStatus as any,
-      note: comment || blockerReason || null,
-      created_by: user.id,
-    }]);
-
-    // Update progress
-    const updatedItems = items.map(i => 
-      i.id === itemId 
-        ? { ...i, status: newStatus as any, comment: comment || i.comment, blocker_reason: blockerReason || i.blocker_reason }
-        : i
-    );
-    
-    const completedCount = updatedItems.filter(i => i.status === "Done").length;
-    const newProgress = Math.round((completedCount / updatedItems.length) * 100);
-    
-    await supabase
-      .from("work_order_checklists")
-      .update({ progress_pct: newProgress })
-      .eq("work_order_id", workOrderId);
-
-    setItems(updatedItems);
-    setProgress(newProgress);
-    setSelectedItem(null);
-    setComment("");
-    setBlockerReason("");
-
-    toast({
-      title: "Uspeh",
-      description: "Status stavke ažuriran",
-    });
   };
 
   const getStatusBadge = (status: string) => {
-    const configs = {
-      Pending: { color: "bg-gray-500", icon: Circle, label: "Na čekanju" },
-      InProgress: { color: "bg-blue-500", icon: Clock, label: "U toku" },
-      Blocked: { color: "bg-red-500", icon: AlertCircle, label: "Blokirano" },
-      Done: { color: "bg-green-500", icon: CheckCircle2, label: "Završeno" },
-      NA: { color: "bg-gray-400", icon: Circle, label: "N/A" },
-    };
-    const config = configs[status as keyof typeof configs];
-    const Icon = config.icon;
-    
+    if (status === "closed") {
+      return (
+        <Badge variant="secondary" className="gap-1">
+          <CheckCircle className="h-3 w-3" />
+          Zatvoren
+        </Badge>
+      );
+    }
     return (
-      <Badge className={`${config.color} text-white`}>
-        <Icon className="w-3 h-3 mr-1" />
-        {config.label}
+      <Badge variant="default" className="gap-1">
+        <XCircle className="h-3 w-3" />
+        Otvoren
       </Badge>
     );
   };
 
-  const isDueSoon = (dueAt: string | null) => {
-    if (!dueAt) return false;
-    const diff = new Date(dueAt).getTime() - Date.now();
-    return diff > 0 && diff < 24 * 60 * 60 * 1000; // Less than 24h
-  };
+  if (loading) {
+    return <div className="p-4 text-center">Učitavanje...</div>;
+  }
 
-  const requiredIncomplete = items.filter(i => i.is_required && i.status !== "Done").length;
+  if (workOrders.length === 0) {
+    return (
+      <div className="p-8 text-center text-muted-foreground">
+        Nema radnih naloga za ovaj tip
+      </div>
+    );
+  }
 
   return (
-    <Card>
-      <CardHeader>
-        <div className="flex items-center justify-between">
-          <CardTitle>Checklist</CardTitle>
-          {requiredIncomplete > 0 && (
-            <Badge variant="outline" className="gap-1">
-              <Lock className="w-3 h-3" />
-              {requiredIncomplete} obaveznih preostalo
-            </Badge>
-          )}
-        </div>
-        <div className="space-y-2">
-          <div className="flex items-center justify-between text-sm">
-            <span>Napredak: {progress}%</span>
-            <span>{items.filter(i => i.status === "Done").length} / {items.length}</span>
-          </div>
-          <Progress value={progress} />
-        </div>
-      </CardHeader>
-      <CardContent>
-        <div className="space-y-2">
-          {items.map((item) => (
-            <Dialog key={item.id}>
-              <DialogTrigger asChild>
-                <div
-                  className="flex items-center justify-between p-3 border rounded-lg hover:bg-accent cursor-pointer"
-                  onClick={() => setSelectedItem(item)}
-                >
-                  <div className="flex-1">
-                    <div className="flex items-center gap-2">
-                      <p className="font-medium">
-                        {item.title}
-                        {item.is_required && <span className="text-red-500 ml-1">*</span>}
-                      </p>
-                      {item.file_entries && (
-                        <Badge variant="outline" className="text-xs">
-                          {item.file_entries.filename}
-                        </Badge>
-                      )}
-                    </div>
-                    {item.blocker_reason && (
-                      <p className="text-sm text-red-600 mt-1">{item.blocker_reason}</p>
-                    )}
-                    {item.comment && (
-                      <p className="text-sm text-muted-foreground mt-1">{item.comment}</p>
-                    )}
-                  </div>
-                  <div className="flex items-center gap-2">
-                    {item.due_at && isDueSoon(item.due_at) && (
-                      <Badge variant="outline" className="text-orange-600 border-orange-600">
-                        <Clock className="w-3 h-3 mr-1" />
-                        Uskoro rok
-                      </Badge>
-                    )}
-                    {getStatusBadge(item.status)}
-                  </div>
-                </div>
-              </DialogTrigger>
-              <DialogContent>
-                <DialogHeader>
-                  <DialogTitle>{item.title}</DialogTitle>
-                </DialogHeader>
-                <div className="space-y-4">
-                  {item.file_entries && (
-                    <div>
-                      <p className="text-sm font-medium mb-1">Fajl:</p>
-                      <p className="text-sm text-muted-foreground">{item.file_entries.filename}</p>
-                    </div>
+    <div className="mt-4">
+      <Table>
+        <TableHeader>
+          <TableRow>
+            <TableHead className="w-12"></TableHead>
+            <TableHead>Broj Naloga</TableHead>
+            <TableHead>Klijent</TableHead>
+            <TableHead>Datum Otvaranja</TableHead>
+            <TableHead>Datum Zatvaranja</TableHead>
+            <TableHead>Status</TableHead>
+            {orderType === "ctp" && <TableHead>Broj Ploča</TableHead>}
+            <TableHead className="text-right">Akcije</TableHead>
+          </TableRow>
+        </TableHeader>
+        <TableBody>
+          {workOrders.map((order) => (
+            <>
+              <TableRow key={order.id} className="cursor-pointer hover:bg-muted/50">
+                <TableCell onClick={() => toggleExpand(order.id)}>
+                  {orderType === "ctp" && order.file_entries && order.file_entries.length > 0 && (
+                    expandedOrders.has(order.id) ? (
+                      <ChevronDown className="h-4 w-4" />
+                    ) : (
+                      <ChevronRight className="h-4 w-4" />
+                    )
                   )}
-                  
-                  <div>
-                    <label className="text-sm font-medium">Status</label>
-                    <Select
-                      value={item.status}
-                      onValueChange={(value) => {
-                        const newItem = { ...item, status: value as any };
-                        setSelectedItem(newItem);
-                      }}
+                </TableCell>
+                <TableCell className="font-medium">{order.order_number}</TableCell>
+                <TableCell>{order.client_name}</TableCell>
+                <TableCell>
+                  {format(new Date(order.created_at), "dd.MM.yyyy HH:mm")}
+                </TableCell>
+                <TableCell>
+                  {order.closed_at
+                    ? format(new Date(order.closed_at), "dd.MM.yyyy HH:mm")
+                    : "-"}
+                </TableCell>
+                <TableCell>{getStatusBadge(order.status)}</TableCell>
+                {orderType === "ctp" && (
+                  <TableCell className="font-semibold">{order.total_plates}</TableCell>
+                )}
+                <TableCell className="text-right">
+                  {order.status === "open" && (
+                    <Button
+                      size="sm"
+                      onClick={() => closeWorkOrder(order.id)}
                     >
-                      <SelectTrigger className="mt-1">
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="Pending">Na čekanju</SelectItem>
-                        <SelectItem value="InProgress">U toku</SelectItem>
-                        <SelectItem value="Done">Završeno</SelectItem>
-                        <SelectItem value="Blocked">Blokirano</SelectItem>
-                        <SelectItem value="NA">N/A</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-
-                  {selectedItem?.status === "Blocked" && (
-                    <div>
-                      <label className="text-sm font-medium">Razlog blokiranja *</label>
-                      <Textarea
-                        className="mt-1"
-                        value={blockerReason}
-                        onChange={(e) => setBlockerReason(e.target.value)}
-                        placeholder="Opišite zašto je stavka blokirana..."
-                        rows={3}
-                      />
-                    </div>
+                      Zatvori Nalog
+                    </Button>
                   )}
+                </TableCell>
+              </TableRow>
 
-                  <div>
-                    <label className="text-sm font-medium">Komentar</label>
-                    <Textarea
-                      className="mt-1"
-                      value={comment}
-                      onChange={(e) => setComment(e.target.value)}
-                      placeholder="Dodajte komentar..."
-                      rows={3}
-                    />
-                  </div>
-
-                  <Button
-                    onClick={() => updateItemStatus(item.id, selectedItem?.status || item.status)}
-                    className="w-full"
-                  >
-                    Sačuvaj izmene
-                  </Button>
-                </div>
-              </DialogContent>
-            </Dialog>
+              {/* Expanded file entries for CTP orders */}
+              {orderType === "ctp" &&
+                expandedOrders.has(order.id) &&
+                order.file_entries &&
+                order.file_entries.map((file) => (
+                  <TableRow key={file.id} className="bg-muted/30">
+                    <TableCell></TableCell>
+                    <TableCell colSpan={2} className="pl-8">
+                      <span className="text-sm text-muted-foreground">
+                        📄 {file.filename}
+                      </span>
+                    </TableCell>
+                    <TableCell>
+                      <span className="text-sm">
+                        Format: {file.plate_format_name || "N/A"}
+                      </span>
+                    </TableCell>
+                    <TableCell>
+                      <span className="text-sm">
+                        Količina: {file.quantity}
+                      </span>
+                    </TableCell>
+                    <TableCell colSpan={orderType === "ctp" ? 1 : 2}>
+                      {getStatusBadge(file.status)}
+                    </TableCell>
+                    {orderType === "ctp" && <TableCell></TableCell>}
+                    <TableCell className="text-right">
+                      {file.status === "open" && (
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() => closeFileEntry(file.id, order.id)}
+                        >
+                          Zatvori Fajl
+                        </Button>
+                      )}
+                    </TableCell>
+                  </TableRow>
+                ))}
+            </>
           ))}
-        </div>
-      </CardContent>
-    </Card>
+        </TableBody>
+      </Table>
+    </div>
   );
 };
+
+export default ChecklistView;
