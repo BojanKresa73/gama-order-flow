@@ -100,7 +100,7 @@ const ChecklistView = ({ orderType }: ChecklistViewProps) => {
           const fileEntries = (files || []).map((file) => ({
             id: file.id,
             filename: file.filename,
-            quantity: file.quantity || 0,
+            quantity: file.quantity ?? (orderType === "ctp" ? 4 : 0),
             plate_format_name: file.plate_formats?.format_name || null,
             status: "open", // TODO: Add actual status from file_entries table
           }));
