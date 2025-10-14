@@ -42,6 +42,8 @@ const NewWorkOrder = () => {
   });
 
   const [ctpItems, setCtpItems] = useState<Array<{ file_name: string; plate_format_id: string; quantity: number }>>([]);
+  const [bulkFormat, setBulkFormat] = useState("");
+  const [bulkQuantity, setBulkQuantity] = useState(4);
 
   useEffect(() => {
     checkAuth();
@@ -327,7 +329,7 @@ const NewWorkOrder = () => {
                           const newItems = files.map(file => ({
                             file_name: file.name,
                             plate_format_id: "",
-                            quantity: 1
+                            quantity: 4
                           }));
                           setCtpItems([...ctpItems, ...newItems]);
                         }}
@@ -345,8 +347,63 @@ const NewWorkOrder = () => {
                     </div>
 
                     {ctpItems.length > 0 && (
-                      <div className="space-y-2">
-                        {ctpItems.map((item, index) => (
+                      <div className="space-y-4">
+                        <div className="p-4 border rounded-lg bg-muted/50">
+                          <Label className="text-sm font-semibold mb-3 block">Masovno dodeljivanje</Label>
+                          <div className="grid grid-cols-12 gap-2">
+                            <div className="col-span-5">
+                              <Select
+                                value={bulkFormat}
+                                onValueChange={setBulkFormat}
+                              >
+                                <SelectTrigger>
+                                  <SelectValue placeholder="Odaberi format" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                  {plateFormats.map((format) => (
+                                    <SelectItem key={format.id} value={format.id}>
+                                      {format.format_name}
+                                    </SelectItem>
+                                  ))}
+                                </SelectContent>
+                              </Select>
+                            </div>
+                            <div className="col-span-3">
+                              <Input
+                                type="number"
+                                placeholder="Količina"
+                                value={bulkQuantity}
+                                onChange={(e) => setBulkQuantity(parseInt(e.target.value) || 4)}
+                                min="1"
+                              />
+                            </div>
+                            <div className="col-span-4">
+                              <Button
+                                type="button"
+                                variant="secondary"
+                                className="w-full"
+                                onClick={() => {
+                                  if (bulkFormat) {
+                                    setCtpItems(ctpItems.map(item => ({
+                                      ...item,
+                                      plate_format_id: bulkFormat,
+                                      quantity: bulkQuantity
+                                    })));
+                                    toast({
+                                      title: "Uspeh",
+                                      description: "Format i količina dodeljeni svim fajlovima",
+                                    });
+                                  }
+                                }}
+                              >
+                                Primeni na sve
+                              </Button>
+                            </div>
+                          </div>
+                        </div>
+
+                        <div className="space-y-2">
+                          {ctpItems.map((item, index) => (
                           <div key={index} className="grid grid-cols-12 gap-2 items-center p-2 border rounded">
                             <div className="col-span-5">
                               <p className="text-sm truncate" title={item.file_name}>
@@ -390,7 +447,8 @@ const NewWorkOrder = () => {
                               </Button>
                             </div>
                           </div>
-                        ))}
+                          ))}
+                        </div>
                       </div>
                     )}
                   </div>
