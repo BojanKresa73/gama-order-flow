@@ -5,12 +5,13 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
-import { ArrowLeft, Plus, FileText } from "lucide-react";
+import { ArrowLeft, Plus, FileText, Send } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 
 const WorkOrders = () => {
   const [workOrders, setWorkOrders] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  const [sendingDeliveryNote, setSendingDeliveryNote] = useState<string | null>(null);
   const navigate = useNavigate();
   const { toast } = useToast();
 
@@ -67,6 +68,35 @@ const WorkOrders = () => {
     );
   };
 
+  const handleSendDeliveryNote = async (workOrderId: string, e: React.MouseEvent) => {
+    e.stopPropagation();
+    setSendingDeliveryNote(workOrderId);
+    
+    try {
+      const { data, error } = await supabase.functions.invoke('send-delivery-note', {
+        body: { workOrderId }
+      });
+
+      if (error) throw error;
+
+      toast({
+        title: "Uspeh",
+        description: data.emailSent 
+          ? "Otpremnica je kreirana i poslata na email" 
+          : "Otpremnica je kreirana (klijent nema email za obaveštenja)",
+      });
+    } catch (error: any) {
+      console.error('Error sending delivery note:', error);
+      toast({
+        title: "Greška",
+        description: error.message || "Greška pri kreiranju otpremnice",
+        variant: "destructive",
+      });
+    } finally {
+      setSendingDeliveryNote(null);
+    }
+  };
+
   if (loading) {
     return <div className="flex items-center justify-center min-h-screen">Učitavanje...</div>;
   }
@@ -112,6 +142,7 @@ const WorkOrders = () => {
                     <TableHead>Status</TableHead>
                     <TableHead>Kreirao</TableHead>
                     <TableHead>Datum</TableHead>
+                    <TableHead>Akcije</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -127,6 +158,17 @@ const WorkOrders = () => {
                       <TableCell>{getStatusBadge(order.status)}</TableCell>
                       <TableCell>{order.profiles?.full_name}</TableCell>
                       <TableCell>{new Date(order.created_at).toLocaleDateString('sr-RS')}</TableCell>
+                      <TableCell>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={(e) => handleSendDeliveryNote(order.id, e)}
+                          disabled={sendingDeliveryNote === order.id}
+                        >
+                          <Send className="h-4 w-4 mr-2" />
+                          {sendingDeliveryNote === order.id ? "Šaljem..." : "Otpremnica"}
+                        </Button>
+                      </TableCell>
                     </TableRow>
                   ))}
                 </TableBody>
