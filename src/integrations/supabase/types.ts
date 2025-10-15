@@ -173,6 +173,7 @@ export type Database = {
           email: string | null
           id: string
           name: string
+          notification_email: string | null
           updated_at: string
         }
         Insert: {
@@ -180,6 +181,7 @@ export type Database = {
           email?: string | null
           id?: string
           name: string
+          notification_email?: string | null
           updated_at?: string
         }
         Update: {
@@ -187,9 +189,60 @@ export type Database = {
           email?: string | null
           id?: string
           name?: string
+          notification_email?: string | null
           updated_at?: string
         }
         Relationships: []
+      }
+      delivery_notes: {
+        Row: {
+          client_name: string
+          client_pib: string | null
+          closed_at: string
+          created_at: string
+          delivery_number: string
+          id: string
+          items: Json
+          opened_at: string
+          sent_at: string | null
+          sent_to_email: string | null
+          work_order_id: string
+        }
+        Insert: {
+          client_name: string
+          client_pib?: string | null
+          closed_at: string
+          created_at?: string
+          delivery_number: string
+          id?: string
+          items: Json
+          opened_at: string
+          sent_at?: string | null
+          sent_to_email?: string | null
+          work_order_id: string
+        }
+        Update: {
+          client_name?: string
+          client_pib?: string | null
+          closed_at?: string
+          created_at?: string
+          delivery_number?: string
+          id?: string
+          items?: Json
+          opened_at?: string
+          sent_at?: string | null
+          sent_to_email?: string | null
+          work_order_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "delivery_notes_work_order_id_fkey"
+            columns: ["work_order_id"]
+            isOneToOne: false
+            referencedRelation: "work_orders"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       email_log: {
         Row: {
