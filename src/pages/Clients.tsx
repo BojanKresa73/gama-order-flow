@@ -22,7 +22,7 @@ const Clients = () => {
   const [clients, setClients] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [dialogOpen, setDialogOpen] = useState(false);
-  const [newClient, setNewClient] = useState({ name: "", email: "" });
+  const [newClient, setNewClient] = useState({ name: "", email: "", notification_email: "" });
   const navigate = useNavigate();
   const { toast } = useToast();
 
@@ -72,7 +72,7 @@ const Clients = () => {
       });
 
       setDialogOpen(false);
-      setNewClient({ name: "", email: "" });
+      setNewClient({ name: "", email: "", notification_email: "" });
       fetchClients();
     } catch (error: any) {
       toast({
@@ -129,6 +129,16 @@ const Clients = () => {
                     placeholder="email@primer.com"
                   />
                 </div>
+                <div className="space-y-2">
+                  <Label htmlFor="notification_email">Email za obaveštenja</Label>
+                  <Input
+                    id="notification_email"
+                    type="email"
+                    value={newClient.notification_email}
+                    onChange={(e) => setNewClient({ ...newClient, notification_email: e.target.value })}
+                    placeholder="obavestenje@primer.rs"
+                  />
+                </div>
               </div>
               <DialogFooter>
                 <Button variant="outline" onClick={() => setDialogOpen(false)}>
@@ -161,6 +171,7 @@ const Clients = () => {
                   <TableRow>
                     <TableHead>Naziv</TableHead>
                     <TableHead>Email</TableHead>
+                    <TableHead>Email za obaveštenja</TableHead>
                     <TableHead>Datum kreiranja</TableHead>
                   </TableRow>
                 </TableHeader>
@@ -173,6 +184,16 @@ const Clients = () => {
                           <div className="flex items-center gap-2">
                             <Mail className="h-4 w-4 text-muted-foreground" />
                             {client.email}
+                          </div>
+                        ) : (
+                          <span className="text-muted-foreground">-</span>
+                        )}
+                      </TableCell>
+                      <TableCell>
+                        {client.notification_email ? (
+                          <div className="flex items-center gap-2">
+                            <Mail className="h-4 w-4 text-muted-foreground" />
+                            {client.notification_email}
                           </div>
                         ) : (
                           <span className="text-muted-foreground">-</span>
