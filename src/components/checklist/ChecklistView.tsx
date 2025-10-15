@@ -11,7 +11,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { ChevronDown, ChevronRight, CheckCircle, XCircle, Search } from "lucide-react";
+import { ChevronDown, ChevronRight, CheckCircle, XCircle, Search, FileText } from "lucide-react";
 import { format } from "date-fns";
 
 interface WorkOrder {
@@ -146,6 +146,15 @@ const ChecklistView = ({ orderType }: ChecklistViewProps) => {
 
   const closeWorkOrder = async (workOrderId: string) => {
     try {
+      // First, close all file entries for this work order
+      const { error: filesError } = await supabase
+        .from("file_entries")
+        .update({ status: "closed" })
+        .eq("work_order_id", workOrderId);
+
+      if (filesError) throw filesError;
+
+      // Then close the work order
       const { error } = await supabase
         .from("work_orders")
         .update({
@@ -156,10 +165,29 @@ const ChecklistView = ({ orderType }: ChecklistViewProps) => {
 
       if (error) throw error;
 
-      toast({
-        title: "Uspešno",
-        description: "Radni nalog je zatvoren",
-      });
+      // Automatically send delivery note
+      try {
+        const { error: deliveryError } = await supabase.functions.invoke(
+          "send-delivery-note",
+          {
+            body: { workOrderId },
+          }
+        );
+
+        if (deliveryError) throw deliveryError;
+
+        toast({
+          title: "Uspešno",
+          description: "Radni nalog je zatvoren i otpremnica je poslata",
+        });
+      } catch (deliveryError) {
+        console.error("Error sending delivery note:", deliveryError);
+        toast({
+          title: "Upozorenje",
+          description: "Radni nalog je zatvoren, ali nije poslata otpremnica",
+          variant: "destructive",
+        });
+      }
 
       fetchWorkOrders();
     } catch (error) {
@@ -192,6 +220,28 @@ const ChecklistView = ({ orderType }: ChecklistViewProps) => {
       toast({
         title: "Greška",
         description: "Greška pri zatvaranju fajla",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const sendDeliveryNote = async (workOrderId: string) => {
+    try {
+      const { error } = await supabase.functions.invoke("send-delivery-note", {
+        body: { workOrderId },
+      });
+
+      if (error) throw error;
+
+      toast({
+        title: "Uspešno",
+        description: "Otpremnica je poslata",
+      });
+    } catch (error: any) {
+      console.error("Error sending delivery note:", error);
+      toast({
+        title: "Greška",
+        description: error.message || "Greška pri slanju otpremnice",
         variant: "destructive",
       });
     }
@@ -280,14 +330,26 @@ const ChecklistView = ({ orderType }: ChecklistViewProps) => {
                   <TableCell className="font-semibold">{order.total_plates}</TableCell>
                 )}
                 <TableCell className="text-right">
-                  {order.status === "open" && (
-                    <Button
-                      size="sm"
-                      onClick={() => closeWorkOrder(order.id)}
-                    >
-                      Zatvori Nalog
-                    </Button>
-                  )}
+                  <div className="flex gap-2 justify-end">
+                    {order.status === "open" && (
+                      <Button
+                        size="sm"
+                        onClick={() => closeWorkOrder(order.id)}
+                      >
+                        Zatvori Nalog
+                      </Button>
+                    )}
+                    {order.status === "closed" && (
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={() => sendDeliveryNote(order.id)}
+                      >
+                        <FileText className="h-4 w-4 mr-2" />
+                        Pošalji Otpremnicu
+                      </Button>
+                    )}
+                  </div>
                 </TableCell>
               </TableRow>
 
