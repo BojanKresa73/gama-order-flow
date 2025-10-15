@@ -4,7 +4,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { ArrowLeft, Plus, Users, Mail } from "lucide-react";
+import { ArrowLeft, Plus, Users, Mail, Pencil } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import {
   Dialog,
@@ -22,6 +22,7 @@ const Clients = () => {
   const [clients, setClients] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [dialogOpen, setDialogOpen] = useState(false);
+  const [editingClient, setEditingClient] = useState<any>(null);
   const [newClient, setNewClient] = useState({ name: "", email: "", notification_email: "" });
   const navigate = useNavigate();
   const { toast } = useToast();
@@ -81,6 +82,41 @@ const Clients = () => {
         variant: "destructive",
       });
     }
+  };
+
+  const handleEditClient = async () => {
+    if (!editingClient) return;
+    
+    try {
+      const { error } = await supabase
+        .from("clients")
+        .update({
+          name: editingClient.name,
+          email: editingClient.email,
+          notification_email: editingClient.notification_email,
+        })
+        .eq("id", editingClient.id);
+
+      if (error) throw error;
+
+      toast({
+        title: "Uspeh",
+        description: "Klijent je uspešno ažuriran",
+      });
+
+      setEditingClient(null);
+      fetchClients();
+    } catch (error: any) {
+      toast({
+        title: "Greška",
+        description: error.message,
+        variant: "destructive",
+      });
+    }
+  };
+
+  const openEditDialog = (client: any) => {
+    setEditingClient({ ...client });
   };
 
   if (loading) {
@@ -173,6 +209,7 @@ const Clients = () => {
                     <TableHead>Email</TableHead>
                     <TableHead>Email za obaveštenja</TableHead>
                     <TableHead>Datum kreiranja</TableHead>
+                    <TableHead>Akcije</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -200,6 +237,16 @@ const Clients = () => {
                         )}
                       </TableCell>
                       <TableCell>{new Date(client.created_at).toLocaleDateString('sr-RS')}</TableCell>
+                      <TableCell>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => openEditDialog(client)}
+                        >
+                          <Pencil className="h-4 w-4 mr-2" />
+                          Edit
+                        </Button>
+                      </TableCell>
                     </TableRow>
                   ))}
                 </TableBody>
@@ -208,6 +255,53 @@ const Clients = () => {
           </CardContent>
         </Card>
       </main>
+
+      {/* Edit Client Dialog */}
+      <Dialog open={!!editingClient} onOpenChange={(open) => !open && setEditingClient(null)}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Izmena klijenta</DialogTitle>
+            <DialogDescription>Izmenite podatke o klijentu</DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <Label htmlFor="edit-name">Naziv</Label>
+              <Input
+                id="edit-name"
+                value={editingClient?.name || ""}
+                onChange={(e) => setEditingClient({ ...editingClient, name: e.target.value })}
+                placeholder="Naziv klijenta"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="edit-email">Email</Label>
+              <Input
+                id="edit-email"
+                type="email"
+                value={editingClient?.email || ""}
+                onChange={(e) => setEditingClient({ ...editingClient, email: e.target.value })}
+                placeholder="email@primer.com"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="edit-notification-email">Email za obaveštenja</Label>
+              <Input
+                id="edit-notification-email"
+                type="email"
+                value={editingClient?.notification_email || ""}
+                onChange={(e) => setEditingClient({ ...editingClient, notification_email: e.target.value })}
+                placeholder="obavestenje@primer.rs"
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setEditingClient(null)}>
+              Otkaži
+            </Button>
+            <Button onClick={handleEditClient}>Sačuvaj</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };
