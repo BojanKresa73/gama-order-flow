@@ -1,11 +1,12 @@
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { ArrowLeft, Plus, Users, Mail, Pencil } from "lucide-react";
+import { ArrowLeft, Plus, Users } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { useClients, Client } from "@/hooks/useClients";
+import { ClientsTable } from "@/components/clients/ClientsTable";
 import {
   Dialog,
   DialogContent,
@@ -19,10 +20,8 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 
 const Clients = () => {
-  const [clients, setClients] = useState<any[]>([]);
-  const [loading, setLoading] = useState(true);
   const [dialogOpen, setDialogOpen] = useState(false);
-  const [editingClient, setEditingClient] = useState<any>(null);
+  const [editingClient, setEditingClient] = useState<Client | null>(null);
   const [newClient, setNewClient] = useState({
     name: "",
     pib: "",
@@ -42,38 +41,7 @@ const Clients = () => {
   const [validationErrors, setValidationErrors] = useState<Record<string, string>>({});
   const navigate = useNavigate();
   const { toast } = useToast();
-
-  useEffect(() => {
-    checkAuth();
-    fetchClients();
-  }, []);
-
-  const checkAuth = async () => {
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) {
-      navigate("/");
-    }
-  };
-
-  const fetchClients = async () => {
-    try {
-      const { data, error } = await supabase
-        .from("clients")
-        .select("*")
-        .order("name", { ascending: true });
-
-      if (error) throw error;
-      setClients(data || []);
-    } catch (error: any) {
-      toast({
-        title: "Greška",
-        description: error.message,
-        variant: "destructive",
-      });
-    } finally {
-      setLoading(false);
-    }
-  };
+  const { data: clients = [], isLoading, refetch } = useClients();
 
   const validateClient = (client: any) => {
     const errors: Record<string, string> = {};
@@ -168,7 +136,7 @@ const Clients = () => {
         napomena: "",
       });
       setValidationErrors({});
-      fetchClients();
+      refetch();
     } catch (error: any) {
       toast({
         title: "Greška",
@@ -225,7 +193,7 @@ const Clients = () => {
 
       setEditingClient(null);
       setValidationErrors({});
-      fetchClients();
+      refetch();
     } catch (error: any) {
       toast({
         title: "Greška",
@@ -235,11 +203,11 @@ const Clients = () => {
     }
   };
 
-  const openEditDialog = (client: any) => {
+  const openEditDialog = (client: Client) => {
     setEditingClient({ ...client });
   };
 
-  if (loading) {
+  if (isLoading) {
     return <div className="flex items-center justify-center min-h-screen">Učitavanje...</div>;
   }
 
@@ -455,52 +423,7 @@ const Clients = () => {
                 <p>Nema klijenata. Dodajte prvog klijenta.</p>
               </div>
             ) : (
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Naziv</TableHead>
-                    <TableHead>PIB</TableHead>
-                    <TableHead>Grad</TableHead>
-                    <TableHead>Telefon</TableHead>
-                    <TableHead>Email</TableHead>
-                    <TableHead>Rabat</TableHead>
-                    <TableHead>Rok plaćanja</TableHead>
-                    <TableHead>Akcije</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {clients.map((client) => (
-                    <TableRow key={client.id}>
-                      <TableCell className="font-medium">{client.name}</TableCell>
-                      <TableCell>{client.pib || "-"}</TableCell>
-                      <TableCell>{client.grad || "-"}</TableCell>
-                      <TableCell>{client.telefon || "-"}</TableCell>
-                      <TableCell>
-                        {client.email ? (
-                          <div className="flex items-center gap-2">
-                            <Mail className="h-4 w-4 text-muted-foreground" />
-                            {client.email}
-                          </div>
-                        ) : (
-                          <span className="text-muted-foreground">-</span>
-                        )}
-                      </TableCell>
-                      <TableCell>{client.rabat_procenat}%</TableCell>
-                      <TableCell>{client.rok_placanja_dana} dana</TableCell>
-                      <TableCell>
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => openEditDialog(client)}
-                        >
-                          <Pencil className="h-4 w-4 mr-2" />
-                          Edit
-                        </Button>
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
+              <ClientsTable clients={clients} onEdit={openEditDialog} />
             )}
           </CardContent>
         </Card>
