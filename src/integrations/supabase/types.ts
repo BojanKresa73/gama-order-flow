@@ -169,27 +169,60 @@ export type Database = {
       }
       clients: {
         Row: {
+          adresa: string | null
           created_at: string
+          drzava: string | null
           email: string | null
+          grad: string | null
           id: string
+          kontakt_osoba: string | null
+          maticni_broj: string | null
           name: string
+          napomena: string | null
           notification_email: string | null
+          pib: string | null
+          postanski_broj: string | null
+          rabat_procenat: number | null
+          rok_placanja_dana: number | null
+          telefon: string | null
           updated_at: string
         }
         Insert: {
+          adresa?: string | null
           created_at?: string
+          drzava?: string | null
           email?: string | null
+          grad?: string | null
           id?: string
+          kontakt_osoba?: string | null
+          maticni_broj?: string | null
           name: string
+          napomena?: string | null
           notification_email?: string | null
+          pib?: string | null
+          postanski_broj?: string | null
+          rabat_procenat?: number | null
+          rok_placanja_dana?: number | null
+          telefon?: string | null
           updated_at?: string
         }
         Update: {
+          adresa?: string | null
           created_at?: string
+          drzava?: string | null
           email?: string | null
+          grad?: string | null
           id?: string
+          kontakt_osoba?: string | null
+          maticni_broj?: string | null
           name?: string
+          napomena?: string | null
           notification_email?: string | null
+          pib?: string | null
+          postanski_broj?: string | null
+          rabat_procenat?: number | null
+          rok_placanja_dana?: number | null
+          telefon?: string | null
           updated_at?: string
         }
         Relationships: []
@@ -719,10 +752,7 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
-      generate_order_number: {
-        Args: Record<PropertyKey, never>
-        Returns: string
-      }
+      generate_order_number: { Args: never; Returns: string }
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"]
