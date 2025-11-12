@@ -1,5 +1,6 @@
 import { useState, useMemo } from "react";
 import { Client } from "@/hooks/useClients";
+import { ClientQuickView } from "./ClientQuickView";
 import {
   Table,
   TableBody,
@@ -25,6 +26,7 @@ import {
   ArrowUpDown,
   ChevronLeft,
   ChevronRight,
+  Eye,
 } from "lucide-react";
 
 interface ClientsTableProps {
@@ -40,6 +42,7 @@ export const ClientsTable = ({ clients, onEdit }: ClientsTableProps) => {
   const [sortDirection, setSortDirection] = useState<SortDirection>("asc");
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage, setItemsPerPage] = useState(25);
+  const [quickViewClient, setQuickViewClient] = useState<Client | null>(null);
   const [columnVisibility, setColumnVisibility] = useState({
     name: true,
     pib: true,
@@ -363,7 +366,11 @@ export const ClientsTable = ({ clients, onEdit }: ClientsTableProps) => {
               </TableRow>
             ) : (
               paginatedClients.map((client) => (
-                <TableRow key={client.id}>
+                <TableRow 
+                  key={client.id}
+                  className="cursor-pointer hover:bg-muted/50"
+                  onClick={() => setQuickViewClient(client)}
+                >
                   {columnVisibility.name && (
                     <TableCell className="font-medium">{client.name}</TableCell>
                   )}
@@ -425,14 +432,29 @@ export const ClientsTable = ({ clients, onEdit }: ClientsTableProps) => {
                     </TableCell>
                   )}
                   <TableCell className="text-right">
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => onEdit(client)}
-                    >
-                      <Pencil className="h-4 w-4 mr-2" />
-                      Edit
-                    </Button>
+                    <div className="flex items-center justify-end gap-2">
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setQuickViewClient(client);
+                        }}
+                      >
+                        <Eye className="h-4 w-4" />
+                      </Button>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          onEdit(client);
+                        }}
+                      >
+                        <Pencil className="h-4 w-4 mr-2" />
+                        Edit
+                      </Button>
+                    </div>
                   </TableCell>
                 </TableRow>
               ))
@@ -473,6 +495,13 @@ export const ClientsTable = ({ clients, onEdit }: ClientsTableProps) => {
           </div>
         </div>
       )}
+
+      {/* Quick View Modal */}
+      <ClientQuickView
+        client={quickViewClient}
+        open={!!quickViewClient}
+        onOpenChange={(open) => !open && setQuickViewClient(null)}
+      />
     </div>
   );
 };

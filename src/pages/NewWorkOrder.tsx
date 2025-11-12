@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -13,6 +13,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Checkbox } from "@/components/ui/checkbox";
 
 const NewWorkOrder = () => {
+  const [searchParams] = useSearchParams();
   const [clients, setClients] = useState<any[]>([]);
   const [plateFormats, setPlateFormats] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
@@ -21,7 +22,7 @@ const NewWorkOrder = () => {
   const { toast } = useToast();
 
   const [formData, setFormData] = useState({
-    client_id: "",
+    client_id: searchParams.get("clientId") || "",
     notes: "",
     // CTP fields
     trial_print: false,
