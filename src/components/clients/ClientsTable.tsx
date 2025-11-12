@@ -36,7 +36,6 @@ type SortField = keyof Client | null;
 type SortDirection = "asc" | "desc";
 
 export const ClientsTable = ({ clients, onEdit }: ClientsTableProps) => {
-  const [searchQuery, setSearchQuery] = useState("");
   const [sortField, setSortField] = useState<SortField>("name");
   const [sortDirection, setSortDirection] = useState<SortDirection>("asc");
   const [currentPage, setCurrentPage] = useState(1);
@@ -56,27 +55,11 @@ export const ClientsTable = ({ clients, onEdit }: ClientsTableProps) => {
     created_at: true,
   });
 
-  // Filter clients based on search query
-  const filteredClients = useMemo(() => {
-    if (!searchQuery) return clients;
-    
-    const query = searchQuery.toLowerCase();
-    return clients.filter((client) => {
-      return (
-        client.name?.toLowerCase().includes(query) ||
-        client.pib?.toLowerCase().includes(query) ||
-        client.email?.toLowerCase().includes(query) ||
-        client.grad?.toLowerCase().includes(query) ||
-        client.telefon?.toLowerCase().includes(query)
-      );
-    });
-  }, [clients, searchQuery]);
-
   // Sort clients
   const sortedClients = useMemo(() => {
-    if (!sortField) return filteredClients;
+    if (!sortField) return clients;
 
-    return [...filteredClients].sort((a, b) => {
+    return [...clients].sort((a, b) => {
       const aVal = a[sortField];
       const bVal = b[sortField];
 
@@ -87,7 +70,7 @@ export const ClientsTable = ({ clients, onEdit }: ClientsTableProps) => {
       if (aVal > bVal) return sortDirection === "asc" ? 1 : -1;
       return 0;
     });
-  }, [filteredClients, sortField, sortDirection]);
+  }, [clients, sortField, sortDirection]);
 
   // Paginate clients
   const paginatedClients = useMemo(() => {
@@ -167,18 +150,13 @@ export const ClientsTable = ({ clients, onEdit }: ClientsTableProps) => {
 
   return (
     <div className="space-y-4">
+      {/* Count */}
+      <div className="text-sm text-muted-foreground">
+        Pronađeno: <span className="font-semibold text-foreground">{sortedClients.length}</span> klijenata
+      </div>
+
       {/* Toolbar */}
       <div className="flex items-center gap-4">
-        <Input
-          placeholder="Pretraga po nazivu, PIB-u, email-u, gradu, telefonu..."
-          value={searchQuery}
-          onChange={(e) => {
-            setSearchQuery(e.target.value);
-            setCurrentPage(1);
-          }}
-          className="max-w-md"
-        />
-        
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
             <Button variant="outline" size="sm">

@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
@@ -7,6 +7,7 @@ import { ArrowLeft, Plus, Users } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useClients, Client } from "@/hooks/useClients";
 import { ClientsTable } from "@/components/clients/ClientsTable";
+import { ClientsFilters, ClientFilters } from "@/components/clients/ClientsFilters";
 import {
   Dialog,
   DialogContent,
@@ -39,9 +40,29 @@ const Clients = () => {
     napomena: "",
   });
   const [validationErrors, setValidationErrors] = useState<Record<string, string>>({});
+  const [filters, setFilters] = useState<ClientFilters>({
+    search: "",
+    grad: "",
+    pibFilter: "all",
+    rokPlacanjaMin: 0,
+    rokPlacanjaMax: 120,
+    rabatMin: 0,
+    rabatMax: 100,
+  });
   const navigate = useNavigate();
   const { toast } = useToast();
-  const { data: clients = [], isLoading, refetch } = useClients();
+  const { data: clients = [], isLoading, refetch } = useClients(filters);
+
+  // Get distinct cities for filter dropdown
+  const cities = useMemo(() => {
+    const allClients = clients || [];
+    const uniqueCities = new Set(
+      allClients
+        .map((c) => c.grad)
+        .filter((city): city is string => !!city)
+    );
+    return Array.from(uniqueCities).sort();
+  }, [clients]);
 
   const validateClient = (client: any) => {
     const errors: Record<string, string> = {};
@@ -409,24 +430,28 @@ const Clients = () => {
       </header>
 
       <main className="container mx-auto px-4 py-8">
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Users className="h-5 w-5" />
-              Svi klijenti
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            {clients.length === 0 ? (
-              <div className="text-center py-12 text-muted-foreground">
-                <Users className="h-12 w-12 mx-auto mb-4 opacity-50" />
-                <p>Nema klijenata. Dodajte prvog klijenta.</p>
-              </div>
-            ) : (
-              <ClientsTable clients={clients} onEdit={openEditDialog} />
-            )}
-          </CardContent>
-        </Card>
+        <div className="space-y-6">
+          <ClientsFilters cities={cities} onFiltersChange={setFilters} />
+          
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Users className="h-5 w-5" />
+                Svi klijenti
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              {clients.length === 0 ? (
+                <div className="text-center py-12 text-muted-foreground">
+                  <Users className="h-12 w-12 mx-auto mb-4 opacity-50" />
+                  <p>Nema klijenata. Dodajte prvog klijenta.</p>
+                </div>
+              ) : (
+                <ClientsTable clients={clients} onEdit={openEditDialog} />
+              )}
+            </CardContent>
+          </Card>
+        </div>
       </main>
 
       {/* Edit Client Dialog */}

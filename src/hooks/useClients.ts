@@ -1,5 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import { useMemo } from "react";
 
 export interface Client {
   id: string;
@@ -21,8 +22,18 @@ export interface Client {
   updated_at: string;
 }
 
-export const useClients = () => {
-  return useQuery({
+export interface ClientFilters {
+  search?: string;
+  grad?: string;
+  pibFilter?: "all" | "with" | "without";
+  rokPlacanjaMin?: number;
+  rokPlacanjaMax?: number;
+  rabatMin?: number;
+  rabatMax?: number;
+}
+
+export const useClients = (filters?: ClientFilters) => {
+  const query = useQuery({
     queryKey: ["clients"],
     queryFn: async () => {
       const { data, error } = await supabase
@@ -34,4 +45,59 @@ export const useClients = () => {
       return (data || []) as Client[];
     },
   });
+
+  const filteredData = useMemo(() => {
+    if (!query.data || !filters) return query.data || [];
+
+    return query.data.filter((client) => {
+      // Search filter
+      if (filters.search) {
+        const searchLower = filters.search.toLowerCase();
+        const matchesSearch =
+          client.name?.toLowerCase().includes(searchLower) ||
+          client.pib?.toLowerCase().includes(searchLower) ||
+          client.email?.toLowerCase().includes(searchLower) ||
+          client.grad?.toLowerCase().includes(searchLower) ||
+          client.telefon?.toLowerCase().includes(searchLower);
+        
+        if (!matchesSearch) return false;
+      }
+
+      // Grad filter
+      if (filters.grad && client.grad !== filters.grad) {
+        return false;
+      }
+
+      // PIB filter
+      if (filters.pibFilter === "with" && !client.pib) {
+        return false;
+      }
+      if (filters.pibFilter === "without" && client.pib) {
+        return false;
+      }
+
+      // Rok plaćanja range
+      if (filters.rokPlacanjaMin !== undefined && client.rok_placanja_dana < filters.rokPlacanjaMin) {
+        return false;
+      }
+      if (filters.rokPlacanjaMax !== undefined && client.rok_placanja_dana > filters.rokPlacanjaMax) {
+        return false;
+      }
+
+      // Rabat range
+      if (filters.rabatMin !== undefined && client.rabat_procenat < filters.rabatMin) {
+        return false;
+      }
+      if (filters.rabatMax !== undefined && client.rabat_procenat > filters.rabatMax) {
+        return false;
+      }
+
+      return true;
+    });
+  }, [query.data, filters]);
+
+  return {
+    ...query,
+    data: filteredData,
+  };
 };
