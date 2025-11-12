@@ -5,13 +5,17 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
-import { ArrowLeft, Plus, FileText, Send } from "lucide-react";
+import { ArrowLeft, Plus, FileText, Send, Eye } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { OrderFilesDialog } from "@/components/work-orders/OrderFilesDialog";
 
 const WorkOrders = () => {
   const [workOrders, setWorkOrders] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [sendingDeliveryNote, setSendingDeliveryNote] = useState<string | null>(null);
+  const [filesDialogOpen, setFilesDialogOpen] = useState(false);
+  const [selectedOrderId, setSelectedOrderId] = useState<string>("");
+  const [filesDialogStatus, setFilesDialogStatus] = useState<"open" | "closed">("open");
   const navigate = useNavigate();
   const { toast } = useToast();
 
@@ -97,6 +101,13 @@ const WorkOrders = () => {
     }
   };
 
+  const handleShowFiles = (orderId: string, status: "open" | "closed", e: React.MouseEvent) => {
+    e.stopPropagation();
+    setSelectedOrderId(orderId);
+    setFilesDialogStatus(status);
+    setFilesDialogOpen(true);
+  };
+
   if (loading) {
     return <div className="flex items-center justify-center min-h-screen">Učitavanje...</div>;
   }
@@ -142,7 +153,7 @@ const WorkOrders = () => {
                     <TableHead>Status</TableHead>
                     <TableHead>Kreirao</TableHead>
                     <TableHead>Datum</TableHead>
-                    <TableHead>Akcije</TableHead>
+                    <TableHead className="text-right">Akcije</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -159,15 +170,33 @@ const WorkOrders = () => {
                       <TableCell>{order.profiles?.full_name}</TableCell>
                       <TableCell>{new Date(order.created_at).toLocaleDateString('sr-RS')}</TableCell>
                       <TableCell>
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={(e) => handleSendDeliveryNote(order.id, e)}
-                          disabled={sendingDeliveryNote === order.id}
-                        >
-                          <Send className="h-4 w-4 mr-2" />
-                          {sendingDeliveryNote === order.id ? "Šaljem..." : "Otpremnica"}
-                        </Button>
+                        <div className="flex justify-end gap-2">
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={(e) => handleShowFiles(order.id, "open", e)}
+                          >
+                            <Eye className="h-4 w-4 mr-2" />
+                            Prikaz
+                          </Button>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={(e) => handleShowFiles(order.id, "closed", e)}
+                          >
+                            <Eye className="h-4 w-4 mr-2" />
+                            Prikaz zatvorenih
+                          </Button>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={(e) => handleSendDeliveryNote(order.id, e)}
+                            disabled={sendingDeliveryNote === order.id}
+                          >
+                            <Send className="h-4 w-4 mr-2" />
+                            {sendingDeliveryNote === order.id ? "Šaljem..." : "Otpremnica"}
+                          </Button>
+                        </div>
                       </TableCell>
                     </TableRow>
                   ))}
@@ -177,6 +206,13 @@ const WorkOrders = () => {
           </CardContent>
         </Card>
       </main>
+
+      <OrderFilesDialog
+        orderId={selectedOrderId}
+        status={filesDialogStatus}
+        open={filesDialogOpen}
+        onOpenChange={setFilesDialogOpen}
+      />
     </div>
   );
 };
