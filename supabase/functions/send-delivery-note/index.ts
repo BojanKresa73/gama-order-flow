@@ -42,6 +42,7 @@ const handler = async (req: Request): Promise<Response> => {
         client:clients (
           id,
           name,
+          pib,
           notification_email
         )
       `)
@@ -85,6 +86,7 @@ const handler = async (req: Request): Promise<Response> => {
         work_order_id: workOrderId,
         delivery_number: deliveryNumber,
         client_name: workOrder.client.name,
+        client_pib: workOrder.client.pib,
         opened_at: workOrder.created_at,
         closed_at: workOrder.closed_at || new Date().toISOString(),
         items: fileEntries.map((fe) => ({
@@ -125,6 +127,7 @@ const handler = async (req: Request): Promise<Response> => {
               </div>
               <div class="content">
                 <p><strong>Klijent:</strong> ${workOrder.client.name}</p>
+                ${workOrder.client.pib ? `<p><strong>PIB:</strong> ${workOrder.client.pib}</p>` : ''}
                 <p><strong>Radni nalog:</strong> ${workOrder.order_number}</p>
                 <p><strong>Datum otvaranja:</strong> ${new Date(
                   workOrder.created_at
