@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Plus, Edit, Trash2, X, Check } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -13,6 +13,8 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { z } from "zod";
+import { supabase } from "@/integrations/supabase/client";
+import { computeFilmJobClient } from "@/lib/filmCalculations";
 
 const filmJobSchema = z.object({
   file_name: z.string().trim().min(1, "Naziv fajla je obavezan"),
@@ -32,6 +34,9 @@ export interface LocalFilmJob {
   allow_rotate_90: boolean;
   margin_mm: number;
   note?: string;
+  computed_rotation_deg?: number;
+  computed_m_per_piece?: number;
+  computed_total_m?: number;
 }
 
 interface LocalFilmJobsTableProps {
@@ -43,6 +48,8 @@ export const LocalFilmJobsTable = ({ jobs, onChange }: LocalFilmJobsTableProps) 
   const [isAdding, setIsAdding] = useState(false);
   const [editingIndex, setEditingIndex] = useState<number | null>(null);
   const [errors, setErrors] = useState<Record<string, string>>({});
+  const [previewCompute, setPreviewCompute] = useState<any>(null);
+  const [computedJobs, setComputedJobs] = useState<Record<number, any>>({});
 
   const [formData, setFormData] = useState<LocalFilmJob>({
     file_name: "",
@@ -53,6 +60,57 @@ export const LocalFilmJobsTable = ({ jobs, onChange }: LocalFilmJobsTableProps) 
     margin_mm: 0,
     note: "",
   });
+
+  // Compute existing jobs
+  useEffect(() => {
+    const computeAllJobs = async () => {
+      const { data: settings } = await supabase
+        .from('film_settings')
+        .select('*')
+        .single();
+      
+      if (settings) {
+        const computed: Record<number, any> = {};
+        jobs.forEach((job, index) => {
+          if (job.width_mm && job.height_mm && job.qty) {
+            const result = computeFilmJobClient(job, settings);
+            if (!('error' in result)) {
+              computed[index] = result;
+            }
+          }
+        });
+        setComputedJobs(computed);
+      }
+    };
+    
+    computeAllJobs();
+  }, [jobs]);
+
+  // Real-time calculation preview for form
+  useEffect(() => {
+    const fetchAndCompute = async () => {
+      if (formData.width_mm && formData.height_mm && formData.qty) {
+        const { data: settings } = await supabase
+          .from('film_settings')
+          .select('*')
+          .single();
+        
+        if (settings) {
+          const result = computeFilmJobClient({
+            width_mm: formData.width_mm || 0,
+            height_mm: formData.height_mm || 0,
+            qty: formData.qty || 1,
+            allow_rotate_90: formData.allow_rotate_90 ?? true,
+            margin_mm: formData.margin_mm || 0,
+          }, settings);
+          
+          setPreviewCompute('error' in result ? null : result);
+        }
+      }
+    };
+    
+    fetchAndCompute();
+  }, [formData.width_mm, formData.height_mm, formData.qty, formData.allow_rotate_90, formData.margin_mm]);
 
   const resetForm = () => {
     setFormData({
@@ -193,6 +251,15 @@ export const LocalFilmJobsTable = ({ jobs, onChange }: LocalFilmJobsTableProps) 
         )}
       </TableCell>
       <TableCell>
+        {previewCompute ? `${previewCompute.computed_rotation_deg}°` : '-'}
+      </TableCell>
+      <TableCell>
+        {previewCompute ? previewCompute.computed_m_per_piece.toFixed(4) : '-'}
+      </TableCell>
+      <TableCell>
+        {previewCompute ? previewCompute.computed_total_m.toFixed(2) : '-'}
+      </TableCell>
+      <TableCell>
         <Textarea
           value={formData.note}
           onChange={(e) => setFormData({ ...formData, note: e.target.value })}
@@ -240,6 +307,9 @@ export const LocalFilmJobsTable = ({ jobs, onChange }: LocalFilmJobsTableProps) 
               <TableHead>Količina</TableHead>
               <TableHead className="text-center">Rotacija 90°</TableHead>
               <TableHead>Margina (mm)</TableHead>
+              <TableHead>Orijentacija</TableHead>
+              <TableHead>m/kom</TableHead>
+              <TableHead>Ukupno m</TableHead>
               <TableHead>Napomena</TableHead>
               <TableHead>Akcije</TableHead>
             </TableRow>
@@ -248,7 +318,7 @@ export const LocalFilmJobsTable = ({ jobs, onChange }: LocalFilmJobsTableProps) 
             {isAdding && renderFormRow()}
             {jobs.length === 0 && !isAdding ? (
               <TableRow>
-                <TableCell colSpan={8} className="text-center text-muted-foreground">
+                <TableCell colSpan={11} className="text-center text-muted-foreground">
                   Nema stavki. Kliknite "Dodaj stavku" da dodate prvu.
                 </TableCell>
               </TableRow>
@@ -266,6 +336,15 @@ export const LocalFilmJobsTable = ({ jobs, onChange }: LocalFilmJobsTableProps) 
                       {job.allow_rotate_90 ? "✓" : "✗"}
                     </TableCell>
                     <TableCell>{job.margin_mm}</TableCell>
+                    <TableCell>
+                      {computedJobs[index] ? `${computedJobs[index].computed_rotation_deg}°` : '-'}
+                    </TableCell>
+                    <TableCell>
+                      {computedJobs[index] ? computedJobs[index].computed_m_per_piece.toFixed(4) : '-'}
+                    </TableCell>
+                    <TableCell>
+                      {computedJobs[index] ? computedJobs[index].computed_total_m.toFixed(2) : '-'}
+                    </TableCell>
                     <TableCell>{job.note || "-"}</TableCell>
                     <TableCell>
                       <div className="flex gap-2">

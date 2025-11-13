@@ -1,5 +1,7 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Plus, Edit, Trash2, X, Check } from "lucide-react";
+import { supabase } from "@/integrations/supabase/client";
+import { computeFilmJobClient } from "@/lib/filmCalculations";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -36,6 +38,7 @@ export const FilmJobsTable = ({ workOrderId }: FilmJobsTableProps) => {
   const [isAdding, setIsAdding] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [errors, setErrors] = useState<Record<string, string>>({});
+  const [previewCompute, setPreviewCompute] = useState<any>(null);
 
   const [formData, setFormData] = useState<Partial<FilmJob>>({
     file_name: "",
@@ -46,6 +49,32 @@ export const FilmJobsTable = ({ workOrderId }: FilmJobsTableProps) => {
     margin_mm: 0,
     note: "",
   });
+
+  // Real-time calculation preview
+  useEffect(() => {
+    const fetchAndCompute = async () => {
+      if (formData.width_mm && formData.height_mm && formData.qty) {
+        const { data: settings } = await supabase
+          .from('film_settings')
+          .select('*')
+          .single();
+        
+        if (settings) {
+          const result = computeFilmJobClient({
+            width_mm: formData.width_mm || 0,
+            height_mm: formData.height_mm || 0,
+            qty: formData.qty || 1,
+            allow_rotate_90: formData.allow_rotate_90 ?? true,
+            margin_mm: formData.margin_mm || 0,
+          }, settings);
+          
+          setPreviewCompute('error' in result ? null : result);
+        }
+      }
+    };
+    
+    fetchAndCompute();
+  }, [formData.width_mm, formData.height_mm, formData.qty, formData.allow_rotate_90, formData.margin_mm]);
 
   const resetForm = () => {
     setFormData({
@@ -191,6 +220,15 @@ export const FilmJobsTable = ({ workOrderId }: FilmJobsTableProps) => {
         )}
       </TableCell>
       <TableCell>
+        {previewCompute ? `${previewCompute.computed_rotation_deg}°` : '-'}
+      </TableCell>
+      <TableCell>
+        {previewCompute ? previewCompute.computed_m_per_piece.toFixed(4) : '-'}
+      </TableCell>
+      <TableCell>
+        {previewCompute ? previewCompute.computed_total_m.toFixed(2) : '-'}
+      </TableCell>
+      <TableCell>
         <Textarea
           value={formData.note}
           onChange={(e) => setFormData({ ...formData, note: e.target.value })}
@@ -239,6 +277,9 @@ export const FilmJobsTable = ({ workOrderId }: FilmJobsTableProps) => {
               <TableHead>Količina</TableHead>
               <TableHead className="text-center">Rotacija 90°</TableHead>
               <TableHead>Margina (mm)</TableHead>
+              <TableHead>Orijentacija</TableHead>
+              <TableHead>m/kom</TableHead>
+              <TableHead>Ukupno m</TableHead>
               <TableHead>Napomena</TableHead>
               <TableHead>Akcije</TableHead>
             </TableRow>
@@ -247,13 +288,13 @@ export const FilmJobsTable = ({ workOrderId }: FilmJobsTableProps) => {
             {isAdding && renderFormRow()}
             {isLoading ? (
               <TableRow>
-                <TableCell colSpan={8} className="text-center">
+                <TableCell colSpan={11} className="text-center">
                   Učitavanje...
                 </TableCell>
               </TableRow>
             ) : filmJobs.length === 0 && !isAdding ? (
               <TableRow>
-                <TableCell colSpan={8} className="text-center text-muted-foreground">
+                <TableCell colSpan={11} className="text-center text-muted-foreground">
                   Nema stavki. Kliknite "Dodaj stavku" da dodate prvu.
                 </TableCell>
               </TableRow>
@@ -271,6 +312,21 @@ export const FilmJobsTable = ({ workOrderId }: FilmJobsTableProps) => {
                       {job.allow_rotate_90 ? "✓" : "✗"}
                     </TableCell>
                     <TableCell>{job.margin_mm}</TableCell>
+                    <TableCell>
+                      {job.computed_rotation_deg !== null && job.computed_rotation_deg !== undefined
+                        ? `${job.computed_rotation_deg}°`
+                        : "-"}
+                    </TableCell>
+                    <TableCell>
+                      {job.computed_m_per_piece !== null && job.computed_m_per_piece !== undefined
+                        ? Number(job.computed_m_per_piece).toFixed(4)
+                        : "-"}
+                    </TableCell>
+                    <TableCell>
+                      {job.computed_total_m !== null && job.computed_total_m !== undefined
+                        ? Number(job.computed_total_m).toFixed(2)
+                        : "-"}
+                    </TableCell>
                     <TableCell>{job.note || "-"}</TableCell>
                     <TableCell>
                       <div className="flex gap-2">
