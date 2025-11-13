@@ -46,8 +46,6 @@ const NewWorkOrder = () => {
     sheets_used: 0,
     clicks_count: 0,
     test_clicks: 0,
-    // Film fields
-    film_note: "",
   });
 
   const [ctpItems, setCtpItems] = useState<Array<{ file_name: string; plate_format_id: string; quantity: number }>>([]);
@@ -128,7 +126,6 @@ const NewWorkOrder = () => {
         workOrderData.clicks_count = formData.clicks_count;
         workOrderData.test_clicks = formData.test_clicks;
       } else if (orderType === "film") {
-        workOrderData.film_note = formData.film_note;
         workOrderData.film_price_override_eur_per_m = filmPriceOverride;
       }
 
@@ -727,17 +724,6 @@ const NewWorkOrder = () => {
 
                     <TabsContent value="jobs" className="space-y-4 mt-4">
                       <div className="space-y-4">
-                        <div className="space-y-2">
-                          <Label htmlFor="film_note">Napomena za filmovanje</Label>
-                          <Textarea
-                            id="film_note"
-                            value={formData.film_note}
-                            onChange={(e) => setFormData({ ...formData, film_note: e.target.value })}
-                            rows={2}
-                            placeholder="Dodatne informacije za filmovanje..."
-                          />
-                        </div>
-
                         {filmSettings && filmJobs.length > 0 && (
                           <FilmJobsSummary
                             totalMeters={filmJobs.reduce((sum, job) => {
