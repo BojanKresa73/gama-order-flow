@@ -3,7 +3,7 @@ import { useNavigate, useParams } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { ArrowLeft, Printer, Info } from "lucide-react";
+import { ArrowLeft, Printer, Info, Download, ExternalLink } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 
 // Helper function to format date as dd.MM.yyyy.
@@ -22,6 +22,7 @@ const OrderDeliveryNote = () => {
   const [loading, setLoading] = useState(true);
   const [workOrder, setWorkOrder] = useState<any>(null);
   const [fileEntries, setFileEntries] = useState<any[]>([]);
+  const [deliveryNote, setDeliveryNote] = useState<any>(null);
 
   useEffect(() => {
     checkAuth();
@@ -69,6 +70,19 @@ const OrderDeliveryNote = () => {
 
       if (filesError) throw filesError;
       setFileEntries(filesData || []);
+
+      // Fetch delivery note if exists
+      const { data: deliveryNoteData, error: dnError } = await supabase
+        .from("delivery_notes")
+        .select("*")
+        .eq("work_order_id", orderId)
+        .maybeSingle();
+
+      if (dnError) {
+        console.error("Error fetching delivery note:", dnError);
+      } else {
+        setDeliveryNote(deliveryNoteData);
+      }
     } catch (error: any) {
       toast({
         title: "Greška",
@@ -82,6 +96,57 @@ const OrderDeliveryNote = () => {
 
   const handlePrint = () => {
     window.print();
+  };
+
+  const handleDownloadPDF = async () => {
+    if (!deliveryNote?.pdf_path) {
+      toast({
+        title: "Greška",
+        description: "PDF još nije generisan",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    try {
+      const { data, error } = await supabase.storage
+        .from("delivery-notes")
+        .download(deliveryNote.pdf_path.replace("delivery-notes/", ""));
+
+      if (error) throw error;
+
+      const url = URL.createObjectURL(data);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `${workOrder.order_number}.pdf`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+    } catch (error: any) {
+      toast({
+        title: "Greška",
+        description: error.message,
+        variant: "destructive",
+      });
+    }
+  };
+
+  const handleOpenPDF = () => {
+    if (!deliveryNote?.pdf_path) {
+      toast({
+        title: "Greška",
+        description: "PDF još nije generisan",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    const { data } = supabase.storage
+      .from("delivery-notes")
+      .getPublicUrl(deliveryNote.pdf_path.replace("delivery-notes/", ""));
+
+    window.open(data.publicUrl, "_blank");
   };
 
   if (loading) {
@@ -108,12 +173,26 @@ const OrderDeliveryNote = () => {
             <Button variant="ghost" size="icon" onClick={() => navigate("/work-orders")}>
               <ArrowLeft className="h-5 w-5" />
             </Button>
-            <h1 className="text-2xl font-bold">Otpremnica - {workOrder.order_number}</h1>
+          <h1 className="text-2xl font-bold">Otpremnica - {workOrder.order_number}</h1>
           </div>
-          <Button onClick={handlePrint}>
-            <Printer className="h-4 w-4 mr-2" />
-            Print
-          </Button>
+          <div className="flex gap-2">
+            {deliveryNote?.pdf_path && (
+              <>
+                <Button variant="outline" onClick={handleDownloadPDF}>
+                  <Download className="h-4 w-4 mr-2" />
+                  Preuzmi PDF
+                </Button>
+                <Button variant="outline" onClick={handleOpenPDF}>
+                  <ExternalLink className="h-4 w-4 mr-2" />
+                  Otvori u novom tabu
+                </Button>
+              </>
+            )}
+            <Button onClick={handlePrint}>
+              <Printer className="h-4 w-4 mr-2" />
+              Print
+            </Button>
+          </div>
         </div>
       </header>
 

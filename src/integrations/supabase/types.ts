@@ -293,6 +293,7 @@ export type Database = {
           id: string
           items: Json
           opened_at: string
+          pdf_path: string | null
           sent_at: string | null
           sent_to_email: string | null
           work_order_id: string
@@ -306,6 +307,7 @@ export type Database = {
           id?: string
           items: Json
           opened_at: string
+          pdf_path?: string | null
           sent_at?: string | null
           sent_to_email?: string | null
           work_order_id: string
@@ -319,6 +321,7 @@ export type Database = {
           id?: string
           items?: Json
           opened_at?: string
+          pdf_path?: string | null
           sent_at?: string | null
           sent_to_email?: string | null
           work_order_id?: string

@@ -1,6 +1,7 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.3";
 import { Resend } from "https://esm.sh/resend@4.0.0";
+import { PDFDocument, StandardFonts, rgb } from "https://esm.sh/pdf-lib@1.17.1";
 
 const resend = new Resend(Deno.env.get("RESEND_API_KEY"));
 
@@ -21,6 +22,161 @@ const formatDate = (dateString: string): string => {
   const month = String(date.getMonth() + 1).padStart(2, "0");
   const year = date.getFullYear();
   return `${day}.${month}.${year}.`;
+};
+
+// Helper function to generate PDF
+const generateDeliveryNotePDF = async (
+  workOrder: any,
+  fileEntries: any[],
+  deliveryNumber: string
+): Promise<Uint8Array> => {
+  const pdfDoc = await PDFDocument.create();
+  const page = pdfDoc.addPage([595, 420]); // A5 landscape (595x420 points)
+  const font = await pdfDoc.embedFont(StandardFonts.Helvetica);
+  const fontBold = await pdfDoc.embedFont(StandardFonts.HelveticaBold);
+  
+  const { width, height } = page.getSize();
+  let yPosition = height - 40;
+
+  // Header - Company Info
+  page.drawText("Gama United", {
+    x: 40,
+    y: yPosition,
+    size: 14,
+    font: fontBold,
+    color: rgb(0, 0, 0),
+  });
+  yPosition -= 15;
+  page.drawText("Adresa vaše firme", { x: 40, y: yPosition, size: 9, font });
+  yPosition -= 12;
+  page.drawText("Grad, Poštanski broj", { x: 40, y: yPosition, size: 9, font });
+  yPosition -= 12;
+  page.drawText("PIB: 123456789", { x: 40, y: yPosition, size: 9, font });
+
+  // Header - Delivery Info (right side)
+  const rightX = width - 200;
+  yPosition = height - 40;
+  page.drawText("OTPREMNICA", {
+    x: rightX,
+    y: yPosition,
+    size: 16,
+    font: fontBold,
+  });
+  yPosition -= 20;
+  page.drawText(`Broj naloga: ${workOrder.order_number}`, {
+    x: rightX,
+    y: yPosition,
+    size: 10,
+    font,
+  });
+  yPosition -= 15;
+  page.drawText(
+    `Datum zatvaranja: ${workOrder.closed_at ? formatDate(workOrder.closed_at) : "-"}`,
+    { x: rightX, y: yPosition, size: 10, font }
+  );
+
+  // Line separator
+  yPosition = height - 105;
+  page.drawLine({
+    start: { x: 40, y: yPosition },
+    end: { x: width - 40, y: yPosition },
+    thickness: 2,
+    color: rgb(0, 0, 0),
+  });
+
+  // Client Box
+  yPosition -= 20;
+  page.drawRectangle({
+    x: 40,
+    y: yPosition - 35,
+    width: width - 80,
+    height: 40,
+    borderColor: rgb(0, 0, 0),
+    borderWidth: 1,
+    color: rgb(0.98, 0.98, 0.98),
+  });
+  
+  page.drawText(`Klijent: ${workOrder.client.name}`, {
+    x: 50,
+    y: yPosition - 15,
+    size: 10,
+    font,
+  });
+  if (workOrder.client.pib) {
+    page.drawText(`PIB: ${workOrder.client.pib}`, {
+      x: 50,
+      y: yPosition - 28,
+      size: 10,
+      font,
+    });
+  }
+
+  // Table Header
+  yPosition -= 60;
+  const tableTop = yPosition;
+  const colX = { num: 40, filename: 80, format: 320, quantity: 480 };
+  
+  // Table header background
+  page.drawRectangle({
+    x: 40,
+    y: yPosition - 18,
+    width: width - 80,
+    height: 20,
+    color: rgb(0.91, 0.91, 0.91),
+  });
+
+  page.drawText("#", { x: colX.num, y: yPosition - 12, size: 9, font: fontBold });
+  page.drawText("Naziv fajla", { x: colX.filename, y: yPosition - 12, size: 9, font: fontBold });
+  page.drawText("Format ploče", { x: colX.format, y: yPosition - 12, size: 9, font: fontBold });
+  page.drawText("Količina", { x: colX.quantity, y: yPosition - 12, size: 9, font: fontBold });
+
+  // Table rows
+  yPosition -= 25;
+  fileEntries.forEach((entry, index) => {
+    if (yPosition < 80) return; // Prevent overflow
+    
+    page.drawText(String(index + 1), { x: colX.num + 5, y: yPosition, size: 9, font });
+    page.drawText(
+      entry.filename.length > 35 ? entry.filename.substring(0, 35) + "..." : entry.filename,
+      { x: colX.filename, y: yPosition, size: 9, font }
+    );
+    page.drawText(
+      entry.plate_format?.format_name || "-",
+      { x: colX.format, y: yPosition, size: 9, font }
+    );
+    page.drawText(
+      String(entry.quantity || "-"),
+      { x: colX.quantity + 15, y: yPosition, size: 9, font }
+    );
+    
+    yPosition -= 15;
+  });
+
+  // Table borders
+  const tableHeight = tableTop - yPosition + 15;
+  page.drawRectangle({
+    x: 40,
+    y: yPosition,
+    width: width - 80,
+    height: tableHeight,
+    borderColor: rgb(0.85, 0.85, 0.85),
+    borderWidth: 1,
+  });
+
+  // Footer
+  page.drawLine({
+    start: { x: 40, y: 60 },
+    end: { x: width - 40, y: 60 },
+    thickness: 1,
+    color: rgb(0.85, 0.85, 0.85),
+  });
+  
+  page.drawText("Robu preuzeo: _________________", { x: 40, y: 40, size: 9, font });
+  page.drawText("Broj lične karte: _________________", { x: 250, y: 40, size: 9, font });
+  page.drawText("Strana 1/1", { x: width - 100, y: 40, size: 9, font });
+
+  const pdfBytes = await pdfDoc.save();
+  return pdfBytes;
 };
 
 const handler = async (req: Request): Promise<Response> => {
@@ -139,6 +295,38 @@ const handler = async (req: Request): Promise<Response> => {
       console.error("Error creating delivery note:", dnError);
       throw new Error("Error creating delivery note");
     }
+
+    // Generate PDF
+    console.log("Generating PDF...");
+    const pdfBytes = await generateDeliveryNotePDF(
+      workOrder,
+      fileEntries,
+      deliveryNumber
+    );
+
+    // Upload PDF to storage
+    const pdfFileName = `${workOrder.order_number}.pdf`;
+    const pdfPath = `delivery-notes/${pdfFileName}`;
+    
+    const { error: uploadError } = await supabaseClient.storage
+      .from("delivery-notes")
+      .upload(pdfPath, pdfBytes, {
+        contentType: "application/pdf",
+        upsert: true,
+      });
+
+    if (uploadError) {
+      console.error("Error uploading PDF:", uploadError);
+      throw new Error("Error uploading PDF to storage");
+    }
+
+    console.log("PDF uploaded to:", pdfPath);
+
+    // Update delivery note with PDF path
+    await supabaseClient
+      .from("delivery_notes")
+      .update({ pdf_path: pdfPath })
+      .eq("id", deliveryNote.id);
 
     // Send email if notification email exists
     if (workOrder.client.notification_email) {
