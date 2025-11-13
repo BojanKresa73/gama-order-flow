@@ -73,8 +73,11 @@ const Clients = () => {
     }
 
     // PIB validation: 9 digits (only if provided)
-    if (client.pib && !/^\d{9}$/.test(client.pib.trim())) {
-      errors.pib = "PIB mora sadržati tačno 9 cifara";
+    if (client.pib && client.pib.trim()) {
+      const pibDigits = client.pib.replace(/\s/g, '');
+      if (!/^\d{9}$/.test(pibDigits)) {
+        errors.pib = "PIB mora biti tačno 9 cifara";
+      }
     }
 
     // Email validation (if provided)
@@ -114,9 +117,12 @@ const Clients = () => {
     }
 
     try {
+      // Normalize PIB before saving
+      const normalizedPib = newClient.pib?.trim().replace(/\s/g, '') || null;
+      
       const clientData = {
         ...newClient,
-        pib: newClient.pib.trim() || null,
+        pib: normalizedPib,
         maticni_broj: newClient.maticni_broj.trim() || null,
         adresa: newClient.adresa.trim() || null,
         grad: newClient.grad.trim() || null,
@@ -132,7 +138,18 @@ const Clients = () => {
         .from("clients")
         .insert([clientData]);
 
-      if (error) throw error;
+      if (error) {
+        // Check for unique constraint violation
+        if (error.code === '23505' && error.message.includes('idx_clients_pib_unique')) {
+          toast({
+            title: "Greška",
+            description: "PIB već postoji kod drugog klijenta",
+            variant: "destructive",
+          });
+          return;
+        }
+        throw error;
+      }
 
       toast({
         title: "Uspeh",
@@ -183,9 +200,12 @@ const Clients = () => {
     }
     
     try {
+      // Normalize PIB before saving
+      const normalizedPib = editingClient.pib?.trim().replace(/\s/g, '') || null;
+      
       const clientData = {
         name: editingClient.name,
-        pib: editingClient.pib?.trim() || null,
+        pib: normalizedPib,
         maticni_broj: editingClient.maticni_broj?.trim() || null,
         adresa: editingClient.adresa?.trim() || null,
         grad: editingClient.grad?.trim() || null,
@@ -205,7 +225,18 @@ const Clients = () => {
         .update(clientData)
         .eq("id", editingClient.id);
 
-      if (error) throw error;
+      if (error) {
+        // Check for unique constraint violation
+        if (error.code === '23505' && error.message.includes('idx_clients_pib_unique')) {
+          toast({
+            title: "Greška",
+            description: "PIB već postoji kod drugog klijenta",
+            variant: "destructive",
+          });
+          return;
+        }
+        throw error;
+      }
 
       toast({
         title: "Uspeh",
@@ -273,7 +304,12 @@ const Clients = () => {
                   <Input
                     id="pib"
                     value={newClient.pib}
-                    onChange={(e) => setNewClient({ ...newClient, pib: e.target.value })}
+                    onChange={(e) => {
+                      // Allow only digits, max 9 characters
+                      const digitsOnly = e.target.value.replace(/\D/g, '').slice(0, 9);
+                      setNewClient({ ...newClient, pib: digitsOnly });
+                      setValidationErrors((prev) => ({ ...prev, pib: "" }));
+                    }}
                     placeholder="123456789"
                     maxLength={9}
                     className={validationErrors.pib ? "border-destructive" : ""}
@@ -480,7 +516,12 @@ const Clients = () => {
               <Input
                 id="edit-pib"
                 value={editingClient?.pib || ""}
-                onChange={(e) => setEditingClient({ ...editingClient, pib: e.target.value })}
+                onChange={(e) => {
+                  // Allow only digits, max 9 characters
+                  const digitsOnly = e.target.value.replace(/\D/g, '').slice(0, 9);
+                  setEditingClient({ ...editingClient, pib: digitsOnly });
+                  setValidationErrors((prev) => ({ ...prev, pib: "" }));
+                }}
                 placeholder="123456789"
                 maxLength={9}
                 className={validationErrors.pib ? "border-destructive" : ""}

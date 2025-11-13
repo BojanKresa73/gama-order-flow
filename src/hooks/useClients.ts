@@ -53,9 +53,11 @@ export const useClients = (filters?: ClientFilters) => {
       // Search filter
       if (filters.search) {
         const searchLower = filters.search.toLowerCase();
+        // Normalize PIB for search (remove spaces)
+        const normalizedPib = client.pib?.replace(/\s/g, '').toLowerCase() || '';
         const matchesSearch =
           client.name?.toLowerCase().includes(searchLower) ||
-          client.pib?.toLowerCase().includes(searchLower) ||
+          normalizedPib.includes(searchLower.replace(/\s/g, '')) ||
           client.email?.toLowerCase().includes(searchLower) ||
           client.grad?.toLowerCase().includes(searchLower) ||
           client.telefon?.toLowerCase().includes(searchLower);
