@@ -56,8 +56,8 @@ export const LocalFilmJobsTable = ({ jobs, onChange }: LocalFilmJobsTableProps) 
     width_mm: 0,
     height_mm: 0,
     qty: 1,
-    allow_rotate_90: true,
-    margin_mm: 0,
+    allow_rotate_90: true, // Always true, hidden from user
+    margin_mm: 0, // Always 0, hidden from user
     note: "",
   });
 
@@ -118,8 +118,8 @@ export const LocalFilmJobsTable = ({ jobs, onChange }: LocalFilmJobsTableProps) 
       width_mm: 0,
       height_mm: 0,
       qty: 1,
-      allow_rotate_90: true,
-      margin_mm: 0,
+      allow_rotate_90: true, // Always true, hidden
+      margin_mm: 0, // Always 0, hidden
       note: "",
     });
     setErrors({});
@@ -228,28 +228,6 @@ export const LocalFilmJobsTable = ({ jobs, onChange }: LocalFilmJobsTableProps) 
           <span className="text-xs text-destructive">{errors.qty}</span>
         )}
       </TableCell>
-      <TableCell className="text-center">
-        <Checkbox
-          checked={formData.allow_rotate_90}
-          onCheckedChange={(checked) =>
-            setFormData({ ...formData, allow_rotate_90: checked as boolean })
-          }
-        />
-      </TableCell>
-      <TableCell>
-        <Input
-          type="number"
-          value={formData.margin_mm || ""}
-          onChange={(e) =>
-            setFormData({ ...formData, margin_mm: Number(e.target.value) })
-          }
-          placeholder="0"
-          className={errors.margin_mm ? "border-destructive" : ""}
-        />
-        {errors.margin_mm && (
-          <span className="text-xs text-destructive">{errors.margin_mm}</span>
-        )}
-      </TableCell>
       <TableCell>
         {previewCompute ? `${previewCompute.computed_rotation_deg}°` : '-'}
       </TableCell>
@@ -305,8 +283,6 @@ export const LocalFilmJobsTable = ({ jobs, onChange }: LocalFilmJobsTableProps) 
               <TableHead>Širina (mm)</TableHead>
               <TableHead>Visina (mm)</TableHead>
               <TableHead>Količina</TableHead>
-              <TableHead className="text-center">Rotacija 90°</TableHead>
-              <TableHead>Margina (mm)</TableHead>
               <TableHead>Orijentacija</TableHead>
               <TableHead>m/kom</TableHead>
               <TableHead>Ukupno m</TableHead>
@@ -318,7 +294,7 @@ export const LocalFilmJobsTable = ({ jobs, onChange }: LocalFilmJobsTableProps) 
             {isAdding && renderFormRow()}
             {jobs.length === 0 && !isAdding ? (
               <TableRow>
-                <TableCell colSpan={11} className="text-center text-muted-foreground">
+                <TableCell colSpan={9} className="text-center text-muted-foreground">
                   Nema stavki. Kliknite "Dodaj stavku" da dodate prvu.
                 </TableCell>
               </TableRow>
@@ -332,10 +308,6 @@ export const LocalFilmJobsTable = ({ jobs, onChange }: LocalFilmJobsTableProps) 
                     <TableCell>{job.width_mm}</TableCell>
                     <TableCell>{job.height_mm}</TableCell>
                     <TableCell>{job.qty}</TableCell>
-                    <TableCell className="text-center">
-                      {job.allow_rotate_90 ? "✓" : "✗"}
-                    </TableCell>
-                    <TableCell>{job.margin_mm}</TableCell>
                     <TableCell>
                       {computedJobs[index] ? `${computedJobs[index].computed_rotation_deg}°` : '-'}
                     </TableCell>
