@@ -14,6 +14,7 @@ import {
 import { supabase } from "@/integrations/supabase/client";
 import { computeFilmJobClient } from "@/lib/filmCalculations";
 import { useToast } from "@/hooks/use-toast";
+import { cn } from "@/lib/utils";
 
 export interface LocalFilmJob {
   file_name: string;
@@ -171,7 +172,56 @@ export const LocalFilmJobsTable = ({ jobs, onChange }: LocalFilmJobsTableProps) 
   };
 
   const handleAddMultipleJobs = (newJobs: LocalFilmJob[]) => {
+    const startIndex = jobs.length;
     onChange([...jobs, ...newJobs]);
+    
+    // Focus first width input of newly added jobs after a short delay
+    setTimeout(() => {
+      const firstNewInput = inputRefs.current[`${startIndex}-width`];
+      if (firstNewInput) {
+        firstNewInput.focus();
+        firstNewInput.select();
+      }
+    }, 100);
+  };
+
+  const handlePaste = (
+    e: React.ClipboardEvent<HTMLInputElement>,
+    index: number,
+    field: 'width_mm' | 'height_mm'
+  ) => {
+    const pastedText = e.clipboardData.getData('text').trim();
+    // Match patterns like "745x605" or "745×605"
+    const dimensionPattern = /^(\d+)[x×](\d+)$/i;
+    const match = pastedText.match(dimensionPattern);
+    
+    if (match) {
+      e.preventDefault();
+      const width = parseInt(match[1], 10);
+      const height = parseInt(match[2], 10);
+      
+      // Clear any pending debounce timers
+      if (debounceTimers.current[index]) {
+        clearTimeout(debounceTimers.current[index]);
+      }
+      
+      const newJobs = [...jobs];
+      newJobs[index] = {
+        ...newJobs[index],
+        width_mm: width,
+        height_mm: height,
+      };
+      onChange(newJobs);
+      
+      // Focus next field (quantity)
+      setTimeout(() => {
+        const qtyRef = inputRefs.current[`${index}-qty`];
+        if (qtyRef) {
+          qtyRef.focus();
+          qtyRef.select();
+        }
+      }, 50);
+    }
   };
 
   return (
@@ -213,86 +263,140 @@ export const LocalFilmJobsTable = ({ jobs, onChange }: LocalFilmJobsTableProps) 
               <TableHead>Količina</TableHead>
               <TableHead>m/kom</TableHead>
               <TableHead>Ukupno m</TableHead>
-              <TableHead>Akcije</TableHead>
+              <TableHead className="w-[100px]">Akcije</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
             {jobs.length === 0 ? (
               <TableRow>
                 <TableCell colSpan={7} className="text-center text-muted-foreground">
-                  Nema stavki. Kliknite "Dodaj stavku" da dodate prvu.
+                  Nema stavki. Dodajte stavku ili importujte fajlove.
                 </TableCell>
               </TableRow>
             ) : (
-              jobs.map((job, index) => (
-                <TableRow key={index}>
-                  <TableCell className="font-medium">{job.file_name}</TableCell>
-                  <TableCell>
-                    <Input
-                      ref={(el) => (inputRefs.current[`${index}-width`] = el)}
-                      type="number"
-                      value={job.width_mm || ""}
-                      onChange={(e) => handleFieldChange(index, 'width_mm', Number(e.target.value))}
-                      onKeyDown={(e) => handleKeyDown(e, index, 'width')}
-                      className={validationErrors[index]?.width ? "border-destructive" : ""}
-                      min="10"
-                      max="500"
-                    />
-                    {validationErrors[index]?.width && (
-                      <span className="text-xs text-destructive">{validationErrors[index].width}</span>
-                    )}
-                  </TableCell>
-                  <TableCell>
-                    <Input
-                      ref={(el) => (inputRefs.current[`${index}-height`] = el)}
-                      type="number"
-                      value={job.height_mm || ""}
-                      onChange={(e) => handleFieldChange(index, 'height_mm', Number(e.target.value))}
-                      onKeyDown={(e) => handleKeyDown(e, index, 'height')}
-                      className={validationErrors[index]?.height ? "border-destructive" : ""}
-                      min="10"
-                    />
-                    {validationErrors[index]?.height && (
-                      <span className="text-xs text-destructive">{validationErrors[index].height}</span>
-                    )}
-                  </TableCell>
-                  <TableCell>
-                    <Input
-                      ref={(el) => (inputRefs.current[`${index}-qty`] = el)}
-                      type="number"
-                      value={job.qty || ""}
-                      onChange={(e) => handleFieldChange(index, 'qty', Math.floor(Number(e.target.value)))}
-                      onKeyDown={(e) => handleKeyDown(e, index, 'qty')}
-                      className={validationErrors[index]?.qty ? "border-destructive" : ""}
-                      min="1"
-                      step="1"
-                    />
-                    {validationErrors[index]?.qty && (
-                      <span className="text-xs text-destructive">{validationErrors[index].qty}</span>
-                    )}
-                  </TableCell>
-                  <TableCell>
-                    {computedJobs[index] ? computedJobs[index].computed_m_per_piece.toFixed(4) : '-'}
-                  </TableCell>
-                  <TableCell>
-                    {computedJobs[index] ? computedJobs[index].computed_total_m.toFixed(2) : '-'}
-                  </TableCell>
-                  <TableCell>
-                    <Button
-                      type="button"
-                      size="sm"
-                      variant="destructive"
-                      onClick={() => handleDelete(index)}
-                    >
-                      <Trash2 className="h-4 w-4" />
-                    </Button>
-                  </TableCell>
-                </TableRow>
-              ))
+              jobs.map((job, index) => {
+                const computed = computedJobs[index];
+                const errors = validationErrors[index];
+                
+                return (
+                  <TableRow key={index}>
+                    <TableCell>{job.file_name}</TableCell>
+                    <TableCell>
+                      <Input
+                        ref={(el) => (inputRefs.current[`${index}-width`] = el)}
+                        type="number"
+                        value={job.width_mm || ""}
+                        onChange={(e) => handleFieldChange(index, "width_mm", parseFloat(e.target.value) || 0)}
+                        onKeyDown={(e) => handleKeyDown(e, index, "width")}
+                        onPaste={(e) => handlePaste(e, index, "width_mm")}
+                        min={10}
+                        max={500}
+                        className={cn(
+                          "w-24",
+                          errors?.width && "border-red-500"
+                        )}
+                        placeholder="10-500"
+                      />
+                      {errors?.width && (
+                        <p className="text-xs text-red-500 mt-1">{errors.width}</p>
+                      )}
+                    </TableCell>
+                    <TableCell>
+                      <Input
+                        ref={(el) => (inputRefs.current[`${index}-height`] = el)}
+                        type="number"
+                        value={job.height_mm || ""}
+                        onChange={(e) => handleFieldChange(index, "height_mm", parseFloat(e.target.value) || 0)}
+                        onKeyDown={(e) => handleKeyDown(e, index, "height")}
+                        onPaste={(e) => handlePaste(e, index, "height_mm")}
+                        min={10}
+                        className={cn(
+                          "w-24",
+                          errors?.height && "border-red-500"
+                        )}
+                        placeholder="≥10"
+                      />
+                      {errors?.height && (
+                        <p className="text-xs text-red-500 mt-1">{errors.height}</p>
+                      )}
+                    </TableCell>
+                    <TableCell>
+                      <Input
+                        ref={(el) => (inputRefs.current[`${index}-qty`] = el)}
+                        type="number"
+                        value={job.qty || ""}
+                        onChange={(e) => handleFieldChange(index, "qty", parseInt(e.target.value) || 0)}
+                        onKeyDown={(e) => handleKeyDown(e, index, "qty")}
+                        min={1}
+                        step={1}
+                        className={cn(
+                          "w-20",
+                          errors?.qty && "border-red-500"
+                        )}
+                        placeholder="≥1"
+                      />
+                      {errors?.qty && (
+                        <p className="text-xs text-red-500 mt-1">{errors.qty}</p>
+                      )}
+                    </TableCell>
+                    <TableCell>
+                      {computed ? (
+                        <span className="text-sm font-medium">
+                          {computed.computed_m_per_piece.toFixed(4)}
+                        </span>
+                      ) : (
+                        <span className="text-sm text-muted-foreground">-</span>
+                      )}
+                    </TableCell>
+                    <TableCell>
+                      {computed ? (
+                        <span className="text-sm font-medium">
+                          {computed.computed_total_m.toFixed(2)}
+                        </span>
+                      ) : (
+                        <span className="text-sm text-muted-foreground">-</span>
+                      )}
+                    </TableCell>
+                    <TableCell>
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => handleDelete(index)}
+                      >
+                        <Trash2 className="h-4 w-4 text-destructive" />
+                      </Button>
+                    </TableCell>
+                  </TableRow>
+                );
+              })
             )}
           </TableBody>
         </Table>
       </div>
+
+      {jobs.length > 0 && (
+        <div className="flex justify-end">
+          <div className="space-y-1 text-sm">
+            <div className="flex justify-between gap-8">
+              <span className="font-medium">Ukupno stavki:</span>
+              <span>{jobs.length}</span>
+            </div>
+            <div className="flex justify-between gap-8">
+              <span className="font-medium">Ukupno komada:</span>
+              <span>{jobs.reduce((sum, job) => sum + (job.qty || 0), 0)}</span>
+            </div>
+            <div className="flex justify-between gap-8">
+              <span className="font-medium">Ukupna dužina filma:</span>
+              <span className="font-bold">
+                {Object.values(computedJobs).reduce((sum: number, computed: any) => 
+                  sum + (computed?.computed_total_m || 0), 0
+                ).toFixed(2)} m
+              </span>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
