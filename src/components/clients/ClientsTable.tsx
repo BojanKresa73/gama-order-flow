@@ -27,7 +27,9 @@ import {
   ChevronLeft,
   ChevronRight,
   Eye,
+  FileSpreadsheet,
 } from "lucide-react";
+import * as XLSX from 'xlsx';
 
 interface ClientsTableProps {
   clients: Client[];
@@ -94,6 +96,48 @@ export const ClientsTable = ({ clients, onEdit }: ClientsTableProps) => {
 
   const toggleColumnVisibility = (column: keyof typeof columnVisibility) => {
     setColumnVisibility((prev) => ({ ...prev, [column]: !prev[column] }));
+  };
+
+  const exportToXLSX = () => {
+    // Define column mapping with display names
+    const columnMapping: Array<{ key: keyof typeof columnVisibility; header: string; accessor: (client: Client) => any }> = [
+      { key: 'name', header: 'Naziv', accessor: (c) => c.name },
+      { key: 'pib', header: 'PIB', accessor: (c) => c.pib || '' },
+      { key: 'maticni_broj', header: 'Matični broj', accessor: (c) => c.maticni_broj || '' },
+      { key: 'adresa', header: 'Adresa', accessor: (c) => c.adresa || '' },
+      { key: 'grad', header: 'Grad', accessor: (c) => c.grad || '' },
+      { key: 'postanski_broj', header: 'Poštanski broj', accessor: (c) => c.postanski_broj || '' },
+      { key: 'telefon', header: 'Telefon', accessor: (c) => c.telefon || '' },
+      { key: 'email', header: 'Email', accessor: (c) => c.email || '' },
+      { key: 'notification_email', header: 'Email za obaveštenja', accessor: (c) => c.notification_email || '' },
+      { key: 'rok_placanja_dana', header: 'Rok plaćanja (dana)', accessor: (c) => c.rok_placanja_dana },
+      { key: 'rabat_procenat', header: 'Rabat (%)', accessor: (c) => c.rabat_procenat },
+      { key: 'created_at', header: 'Datum kreiranja', accessor: (c) => new Date(c.created_at).toLocaleDateString("sr-RS") },
+    ];
+
+    // Filter to only visible columns
+    const visibleColumns = columnMapping.filter(col => columnVisibility[col.key]);
+
+    // Build headers and rows based on visible columns
+    const headers = visibleColumns.map(col => col.header);
+    const rows = sortedClients.map(client => 
+      visibleColumns.map(col => col.accessor(client))
+    );
+
+    // Create worksheet from headers and rows
+    const worksheet = XLSX.utils.aoa_to_sheet([headers, ...rows]);
+    
+    // Create workbook and add worksheet
+    const workbook = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(workbook, worksheet, 'Klijenti');
+
+    // Generate filename with timestamp
+    const now = new Date();
+    const timestamp = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}_${String(now.getHours()).padStart(2, '0')}-${String(now.getMinutes()).padStart(2, '0')}`;
+    const filename = `clients_export_${timestamp}.xlsx`;
+
+    // Save file
+    XLSX.writeFile(workbook, filename);
   };
 
   const exportToCSV = () => {
@@ -240,12 +284,27 @@ export const ClientsTable = ({ clients, onEdit }: ClientsTableProps) => {
             >
               Datum kreiranja
             </DropdownMenuCheckboxItem>
-          </DropdownMenuContent>
+        </DropdownMenuContent>
         </DropdownMenu>
 
-        <Button variant="outline" size="sm" onClick={exportToCSV}>
+        <Button 
+          variant="outline" 
+          size="sm" 
+          onClick={exportToCSV}
+          disabled={sortedClients.length === 0}
+        >
           <Download className="h-4 w-4 mr-2" />
           Export CSV
+        </Button>
+
+        <Button 
+          variant="outline" 
+          size="sm" 
+          onClick={exportToXLSX}
+          disabled={sortedClients.length === 0}
+        >
+          <FileSpreadsheet className="h-4 w-4 mr-2" />
+          Export XLSX
         </Button>
 
         <div className="flex items-center gap-2 ml-auto">
