@@ -14,6 +14,15 @@ interface DeliveryNoteRequest {
   workOrderId: string;
 }
 
+// Helper function to format date as dd.MM.yyyy.
+const formatDate = (dateString: string): string => {
+  const date = new Date(dateString);
+  const day = String(date.getDate()).padStart(2, "0");
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  const year = date.getFullYear();
+  return `${day}.${month}.${year}.`;
+};
+
 const handler = async (req: Request): Promise<Response> => {
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
@@ -54,10 +63,15 @@ const handler = async (req: Request): Promise<Response> => {
       throw new Error("Work order not found");
     }
 
-    // Fetch file entries
+    // Fetch file entries with plate format info
     const { data: fileEntries, error: feError } = await supabaseClient
       .from("file_entries")
-      .select("*")
+      .select(`
+        *,
+        plate_format:plate_formats (
+          format_name
+        )
+      `)
       .eq("work_order_id", workOrderId)
       .eq("status", "closed");
 
@@ -107,61 +121,261 @@ const handler = async (req: Request): Promise<Response> => {
     // Send email if notification email exists
     if (workOrder.client.notification_email) {
       const emailContent = `
+        <!DOCTYPE html>
         <html>
           <head>
+            <meta charset="UTF-8">
             <style>
-              body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; }
-              .container { max-width: 600px; margin: 0 auto; padding: 20px; }
-              .header { background-color: #f4f4f4; padding: 20px; text-align: center; }
-              .content { padding: 20px; }
-              table { width: 100%; border-collapse: collapse; margin: 20px 0; }
-              th, td { padding: 12px; text-align: left; border-bottom: 1px solid #ddd; }
-              th { background-color: #f4f4f4; font-weight: bold; }
-              .footer { margin-top: 20px; padding-top: 20px; border-top: 1px solid #ddd; font-size: 12px; color: #666; }
+              @page {
+                size: A5 landscape;
+                margin: 10mm;
+              }
+              
+              * {
+                margin: 0;
+                padding: 0;
+                box-sizing: border-box;
+              }
+              
+              body {
+                font-family: system-ui, -apple-system, 'Segoe UI', Roboto, Arial, sans-serif;
+                font-size: 11px;
+                line-height: 1.4;
+                color: #000;
+              }
+              
+              .document {
+                width: 100%;
+                height: 100%;
+              }
+              
+              /* Header */
+              .doc-header {
+                display: flex;
+                justify-content: space-between;
+                margin-bottom: 12px;
+                padding-bottom: 8px;
+                border-bottom: 2px solid #000;
+              }
+              
+              .company-info {
+                flex: 1;
+              }
+              
+              .company-info h1 {
+                font-size: 14px;
+                font-weight: bold;
+                margin-bottom: 4px;
+              }
+              
+              .company-info p {
+                font-size: 10px;
+                line-height: 1.3;
+              }
+              
+              .delivery-info {
+                text-align: right;
+                flex: 1;
+              }
+              
+              .delivery-info h2 {
+                font-size: 16px;
+                font-weight: bold;
+                margin-bottom: 6px;
+              }
+              
+              .delivery-info p {
+                font-size: 11px;
+                margin-bottom: 2px;
+              }
+              
+              /* Client box */
+              .client-box {
+                border: 1px solid #000;
+                padding: 8px;
+                margin-bottom: 12px;
+                background: #f9f9f9;
+              }
+              
+              .client-box p {
+                margin-bottom: 3px;
+              }
+              
+              .client-box strong {
+                font-weight: 600;
+              }
+              
+              /* Table */
+              table {
+                width: 100%;
+                border-collapse: collapse;
+                margin-bottom: 12px;
+              }
+              
+              th, td {
+                border: 1px solid #ddd;
+                padding: 6px 8px;
+                text-align: left;
+              }
+              
+              th {
+                background: #e8e8e8;
+                font-weight: 600;
+                font-size: 10px;
+                text-transform: uppercase;
+              }
+              
+              td {
+                font-size: 11px;
+              }
+              
+              td.number {
+                text-align: center;
+                width: 40px;
+              }
+              
+              td.quantity {
+                text-align: center;
+                width: 80px;
+              }
+              
+              td.format {
+                width: 120px;
+              }
+              
+              thead {
+                display: table-header-group;
+              }
+              
+              tfoot {
+                display: table-footer-group;
+              }
+              
+              tr {
+                page-break-inside: avoid;
+              }
+              
+              /* Footer */
+              .doc-footer {
+                margin-top: 20px;
+                padding-top: 12px;
+                border-top: 1px solid #ddd;
+                display: flex;
+                justify-content: space-between;
+                align-items: center;
+              }
+              
+              .signature-line {
+                font-size: 10px;
+              }
+              
+              .signature-line span {
+                display: inline-block;
+                margin-right: 15px;
+              }
+              
+              .signature-line .underline {
+                border-bottom: 1px solid #000;
+                display: inline-block;
+                width: 150px;
+                margin-left: 5px;
+              }
+              
+              .pagination {
+                font-size: 10px;
+                text-align: right;
+              }
+              
+              .no-items {
+                text-align: center;
+                padding: 40px;
+                font-style: italic;
+                color: #666;
+              }
+              
+              @media print {
+                body {
+                  margin: 0;
+                  padding: 0;
+                }
+                
+                .doc-footer {
+                  position: fixed;
+                  bottom: 0;
+                  width: 100%;
+                }
+              }
             </style>
           </head>
           <body>
-            <div class="container">
-              <div class="header">
-                <h2>Otpremnica - ${deliveryNumber}</h2>
+            <div class="document">
+              <!-- Header -->
+              <div class="doc-header">
+                <div class="company-info">
+                  <h1>Gama United</h1>
+                  <p>Adresa vaše firme</p>
+                  <p>Grad, Poštanski broj</p>
+                  <p>PIB: 123456789</p>
+                </div>
+                <div class="delivery-info">
+                  <h2>OTPREMNICA</h2>
+                  <p><strong>Broj naloga:</strong> ${workOrder.order_number}</p>
+                  <p><strong>Datum zatvaranja:</strong> ${formatDate(deliveryNote.closed_at)}</p>
+                </div>
               </div>
-              <div class="content">
+              
+              <!-- Client info -->
+              <div class="client-box">
                 <p><strong>Klijent:</strong> ${workOrder.client.name}</p>
-                ${workOrder.client.pib ? `<p><strong>PIB:</strong> ${workOrder.client.pib}</p>` : ''}
-                <p><strong>Radni nalog:</strong> ${workOrder.order_number}</p>
-                <p><strong>Datum otvaranja:</strong> ${new Date(
-                  workOrder.created_at
-                ).toLocaleDateString("sr-RS")}</p>
-                <p><strong>Datum zatvaranja:</strong> ${new Date(
-                  deliveryNote.closed_at
-                ).toLocaleDateString("sr-RS")}</p>
-                
-                <h3>Stavke:</h3>
-                <table>
-                  <thead>
-                    <tr>
-                      <th>Naziv fajla</th>
-                      <th>Količina</th>
-                      <th>Tip</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    ${fileEntries
-                      .map(
-                        (fe) => `
-                      <tr>
-                        <td>${fe.filename}</td>
-                        <td>${fe.quantity || "-"}</td>
-                        <td>${fe.file_type}</td>
-                      </tr>
-                    `
-                      )
-                      .join("")}
-                  </tbody>
-                </table>
+                ${workOrder.client.pib ? `<p><strong>PIB:</strong> ${workOrder.client.pib}</p>` : ""}
+                ${workOrder.client.notification_email ? `<p><strong>Email:</strong> ${workOrder.client.notification_email}</p>` : ""}
               </div>
-              <div class="footer">
-                <p>Ova poruka je automatski generisana iz sistema za upravljanje radnim nalozima.</p>
+              
+              ${
+                fileEntries && fileEntries.length > 0
+                  ? `
+              <!-- Items table -->
+              <table>
+                <thead>
+                  <tr>
+                    <th class="number">#</th>
+                    <th>Naziv fajla</th>
+                    <th class="format">Format ploče</th>
+                    <th class="quantity">Količina</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  ${fileEntries
+                    .map(
+                      (fe, index) => `
+                    <tr>
+                      <td class="number">${index + 1}</td>
+                      <td>${fe.filename}</td>
+                      <td class="format">${fe.plate_format?.format_name || "-"}</td>
+                      <td class="quantity">${fe.quantity || "-"}</td>
+                    </tr>
+                  `
+                    )
+                    .join("")}
+                </tbody>
+              </table>
+              `
+                  : `
+              <div class="no-items">
+                <p>Nema zatvorenih stavki za otpremnicu.</p>
+              </div>
+              `
+              }
+              
+              <!-- Footer -->
+              <div class="doc-footer">
+                <div class="signature-line">
+                  <span>Robu preuzeo: <span class="underline"></span></span>
+                  <span>Broj lične karte: <span class="underline"></span></span>
+                </div>
+                <div class="pagination">
+                  Strana 1/1
+                </div>
               </div>
             </div>
           </body>
