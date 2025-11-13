@@ -1,9 +1,10 @@
 import { useState, useEffect } from "react";
-import { Plus, Edit, Trash2, X, Check } from "lucide-react";
+import { Plus, Edit, Trash2, X, Check, FileUp } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Textarea } from "@/components/ui/textarea";
+import { AddFilmJobsModal } from "./AddFilmJobsModal";
 import {
   Table,
   TableBody,
@@ -50,6 +51,7 @@ export const LocalFilmJobsTable = ({ jobs, onChange }: LocalFilmJobsTableProps) 
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [previewCompute, setPreviewCompute] = useState<any>(null);
   const [computedJobs, setComputedJobs] = useState<Record<number, any>>({});
+  const [showAddFilesModal, setShowAddFilesModal] = useState(false);
 
   const [formData, setFormData] = useState<LocalFilmJob>({
     file_name: "",
@@ -258,22 +260,43 @@ export const LocalFilmJobsTable = ({ jobs, onChange }: LocalFilmJobsTableProps) 
     </TableRow>
   );
 
+  const handleAddMultipleJobs = (newJobs: LocalFilmJob[]) => {
+    onChange([...jobs, ...newJobs]);
+  };
+
   return (
     <div className="space-y-4">
       <div className="flex justify-between items-center">
         <h3 className="text-lg font-semibold">Stavke filmovanja</h3>
-        <Button
-          type="button"
-          onClick={() => {
-            resetForm();
-            setIsAdding(true);
-          }}
-          disabled={isAdding || editingIndex !== null}
-        >
-          <Plus className="h-4 w-4 mr-2" />
-          Dodaj stavku
-        </Button>
+        <div className="flex gap-2">
+          <Button
+            type="button"
+            variant="secondary"
+            onClick={() => setShowAddFilesModal(true)}
+            disabled={isAdding || editingIndex !== null}
+          >
+            <FileUp className="h-4 w-4 mr-2" />
+            Dodaj fajlove
+          </Button>
+          <Button
+            type="button"
+            onClick={() => {
+              resetForm();
+              setIsAdding(true);
+            }}
+            disabled={isAdding || editingIndex !== null}
+          >
+            <Plus className="h-4 w-4 mr-2" />
+            Dodaj stavku
+          </Button>
+        </div>
       </div>
+
+      <AddFilmJobsModal
+        open={showAddFilesModal}
+        onOpenChange={setShowAddFilesModal}
+        onAddJobs={handleAddMultipleJobs}
+      />
 
       <div className="border rounded-lg overflow-hidden">
         <Table>
