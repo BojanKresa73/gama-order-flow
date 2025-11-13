@@ -628,6 +628,7 @@ const NewWorkOrder = () => {
                         jobs={digitalJobs}
                         onChange={setDigitalJobs}
                         printSides={formData.print_spec || "4/4"}
+                        clientRabatProcenat={clients.find(c => c.id === formData.client_id)?.rabat_procenat || 0}
                       />
                     </div>
                   </div>
