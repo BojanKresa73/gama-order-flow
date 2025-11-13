@@ -5,15 +5,23 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
-import { ArrowLeft, Plus, FileText, Eye } from "lucide-react";
+import { ArrowLeft, Plus, FileText, Eye, Lock } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { OrderFilesDialog } from "@/components/work-orders/OrderFilesDialog";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
+import { Textarea } from "@/components/ui/textarea";
+import { Label } from "@/components/ui/label";
 
 const WorkOrders = () => {
   const [workOrders, setWorkOrders] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [filesDialogOpen, setFilesDialogOpen] = useState(false);
   const [selectedOrderId, setSelectedOrderId] = useState<string>("");
+  const [closeDialogOpen, setCloseDialogOpen] = useState(false);
+  const [orderToClose, setOrderToClose] = useState<any>(null);
+  const [closingNote, setClosingNote] = useState("");
+  const [isClosing, setIsClosing] = useState(false);
   const navigate = useNavigate();
   const { toast } = useToast();
 
@@ -81,6 +89,66 @@ const WorkOrders = () => {
     setFilesDialogOpen(true);
   };
 
+  const handleCloseOrder = (order: any, e: React.MouseEvent) => {
+    e.stopPropagation();
+    setOrderToClose(order);
+    setClosingNote("");
+    setCloseDialogOpen(true);
+  };
+
+  const confirmCloseOrder = async () => {
+    if (!orderToClose) return;
+
+    setIsClosing(true);
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error("Niste autentifikovani");
+
+      // Call appropriate function based on order type
+      const functionName = orderToClose.order_type === 'film' 
+        ? 'close_film_work_order' 
+        : 'close_work_order_atomic';
+
+      const { data, error } = await supabase.rpc(functionName, {
+        p_work_order_id: orderToClose.id,
+        p_user_id: user.id
+      });
+
+      if (error) throw error;
+      
+      const result = data as { success: boolean; error?: string };
+      if (!result?.success) throw new Error(result?.error || "Greška pri zatvaranju naloga");
+
+      // Add closing note if provided
+      if (closingNote.trim()) {
+        await supabase.from('work_order_events').insert({
+          work_order_id: orderToClose.id,
+          event_type: 'note',
+          created_by: user.id,
+          metadata: { note: closingNote.trim(), context: 'closing' }
+        });
+      }
+
+      toast({
+        title: "Uspeh",
+        description: "Radni nalog je zatvoren i otpremnica je poslata.",
+      });
+
+      setCloseDialogOpen(false);
+      setOrderToClose(null);
+      setClosingNote("");
+      fetchWorkOrders();
+    } catch (error: any) {
+      toast({
+        title: "Greška",
+        description: error.message,
+        variant: "destructive",
+      });
+    } finally {
+      setIsClosing(false);
+    }
+  };
+
   if (loading) {
     return <div className="flex items-center justify-center min-h-screen">Učitavanje...</div>;
   }
@@ -127,6 +195,7 @@ const WorkOrders = () => {
                     <TableHead>Kreirao</TableHead>
                     <TableHead>Datum</TableHead>
                     <TableHead className="text-right">Akcije</TableHead>
+                    <TableHead className="text-center">Zatvori</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -162,6 +231,30 @@ const WorkOrders = () => {
                           </Button>
                         </div>
                       </TableCell>
+                      <TableCell className="text-center">
+                        <TooltipProvider>
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <div className="inline-block">
+                                <Button
+                                  variant="default"
+                                  size="sm"
+                                  disabled={order.status === 'closed'}
+                                  onClick={(e) => handleCloseOrder(order, e)}
+                                >
+                                  {order.status === 'closed' && <Lock className="h-4 w-4 mr-2" />}
+                                  Zatvori
+                                </Button>
+                              </div>
+                            </TooltipTrigger>
+                            {order.status === 'closed' && (
+                              <TooltipContent>
+                                <p>Nalog je već zatvoren</p>
+                              </TooltipContent>
+                            )}
+                          </Tooltip>
+                        </TooltipProvider>
+                      </TableCell>
                     </TableRow>
                   ))}
                 </TableBody>
@@ -176,6 +269,35 @@ const WorkOrders = () => {
         open={filesDialogOpen}
         onOpenChange={setFilesDialogOpen}
       />
+
+      <AlertDialog open={closeDialogOpen} onOpenChange={setCloseDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>
+              Zatvori radni nalog {orderToClose?.order_number}?
+            </AlertDialogTitle>
+            <AlertDialogDescription>
+              Po zatvaranju biće generisana i automatski poslata otpremnica klijentu.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <div className="space-y-2 py-4">
+            <Label htmlFor="closing-note">Napomena za zatvaranje (opciono)</Label>
+            <Textarea
+              id="closing-note"
+              placeholder="Dodajte napomenu..."
+              value={closingNote}
+              onChange={(e) => setClosingNote(e.target.value)}
+              rows={3}
+            />
+          </div>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={isClosing}>Otkaži</AlertDialogCancel>
+            <AlertDialogAction onClick={confirmCloseOrder} disabled={isClosing}>
+              {isClosing ? "Zatvaranje..." : "Zatvori nalog"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 };
