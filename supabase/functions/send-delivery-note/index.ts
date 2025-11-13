@@ -327,8 +327,9 @@ const handler = async (req: Request): Promise<Response> => {
               <!-- Client info -->
               <div class="client-box">
                 <p><strong>Klijent:</strong> ${workOrder.client.name}</p>
-                ${workOrder.client.pib ? `<p><strong>PIB:</strong> ${workOrder.client.pib}</p>` : ""}
-                ${workOrder.client.notification_email ? `<p><strong>Email:</strong> ${workOrder.client.notification_email}</p>` : ""}
+                ${workOrder.client.pib && workOrder.client.pib.trim() ? `<p><strong>PIB:</strong> ${workOrder.client.pib}</p>` : ""}
+                ${workOrder.client.notification_email && workOrder.client.notification_email.trim() ? `<p><strong>Email:</strong> ${workOrder.client.notification_email}</p>` : ""}
+              </div>
               </div>
               
               ${

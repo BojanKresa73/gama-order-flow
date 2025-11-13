@@ -367,8 +367,10 @@ const DeliveryNotePreview = () => {
 
             <div className="client-box">
               <p><strong>Klijent:</strong> {selectedOrder.clients?.name}</p>
-              {selectedOrder.clients?.pib && <p><strong>PIB:</strong> {selectedOrder.clients.pib}</p>}
-              {selectedOrder.clients?.notification_email && (
+              {selectedOrder.clients?.pib && selectedOrder.clients.pib.trim() && (
+                <p><strong>PIB:</strong> {selectedOrder.clients.pib}</p>
+              )}
+              {selectedOrder.clients?.notification_email && selectedOrder.clients.notification_email.trim() && (
                 <p><strong>Email:</strong> {selectedOrder.clients.notification_email}</p>
               )}
             </div>
