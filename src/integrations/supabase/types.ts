@@ -994,6 +994,10 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      close_film_work_order: {
+        Args: { p_user_id: string; p_work_order_id: string }
+        Returns: Json
+      }
       close_work_order_atomic: {
         Args: { p_user_id: string; p_work_order_id: string }
         Returns: Json

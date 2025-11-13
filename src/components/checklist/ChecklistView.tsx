@@ -34,7 +34,7 @@ interface FileEntry {
 }
 
 interface ChecklistViewProps {
-  orderType: "ctp" | "digital" | "other";
+  orderType: "ctp" | "digital" | "other" | "film";
 }
 
 const ChecklistView = ({ orderType }: ChecklistViewProps) => {
@@ -150,7 +150,28 @@ const ChecklistView = ({ orderType }: ChecklistViewProps) => {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error("User not authenticated");
 
-      // Call atomic close function
+      // For film orders, use dedicated function with validation
+      if (orderType === "film") {
+        const { data, error } = await supabase.rpc("close_film_work_order", {
+          p_work_order_id: workOrderId,
+          p_user_id: user.id,
+        });
+
+        if (error) throw error;
+        
+        const result = data as { success: boolean; error?: string };
+        if (!result?.success) throw new Error(result?.error || "Failed to close film work order");
+
+        toast({
+          title: "Uspešno",
+          description: "Film nalog je zatvoren",
+        });
+
+        fetchWorkOrders();
+        return;
+      }
+
+      // For other order types, use standard atomic close function
       const { data, error } = await supabase.rpc("close_work_order_atomic", {
         p_work_order_id: workOrderId,
         p_user_id: user.id,
