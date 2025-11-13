@@ -14,6 +14,7 @@ import Inventory from "./pages/Inventory";
 import Checklist from "./pages/Checklist";
 import DevPreview from "./pages/DevPreview";
 import DeliveryNotePreview from "./pages/DeliveryNotePreview";
+import OrderDeliveryNote from "./pages/OrderDeliveryNote";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -31,6 +32,7 @@ const App = () => {
             <Route path="/dashboard" element={<Dashboard />} />
             <Route path="/work-orders" element={<WorkOrders />} />
             <Route path="/work-orders/new" element={<NewWorkOrder />} />
+            <Route path="/work-orders/:orderId/delivery-note" element={<OrderDeliveryNote />} />
             <Route path="/clients" element={<Clients />} />
             <Route path="/inventory" element={<Inventory />} />
             <Route path="/checklist" element={<Checklist />} />
