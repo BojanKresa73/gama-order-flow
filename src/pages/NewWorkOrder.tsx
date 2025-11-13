@@ -13,7 +13,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Checkbox } from "@/components/ui/checkbox";
 import { LocalFilmJobsTable, LocalFilmJob } from "@/components/film/LocalFilmJobsTable";
 import { FilmJobsSummary } from "@/components/film/FilmJobsSummary";
-import { FilmCutsPreview } from "@/components/film/FilmCutsPreview";
+
 import { useFilmSettings } from "@/hooks/useFilmSettings";
 import { computeFilmJobClient } from "@/lib/filmCalculations";
 
@@ -713,46 +713,21 @@ const NewWorkOrder = () => {
                 </TabsContent>
 
                 <TabsContent value="film" className="space-y-4 mt-4">
-                  <Tabs defaultValue="jobs" className="w-full">
-                    <TabsList className="grid w-full grid-cols-2">
-                      <TabsTrigger value="jobs">Stavke filmovanja</TabsTrigger>
-                      <TabsTrigger value="cuts">Pregled rasporeda/rezova</TabsTrigger>
-                    </TabsList>
+                  <div className="space-y-4">
+                    {filmSettings && filmJobs.length > 0 && (
+                      <FilmJobsSummary
+                        totalMeters={filmJobs.reduce((sum, job) => {
+                          const result = computeFilmJobClient(job, filmSettings);
+                          return sum + (('error' in result) ? 0 : result.computed_total_m);
+                        }, 0)}
+                        clientDiscount={
+                          clients.find(c => c.id === formData.client_id)?.rabat_procenat || 0
+                        }
+                      />
+                    )}
 
-                    <TabsContent value="jobs" className="space-y-4 mt-4">
-                      <div className="space-y-4">
-                        {filmSettings && filmJobs.length > 0 && (
-                          <FilmJobsSummary
-                            totalMeters={filmJobs.reduce((sum, job) => {
-                              const result = computeFilmJobClient(job, filmSettings);
-                              return sum + (('error' in result) ? 0 : result.computed_total_m);
-                            }, 0)}
-                            clientDiscount={
-                              clients.find(c => c.id === formData.client_id)?.rabat_procenat || 0
-                            }
-                          />
-                        )}
-
-                        <LocalFilmJobsTable jobs={filmJobs} onChange={setFilmJobs} />
-                      </div>
-                    </TabsContent>
-
-                    <TabsContent value="cuts" className="space-y-4 mt-4">
-                      {filmSettings ? (
-                        <FilmCutsPreview
-                          filmJobs={filmJobs}
-                          filmSettings={filmSettings}
-                          clientDiscount={
-                            clients.find(c => c.id === formData.client_id)?.rabat_procenat || 0
-                          }
-                        />
-                      ) : (
-                        <div className="text-center text-muted-foreground py-8">
-                          Učitavanje podešavanja...
-                        </div>
-                      )}
-                    </TabsContent>
-                  </Tabs>
+                    <LocalFilmJobsTable jobs={filmJobs} onChange={setFilmJobs} />
+                  </div>
                 </TabsContent>
               </Tabs>
 
