@@ -9,6 +9,14 @@ import { useClients, Client } from "@/hooks/useClients";
 import { ClientsTable } from "@/components/clients/ClientsTable";
 import { ClientsFilters, ClientFilters } from "@/components/clients/ClientsFilters";
 import { ClientsCsvImport } from "@/components/clients/ClientsCsvImport";
+import { Switch } from "@/components/ui/switch";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import {
   Dialog,
   DialogContent,
@@ -24,7 +32,25 @@ import { Label } from "@/components/ui/label";
 const Clients = () => {
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingClient, setEditingClient] = useState<Client | null>(null);
-  const [newClient, setNewClient] = useState({
+  const [newClient, setNewClient] = useState<{
+    name: string;
+    pib: string;
+    maticni_broj: string;
+    adresa: string;
+    grad: string;
+    postanski_broj: string;
+    drzava: string;
+    kontakt_osoba: string;
+    telefon: string;
+    email: string;
+    notification_email: string;
+    rok_placanja_dana: number;
+    rabat_procenat: number;
+    napomena: string;
+    is_vip: boolean;
+    is_blocked: boolean;
+    segment: "novi" | "redovan" | "premium";
+  }>({
     name: "",
     pib: "",
     maticni_broj: "",
@@ -39,6 +65,9 @@ const Clients = () => {
     rok_placanja_dana: 0,
     rabat_procenat: 0,
     napomena: "",
+    is_vip: false,
+    is_blocked: false,
+    segment: "novi",
   });
   const [validationErrors, setValidationErrors] = useState<Record<string, string>>({});
   const [filters, setFilters] = useState<ClientFilters>({
@@ -49,6 +78,9 @@ const Clients = () => {
     rokPlacanjaMax: 120,
     rabatMin: 0,
     rabatMax: 100,
+    onlyVip: false,
+    onlyBlocked: false,
+    segment: "all",
   });
   const navigate = useNavigate();
   const { toast } = useToast();
@@ -173,6 +205,9 @@ const Clients = () => {
         rok_placanja_dana: 0,
         rabat_procenat: 0,
         napomena: "",
+        is_vip: false,
+        is_blocked: false,
+        segment: "novi",
       });
       setValidationErrors({});
       refetch();
@@ -456,6 +491,48 @@ const Clients = () => {
                     placeholder="Dodatne napomene..."
                   />
                 </div>
+
+                {/* New status fields */}
+                <div className="border-t pt-4 space-y-4">
+                  <h4 className="font-medium text-sm">Status i segment</h4>
+                  
+                  <div className="flex items-center space-x-2">
+                    <Switch
+                      id="is_vip"
+                      checked={newClient.is_vip}
+                      onCheckedChange={(checked) => setNewClient({ ...newClient, is_vip: checked })}
+                    />
+                    <Label htmlFor="is_vip" className="cursor-pointer">VIP klijent</Label>
+                  </div>
+
+                  <div className="flex items-center space-x-2">
+                    <Switch
+                      id="is_blocked"
+                      checked={newClient.is_blocked}
+                      onCheckedChange={(checked) => setNewClient({ ...newClient, is_blocked: checked })}
+                    />
+                    <Label htmlFor="is_blocked" className="cursor-pointer">Blokiran</Label>
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="segment">Segment</Label>
+                    <Select
+                      value={newClient.segment}
+                      onValueChange={(value: "novi" | "redovan" | "premium") =>
+                        setNewClient({ ...newClient, segment: value })
+                      }
+                    >
+                      <SelectTrigger id="segment">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent className="bg-popover z-50">
+                        <SelectItem value="novi">Novi</SelectItem>
+                        <SelectItem value="redovan">Redovan</SelectItem>
+                        <SelectItem value="premium">Premium</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
               </div>
               <DialogFooter>
                 <Button variant="outline" onClick={() => setDialogOpen(false)}>
@@ -668,6 +745,48 @@ const Clients = () => {
                 onChange={(e) => setEditingClient({ ...editingClient, napomena: e.target.value })}
                 placeholder="Dodatne napomene..."
               />
+            </div>
+
+            {/* Status fields in edit form */}
+            <div className="border-t pt-4 space-y-4">
+              <h4 className="font-medium text-sm">Status i segment</h4>
+              
+              <div className="flex items-center space-x-2">
+                <Switch
+                  id="edit-is_vip"
+                  checked={editingClient?.is_vip || false}
+                  onCheckedChange={(checked) => setEditingClient({ ...editingClient!, is_vip: checked })}
+                />
+                <Label htmlFor="edit-is_vip" className="cursor-pointer">VIP klijent</Label>
+              </div>
+
+              <div className="flex items-center space-x-2">
+                <Switch
+                  id="edit-is_blocked"
+                  checked={editingClient?.is_blocked || false}
+                  onCheckedChange={(checked) => setEditingClient({ ...editingClient!, is_blocked: checked })}
+                />
+                <Label htmlFor="edit-is_blocked" className="cursor-pointer">Blokiran</Label>
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="edit-segment">Segment</Label>
+                <Select
+                  value={editingClient?.segment || "novi"}
+                  onValueChange={(value: "novi" | "redovan" | "premium") =>
+                    setEditingClient({ ...editingClient!, segment: value })
+                  }
+                >
+                  <SelectTrigger id="edit-segment">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent className="bg-popover z-50">
+                    <SelectItem value="novi">Novi</SelectItem>
+                    <SelectItem value="redovan">Redovan</SelectItem>
+                    <SelectItem value="premium">Premium</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
             </div>
           </div>
           <DialogFooter>

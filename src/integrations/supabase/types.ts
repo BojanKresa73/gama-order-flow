@@ -175,6 +175,8 @@ export type Database = {
           email: string | null
           grad: string | null
           id: string
+          is_blocked: boolean
+          is_vip: boolean
           kontakt_osoba: string | null
           maticni_broj: string | null
           name: string
@@ -184,6 +186,7 @@ export type Database = {
           postanski_broj: string | null
           rabat_procenat: number | null
           rok_placanja_dana: number | null
+          segment: string
           telefon: string | null
           updated_at: string
         }
@@ -194,6 +197,8 @@ export type Database = {
           email?: string | null
           grad?: string | null
           id?: string
+          is_blocked?: boolean
+          is_vip?: boolean
           kontakt_osoba?: string | null
           maticni_broj?: string | null
           name: string
@@ -203,6 +208,7 @@ export type Database = {
           postanski_broj?: string | null
           rabat_procenat?: number | null
           rok_placanja_dana?: number | null
+          segment?: string
           telefon?: string | null
           updated_at?: string
         }
@@ -213,6 +219,8 @@ export type Database = {
           email?: string | null
           grad?: string | null
           id?: string
+          is_blocked?: boolean
+          is_vip?: boolean
           kontakt_osoba?: string | null
           maticni_broj?: string | null
           name?: string
@@ -222,6 +230,7 @@ export type Database = {
           postanski_broj?: string | null
           rabat_procenat?: number | null
           rok_placanja_dana?: number | null
+          segment?: string
           telefon?: string | null
           updated_at?: string
         }

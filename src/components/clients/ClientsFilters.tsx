@@ -11,6 +11,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Slider } from "@/components/ui/slider";
+import { Switch } from "@/components/ui/switch";
 import { Card, CardContent } from "@/components/ui/card";
 import { Filter, X } from "lucide-react";
 
@@ -22,6 +23,9 @@ export interface ClientFilters {
   rokPlacanjaMax: number;
   rabatMin: number;
   rabatMax: number;
+  onlyVip: boolean;
+  onlyBlocked: boolean;
+  segment: "all" | "novi" | "redovan" | "premium";
 }
 
 interface ClientsFiltersProps {
@@ -42,6 +46,9 @@ export const ClientsFilters = ({ cities, onFiltersChange }: ClientsFiltersProps)
     rokPlacanjaMax: parseInt(searchParams.get("rokMax") || "120"),
     rabatMin: parseInt(searchParams.get("rabatMin") || "0"),
     rabatMax: parseInt(searchParams.get("rabatMax") || "100"),
+    onlyVip: searchParams.get("onlyVip") === "true",
+    onlyBlocked: searchParams.get("onlyBlocked") === "true",
+    segment: (searchParams.get("segment") as ClientFilters["segment"]) || "all",
   });
 
   // Debounce search input
@@ -64,6 +71,9 @@ export const ClientsFilters = ({ cities, onFiltersChange }: ClientsFiltersProps)
     if (filters.rokPlacanjaMax < 120) params.set("rokMax", filters.rokPlacanjaMax.toString());
     if (filters.rabatMin > 0) params.set("rabatMin", filters.rabatMin.toString());
     if (filters.rabatMax < 100) params.set("rabatMax", filters.rabatMax.toString());
+    if (filters.onlyVip) params.set("onlyVip", "true");
+    if (filters.onlyBlocked) params.set("onlyBlocked", "true");
+    if (filters.segment !== "all") params.set("segment", filters.segment);
 
     setSearchParams(params, { replace: true });
     onFiltersChange(filters);
@@ -82,6 +92,9 @@ export const ClientsFilters = ({ cities, onFiltersChange }: ClientsFiltersProps)
       rokPlacanjaMax: 120,
       rabatMin: 0,
       rabatMax: 100,
+      onlyVip: false,
+      onlyBlocked: false,
+      segment: "all",
     };
     setSearchInput("");
     setFilters(defaultFilters);
@@ -95,7 +108,10 @@ export const ClientsFilters = ({ cities, onFiltersChange }: ClientsFiltersProps)
     filters.rokPlacanjaMin > 0 ||
     filters.rokPlacanjaMax < 120 ||
     filters.rabatMin > 0 ||
-    filters.rabatMax < 100;
+    filters.rabatMax < 100 ||
+    filters.onlyVip ||
+    filters.onlyBlocked ||
+    filters.segment !== "all";
 
   return (
     <Card>
@@ -206,6 +222,50 @@ export const ClientsFilters = ({ cities, onFiltersChange }: ClientsFiltersProps)
                   className="w-full"
                 />
               </div>
+            </div>
+          </div>
+
+          {/* New row for status filters */}
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 pt-4 border-t">
+            {/* VIP Switch */}
+            <div className="flex items-center space-x-2">
+              <Switch
+                id="only-vip"
+                checked={filters.onlyVip}
+                onCheckedChange={(checked) => setFilters({ ...filters, onlyVip: checked })}
+              />
+              <Label htmlFor="only-vip" className="cursor-pointer">Samo VIP</Label>
+            </div>
+
+            {/* Blocked Switch */}
+            <div className="flex items-center space-x-2">
+              <Switch
+                id="only-blocked"
+                checked={filters.onlyBlocked}
+                onCheckedChange={(checked) => setFilters({ ...filters, onlyBlocked: checked })}
+              />
+              <Label htmlFor="only-blocked" className="cursor-pointer">Samo blokirani</Label>
+            </div>
+
+            {/* Segment Dropdown */}
+            <div className="space-y-2">
+              <Label htmlFor="segment">Segment</Label>
+              <Select
+                value={filters.segment}
+                onValueChange={(value: ClientFilters["segment"]) =>
+                  setFilters({ ...filters, segment: value })
+                }
+              >
+                <SelectTrigger id="segment">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent className="bg-popover z-50">
+                  <SelectItem value="all">Svi</SelectItem>
+                  <SelectItem value="novi">Novi</SelectItem>
+                  <SelectItem value="redovan">Redovan</SelectItem>
+                  <SelectItem value="premium">Premium</SelectItem>
+                </SelectContent>
+              </Select>
             </div>
           </div>
 

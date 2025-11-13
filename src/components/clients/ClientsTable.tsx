@@ -430,8 +430,23 @@ export const ClientsTable = ({ clients, onEdit }: ClientsTableProps) => {
                   className="cursor-pointer hover:bg-muted/50"
                   onClick={() => setQuickViewClient(client)}
                 >
-                  {columnVisibility.name && (
-                    <TableCell className="font-medium">{client.name}</TableCell>
+                   {columnVisibility.name && (
+                    <TableCell className="font-medium">
+                      <div className="flex items-center gap-2">
+                        <span>{client.name}</span>
+                        {client.is_vip && (
+                          <Badge className="bg-yellow-500/20 text-yellow-700 dark:text-yellow-300 border-yellow-500/30">VIP</Badge>
+                        )}
+                        {client.is_blocked && (
+                          <Badge variant="destructive">Blokiran</Badge>
+                        )}
+                        <Badge variant="outline" className="text-xs">
+                          {client.segment === 'novi' && 'Novi'}
+                          {client.segment === 'redovan' && 'Redovan'}
+                          {client.segment === 'premium' && 'Premium'}
+                        </Badge>
+                      </div>
+                    </TableCell>
                   )}
                   {columnVisibility.pib && (
                     <TableCell>{client.pib || "-"}</TableCell>

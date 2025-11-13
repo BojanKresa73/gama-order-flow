@@ -18,6 +18,9 @@ export interface Client {
   rok_placanja_dana: number;
   rabat_procenat: number;
   napomena: string | null;
+  is_vip: boolean;
+  is_blocked: boolean;
+  segment: 'novi' | 'redovan' | 'premium';
   created_at: string;
   updated_at: string;
 }
@@ -30,6 +33,9 @@ export interface ClientFilters {
   rokPlacanjaMax?: number;
   rabatMin?: number;
   rabatMax?: number;
+  onlyVip?: boolean;
+  onlyBlocked?: boolean;
+  segment?: "all" | "novi" | "redovan" | "premium";
 }
 
 export const useClients = (filters?: ClientFilters) => {
@@ -91,6 +97,21 @@ export const useClients = (filters?: ClientFilters) => {
         return false;
       }
       if (filters.rabatMax !== undefined && client.rabat_procenat > filters.rabatMax) {
+        return false;
+      }
+
+      // VIP filter
+      if (filters.onlyVip && !client.is_vip) {
+        return false;
+      }
+
+      // Blocked filter
+      if (filters.onlyBlocked && !client.is_blocked) {
+        return false;
+      }
+
+      // Segment filter
+      if (filters.segment && filters.segment !== "all" && client.segment !== filters.segment) {
         return false;
       }
 

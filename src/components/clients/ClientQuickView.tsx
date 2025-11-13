@@ -10,6 +10,12 @@ import {
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 import { useToast } from "@/hooks/use-toast";
 import {
   Copy,
@@ -278,10 +284,27 @@ export const ClientQuickView = ({ client, open, onOpenChange }: ClientQuickViewP
 
         {/* Action Buttons */}
         <div className="flex gap-2 pt-4 border-t">
-          <Button onClick={handleNewOrder} className="flex-1">
-            <Plus className="h-4 w-4 mr-2" />
-            Novi nalog za ovog klijenta
-          </Button>
+          <TooltipProvider>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <div className="flex-1">
+                  <Button 
+                    onClick={handleNewOrder} 
+                    className="w-full"
+                    disabled={client.is_blocked}
+                  >
+                    <Plus className="h-4 w-4 mr-2" />
+                    Novi nalog za ovog klijenta
+                  </Button>
+                </div>
+              </TooltipTrigger>
+              {client.is_blocked && (
+                <TooltipContent>
+                  <p>Klijent je blokiran</p>
+                </TooltipContent>
+              )}
+            </Tooltip>
+          </TooltipProvider>
         </div>
       </DialogContent>
     </Dialog>
