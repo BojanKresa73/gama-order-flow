@@ -24,6 +24,7 @@ export interface ComputeResult {
 export function computeFilmJobClient(job: FilmJob, settings: FilmSettings): ComputeResult | { error: string } {
   const ROLL_WIDTH_MM = 508;
   const MAX_COMPONENT_WIDTH_MM = 500;
+  const WASTE_PERCENT = 3;
 
   // Check if dimensions exceed maximum allowed width
   if (job.width_mm > MAX_COMPONENT_WIDTH_MM || job.height_mm > MAX_COMPONENT_WIDTH_MM) {
@@ -57,11 +58,10 @@ export function computeFilmJobClient(job: FilmJob, settings: FilmSettings): Comp
     return { error: `Preširoko za rolu (max ${MAX_COMPONENT_WIDTH_MM} mm)` };
   }
 
-  // Apply waste percentage
-  const wastePercent = settings.waste_percent || 3;
-  const totalMmWithWaste = best.totalMm * (1 + wastePercent / 100);
+  // Apply 3% waste
+  const totalMmWithWaste = best.totalMm * (1 + WASTE_PERCENT / 100);
   
-  // Convert to meters and round up to centimeter (0.01 m)
+  // Ceiling to centimeter (0.01 m)
   const totalLengthM = Math.ceil(totalMmWithWaste / 10) / 100;
   const mPerPiece = totalLengthM / job.qty;
 
