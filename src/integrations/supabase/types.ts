@@ -486,6 +486,7 @@ export type Database = {
           current_stock: number
           format_name: string
           id: string
+          low_stock: boolean | null
           low_stock_threshold: number
           updated_at: string
         }
@@ -494,6 +495,7 @@ export type Database = {
           current_stock?: number
           format_name: string
           id?: string
+          low_stock?: boolean | null
           low_stock_threshold?: number
           updated_at?: string
         }
@@ -502,6 +504,7 @@ export type Database = {
           current_stock?: number
           format_name?: string
           id?: string
+          low_stock?: boolean | null
           low_stock_threshold?: number
           updated_at?: string
         }
@@ -668,6 +671,41 @@ export type Database = {
           },
         ]
       }
+      work_order_events: {
+        Row: {
+          created_at: string | null
+          created_by: string | null
+          event_type: string
+          id: string
+          metadata: Json | null
+          work_order_id: string
+        }
+        Insert: {
+          created_at?: string | null
+          created_by?: string | null
+          event_type: string
+          id?: string
+          metadata?: Json | null
+          work_order_id: string
+        }
+        Update: {
+          created_at?: string | null
+          created_by?: string | null
+          event_type?: string
+          id?: string
+          metadata?: Json | null
+          work_order_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "work_order_events_work_order_id_fkey"
+            columns: ["work_order_id"]
+            isOneToOne: false
+            referencedRelation: "work_orders"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       work_order_items: {
         Row: {
           created_at: string
@@ -811,6 +849,10 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      close_work_order_atomic: {
+        Args: { p_user_id: string; p_work_order_id: string }
+        Returns: Json
+      }
       generate_order_number: { Args: never; Returns: string }
       has_role: {
         Args: {

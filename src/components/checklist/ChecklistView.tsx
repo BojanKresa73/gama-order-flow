@@ -146,26 +146,22 @@ const ChecklistView = ({ orderType }: ChecklistViewProps) => {
 
   const closeWorkOrder = async (workOrderId: string) => {
     try {
-      // First, close all file entries for this work order
-      const { error: filesError } = await supabase
-        .from("file_entries")
-        .update({ status: "closed" })
-        .eq("work_order_id", workOrderId);
+      // Get current user
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error("User not authenticated");
 
-      if (filesError) throw filesError;
-
-      // Then close the work order
-      const { error } = await supabase
-        .from("work_orders")
-        .update({
-          status: "closed",
-          closed_at: new Date().toISOString(),
-        })
-        .eq("id", workOrderId);
+      // Call atomic close function
+      const { data, error } = await supabase.rpc("close_work_order_atomic", {
+        p_work_order_id: workOrderId,
+        p_user_id: user.id,
+      });
 
       if (error) throw error;
+      
+      const result = data as { success: boolean; error?: string };
+      if (!result?.success) throw new Error(result?.error || "Failed to close work order");
 
-      // Automatically send delivery note
+      // After successful atomic close, send delivery note
       try {
         const { error: deliveryError } = await supabase.functions.invoke(
           "send-delivery-note",
@@ -184,7 +180,7 @@ const ChecklistView = ({ orderType }: ChecklistViewProps) => {
         console.error("Error sending delivery note:", deliveryError);
         toast({
           title: "Upozorenje",
-          description: "Radni nalog je zatvoren, ali nije poslata otpremnica",
+          description: "Radni nalog je zatvoren, ali otpremnica nije poslata",
           variant: "destructive",
         });
       }
@@ -194,7 +190,7 @@ const ChecklistView = ({ orderType }: ChecklistViewProps) => {
       console.error("Error closing work order:", error);
       toast({
         title: "Greška",
-        description: "Greška pri zatvaranju radnog naloga",
+        description: error instanceof Error ? error.message : "Greška pri zatvaranju radnog naloga",
         variant: "destructive",
       });
     }
