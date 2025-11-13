@@ -896,6 +896,7 @@ export type Database = {
           created_at: string
           created_by: string
           film_note: string | null
+          film_price_override_eur_per_m: number | null
           id: string
           job_name: string | null
           lamination: string | null
@@ -923,6 +924,7 @@ export type Database = {
           created_at?: string
           created_by: string
           film_note?: string | null
+          film_price_override_eur_per_m?: number | null
           id?: string
           job_name?: string | null
           lamination?: string | null
@@ -950,6 +952,7 @@ export type Database = {
           created_at?: string
           created_by?: string
           film_note?: string | null
+          film_price_override_eur_per_m?: number | null
           id?: string
           job_name?: string | null
           lamination?: string | null

@@ -12,6 +12,9 @@ import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Checkbox } from "@/components/ui/checkbox";
 import { LocalFilmJobsTable, LocalFilmJob } from "@/components/film/LocalFilmJobsTable";
+import { FilmJobsSummary } from "@/components/film/FilmJobsSummary";
+import { useFilmSettings } from "@/hooks/useFilmSettings";
+import { computeFilmJobClient } from "@/lib/filmCalculations";
 
 const NewWorkOrder = () => {
   const [searchParams] = useSearchParams();
@@ -48,6 +51,9 @@ const NewWorkOrder = () => {
 
   const [ctpItems, setCtpItems] = useState<Array<{ file_name: string; plate_format_id: string; quantity: number }>>([]);
   const [filmJobs, setFilmJobs] = useState<LocalFilmJob[]>([]);
+  const [filmPriceOverride, setFilmPriceOverride] = useState<number | null>(null);
+  
+  const { data: filmSettings } = useFilmSettings();
   const [bulkFormat, setBulkFormat] = useState("");
   const [bulkQuantity, setBulkQuantity] = useState(4);
 
@@ -122,6 +128,7 @@ const NewWorkOrder = () => {
         workOrderData.test_clicks = formData.test_clicks;
       } else if (orderType === "film") {
         workOrderData.film_note = formData.film_note;
+        workOrderData.film_price_override_eur_per_m = filmPriceOverride;
       }
 
       const { data: workOrder, error: orderError } = await supabase
@@ -722,6 +729,22 @@ const NewWorkOrder = () => {
                         placeholder="Dodatne informacije za filmovanje..."
                       />
                     </div>
+
+                    {filmSettings && filmJobs.length > 0 && (
+                      <FilmJobsSummary
+                        totalMeters={filmJobs.reduce((sum, job) => {
+                          const result = computeFilmJobClient(job, filmSettings);
+                          return sum + (('error' in result) ? 0 : result.computed_total_m);
+                        }, 0)}
+                        costPerMeter={filmSettings.cost_eur_per_m}
+                        defaultPricePerMeter={filmSettings.price_eur_per_m}
+                        overridePrice={filmPriceOverride}
+                        clientDiscount={
+                          clients.find(c => c.id === formData.client_id)?.rabat_procenat || 0
+                        }
+                        onOverridePriceChange={setFilmPriceOverride}
+                      />
+                    )}
 
                     <LocalFilmJobsTable jobs={filmJobs} onChange={setFilmJobs} />
                   </div>
