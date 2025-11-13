@@ -84,6 +84,28 @@ const handler = async (req: Request): Promise<Response> => {
       throw new Error("No closed file entries found for this work order");
     }
 
+    // Check if delivery note already exists (idempotency)
+    const { data: existingNote, error: existingError } = await supabaseClient
+      .from("delivery_notes")
+      .select("id, sent_at")
+      .eq("work_order_id", workOrderId)
+      .single();
+
+    if (existingNote) {
+      console.log("Delivery note already exists for work order:", workOrderId);
+      return new Response(
+        JSON.stringify({ 
+          message: "Delivery note already sent",
+          delivery_note_id: existingNote.id,
+          sent_at: existingNote.sent_at
+        }),
+        {
+          status: 200,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        }
+      );
+    }
+
     // Generate delivery number
     const { count: deliveryCount } = await supabaseClient
       .from("delivery_notes")
