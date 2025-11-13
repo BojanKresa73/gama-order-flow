@@ -627,6 +627,7 @@ const NewWorkOrder = () => {
                       <LocalDigitalJobsTable
                         jobs={digitalJobs}
                         onChange={setDigitalJobs}
+                        printSides={formData.print_spec || "4/4"}
                       />
                     </div>
                   </div>
