@@ -1020,7 +1020,7 @@ export type Database = {
         | "Done"
         | "NA"
       work_order_status: "open" | "closed"
-      work_order_type: "ctp" | "digital" | "other"
+      work_order_type: "ctp" | "digital" | "other" | "film"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -1151,7 +1151,7 @@ export const Constants = {
       app_role: ["admin", "accounting", "operator"],
       checklist_item_status: ["Pending", "InProgress", "Blocked", "Done", "NA"],
       work_order_status: ["open", "closed"],
-      work_order_type: ["ctp", "digital", "other"],
+      work_order_type: ["ctp", "digital", "other", "film"],
     },
   },
 } as const
