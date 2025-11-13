@@ -1,5 +1,6 @@
 import { Client } from "@/hooks/useClients";
 import { useClientStats } from "@/hooks/useClientStats";
+import { useClientActivities } from "@/hooks/useClientActivities";
 import { useNavigate } from "react-router-dom";
 import {
   Dialog,
@@ -10,6 +11,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   Tooltip,
   TooltipContent,
@@ -17,6 +19,8 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 import { useToast } from "@/hooks/use-toast";
+import { ClientActivitiesTimeline } from "./ClientActivitiesTimeline";
+import { ClientQuickNoteForm } from "./ClientQuickNoteForm";
 import {
   Copy,
   Mail,
@@ -28,6 +32,7 @@ import {
   Printer,
   Monitor,
   Plus,
+  Activity,
 } from "lucide-react";
 
 interface ClientQuickViewProps {
@@ -41,6 +46,7 @@ export const ClientQuickView = ({ client, open, onOpenChange, onEdit }: ClientQu
   const { toast } = useToast();
   const navigate = useNavigate();
   const { data: stats, isLoading } = useClientStats(client?.id || "");
+  const { data: activities, isLoading: activitiesLoading } = useClientActivities(client?.id || "");
 
   if (!client) return null;
 
@@ -76,7 +82,20 @@ export const ClientQuickView = ({ client, open, onOpenChange, onEdit }: ClientQu
           </DialogTitle>
         </DialogHeader>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 py-4">
+        <Tabs defaultValue="info" className="py-4">
+          <TabsList className="grid w-full grid-cols-2">
+            <TabsTrigger value="info">
+              <FileText className="h-4 w-4 mr-2" />
+              Podaci klijenta
+            </TabsTrigger>
+            <TabsTrigger value="activities">
+              <Activity className="h-4 w-4 mr-2" />
+              Aktivnosti
+            </TabsTrigger>
+          </TabsList>
+
+          <TabsContent value="info" className="mt-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           {/* Left Column - Client Data */}
           <div className="space-y-4">
             <h3 className="font-semibold text-lg flex items-center gap-2">
@@ -332,7 +351,23 @@ export const ClientQuickView = ({ client, open, onOpenChange, onEdit }: ClientQu
               <div className="text-sm text-muted-foreground">Nema dostupnih podataka</div>
             )}
           </div>
-        </div>
+            </div>
+          </TabsContent>
+
+          <TabsContent value="activities" className="mt-4">
+            <div className="space-y-6">
+              <ClientQuickNoteForm clientId={client.id} />
+              <Separator />
+              <div>
+                <h3 className="font-semibold text-lg mb-4">Istorija aktivnosti</h3>
+                <ClientActivitiesTimeline 
+                  activities={activities || []} 
+                  isLoading={activitiesLoading}
+                />
+              </div>
+            </div>
+          </TabsContent>
+        </Tabs>
 
         {/* Action Buttons */}
         <div className="flex gap-2 pt-4 border-t">
