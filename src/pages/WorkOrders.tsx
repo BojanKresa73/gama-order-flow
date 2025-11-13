@@ -101,37 +101,24 @@ const WorkOrders = () => {
 
     setIsClosing(true);
     try {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) throw new Error("Niste autentifikovani");
-
-      // Call appropriate function based on order type
-      const functionName = orderToClose.order_type === 'film' 
-        ? 'close_film_work_order' 
-        : 'close_work_order_atomic';
-
-      const { data, error } = await supabase.rpc(functionName, {
-        p_work_order_id: orderToClose.id,
-        p_user_id: user.id
+      const { data, error } = await supabase.functions.invoke('close-work-order', {
+        body: {
+          work_order_id: orderToClose.id,
+          note: closingNote.trim() || undefined
+        }
       });
 
       if (error) throw error;
-      
-      const result = data as { success: boolean; error?: string };
-      if (!result?.success) throw new Error(result?.error || "Greška pri zatvaranju naloga");
 
-      // Add closing note if provided
-      if (closingNote.trim()) {
-        await supabase.from('work_order_events').insert({
-          work_order_id: orderToClose.id,
-          event_type: 'note',
-          created_by: user.id,
-          metadata: { note: closingNote.trim(), context: 'closing' }
-        });
+      const result = data as { success: boolean; error?: string; message?: string };
+      
+      if (!result?.success) {
+        throw new Error(result?.error || "Greška pri zatvaranju naloga");
       }
 
       toast({
         title: "Uspeh",
-        description: "Radni nalog je zatvoren i otpremnica je poslata.",
+        description: result.message || "Radni nalog je zatvoren i otpremnica je poslata.",
       });
 
       setCloseDialogOpen(false);
