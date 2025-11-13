@@ -45,36 +45,37 @@ interface CutInfo {
 interface FilmCutsPreviewProps {
   filmJobs: FilmJob[];
   filmSettings: FilmSettings;
-  overridePrice: number | null;
   clientDiscount: number;
 }
 
 function computeCuts(job: FilmJob, settings: FilmSettings): CutInfo | null {
-  const effectiveRollWidth = settings.roll_width_mm - 2 * settings.side_margin_mm;
-  const effectiveHeight = job.height_mm + 2 * job.margin_mm;
-  const effectiveWidth = job.width_mm + 2 * job.margin_mm;
+  const ROLL_WIDTH_MM = 508;
+  const MAX_COMPONENT_WIDTH_MM = 500;
 
-  let best: { rotation: number; copies: number; rows: number; length: number } | null = null;
+  // Check if dimensions exceed maximum allowed width
+  if (job.width_mm > MAX_COMPONENT_WIDTH_MM || job.height_mm > MAX_COMPONENT_WIDTH_MM) {
+    return null;
+  }
+
+  let best: { rotation: number; copies: number; rows: number; totalMm: number } | null = null;
 
   // Try 0° orientation
-  const copiesPerRow0 = Math.floor(effectiveRollWidth / effectiveWidth);
+  const copiesPerRow0 = Math.floor(ROLL_WIDTH_MM / job.width_mm);
   if (copiesPerRow0 >= 1) {
     const rows0 = Math.ceil(job.qty / copiesPerRow0);
-    const totalLength0 = rows0 * (effectiveHeight + settings.gap_mm) + 
-                         settings.lead_trim_mm + settings.tail_trim_mm - settings.gap_mm;
-    best = { rotation: 0, copies: copiesPerRow0, rows: rows0, length: totalLength0 };
+    const total0Mm = rows0 * job.height_mm;
+    best = { rotation: 0, copies: copiesPerRow0, rows: rows0, totalMm: total0Mm };
   }
 
   // Try 90° orientation if allowed
   if (job.allow_rotate_90) {
-    const copiesPerRow90 = Math.floor(effectiveRollWidth / effectiveHeight);
+    const copiesPerRow90 = Math.floor(ROLL_WIDTH_MM / job.height_mm);
     if (copiesPerRow90 >= 1) {
       const rows90 = Math.ceil(job.qty / copiesPerRow90);
-      const totalLength90 = rows90 * (effectiveWidth + settings.gap_mm) + 
-                           settings.lead_trim_mm + settings.tail_trim_mm - settings.gap_mm;
+      const total90Mm = rows90 * job.width_mm;
       
-      if (!best || totalLength90 < best.length) {
-        best = { rotation: 90, copies: copiesPerRow90, rows: rows90, length: totalLength90 };
+      if (!best || total90Mm < best.totalMm) {
+        best = { rotation: 90, copies: copiesPerRow90, rows: rows90, totalMm: total90Mm };
       }
     }
   }
@@ -82,10 +83,11 @@ function computeCuts(job: FilmJob, settings: FilmSettings): CutInfo | null {
   if (!best) return null;
 
   // Apply waste percentage
-  const totalLengthWithWaste = best.length * (1 + settings.waste_percent / 100);
+  const wastePercent = settings.waste_percent || 3;
+  const totalMmWithWaste = best.totalMm * (1 + wastePercent / 100);
   
-  // Round up to centimeters
-  const totalLengthM = Math.ceil(totalLengthWithWaste / 10) / 100;
+  // Convert to meters and round up to centimeter (0.01 m)
+  const totalLengthM = Math.ceil(totalMmWithWaste / 10) / 100;
   const mPerPiece = totalLengthM / job.qty;
 
   return {
@@ -102,9 +104,11 @@ function computeCuts(job: FilmJob, settings: FilmSettings): CutInfo | null {
 export const FilmCutsPreview = ({ 
   filmJobs, 
   filmSettings, 
-  overridePrice,
   clientDiscount 
 }: FilmCutsPreviewProps) => {
+  const COST_EUR_PER_M = 12.5;
+  const PRICE_EUR_PER_M = 17;
+
   const cutsData = useMemo(() => {
     return filmJobs
       .map(job => computeCuts(job, filmSettings))
@@ -116,9 +120,8 @@ export const FilmCutsPreview = ({
   }, [cutsData]);
 
   const handleExport = () => {
-    const effectivePrice = overridePrice ?? filmSettings.price_eur_per_m;
-    const costTotal = totalMeters * filmSettings.cost_eur_per_m;
-    const sellingTotal = totalMeters * effectivePrice;
+    const costTotal = totalMeters * COST_EUR_PER_M;
+    const sellingTotal = totalMeters * PRICE_EUR_PER_M;
     const discountedTotal = clientDiscount > 0 
       ? sellingTotal * (1 - clientDiscount / 100)
       : sellingTotal;
@@ -146,9 +149,9 @@ export const FilmCutsPreview = ({
       [],
       ["SAŽETAK"],
       ["Ukupno metara", totalMeters.toFixed(2), "m"],
-      ["Nabavna cena", `€${filmSettings.cost_eur_per_m.toFixed(2)}/m`, `€${costTotal.toFixed(2)}`],
-      ["Prodajna cena", `€${effectivePrice.toFixed(2)}/m${overridePrice ? " (prilagođeno)" : ""}`, `€${sellingTotal.toFixed(2)}`],
-      ["Marža", "", `€${(sellingTotal - costTotal).toFixed(2)} (${((sellingTotal - costTotal) / costTotal * 100).toFixed(1)}%)`],
+      ["Nabavna cena", `€${COST_EUR_PER_M.toFixed(2)}/m`, `€${costTotal.toFixed(2)}`],
+      ["Prodajna cena", `€${PRICE_EUR_PER_M.toFixed(2)}/m`, `€${sellingTotal.toFixed(2)}`],
+      ["Marža", "", `€${(sellingTotal - costTotal).toFixed(2)} (${((sellingTotal - costTotal) / sellingTotal * 100).toFixed(1)}%)`],
     ];
 
     if (clientDiscount > 0) {

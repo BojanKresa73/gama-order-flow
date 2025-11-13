@@ -50,7 +50,6 @@ const NewWorkOrder = () => {
 
   const [ctpItems, setCtpItems] = useState<Array<{ file_name: string; plate_format_id: string; quantity: number }>>([]);
   const [filmJobs, setFilmJobs] = useState<LocalFilmJob[]>([]);
-  const [filmPriceOverride, setFilmPriceOverride] = useState<number | null>(null);
   
   const { data: filmSettings } = useFilmSettings();
   const [bulkFormat, setBulkFormat] = useState("");
@@ -125,8 +124,6 @@ const NewWorkOrder = () => {
         workOrderData.sheets_used = formData.sheets_used;
         workOrderData.clicks_count = formData.clicks_count;
         workOrderData.test_clicks = formData.test_clicks;
-      } else if (orderType === "film") {
-        workOrderData.film_price_override_eur_per_m = filmPriceOverride;
       }
 
       const { data: workOrder, error: orderError } = await supabase
@@ -730,13 +727,9 @@ const NewWorkOrder = () => {
                               const result = computeFilmJobClient(job, filmSettings);
                               return sum + (('error' in result) ? 0 : result.computed_total_m);
                             }, 0)}
-                            costPerMeter={filmSettings.cost_eur_per_m}
-                            defaultPricePerMeter={filmSettings.price_eur_per_m}
-                            overridePrice={filmPriceOverride}
                             clientDiscount={
                               clients.find(c => c.id === formData.client_id)?.rabat_procenat || 0
                             }
-                            onOverridePriceChange={setFilmPriceOverride}
                           />
                         )}
 
@@ -749,7 +742,6 @@ const NewWorkOrder = () => {
                         <FilmCutsPreview
                           filmJobs={filmJobs}
                           filmSettings={filmSettings}
-                          overridePrice={filmPriceOverride}
                           clientDiscount={
                             clients.find(c => c.id === formData.client_id)?.rabat_procenat || 0
                           }
