@@ -9,6 +9,7 @@ import { StatsCards } from "@/components/dashboard/StatsCards";
 import { OrdersChart } from "@/components/dashboard/OrdersChart";
 import { RecentOrders } from "@/components/dashboard/RecentOrders";
 import { LowStockAlerts } from "@/components/dashboard/LowStockAlerts";
+import { FollowUpWidget } from "@/components/dashboard/FollowUpWidget";
 
 const Dashboard = () => {
   const [loading, setLoading] = useState(true);
@@ -80,9 +81,10 @@ const Dashboard = () => {
           
           <OrdersChart />
 
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
             <RecentOrders />
             <LowStockAlerts />
+            <FollowUpWidget />
           </div>
 
           <div>

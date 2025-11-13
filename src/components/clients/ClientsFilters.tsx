@@ -26,6 +26,7 @@ export interface ClientFilters {
   onlyVip: boolean;
   onlyBlocked: boolean;
   segment: "all" | "novi" | "redovan" | "premium";
+  followUpDate: string;
 }
 
 interface ClientsFiltersProps {
@@ -49,6 +50,7 @@ export const ClientsFilters = ({ cities, onFiltersChange }: ClientsFiltersProps)
     onlyVip: searchParams.get("onlyVip") === "true",
     onlyBlocked: searchParams.get("onlyBlocked") === "true",
     segment: (searchParams.get("segment") as ClientFilters["segment"]) || "all",
+    followUpDate: searchParams.get("followUpDate") || "",
   });
 
   // Debounce search input
@@ -74,6 +76,7 @@ export const ClientsFilters = ({ cities, onFiltersChange }: ClientsFiltersProps)
     if (filters.onlyVip) params.set("onlyVip", "true");
     if (filters.onlyBlocked) params.set("onlyBlocked", "true");
     if (filters.segment !== "all") params.set("segment", filters.segment);
+    if (filters.followUpDate) params.set("followUpDate", filters.followUpDate);
 
     setSearchParams(params, { replace: true });
     onFiltersChange(filters);
@@ -95,6 +98,7 @@ export const ClientsFilters = ({ cities, onFiltersChange }: ClientsFiltersProps)
       onlyVip: false,
       onlyBlocked: false,
       segment: "all",
+      followUpDate: "",
     };
     setSearchInput("");
     setFilters(defaultFilters);
@@ -111,7 +115,8 @@ export const ClientsFilters = ({ cities, onFiltersChange }: ClientsFiltersProps)
     filters.rabatMax < 100 ||
     filters.onlyVip ||
     filters.onlyBlocked ||
-    filters.segment !== "all";
+    filters.segment !== "all" ||
+    filters.followUpDate;
 
   return (
     <Card>
@@ -266,6 +271,19 @@ export const ClientsFilters = ({ cities, onFiltersChange }: ClientsFiltersProps)
                   <SelectItem value="premium">Premium</SelectItem>
                 </SelectContent>
               </Select>
+            </div>
+          </div>
+
+          {/* Follow-up date filter */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-4 border-t">
+            <div className="space-y-2">
+              <Label htmlFor="follow-up-date">Follow-up do datuma</Label>
+              <Input
+                id="follow-up-date"
+                type="date"
+                value={filters.followUpDate}
+                onChange={(e) => setFilters({ ...filters, followUpDate: e.target.value })}
+              />
             </div>
           </div>
 

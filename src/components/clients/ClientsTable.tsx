@@ -57,6 +57,7 @@ export const ClientsTable = ({ clients, onEdit }: ClientsTableProps) => {
     notification_email: true,
     rok_placanja_dana: true,
     rabat_procenat: true,
+    next_follow_up_at: true,
     created_at: true,
   });
 
@@ -98,6 +99,35 @@ export const ClientsTable = ({ clients, onEdit }: ClientsTableProps) => {
     setColumnVisibility((prev) => ({ ...prev, [column]: !prev[column] }));
   };
 
+  // Helper to determine follow-up status
+  const getFollowUpStatus = (date: string | null) => {
+    if (!date) return null;
+    
+    const followUpDate = new Date(date);
+    const now = new Date();
+    const diffMs = followUpDate.getTime() - now.getTime();
+    const diffHours = diffMs / (1000 * 60 * 60);
+    
+    if (diffHours < 0) return 'overdue'; // Past due
+    if (diffHours <= 48) return 'soon'; // Within 48 hours
+    return 'upcoming'; // Future
+  };
+
+  const getFollowUpBadge = (client: Client) => {
+    if (!client.next_follow_up_at) return null;
+    
+    const status = getFollowUpStatus(client.next_follow_up_at);
+    const dateStr = new Date(client.next_follow_up_at).toLocaleDateString("sr-RS");
+    
+    if (status === 'overdue') {
+      return <Badge variant="destructive">{dateStr}</Badge>;
+    }
+    if (status === 'soon') {
+      return <Badge className="bg-orange-500/20 text-orange-700 dark:text-orange-300 border-orange-500/30">{dateStr}</Badge>;
+    }
+    return <Badge variant="outline">{dateStr}</Badge>;
+  };
+
   const exportToXLSX = () => {
     // Define column mapping with display names
     const columnMapping: Array<{ key: keyof typeof columnVisibility; header: string; accessor: (client: Client) => any }> = [
@@ -112,6 +142,7 @@ export const ClientsTable = ({ clients, onEdit }: ClientsTableProps) => {
       { key: 'notification_email', header: 'Email za obaveštenja', accessor: (c) => c.notification_email || '' },
       { key: 'rok_placanja_dana', header: 'Rok plaćanja (dana)', accessor: (c) => c.rok_placanja_dana },
       { key: 'rabat_procenat', header: 'Rabat (%)', accessor: (c) => c.rabat_procenat },
+      { key: 'next_follow_up_at', header: 'Sledeći follow-up', accessor: (c) => c.next_follow_up_at ? new Date(c.next_follow_up_at).toLocaleDateString("sr-RS") : '' },
       { key: 'created_at', header: 'Datum kreiranja', accessor: (c) => new Date(c.created_at).toLocaleDateString("sr-RS") },
     ];
 
@@ -279,6 +310,12 @@ export const ClientsTable = ({ clients, onEdit }: ClientsTableProps) => {
               Rabat
             </DropdownMenuCheckboxItem>
             <DropdownMenuCheckboxItem
+              checked={columnVisibility.next_follow_up_at}
+              onCheckedChange={() => toggleColumnVisibility("next_follow_up_at")}
+            >
+              Sledeći follow-up
+            </DropdownMenuCheckboxItem>
+            <DropdownMenuCheckboxItem
               checked={columnVisibility.created_at}
               onCheckedChange={() => toggleColumnVisibility("created_at")}
             >
@@ -408,6 +445,11 @@ export const ClientsTable = ({ clients, onEdit }: ClientsTableProps) => {
                   <SortButton field="rabat_procenat">Rabat (%)</SortButton>
                 </TableHead>
               )}
+              {columnVisibility.next_follow_up_at && (
+                <TableHead>
+                  <SortButton field="next_follow_up_at">Sledeći follow-up</SortButton>
+                </TableHead>
+              )}
               {columnVisibility.created_at && (
                 <TableHead>
                   <SortButton field="created_at">Datum kreiranja</SortButton>
@@ -419,7 +461,7 @@ export const ClientsTable = ({ clients, onEdit }: ClientsTableProps) => {
           <TableBody>
             {paginatedClients.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={13} className="text-center py-8 text-muted-foreground">
+                <TableCell colSpan={14} className="text-center py-8 text-muted-foreground">
                   Nema klijenata za prikaz.
                 </TableCell>
               </TableRow>
@@ -500,6 +542,11 @@ export const ClientsTable = ({ clients, onEdit }: ClientsTableProps) => {
                       <Badge variant="secondary">{client.rabat_procenat}%</Badge>
                     </TableCell>
                   )}
+                  {columnVisibility.next_follow_up_at && (
+                    <TableCell>
+                      {getFollowUpBadge(client) || "-"}
+                    </TableCell>
+                  )}
                   {columnVisibility.created_at && (
                     <TableCell>
                       {new Date(client.created_at).toLocaleDateString("sr-RS")}
@@ -575,6 +622,7 @@ export const ClientsTable = ({ clients, onEdit }: ClientsTableProps) => {
         client={quickViewClient}
         open={!!quickViewClient}
         onOpenChange={(open) => !open && setQuickViewClient(null)}
+        onEdit={onEdit}
       />
     </div>
   );

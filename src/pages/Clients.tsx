@@ -81,6 +81,7 @@ const Clients = () => {
     onlyVip: false,
     onlyBlocked: false,
     segment: "all",
+    followUpDate: "",
   });
   const navigate = useNavigate();
   const { toast } = useToast();
@@ -786,6 +787,65 @@ const Clients = () => {
                     <SelectItem value="premium">Premium</SelectItem>
                   </SelectContent>
                 </Select>
+              </div>
+            </div>
+
+            {/* CRM fields */}
+            <div className="border-t pt-4 space-y-4">
+              <h4 className="font-medium text-sm">CRM</h4>
+              
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="edit-last-activity">Poslednja aktivnost</Label>
+                  <Input
+                    id="edit-last-activity"
+                    type="date"
+                    value={editingClient?.last_activity_at?.split('T')[0] || ""}
+                    onChange={(e) => setEditingClient({ 
+                      ...editingClient!, 
+                      last_activity_at: e.target.value ? new Date(e.target.value).toISOString() : null 
+                    })}
+                  />
+                </div>
+                
+                <div className="space-y-2">
+                  <Label htmlFor="edit-last-contacted">Poslednji kontakt</Label>
+                  <Input
+                    id="edit-last-contacted"
+                    type="date"
+                    value={editingClient?.last_contacted_at?.split('T')[0] || ""}
+                    onChange={(e) => setEditingClient({ 
+                      ...editingClient!, 
+                      last_contacted_at: e.target.value ? new Date(e.target.value).toISOString() : null 
+                    })}
+                  />
+                </div>
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="edit-next-followup">Sledeći follow-up</Label>
+                <Input
+                  id="edit-next-followup"
+                  type="date"
+                  value={editingClient?.next_follow_up_at?.split('T')[0] || ""}
+                  onChange={(e) => setEditingClient({ 
+                    ...editingClient!, 
+                    next_follow_up_at: e.target.value ? new Date(e.target.value).toISOString() : null 
+                  })}
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="edit-owner-id">Vlasnik (User ID)</Label>
+                <Input
+                  id="edit-owner-id"
+                  value={editingClient?.owner_user_id || ""}
+                  onChange={(e) => setEditingClient({ 
+                    ...editingClient!, 
+                    owner_user_id: e.target.value || null 
+                  })}
+                  placeholder="UUID korisnika"
+                />
               </div>
             </div>
           </div>

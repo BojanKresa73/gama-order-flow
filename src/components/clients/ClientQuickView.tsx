@@ -34,9 +34,10 @@ interface ClientQuickViewProps {
   client: Client | null;
   open: boolean;
   onOpenChange: (open: boolean) => void;
+  onEdit: (client: Client) => void;
 }
 
-export const ClientQuickView = ({ client, open, onOpenChange }: ClientQuickViewProps) => {
+export const ClientQuickView = ({ client, open, onOpenChange, onEdit }: ClientQuickViewProps) => {
   const { toast } = useToast();
   const navigate = useNavigate();
   const { data: stats, isLoading } = useClientStats(client?.id || "");
@@ -195,6 +196,57 @@ export const ClientQuickView = ({ client, open, onOpenChange }: ClientQuickViewP
                   <p className="font-medium whitespace-pre-wrap text-sm">{client.napomena}</p>
                 </div>
               )}
+
+              <Separator />
+
+              {/* CRM Block */}
+              <div className="space-y-3">
+                <div className="flex items-center justify-between">
+                  <h4 className="font-semibold text-sm">CRM</h4>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      onOpenChange(false);
+                      onEdit(client);
+                    }}
+                  >
+                    Uredi
+                  </Button>
+                </div>
+                
+                <div className="space-y-2 text-sm">
+                  <div>
+                    <p className="text-muted-foreground">Poslednja aktivnost</p>
+                    <p className="font-medium">
+                      {client.last_activity_at 
+                        ? new Date(client.last_activity_at).toLocaleDateString("sr-RS") 
+                        : "-"}
+                    </p>
+                  </div>
+                  <div>
+                    <p className="text-muted-foreground">Poslednji kontakt</p>
+                    <p className="font-medium">
+                      {client.last_contacted_at 
+                        ? new Date(client.last_contacted_at).toLocaleDateString("sr-RS") 
+                        : "-"}
+                    </p>
+                  </div>
+                  <div>
+                    <p className="text-muted-foreground">Sledeći follow-up</p>
+                    <p className="font-medium">
+                      {client.next_follow_up_at 
+                        ? new Date(client.next_follow_up_at).toLocaleDateString("sr-RS") 
+                        : "-"}
+                    </p>
+                  </div>
+                  <div>
+                    <p className="text-muted-foreground">Vlasnik (ID)</p>
+                    <p className="font-medium">{client.owner_user_id || "-"}</p>
+                  </div>
+                </div>
+              </div>
             </div>
           </div>
 

@@ -21,6 +21,10 @@ export interface Client {
   is_vip: boolean;
   is_blocked: boolean;
   segment: 'novi' | 'redovan' | 'premium';
+  last_activity_at: string | null;
+  last_contacted_at: string | null;
+  next_follow_up_at: string | null;
+  owner_user_id: string | null;
   created_at: string;
   updated_at: string;
 }
@@ -36,6 +40,7 @@ export interface ClientFilters {
   onlyVip?: boolean;
   onlyBlocked?: boolean;
   segment?: "all" | "novi" | "redovan" | "premium";
+  followUpDate?: string;
 }
 
 export const useClients = (filters?: ClientFilters) => {
@@ -113,6 +118,16 @@ export const useClients = (filters?: ClientFilters) => {
       // Segment filter
       if (filters.segment && filters.segment !== "all" && client.segment !== filters.segment) {
         return false;
+      }
+
+      // Follow-up date filter
+      if (filters.followUpDate && client.next_follow_up_at) {
+        const followUpDate = new Date(client.next_follow_up_at);
+        const filterDate = new Date(filters.followUpDate);
+        filterDate.setHours(23, 59, 59, 999);
+        if (followUpDate > filterDate) {
+          return false;
+        }
       }
 
       return true;

@@ -178,10 +178,14 @@ export type Database = {
           is_blocked: boolean
           is_vip: boolean
           kontakt_osoba: string | null
+          last_activity_at: string | null
+          last_contacted_at: string | null
           maticni_broj: string | null
           name: string
           napomena: string | null
+          next_follow_up_at: string | null
           notification_email: string | null
+          owner_user_id: string | null
           pib: string | null
           postanski_broj: string | null
           rabat_procenat: number | null
@@ -200,10 +204,14 @@ export type Database = {
           is_blocked?: boolean
           is_vip?: boolean
           kontakt_osoba?: string | null
+          last_activity_at?: string | null
+          last_contacted_at?: string | null
           maticni_broj?: string | null
           name: string
           napomena?: string | null
+          next_follow_up_at?: string | null
           notification_email?: string | null
+          owner_user_id?: string | null
           pib?: string | null
           postanski_broj?: string | null
           rabat_procenat?: number | null
@@ -222,10 +230,14 @@ export type Database = {
           is_blocked?: boolean
           is_vip?: boolean
           kontakt_osoba?: string | null
+          last_activity_at?: string | null
+          last_contacted_at?: string | null
           maticni_broj?: string | null
           name?: string
           napomena?: string | null
+          next_follow_up_at?: string | null
           notification_email?: string | null
+          owner_user_id?: string | null
           pib?: string | null
           postanski_broj?: string | null
           rabat_procenat?: number | null
