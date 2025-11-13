@@ -8,6 +8,7 @@ import { useToast } from "@/hooks/use-toast";
 import { useClients, Client } from "@/hooks/useClients";
 import { ClientsTable } from "@/components/clients/ClientsTable";
 import { ClientsFilters, ClientFilters } from "@/components/clients/ClientsFilters";
+import { ClientsCsvImport } from "@/components/clients/ClientsCsvImport";
 import {
   Dialog,
   DialogContent,
@@ -273,7 +274,9 @@ const Clients = () => {
             </Button>
             <h1 className="text-2xl font-bold">Klijenti</h1>
           </div>
-          <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
+          <div className="flex items-center gap-2">
+            <ClientsCsvImport />
+            <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
             <DialogTrigger asChild>
               <Button>
                 <Plus className="h-4 w-4 mr-2" />
@@ -462,6 +465,7 @@ const Clients = () => {
               </DialogFooter>
             </DialogContent>
           </Dialog>
+          </div>
         </div>
       </header>
 
