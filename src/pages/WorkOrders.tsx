@@ -5,13 +5,15 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
-import { ArrowLeft, Plus, FileText, Eye, Lock } from "lucide-react";
+import { ArrowLeft, Plus, FileText, Eye, Lock, CheckCircle2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { OrderFilesDialog } from "@/components/work-orders/OrderFilesDialog";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Progress } from "@/components/ui/progress";
 
 const WorkOrders = () => {
   const [workOrders, setWorkOrders] = useState<any[]>([]);
@@ -22,6 +24,11 @@ const WorkOrders = () => {
   const [orderToClose, setOrderToClose] = useState<any>(null);
   const [closingNote, setClosingNote] = useState("");
   const [isClosing, setIsClosing] = useState(false);
+  const [selectedOrders, setSelectedOrders] = useState<Set<string>>(new Set());
+  const [bulkCloseDialogOpen, setBulkCloseDialogOpen] = useState(false);
+  const [bulkClosingProgress, setBulkClosingProgress] = useState(0);
+  const [bulkClosingTotal, setBulkClosingTotal] = useState(0);
+  const [bulkResults, setBulkResults] = useState<{ closed: number; alreadyClosed: number; errors: number } | null>(null);
   const navigate = useNavigate();
   const { toast } = useToast();
 
@@ -150,6 +157,81 @@ const WorkOrders = () => {
     }
   };
 
+  const toggleOrderSelection = (orderId: string, isOpen: boolean) => {
+    if (!isOpen) return; // Only allow selecting open orders
+    
+    setSelectedOrders(prev => {
+      const newSet = new Set(prev);
+      if (newSet.has(orderId)) {
+        newSet.delete(orderId);
+      } else {
+        newSet.add(orderId);
+      }
+      return newSet;
+    });
+  };
+
+  const toggleAllOrders = () => {
+    const openOrders = workOrders.filter(order => order.status === 'open');
+    if (selectedOrders.size === openOrders.length) {
+      setSelectedOrders(new Set());
+    } else {
+      setSelectedOrders(new Set(openOrders.map(order => order.id)));
+    }
+  };
+
+  const handleBulkClose = () => {
+    if (selectedOrders.size === 0) return;
+    setBulkResults(null);
+    setBulkCloseDialogOpen(true);
+  };
+
+  const confirmBulkClose = async () => {
+    const orderIds = Array.from(selectedOrders);
+    setBulkClosingTotal(orderIds.length);
+    setBulkClosingProgress(0);
+
+    let closed = 0;
+    let alreadyClosed = 0;
+    let errors = 0;
+
+    for (let i = 0; i < orderIds.length; i++) {
+      try {
+        const { data, error } = await supabase.functions.invoke('close-work-order', {
+          body: {
+            work_order_id: orderIds[i],
+            note: closingNote.trim() || undefined
+          }
+        });
+
+        if (error) throw error;
+
+        const result = data as { success: boolean; error?: string };
+        
+        if (result?.success) {
+          closed++;
+        } else if (result?.error?.includes('već zatvoren')) {
+          alreadyClosed++;
+        } else {
+          errors++;
+        }
+      } catch (error: any) {
+        if (error.message?.includes('već zatvoren')) {
+          alreadyClosed++;
+        } else {
+          errors++;
+        }
+      }
+
+      setBulkClosingProgress(i + 1);
+    }
+
+    setBulkResults({ closed, alreadyClosed, errors });
+    setSelectedOrders(new Set());
+    setClosingNote("");
+    fetchWorkOrders();
+  };
+
   if (loading) {
     return <div className="flex items-center justify-center min-h-screen">Učitavanje...</div>;
   }
@@ -174,9 +256,17 @@ const WorkOrders = () => {
       <main className="container mx-auto px-4 py-8">
         <Card>
           <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <FileText className="h-5 w-5" />
-              Svi radni nalozi
+            <CardTitle className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <FileText className="h-5 w-5" />
+                Svi radni nalozi
+              </div>
+              {selectedOrders.size > 0 && (
+                <Button onClick={handleBulkClose} variant="default">
+                  <CheckCircle2 className="h-4 w-4 mr-2" />
+                  Zatvori odabrane ({selectedOrders.size})
+                </Button>
+              )}
             </CardTitle>
           </CardHeader>
           <CardContent>
@@ -189,6 +279,13 @@ const WorkOrders = () => {
               <Table>
                 <TableHeader>
                   <TableRow>
+                    <TableHead className="w-12">
+                      <Checkbox
+                        checked={selectedOrders.size > 0 && selectedOrders.size === workOrders.filter(o => o.status === 'open').length}
+                        onCheckedChange={toggleAllOrders}
+                        disabled={workOrders.filter(o => o.status === 'open').length === 0}
+                      />
+                    </TableHead>
                     <TableHead>Broj naloga</TableHead>
                     <TableHead>Klijent</TableHead>
                     <TableHead>Tip</TableHead>
@@ -206,6 +303,13 @@ const WorkOrders = () => {
                       className="cursor-pointer hover:bg-muted/50"
                       onClick={() => navigate(`/work-orders/${order.id}`)}
                     >
+                      <TableCell onClick={(e) => e.stopPropagation()}>
+                        <Checkbox
+                          checked={selectedOrders.has(order.id)}
+                          onCheckedChange={() => toggleOrderSelection(order.id, order.status === 'open')}
+                          disabled={order.status === 'closed'}
+                        />
+                      </TableCell>
                       <TableCell className="font-medium">{order.order_number}</TableCell>
                       <TableCell>{order.clients?.name}</TableCell>
                       <TableCell>{getOrderTypeLabel(order.order_type)}</TableCell>
@@ -296,6 +400,86 @@ const WorkOrders = () => {
             <AlertDialogAction onClick={confirmCloseOrder} disabled={isClosing}>
               {isClosing ? "Zatvaranje..." : "Zatvori nalog"}
             </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      <AlertDialog open={bulkCloseDialogOpen} onOpenChange={setBulkCloseDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>
+              Zatvori {selectedOrders.size} {selectedOrders.size === 1 ? 'nalog' : 'naloga'}?
+            </AlertDialogTitle>
+            <AlertDialogDescription>
+              Po zatvaranju biće generisane i automatski poslate otpremnice klijentima.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          
+          {bulkClosingTotal > 0 && !bulkResults && (
+            <div className="space-y-2 py-4">
+              <div className="flex justify-between text-sm">
+                <span>Zatvaranje naloga...</span>
+                <span>{bulkClosingProgress} / {bulkClosingTotal}</span>
+              </div>
+              <Progress value={(bulkClosingProgress / bulkClosingTotal) * 100} />
+            </div>
+          )}
+
+          {bulkResults && (
+            <div className="space-y-2 py-4">
+              <div className="rounded-md bg-muted p-4 space-y-1">
+                <p className="text-sm">
+                  ✅ Zatvoreno: <strong>{bulkResults.closed}</strong>
+                </p>
+                {bulkResults.alreadyClosed > 0 && (
+                  <p className="text-sm text-muted-foreground">
+                    ℹ️ Već zatvoreno: {bulkResults.alreadyClosed}
+                  </p>
+                )}
+                {bulkResults.errors > 0 && (
+                  <p className="text-sm text-destructive">
+                    ❌ Greške: {bulkResults.errors}
+                  </p>
+                )}
+              </div>
+            </div>
+          )}
+
+          {!bulkResults && (
+            <div className="space-y-2 py-4">
+              <Label htmlFor="bulk-closing-note">Napomena za zatvaranje (opciono)</Label>
+              <Textarea
+                id="bulk-closing-note"
+                placeholder="Dodajte napomenu..."
+                value={closingNote}
+                onChange={(e) => setClosingNote(e.target.value)}
+                rows={3}
+                disabled={bulkClosingTotal > 0}
+              />
+            </div>
+          )}
+
+          <AlertDialogFooter>
+            {bulkResults ? (
+              <AlertDialogCancel onClick={() => {
+                setBulkCloseDialogOpen(false);
+                setBulkResults(null);
+                setBulkClosingTotal(0);
+                setBulkClosingProgress(0);
+              }}>
+                Zatvori
+              </AlertDialogCancel>
+            ) : (
+              <>
+                <AlertDialogCancel disabled={bulkClosingTotal > 0}>Otkaži</AlertDialogCancel>
+                <AlertDialogAction 
+                  onClick={confirmBulkClose} 
+                  disabled={bulkClosingTotal > 0}
+                >
+                  {bulkClosingTotal > 0 ? "Zatvaranje..." : "Zatvori naloge"}
+                </AlertDialogAction>
+              </>
+            )}
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
