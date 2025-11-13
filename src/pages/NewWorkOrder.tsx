@@ -11,13 +11,14 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Checkbox } from "@/components/ui/checkbox";
+import { LocalFilmJobsTable, LocalFilmJob } from "@/components/film/LocalFilmJobsTable";
 
 const NewWorkOrder = () => {
   const [searchParams] = useSearchParams();
   const [clients, setClients] = useState<any[]>([]);
   const [plateFormats, setPlateFormats] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
-  const [orderType, setOrderType] = useState<"ctp" | "digital" | "other">("ctp");
+  const [orderType, setOrderType] = useState<"ctp" | "digital" | "other" | "film">("ctp");
   const navigate = useNavigate();
   const { toast } = useToast();
 
@@ -41,9 +42,12 @@ const NewWorkOrder = () => {
     sheets_used: 0,
     clicks_count: 0,
     test_clicks: 0,
+    // Film fields
+    film_note: "",
   });
 
   const [ctpItems, setCtpItems] = useState<Array<{ file_name: string; plate_format_id: string; quantity: number }>>([]);
+  const [filmJobs, setFilmJobs] = useState<LocalFilmJob[]>([]);
   const [bulkFormat, setBulkFormat] = useState("");
   const [bulkQuantity, setBulkQuantity] = useState(4);
 
@@ -116,6 +120,8 @@ const NewWorkOrder = () => {
         workOrderData.sheets_used = formData.sheets_used;
         workOrderData.clicks_count = formData.clicks_count;
         workOrderData.test_clicks = formData.test_clicks;
+      } else if (orderType === "film") {
+        workOrderData.film_note = formData.film_note;
       }
 
       const { data: workOrder, error: orderError } = await supabase
@@ -224,6 +230,20 @@ const NewWorkOrder = () => {
         }
       }
 
+      // Insert film jobs
+      if (orderType === "film" && filmJobs.length > 0) {
+        const jobs = filmJobs.map(job => ({
+          work_order_id: workOrder.id,
+          ...job,
+        }));
+
+        const { error: jobsError } = await supabase
+          .from("film_jobs")
+          .insert(jobs);
+
+        if (jobsError) throw jobsError;
+      }
+
       toast({
         title: "Uspeh",
         description: `Radni nalog ${workOrder.order_number} je kreiran`,
@@ -311,9 +331,10 @@ const NewWorkOrder = () => {
               )}
 
               <Tabs value={orderType} onValueChange={(v) => setOrderType(v as any)}>
-                <TabsList className="grid w-full grid-cols-3">
+                <TabsList className="grid w-full grid-cols-4">
                   <TabsTrigger value="ctp">CTP</TabsTrigger>
                   <TabsTrigger value="digital">Digital</TabsTrigger>
+                  <TabsTrigger value="film">Film</TabsTrigger>
                   <TabsTrigger value="other">Ostalo</TabsTrigger>
                 </TabsList>
 
@@ -687,6 +708,23 @@ const NewWorkOrder = () => {
                   <p className="text-sm text-muted-foreground">
                     Dodajte napomene za ostale usluge.
                   </p>
+                </TabsContent>
+
+                <TabsContent value="film" className="space-y-4 mt-4">
+                  <div className="space-y-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="film_note">Napomena za filmovanje</Label>
+                      <Textarea
+                        id="film_note"
+                        value={formData.film_note}
+                        onChange={(e) => setFormData({ ...formData, film_note: e.target.value })}
+                        rows={2}
+                        placeholder="Dodatne informacije za filmovanje..."
+                      />
+                    </div>
+
+                    <LocalFilmJobsTable jobs={filmJobs} onChange={setFilmJobs} />
+                  </div>
                 </TabsContent>
               </Tabs>
 
