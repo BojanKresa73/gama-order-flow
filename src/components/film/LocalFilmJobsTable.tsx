@@ -1,9 +1,8 @@
 import { useState, useEffect } from "react";
-import { Plus, Edit, Trash2, X, Check, FileUp } from "lucide-react";
+import { Plus, Trash2, X, Check, FileUp } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Textarea } from "@/components/ui/textarea";
 import { AddFilmJobsModal } from "./AddFilmJobsModal";
 import {
   Table,
@@ -231,21 +230,10 @@ export const LocalFilmJobsTable = ({ jobs, onChange }: LocalFilmJobsTableProps) 
         )}
       </TableCell>
       <TableCell>
-        {previewCompute ? `${previewCompute.computed_rotation_deg}°` : '-'}
-      </TableCell>
-      <TableCell>
         {previewCompute ? previewCompute.computed_m_per_piece.toFixed(4) : '-'}
       </TableCell>
       <TableCell>
         {previewCompute ? previewCompute.computed_total_m.toFixed(2) : '-'}
-      </TableCell>
-      <TableCell>
-        <Textarea
-          value={formData.note}
-          onChange={(e) => setFormData({ ...formData, note: e.target.value })}
-          placeholder="Napomena"
-          rows={1}
-        />
       </TableCell>
       <TableCell>
         <div className="flex gap-2">
@@ -306,10 +294,8 @@ export const LocalFilmJobsTable = ({ jobs, onChange }: LocalFilmJobsTableProps) 
               <TableHead>Širina (mm)</TableHead>
               <TableHead>Visina (mm)</TableHead>
               <TableHead>Količina</TableHead>
-              <TableHead>Orijentacija</TableHead>
               <TableHead>m/kom</TableHead>
               <TableHead>Ukupno m</TableHead>
-              <TableHead>Napomena</TableHead>
               <TableHead>Akcije</TableHead>
             </TableRow>
           </TableHeader>
@@ -317,7 +303,7 @@ export const LocalFilmJobsTable = ({ jobs, onChange }: LocalFilmJobsTableProps) 
             {isAdding && renderFormRow()}
             {jobs.length === 0 && !isAdding ? (
               <TableRow>
-                <TableCell colSpan={9} className="text-center text-muted-foreground">
+                <TableCell colSpan={7} className="text-center text-muted-foreground">
                   Nema stavki. Kliknite "Dodaj stavku" da dodate prvu.
                 </TableCell>
               </TableRow>
@@ -332,26 +318,13 @@ export const LocalFilmJobsTable = ({ jobs, onChange }: LocalFilmJobsTableProps) 
                     <TableCell>{job.height_mm}</TableCell>
                     <TableCell>{job.qty}</TableCell>
                     <TableCell>
-                      {computedJobs[index] ? `${computedJobs[index].computed_rotation_deg}°` : '-'}
-                    </TableCell>
-                    <TableCell>
                       {computedJobs[index] ? computedJobs[index].computed_m_per_piece.toFixed(4) : '-'}
                     </TableCell>
                     <TableCell>
                       {computedJobs[index] ? computedJobs[index].computed_total_m.toFixed(2) : '-'}
                     </TableCell>
-                    <TableCell>{job.note || "-"}</TableCell>
                     <TableCell>
                       <div className="flex gap-2">
-                        <Button
-                          type="button"
-                          size="sm"
-                          variant="outline"
-                          onClick={() => handleEdit(index)}
-                          disabled={isAdding || editingIndex !== null}
-                        >
-                          <Edit className="h-4 w-4" />
-                        </Button>
                         <Button
                           type="button"
                           size="sm"
