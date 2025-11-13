@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import {
   Dialog,
   DialogContent,
@@ -21,12 +21,13 @@ import {
   PaginationNext,
   PaginationPrevious,
 } from "@/components/ui/pagination";
+import { Badge } from "@/components/ui/badge";
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useOrderFiles } from "@/hooks/useOrderFiles";
 import { Skeleton } from "@/components/ui/skeleton";
 
 interface OrderFilesDialogProps {
   orderId: string;
-  status: "open" | "closed";
   open: boolean;
   onOpenChange: (open: boolean) => void;
 }
@@ -35,41 +36,68 @@ const ITEMS_PER_PAGE = 50;
 
 export const OrderFilesDialog = ({
   orderId,
-  status,
   open,
   onOpenChange,
 }: OrderFilesDialogProps) => {
   const [currentPage, setCurrentPage] = useState(1);
-  const { data: files, isLoading } = useOrderFiles(orderId, status);
+  const [statusFilter, setStatusFilter] = useState<"all" | "open" | "closed">("all");
+  const { data: files, isLoading } = useOrderFiles(orderId);
 
-  const totalPages = Math.ceil((files?.length || 0) / ITEMS_PER_PAGE);
+  const filteredFiles = useMemo(() => {
+    if (!files) return [];
+    if (statusFilter === "all") return files;
+    return files.filter((file) => file.status === statusFilter);
+  }, [files, statusFilter]);
+
+  const totalPages = Math.ceil((filteredFiles?.length || 0) / ITEMS_PER_PAGE);
   const startIndex = (currentPage - 1) * ITEMS_PER_PAGE;
   const endIndex = startIndex + ITEMS_PER_PAGE;
-  const currentFiles = files?.slice(startIndex, endIndex) || [];
+  const currentFiles = filteredFiles?.slice(startIndex, endIndex) || [];
 
-  const title = status === "open" ? "Otvoreni fajlovi" : "Zatvoreni fajlovi";
+  // Reset to page 1 when filter changes
+  const handleFilterChange = (value: string) => {
+    setStatusFilter(value as "all" | "open" | "closed");
+    setCurrentPage(1);
+  };
+
+  const getStatusBadge = (status: string) => {
+    return status === "open" ? (
+      <Badge variant="default">Otvoren</Badge>
+    ) : (
+      <Badge variant="secondary">Zatvoren</Badge>
+    );
+  };
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-4xl">
         <DialogHeader>
-          <DialogTitle>{title}</DialogTitle>
+          <DialogTitle>Fajlovi naloga</DialogTitle>
         </DialogHeader>
         
         <div className="mt-4">
+          <Tabs value={statusFilter} onValueChange={handleFilterChange} className="mb-4">
+            <TabsList className="grid w-full grid-cols-3">
+              <TabsTrigger value="all">Svi</TabsTrigger>
+              <TabsTrigger value="open">Otvoreni</TabsTrigger>
+              <TabsTrigger value="closed">Zatvoreni</TabsTrigger>
+            </TabsList>
+          </Tabs>
+
           {isLoading ? (
             <div className="space-y-2">
               <Skeleton className="h-10 w-full" />
               <Skeleton className="h-10 w-full" />
               <Skeleton className="h-10 w-full" />
             </div>
-          ) : files && files.length > 0 ? (
+          ) : filteredFiles && filteredFiles.length > 0 ? (
             <>
               <Table>
                 <TableHeader>
                   <TableRow>
                     <TableHead>Naziv fajla</TableHead>
                     <TableHead>Format ploče</TableHead>
+                    <TableHead>Status</TableHead>
                     <TableHead className="text-right">Količina</TableHead>
                   </TableRow>
                 </TableHeader>
@@ -80,6 +108,7 @@ export const OrderFilesDialog = ({
                       <TableCell>
                         {file.plate_formats?.format_name || "-"}
                       </TableCell>
+                      <TableCell>{getStatusBadge(file.status)}</TableCell>
                       <TableCell className="text-right">
                         {file.quantity || "-"}
                       </TableCell>

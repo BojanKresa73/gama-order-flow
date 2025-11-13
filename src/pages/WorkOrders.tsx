@@ -15,7 +15,6 @@ const WorkOrders = () => {
   const [sendingDeliveryNote, setSendingDeliveryNote] = useState<string | null>(null);
   const [filesDialogOpen, setFilesDialogOpen] = useState(false);
   const [selectedOrderId, setSelectedOrderId] = useState<string>("");
-  const [filesDialogStatus, setFilesDialogStatus] = useState<"open" | "closed">("open");
   const navigate = useNavigate();
   const { toast } = useToast();
 
@@ -101,10 +100,9 @@ const WorkOrders = () => {
     }
   };
 
-  const handleShowFiles = (orderId: string, status: "open" | "closed", e: React.MouseEvent) => {
+  const handleShowFiles = (orderId: string, e: React.MouseEvent) => {
     e.stopPropagation();
     setSelectedOrderId(orderId);
-    setFilesDialogStatus(status);
     setFilesDialogOpen(true);
   };
 
@@ -174,18 +172,10 @@ const WorkOrders = () => {
                           <Button
                             variant="outline"
                             size="sm"
-                            onClick={(e) => handleShowFiles(order.id, "open", e)}
+                            onClick={(e) => handleShowFiles(order.id, e)}
                           >
                             <Eye className="h-4 w-4 mr-2" />
                             Prikaz
-                          </Button>
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={(e) => handleShowFiles(order.id, "closed", e)}
-                          >
-                            <Eye className="h-4 w-4 mr-2" />
-                            Prikaz zatvorenih
                           </Button>
                           <Button
                             variant="outline"
@@ -209,7 +199,6 @@ const WorkOrders = () => {
 
       <OrderFilesDialog
         orderId={selectedOrderId}
-        status={filesDialogStatus}
         open={filesDialogOpen}
         onOpenChange={setFilesDialogOpen}
       />

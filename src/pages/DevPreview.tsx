@@ -24,7 +24,6 @@ const DevPreview = () => {
   // Dialog states
   const [filesDialogOpen, setFilesDialogOpen] = useState(false);
   const [selectedOrderId, setSelectedOrderId] = useState<string>("");
-  const [filesDialogStatus, setFilesDialogStatus] = useState<"open" | "closed">("open");
   const [deliveryPreviewOpen, setDeliveryPreviewOpen] = useState(false);
 
   useEffect(() => {
@@ -89,9 +88,9 @@ const DevPreview = () => {
     }
   };
 
-  const handleShowFiles = (orderId: string, status: "open" | "closed") => {
+  const handleShowFiles = (orderId: string, e: React.MouseEvent) => {
+    e.stopPropagation();
     setSelectedOrderId(orderId);
-    setFilesDialogStatus(status);
     setFilesDialogOpen(true);
   };
 
@@ -226,18 +225,13 @@ const DevPreview = () => {
                           <Button
                             variant="outline"
                             size="sm"
-                            onClick={() => handleShowFiles(order.id, "open")}
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleShowFiles(order.id, e);
+                            }}
                           >
                             <Eye className="h-4 w-4 mr-2" />
                             Prikaz
-                          </Button>
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={() => handleShowFiles(order.id, "closed")}
-                          >
-                            <Eye className="h-4 w-4 mr-2" />
-                            Prikaz zatvorenih
                           </Button>
                         </div>
                       </TableCell>
@@ -411,7 +405,6 @@ const DevPreview = () => {
       {/* File Entries Dialog */}
       <OrderFilesDialog
         orderId={selectedOrderId}
-        status={filesDialogStatus}
         open={filesDialogOpen}
         onOpenChange={setFilesDialogOpen}
       />

@@ -6,14 +6,15 @@ interface FileEntry {
   filename: string;
   quantity: number | null;
   plate_format_id: string | null;
+  status: string;
   plate_formats: {
     format_name: string;
   } | null;
 }
 
-export const useOrderFiles = (orderId: string, status: "open" | "closed") => {
+export const useOrderFiles = (orderId: string) => {
   return useQuery({
-    queryKey: ["order-files", orderId, status],
+    queryKey: ["order-files", orderId],
     queryFn: async () => {
       const { data, error } = await supabase
         .from("file_entries")
@@ -22,12 +23,12 @@ export const useOrderFiles = (orderId: string, status: "open" | "closed") => {
           filename,
           quantity,
           plate_format_id,
+          status,
           plate_formats (
             format_name
           )
         `)
         .eq("work_order_id", orderId)
-        .eq("status", status)
         .order("created_at", { ascending: false });
 
       if (error) throw error;
