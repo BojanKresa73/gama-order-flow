@@ -129,6 +129,17 @@ export const LocalDigitalJobsTable = ({ jobs, onChange, printSides, clientRabatP
 
   const handleAddJobs = (newJobs: LocalDigitalJob[]) => {
     onChange([...jobs, ...newJobs]);
+    
+    // Focus on first pages input after a short delay
+    setTimeout(() => {
+      const firstPagesInput = document.querySelector<HTMLInputElement>(
+        `input[type="number"][value="1"]`
+      );
+      if (firstPagesInput) {
+        firstPagesInput.focus();
+        firstPagesInput.select();
+      }
+    }, 100);
   };
 
   return (
