@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Checkbox } from "@/components/ui/checkbox";
 import { AddDigitalJobsModal } from "./AddDigitalJobsModal";
+import { DigitalJobsSummary } from "./DigitalJobsSummary";
 import {
   Table,
   TableBody,
@@ -38,9 +39,10 @@ interface LocalDigitalJobsTableProps {
   jobs: LocalDigitalJob[];
   onChange: (jobs: LocalDigitalJob[]) => void;
   printSides: string; // From parent form (e.g. "4/4")
+  clientRabatProcenat?: number;
 }
 
-export const LocalDigitalJobsTable = ({ jobs, onChange, printSides }: LocalDigitalJobsTableProps) => {
+export const LocalDigitalJobsTable = ({ jobs, onChange, printSides, clientRabatProcenat }: LocalDigitalJobsTableProps) => {
   const [showAddFilesModal, setShowAddFilesModal] = useState(false);
   const { data: settings } = useDigitalSettings();
   const { data: priceList } = useDigitalPriceList();
@@ -131,6 +133,8 @@ export const LocalDigitalJobsTable = ({ jobs, onChange, printSides }: LocalDigit
 
   return (
     <div className="space-y-4">
+      <DigitalJobsSummary jobs={jobs} clientRabatProcenat={clientRabatProcenat} />
+      
       <div className="flex gap-2">
         <Button
           type="button"
