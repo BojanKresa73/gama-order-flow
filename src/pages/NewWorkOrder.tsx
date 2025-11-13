@@ -23,6 +23,7 @@ const NewWorkOrder = () => {
 
   const [formData, setFormData] = useState({
     client_id: searchParams.get("clientId") || "",
+    notification_email: "",
     notes: "",
     // CTP fields
     trial_print: false,
@@ -272,21 +273,42 @@ const NewWorkOrder = () => {
                 <Label htmlFor="client">Klijent *</Label>
                 <Select
                   value={formData.client_id}
-                  onValueChange={(value) => setFormData({ ...formData, client_id: value })}
+                  onValueChange={(value) => {
+                    const selectedClient = clients.find(c => c.id === value);
+                    setFormData({ 
+                      ...formData, 
+                      client_id: value,
+                      notification_email: selectedClient?.notification_email || ""
+                    });
+                  }}
                   required
                 >
                   <SelectTrigger>
                     <SelectValue placeholder="Izaberite klijenta" />
                   </SelectTrigger>
-                  <SelectContent>
+                  <SelectContent className="bg-popover z-50">
                     {clients.map((client) => (
                       <SelectItem key={client.id} value={client.id}>
                         {client.name}
+                        {client.pib && ` — ${client.pib}`}
+                        {client.grad && ` — ${client.grad}`}
                       </SelectItem>
                     ))}
                   </SelectContent>
                 </Select>
               </div>
+
+              {formData.notification_email && (
+                <div className="space-y-2">
+                  <Label htmlFor="notification_email">Email primaoca otpremnice</Label>
+                  <Input
+                    id="notification_email"
+                    type="email"
+                    value={formData.notification_email}
+                    onChange={(e) => setFormData({ ...formData, notification_email: e.target.value })}
+                  />
+                </div>
+              )}
 
               <Tabs value={orderType} onValueChange={(v) => setOrderType(v as any)}>
                 <TabsList className="grid w-full grid-cols-3">
