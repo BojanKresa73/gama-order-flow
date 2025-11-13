@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Plus, Trash2, FileUp } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -12,6 +12,10 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import { useDigitalSettings } from "@/hooks/useDigitalSettings";
+import { useDigitalPriceList } from "@/hooks/useDigitalPriceList";
+import { computeDigitalJob } from "@/lib/digitalCalculations";
+import { useToast } from "@/hooks/use-toast";
 
 export interface LocalDigitalJob {
   file_name: string;
@@ -20,6 +24,7 @@ export interface LocalDigitalJob {
   pages: number;
   qty: number;
   is_test_print: boolean;
+  print_sides: string; // e.g. "4/4", "4/0", etc.
   computed_nup?: number;
   computed_sheets_per_copy?: number;
   computed_total_sheets?: number;
@@ -32,10 +37,48 @@ export interface LocalDigitalJob {
 interface LocalDigitalJobsTableProps {
   jobs: LocalDigitalJob[];
   onChange: (jobs: LocalDigitalJob[]) => void;
+  printSides: string; // From parent form (e.g. "4/4")
 }
 
-export const LocalDigitalJobsTable = ({ jobs, onChange }: LocalDigitalJobsTableProps) => {
+export const LocalDigitalJobsTable = ({ jobs, onChange, printSides }: LocalDigitalJobsTableProps) => {
   const [showAddFilesModal, setShowAddFilesModal] = useState(false);
+  const { data: settings } = useDigitalSettings();
+  const { data: priceList } = useDigitalPriceList();
+  const { toast } = useToast();
+
+  // Recompute all jobs when settings, priceList, or printSides change
+  useEffect(() => {
+    if (!settings || !priceList || priceList.length === 0) return;
+
+    const updatedJobs = jobs.map(job => {
+      const result = computeDigitalJob(
+        { ...job, print_sides: printSides },
+        settings,
+        priceList
+      );
+
+      if ('error' in result) {
+        return job; // Keep original if error
+      }
+
+      return {
+        ...job,
+        print_sides: printSides,
+        ...result,
+      };
+    });
+
+    // Only update if something changed
+    const hasChanges = updatedJobs.some((job, i) => 
+      job.computed_nup !== jobs[i].computed_nup ||
+      job.computed_total_sheets !== jobs[i].computed_total_sheets ||
+      job.computed_line_total !== jobs[i].computed_line_total
+    );
+
+    if (hasChanges) {
+      onChange(updatedJobs);
+    }
+  }, [jobs.length, settings, priceList, printSides]);
 
   const handleAdd = () => {
     const newJob: LocalDigitalJob = {
@@ -45,6 +88,7 @@ export const LocalDigitalJobsTable = ({ jobs, onChange }: LocalDigitalJobsTableP
       pages: 1,
       qty: 1,
       is_test_print: false,
+      print_sides: printSides,
     };
     onChange([...jobs, newJob]);
   };
@@ -57,7 +101,27 @@ export const LocalDigitalJobsTable = ({ jobs, onChange }: LocalDigitalJobsTableP
 
   const handleFieldChange = (index: number, field: keyof LocalDigitalJob, value: any) => {
     const updated = [...jobs];
-    updated[index] = { ...updated[index], [field]: value };
+    updated[index] = { ...updated[index], [field]: value, print_sides: printSides };
+
+    // Recompute immediately after field change
+    if (settings && priceList && priceList.length > 0) {
+      const result = computeDigitalJob(
+        { ...updated[index], print_sides: printSides },
+        settings,
+        priceList
+      );
+
+      if ('error' in result) {
+        toast({
+          title: "Greška",
+          description: result.error,
+          variant: "destructive",
+        });
+      } else {
+        updated[index] = { ...updated[index], ...result };
+      }
+    }
+
     onChange(updated);
   };
 

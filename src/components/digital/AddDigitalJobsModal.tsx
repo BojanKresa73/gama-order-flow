@@ -57,6 +57,7 @@ export const AddDigitalJobsModal = ({ open, onOpenChange, onAddJobs }: AddDigita
         pages: 1,
         qty: 1,
         is_test_print: false,
+        print_sides: "4/4", // Default
       });
     });
 
@@ -83,6 +84,7 @@ export const AddDigitalJobsModal = ({ open, onOpenChange, onAddJobs }: AddDigita
         pages: 1,
         qty: 1,
         is_test_print: false,
+        print_sides: "4/4", // Default
       };
     });
 
