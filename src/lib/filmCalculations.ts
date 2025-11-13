@@ -22,44 +22,47 @@ export interface ComputeResult {
 }
 
 export function computeFilmJobClient(job: FilmJob, settings: FilmSettings): ComputeResult | { error: string } {
-  const effectiveRollWidth = settings.roll_width_mm - 2 * settings.side_margin_mm;
-  const effectiveHeight = job.height_mm + 2 * job.margin_mm;
-  const effectiveWidth = job.width_mm + 2 * job.margin_mm;
+  const ROLL_WIDTH_MM = 508;
+  const MAX_COMPONENT_WIDTH_MM = 500;
 
-  let best: { rotation: number; copies: number; rows: number; length: number } | null = null;
+  // Check if dimensions exceed maximum allowed width
+  if (job.width_mm > MAX_COMPONENT_WIDTH_MM || job.height_mm > MAX_COMPONENT_WIDTH_MM) {
+    return { error: `Preširoko za rolu (max ${MAX_COMPONENT_WIDTH_MM} mm)` };
+  }
+
+  let best: { rotation: number; copies: number; rows: number; totalMm: number } | null = null;
 
   // Try 0° orientation
-  const copiesPerRow0 = Math.floor(effectiveRollWidth / effectiveWidth);
+  const copiesPerRow0 = Math.floor(ROLL_WIDTH_MM / job.width_mm);
   if (copiesPerRow0 >= 1) {
     const rows0 = Math.ceil(job.qty / copiesPerRow0);
-    const totalLength0 = rows0 * (effectiveHeight + settings.gap_mm) + 
-                         settings.lead_trim_mm + settings.tail_trim_mm - settings.gap_mm;
-    best = { rotation: 0, copies: copiesPerRow0, rows: rows0, length: totalLength0 };
+    const total0Mm = rows0 * job.height_mm;
+    best = { rotation: 0, copies: copiesPerRow0, rows: rows0, totalMm: total0Mm };
   }
 
   // Try 90° orientation if allowed
   if (job.allow_rotate_90) {
-    const copiesPerRow90 = Math.floor(effectiveRollWidth / effectiveHeight);
+    const copiesPerRow90 = Math.floor(ROLL_WIDTH_MM / job.height_mm);
     if (copiesPerRow90 >= 1) {
       const rows90 = Math.ceil(job.qty / copiesPerRow90);
-      const totalLength90 = rows90 * (effectiveWidth + settings.gap_mm) + 
-                           settings.lead_trim_mm + settings.tail_trim_mm - settings.gap_mm;
+      const total90Mm = rows90 * job.width_mm;
       
-      if (!best || totalLength90 < best.length) {
-        best = { rotation: 90, copies: copiesPerRow90, rows: rows90, length: totalLength90 };
+      if (!best || total90Mm < best.totalMm) {
+        best = { rotation: 90, copies: copiesPerRow90, rows: rows90, totalMm: total90Mm };
       }
     }
   }
 
   if (!best) {
-    return { error: `Preširoko za rolu (${settings.roll_width_mm} mm)` };
+    return { error: `Preširoko za rolu (max ${MAX_COMPONENT_WIDTH_MM} mm)` };
   }
 
   // Apply waste percentage
-  const totalLengthWithWaste = best.length * (1 + settings.waste_percent / 100);
+  const wastePercent = settings.waste_percent || 3;
+  const totalMmWithWaste = best.totalMm * (1 + wastePercent / 100);
   
-  // Round up to centimeters
-  const totalLengthM = Math.ceil(totalLengthWithWaste / 10) / 100;
+  // Convert to meters and round up to centimeter (0.01 m)
+  const totalLengthM = Math.ceil(totalMmWithWaste / 10) / 100;
   const mPerPiece = totalLengthM / job.qty;
 
   return {
