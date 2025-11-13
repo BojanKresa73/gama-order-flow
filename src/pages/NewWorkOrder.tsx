@@ -13,6 +13,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Checkbox } from "@/components/ui/checkbox";
 import { LocalFilmJobsTable, LocalFilmJob } from "@/components/film/LocalFilmJobsTable";
 import { FilmJobsSummary } from "@/components/film/FilmJobsSummary";
+import { LocalDigitalJobsTable, LocalDigitalJob } from "@/components/digital/LocalDigitalJobsTable";
 
 import { useFilmSettings } from "@/hooks/useFilmSettings";
 import { computeFilmJobClient } from "@/lib/filmCalculations";
@@ -50,6 +51,7 @@ const NewWorkOrder = () => {
 
   const [ctpItems, setCtpItems] = useState<Array<{ file_name: string; plate_format_id: string; quantity: number }>>([]);
   const [filmJobs, setFilmJobs] = useState<LocalFilmJob[]>([]);
+  const [digitalJobs, setDigitalJobs] = useState<LocalDigitalJob[]>([]);
   
   const { data: filmSettings } = useFilmSettings();
   const [bulkFormat, setBulkFormat] = useState("");
@@ -501,157 +503,130 @@ const NewWorkOrder = () => {
                 </TabsContent>
 
                 <TabsContent value="digital" className="space-y-4 mt-4">
-                  <div className="space-y-4">
-                    <div className="flex items-center justify-between">
-                      <Label>Fajlovi</Label>
-                      <Input
-                        type="file"
-                        multiple
-                        onChange={(e) => {
-                          const files = Array.from(e.target.files || []);
-                          const newItems = files.map(file => ({
-                            file_name: file.name,
-                            plate_format_id: "",
-                            quantity: 1
-                          }));
-                          setCtpItems([...ctpItems, ...newItems]);
-                        }}
-                        className="hidden"
-                        id="file-upload-digital"
-                      />
-                      <Button 
-                        type="button" 
-                        variant="outline" 
-                        size="sm" 
-                        onClick={() => document.getElementById('file-upload-digital')?.click()}
-                      >
-                        Dodaj fajlove
-                      </Button>
-                    </div>
-
-                    {ctpItems.length > 0 && (
+                  <div className="space-y-6">
+                    {/* Job Header */}
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4 p-4 border rounded-lg bg-muted/30">
                       <div className="space-y-2">
-                        {ctpItems.map((item, index) => (
-                          <div key={index} className="flex items-center gap-2 p-2 border rounded">
-                            <p className="text-sm flex-1 truncate" title={item.file_name}>
-                              {item.file_name || "Naziv fajla"}
-                            </p>
-                            <Button
-                              type="button"
-                              variant="ghost"
-                              size="icon"
-                              onClick={() => removeCtpItem(index)}
-                            >
-                              ✕
-                            </Button>
-                          </div>
-                        ))}
+                        <Label htmlFor="job_name">Naziv posla</Label>
+                        <Input
+                          id="job_name"
+                          value={formData.job_name}
+                          onChange={(e) => setFormData({ ...formData, job_name: e.target.value })}
+                          placeholder="Naziv posla"
+                        />
                       </div>
-                    )}
-                  </div>
 
-                  <div className="grid grid-cols-2 gap-4">
-                    <div className="space-y-2">
-                      <Label htmlFor="job_name">Naziv posla</Label>
-                      <Input
-                        id="job_name"
-                        value={formData.job_name}
-                        onChange={(e) => setFormData({ ...formData, job_name: e.target.value })}
-                      />
+                      <div className="space-y-2">
+                        <Label htmlFor="binding">Povez</Label>
+                        <Select
+                          value={formData.binding}
+                          onValueChange={(value) => setFormData({ ...formData, binding: value })}
+                        >
+                          <SelectTrigger>
+                            <SelectValue placeholder="Odaberi povez" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="bez_poveza">Bez poveza</SelectItem>
+                            <SelectItem value="binder">Binder</SelectItem>
+                            <SelectItem value="klamovanje">Klamovanje</SelectItem>
+                            <SelectItem value="spirala">Spirala</SelectItem>
+                            <SelectItem value="perfect">Perfect</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+
+                      <div className="space-y-2">
+                        <Label htmlFor="print_spec">Štampa</Label>
+                        <Select
+                          value={formData.print_spec}
+                          onValueChange={(value) => setFormData({ ...formData, print_spec: value })}
+                        >
+                          <SelectTrigger>
+                            <SelectValue placeholder="Odaberi tip" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="4/4">4/4</SelectItem>
+                            <SelectItem value="4/1">4/1</SelectItem>
+                            <SelectItem value="4/0">4/0</SelectItem>
+                            <SelectItem value="1/1">1/1</SelectItem>
+                            <SelectItem value="1/0">1/0</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+
+                      <div className="space-y-2">
+                        <Label htmlFor="paper_gsm_text">Papir (gsm)</Label>
+                        <Input
+                          id="paper_gsm_text"
+                          type="number"
+                          value={formData.paper_gsm_text || ''}
+                          onChange={(e) => setFormData({ ...formData, paper_gsm_text: parseInt(e.target.value) || 0 })}
+                          placeholder="80"
+                        />
+                      </div>
+
+                      <div className="space-y-2">
+                        <Label htmlFor="paper_gsm_cover">Korice (gsm)</Label>
+                        <Input
+                          id="paper_gsm_cover"
+                          type="number"
+                          value={formData.paper_gsm_cover || ''}
+                          onChange={(e) => setFormData({ ...formData, paper_gsm_cover: parseInt(e.target.value) || 0 })}
+                          placeholder="350"
+                        />
+                      </div>
+
+                      <div className="space-y-2">
+                        <Label htmlFor="lamination">Plastifikacija</Label>
+                        <div className="flex gap-2">
+                          <Select
+                            value={formData.lamination}
+                            onValueChange={(value) => setFormData({ ...formData, lamination: value })}
+                          >
+                            <SelectTrigger className="flex-1">
+                              <SelectValue placeholder="Tip" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="none">Bez</SelectItem>
+                              <SelectItem value="1/0">1/0</SelectItem>
+                              <SelectItem value="1/1">1/1</SelectItem>
+                            </SelectContent>
+                          </Select>
+                          {formData.lamination !== 'none' && formData.lamination && (
+                            <Select
+                              value={formData.print_format || ''}
+                              onValueChange={(value) => setFormData({ ...formData, print_format: value })}
+                            >
+                              <SelectTrigger className="w-24">
+                                <SelectValue placeholder="Finish" />
+                              </SelectTrigger>
+                              <SelectContent>
+                                <SelectItem value="mat">Mat</SelectItem>
+                                <SelectItem value="sjaj">Sjaj</SelectItem>
+                              </SelectContent>
+                            </Select>
+                          )}
+                        </div>
+                      </div>
+
+                      <div className="space-y-2 md:col-span-3">
+                        <Label htmlFor="notes_digital">Napomena</Label>
+                        <Textarea
+                          id="notes_digital"
+                          value={formData.notes}
+                          onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
+                          placeholder="Dodatne napomene..."
+                          rows={2}
+                        />
+                      </div>
                     </div>
-                    <div className="space-y-2">
-                      <Label htmlFor="run_quantity">Tiraž</Label>
-                      <Input
-                        id="run_quantity"
-                        type="number"
-                        value={formData.run_quantity}
-                        onChange={(e) => setFormData({ ...formData, run_quantity: parseInt(e.target.value) })}
-                      />
-                    </div>
-                    <div className="space-y-2">
-                      <Label htmlFor="pages">Strane</Label>
-                      <Input
-                        id="pages"
-                        type="number"
-                        value={formData.pages}
-                        onChange={(e) => setFormData({ ...formData, pages: parseInt(e.target.value) })}
-                      />
-                    </div>
-                    <div className="space-y-2">
-                      <Label htmlFor="print_format">Format</Label>
-                      <Input
-                        id="print_format"
-                        value={formData.print_format}
-                        onChange={(e) => setFormData({ ...formData, print_format: e.target.value })}
-                      />
-                    </div>
-                    <div className="space-y-2">
-                      <Label htmlFor="binding">Povez</Label>
-                      <Input
-                        id="binding"
-                        value={formData.binding}
-                        onChange={(e) => setFormData({ ...formData, binding: e.target.value })}
-                      />
-                    </div>
-                    <div className="space-y-2">
-                      <Label htmlFor="print_spec">Specifikacija</Label>
-                      <Input
-                        id="print_spec"
-                        value={formData.print_spec}
-                        onChange={(e) => setFormData({ ...formData, print_spec: e.target.value })}
-                      />
-                    </div>
-                    <div className="space-y-2">
-                      <Label htmlFor="paper_gsm_text">Papir tekst (gsm)</Label>
-                      <Input
-                        id="paper_gsm_text"
-                        type="number"
-                        value={formData.paper_gsm_text}
-                        onChange={(e) => setFormData({ ...formData, paper_gsm_text: parseInt(e.target.value) })}
-                      />
-                    </div>
-                    <div className="space-y-2">
-                      <Label htmlFor="paper_gsm_cover">Papir korice (gsm)</Label>
-                      <Input
-                        id="paper_gsm_cover"
-                        type="number"
-                        value={formData.paper_gsm_cover}
-                        onChange={(e) => setFormData({ ...formData, paper_gsm_cover: parseInt(e.target.value) })}
-                      />
-                    </div>
-                    <div className="space-y-2">
-                      <Label htmlFor="lamination">Laminacija</Label>
-                      <Input
-                        id="lamination"
-                        value={formData.lamination}
-                        onChange={(e) => setFormData({ ...formData, lamination: e.target.value })}
-                      />
-                    </div>
-                    <div className="space-y-2">
-                      <Label htmlFor="sheets_used">Utrošeni tabaci</Label>
-                      <Input
-                        id="sheets_used"
-                        type="number"
-                        value={formData.sheets_used}
-                        onChange={(e) => setFormData({ ...formData, sheets_used: parseInt(e.target.value) })}
-                      />
-                    </div>
-                    <div className="space-y-2">
-                      <Label htmlFor="clicks_count">Broj klikova</Label>
-                      <Input
-                        id="clicks_count"
-                        type="number"
-                        value={formData.clicks_count}
-                        onChange={(e) => setFormData({ ...formData, clicks_count: parseInt(e.target.value) })}
-                      />
-                    </div>
-                    <div className="space-y-2">
-                      <Label htmlFor="test_clicks">Test klikovi</Label>
-                      <Input
-                        id="test_clicks"
-                        type="number"
-                        value={formData.test_clicks}
-                        onChange={(e) => setFormData({ ...formData, test_clicks: parseInt(e.target.value) })}
+
+                    {/* Digital Jobs Table */}
+                    <div>
+                      <h3 className="text-lg font-semibold mb-4">Stavke digitale</h3>
+                      <LocalDigitalJobsTable
+                        jobs={digitalJobs}
+                        onChange={setDigitalJobs}
                       />
                     </div>
                   </div>
