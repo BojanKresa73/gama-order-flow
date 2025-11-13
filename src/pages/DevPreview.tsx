@@ -393,10 +393,16 @@ const DevPreview = () => {
               <p className="text-sm text-muted-foreground mb-4">
                 HTML preview šablona iz edge funkcije <code className="bg-muted px-2 py-1 rounded">send-delivery-note</code> (bez realnog slanja).
               </p>
-              <Button onClick={() => setDeliveryPreviewOpen(true)}>
-                <Eye className="h-4 w-4 mr-2" />
-                Otvori Preview
-              </Button>
+              <div className="flex gap-2">
+                <Button onClick={() => setDeliveryPreviewOpen(true)} variant="outline">
+                  <Eye className="h-4 w-4 mr-2" />
+                  Otvori Modal Preview
+                </Button>
+                <Button onClick={() => navigate("/dev/preview/delivery-note")}>
+                  <FileText className="h-4 w-4 mr-2" />
+                  Preview Otpremnice (A5)
+                </Button>
+              </div>
             </CardContent>
           </Card>
         </div>

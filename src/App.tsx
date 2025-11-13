@@ -13,6 +13,7 @@ import Clients from "./pages/Clients";
 import Inventory from "./pages/Inventory";
 import Checklist from "./pages/Checklist";
 import DevPreview from "./pages/DevPreview";
+import DeliveryNotePreview from "./pages/DeliveryNotePreview";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -34,7 +35,10 @@ const App = () => {
             <Route path="/inventory" element={<Inventory />} />
             <Route path="/checklist" element={<Checklist />} />
             {import.meta.env.VITE_SHOW_DEV_PREVIEW === "true" && (
-              <Route path="/dev/preview" element={<DevPreview />} />
+              <>
+                <Route path="/dev/preview" element={<DevPreview />} />
+                <Route path="/dev/preview/delivery-note" element={<DeliveryNotePreview />} />
+              </>
             )}
             {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
             <Route path="*" element={<NotFound />} />
