@@ -110,16 +110,30 @@ const WorkOrders = () => {
 
       if (error) throw error;
 
-      const result = data as { success: boolean; error?: string; message?: string };
+      const result = data as { 
+        success: boolean; 
+        error?: string; 
+        message?: string;
+        delivery_note_sent?: boolean;
+      };
       
       if (!result?.success) {
         throw new Error(result?.error || "Greška pri zatvaranju naloga");
       }
 
-      toast({
-        title: "Uspeh",
-        description: result.message || "Radni nalog je zatvoren i otpremnica je poslata.",
-      });
+      // Show appropriate toast based on delivery note status
+      if (result.delivery_note_sent) {
+        toast({
+          title: "Uspeh",
+          description: "Radni nalog je zatvoren i otpremnica je poslata.",
+        });
+      } else {
+        toast({
+          title: "Upozorenje",
+          description: "Nalog zatvoren, ali slanje otpremnice nije uspelo – pokušajte ponovo iz pregleda otpremnice.",
+          variant: "destructive",
+        });
+      }
 
       setCloseDialogOpen(false);
       setOrderToClose(null);
