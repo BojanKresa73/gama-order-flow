@@ -428,6 +428,145 @@ export type Database = {
           },
         ]
       }
+      film_cuts: {
+        Row: {
+          copies_per_row: number
+          created_at: string | null
+          film_job_id: string
+          id: string
+          length_m: number
+          rotation_deg: number
+          rows_needed: number
+        }
+        Insert: {
+          copies_per_row: number
+          created_at?: string | null
+          film_job_id: string
+          id?: string
+          length_m: number
+          rotation_deg: number
+          rows_needed: number
+        }
+        Update: {
+          copies_per_row?: number
+          created_at?: string | null
+          film_job_id?: string
+          id?: string
+          length_m?: number
+          rotation_deg?: number
+          rows_needed?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "film_cuts_film_job_id_fkey"
+            columns: ["film_job_id"]
+            isOneToOne: false
+            referencedRelation: "film_jobs"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      film_jobs: {
+        Row: {
+          allow_rotate_90: boolean
+          computed_m_per_piece: number | null
+          computed_rotation_deg: number | null
+          computed_total_m: number | null
+          created_at: string | null
+          file_name: string
+          height_mm: number
+          id: string
+          margin_mm: number
+          note: string | null
+          qty: number
+          updated_at: string | null
+          width_mm: number
+          work_order_id: string
+        }
+        Insert: {
+          allow_rotate_90?: boolean
+          computed_m_per_piece?: number | null
+          computed_rotation_deg?: number | null
+          computed_total_m?: number | null
+          created_at?: string | null
+          file_name: string
+          height_mm: number
+          id?: string
+          margin_mm?: number
+          note?: string | null
+          qty: number
+          updated_at?: string | null
+          width_mm: number
+          work_order_id: string
+        }
+        Update: {
+          allow_rotate_90?: boolean
+          computed_m_per_piece?: number | null
+          computed_rotation_deg?: number | null
+          computed_total_m?: number | null
+          created_at?: string | null
+          file_name?: string
+          height_mm?: number
+          id?: string
+          margin_mm?: number
+          note?: string | null
+          qty?: number
+          updated_at?: string | null
+          width_mm?: number
+          work_order_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "film_jobs_work_order_id_fkey"
+            columns: ["work_order_id"]
+            isOneToOne: false
+            referencedRelation: "work_orders"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      film_settings: {
+        Row: {
+          cost_eur_per_m: number
+          created_at: string | null
+          gap_mm: number
+          id: string
+          lead_trim_mm: number
+          price_eur_per_m: number
+          roll_width_mm: number
+          side_margin_mm: number
+          tail_trim_mm: number
+          updated_at: string | null
+          waste_percent: number
+        }
+        Insert: {
+          cost_eur_per_m?: number
+          created_at?: string | null
+          gap_mm?: number
+          id?: string
+          lead_trim_mm?: number
+          price_eur_per_m?: number
+          roll_width_mm?: number
+          side_margin_mm?: number
+          tail_trim_mm?: number
+          updated_at?: string | null
+          waste_percent?: number
+        }
+        Update: {
+          cost_eur_per_m?: number
+          created_at?: string | null
+          gap_mm?: number
+          id?: string
+          lead_trim_mm?: number
+          price_eur_per_m?: number
+          roll_width_mm?: number
+          side_margin_mm?: number
+          tail_trim_mm?: number
+          updated_at?: string | null
+          waste_percent?: number
+        }
+        Relationships: []
+      }
       inventory_history: {
         Row: {
           change_amount: number
@@ -756,6 +895,7 @@ export type Database = {
           closed_at: string | null
           created_at: string
           created_by: string
+          film_note: string | null
           id: string
           job_name: string | null
           lamination: string | null
@@ -782,6 +922,7 @@ export type Database = {
           closed_at?: string | null
           created_at?: string
           created_by: string
+          film_note?: string | null
           id?: string
           job_name?: string | null
           lamination?: string | null
@@ -808,6 +949,7 @@ export type Database = {
           closed_at?: string | null
           created_at?: string
           created_by?: string
+          film_note?: string | null
           id?: string
           job_name?: string | null
           lamination?: string | null
