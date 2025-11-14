@@ -16,6 +16,7 @@ import AdminPriceListDigital from "./pages/AdminPriceListDigital";
 import DevPreview from "./pages/DevPreview";
 import DeliveryNotePreview from "./pages/DeliveryNotePreview";
 import OrderDeliveryNote from "./pages/OrderDeliveryNote";
+import CtpStats from "./pages/CtpStats";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -38,6 +39,7 @@ const App = () => {
             <Route path="/inventory" element={<Inventory />} />
             <Route path="/checklist" element={<Checklist />} />
             <Route path="/admin/price-list-digital" element={<AdminPriceListDigital />} />
+            <Route path="/stats/ctp" element={<CtpStats />} />
             {import.meta.env.VITE_SHOW_DEV_PREVIEW === "true" && (
               <>
                 <Route path="/dev/preview" element={<DevPreview />} />
