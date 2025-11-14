@@ -311,6 +311,9 @@ const Clients = () => {
             <h1 className="text-2xl font-bold">Klijenti</h1>
           </div>
           <div className="flex items-center gap-2">
+            <Button variant="outline" size="sm" onClick={() => navigate("/checklist")}>
+              Checklist
+            </Button>
             <ClientsCsvImport />
             <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
             <DialogTrigger asChild>
