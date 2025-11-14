@@ -1298,6 +1298,29 @@ export type Database = {
       }
     }
     Functions: {
+      admin_list_users: {
+        Args: { p_limit?: number; p_offset?: number; p_search?: string }
+        Returns: {
+          created_at: string
+          email: string
+          full_name: string
+          id: string
+          is_active: boolean
+          role: Database["public"]["Enums"]["app_role"]
+        }[]
+      }
+      admin_reset_user_password: { Args: { p_user_id: string }; Returns: Json }
+      admin_set_user_active: {
+        Args: { p_active: boolean; p_user_id: string }
+        Returns: undefined
+      }
+      admin_set_user_role: {
+        Args: {
+          p_role: Database["public"]["Enums"]["app_role"]
+          p_user_id: string
+        }
+        Returns: undefined
+      }
       close_digital_work_order: {
         Args: { p_user_id: string; p_work_order_id: string }
         Returns: Json
@@ -1316,6 +1339,10 @@ export type Database = {
         Returns: Database["public"]["Enums"]["app_role"]
       }
       generate_order_number: { Args: never; Returns: string }
+      has_any_role: {
+        Args: { p_roles: Database["public"]["Enums"]["app_role"][] }
+        Returns: boolean
+      }
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"]
