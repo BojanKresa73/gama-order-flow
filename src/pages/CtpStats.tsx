@@ -3,6 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { CtpFilters } from "@/components/stats/CtpFilters";
+import { CtpStatsCards } from "@/components/stats/CtpStatsCards";
 import { subDays } from "date-fns";
 import { ChevronLeft } from "lucide-react";
 
@@ -53,13 +54,7 @@ const CtpStats = () => {
 
       <main className="container mx-auto px-4 py-6 space-y-6">
         <CtpFilters filters={filters} onFiltersChange={setFilters} />
-
-        {/* Placeholder za widgets - biće dodati u sledećem koraku */}
-        <div className="grid grid-cols-12 gap-4">
-          <div className="col-span-12 p-8 text-center text-muted-foreground border border-neutral-200 dark:border-neutral-800 rounded-2xl bg-card">
-            Widgets će biti dodati ovde
-          </div>
-        </div>
+        <CtpStatsCards filters={filters} />
       </main>
     </div>
   );
