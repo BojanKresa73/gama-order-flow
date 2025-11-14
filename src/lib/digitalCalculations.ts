@@ -81,31 +81,39 @@ export function computeDigitalJob(
 
   const totalSheets = Math.ceil(job.qty * sheetsPerCopy);
 
-  // 3) Calculate clicks
-  // Parse print_sides to determine color/mono for front and back
-  const [front, back] = printSides.split("/");
-  
-  let colorSidesPerSheet = 0;
-  let monoSidesPerSheet = 0;
+  // 3) Calculate clicks - explicit mapping per sheet
+  let colorClicksPerSheet = 0;
+  let monoClicksPerSheet = 0;
 
-  // Front side
-  if (front === "4") {
-    colorSidesPerSheet += 1;
-  } else if (front === "1") {
-    monoSidesPerSheet += 1;
+  switch (printSides) {
+    case "4/4":
+      colorClicksPerSheet = 2;
+      monoClicksPerSheet = 0;
+      break;
+    case "4/1":
+      colorClicksPerSheet = 1;
+      monoClicksPerSheet = 1;
+      break;
+    case "4/0":
+      colorClicksPerSheet = 1;
+      monoClicksPerSheet = 0;
+      break;
+    case "1/1":
+      colorClicksPerSheet = 0;
+      monoClicksPerSheet = 2;
+      break;
+    case "1/0":
+      colorClicksPerSheet = 0;
+      monoClicksPerSheet = 1;
+      break;
+    default:
+      // Fallback for unexpected values
+      colorClicksPerSheet = 0;
+      monoClicksPerSheet = 0;
   }
 
-  // Back side (if exists)
-  if (back) {
-    if (back === "4") {
-      colorSidesPerSheet += 1;
-    } else if (back === "1") {
-      monoSidesPerSheet += 1;
-    }
-  }
-
-  const totalColorClicks = totalSheets * colorSidesPerSheet;
-  const totalMonoClicks = totalSheets * monoSidesPerSheet;
+  const totalColorClicks = totalSheets * colorClicksPerSheet;
+  const totalMonoClicks = totalSheets * monoClicksPerSheet;
 
   // 4) Interpolate price per sheet
   let pricePerSheet = 0;
