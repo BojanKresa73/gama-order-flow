@@ -29,7 +29,7 @@ import {
 } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
-import { Users, Search, RefreshCw, UserPlus, KeyRound } from "lucide-react";
+import { Users, Search, RefreshCw, UserPlus, KeyRound, ArrowLeft } from "lucide-react";
 import { useAuthz } from "@/hooks/useAuthz";
 import { useNavigate } from "react-router-dom";
 import * as adminUsersService from "@/services/adminUsers";
@@ -178,6 +178,9 @@ export default function AdminUsers() {
         <CardHeader>
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
+              <Button variant="ghost" size="sm" onClick={() => navigate(-1)}>
+                <ArrowLeft className="h-4 w-4" />
+              </Button>
               <Users className="h-6 w-6" />
               <CardTitle>Administracija korisnika</CardTitle>
             </div>
