@@ -2,7 +2,21 @@ import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
-import { LineChart, Line, XAxis, YAxis, CartesianGrid, ResponsiveContainer, Tooltip, Area, AreaChart } from "recharts";
+import { AreaChart, Area, XAxis, YAxis, CartesianGrid, ResponsiveContainer, Tooltip } from "recharts";
+
+const CustomTooltip = ({ active, payload }: any) => {
+  if (active && payload && payload.length) {
+    return (
+      <div className="bg-card border rounded-lg shadow-lg p-3">
+        <p className="text-sm font-medium">{payload[0].payload.date}</p>
+        <p className="text-sm text-muted-foreground">
+          Zatvoreno: <span className="font-semibold text-foreground">{payload[0].value}</span>
+        </p>
+      </div>
+    );
+  }
+  return null;
+};
 
 export const ClosedOrdersChart = () => {
   const { data: ordersTimeline, isLoading } = useQuery({
@@ -35,7 +49,7 @@ export const ClosedOrdersChart = () => {
       });
 
       return Object.entries(dailyCounts).map(([date, count]) => ({
-        date: new Date(date).toLocaleDateString("sr-RS", { day: "numeric", month: "short" }),
+        date: new Date(date).toLocaleDateString("sr-RS", { day: "2-digit", month: "2-digit" }),
         count,
       }));
     },
@@ -64,15 +78,29 @@ export const ClosedOrdersChart = () => {
           <AreaChart data={ordersTimeline}>
             <defs>
               <linearGradient id="colorCount" x1="0" y1="0" x2="0" y2="1">
-                <stop offset="5%" stopColor="#3b82f6" stopOpacity={0.3}/>
+                <stop offset="5%" stopColor="#3b82f6" stopOpacity={0.2}/>
                 <stop offset="95%" stopColor="#3b82f6" stopOpacity={0}/>
               </linearGradient>
             </defs>
-            <CartesianGrid strokeDasharray="3 3" opacity={0.3} />
-            <XAxis dataKey="date" tick={{ fontSize: 12 }} />
-            <YAxis tick={{ fontSize: 12 }} />
-            <Tooltip />
-            <Area type="monotone" dataKey="count" stroke="#3b82f6" strokeWidth={2} fill="url(#colorCount)" />
+            <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" opacity={0.5} />
+            <XAxis 
+              dataKey="date" 
+              tick={{ fontSize: 12, fill: "hsl(var(--muted-foreground))" }}
+              stroke="hsl(var(--border))"
+            />
+            <YAxis 
+              tick={{ fontSize: 12, fill: "hsl(var(--muted-foreground))" }}
+              stroke="hsl(var(--border))"
+            />
+            <Tooltip content={<CustomTooltip />} />
+            <Area 
+              type="monotone" 
+              dataKey="count" 
+              stroke="#3b82f6" 
+              strokeWidth={2} 
+              fill="url(#colorCount)"
+              strokeLinecap="round"
+            />
           </AreaChart>
         </ResponsiveContainer>
       </CardContent>
