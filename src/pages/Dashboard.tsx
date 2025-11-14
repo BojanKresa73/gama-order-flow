@@ -84,6 +84,9 @@ const Dashboard = () => {
             <Button variant="outline" onClick={() => navigate("/inventory")}>
               Inventar
             </Button>
+            <Button variant="outline" onClick={() => navigate("/checklist")}>
+              Checklist
+            </Button>
             <Button variant="outline" onClick={() => navigate("/stats/ctp")}>
               CTP statistika
             </Button>

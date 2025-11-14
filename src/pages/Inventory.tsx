@@ -143,6 +143,11 @@ const Inventory = () => {
             </Button>
             <h1 className="text-2xl font-bold">Inventar - Plate formati</h1>
           </div>
+          <div className="flex items-center gap-2">
+            <Button variant="outline" size="sm" onClick={() => navigate("/checklist")}>
+              Checklist
+            </Button>
+          </div>
         </div>
       </header>
 
