@@ -1,3 +1,4 @@
+import { useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -19,7 +20,7 @@ const COLORS = [
 ];
 
 export const CtpFormatChart = ({ filters }: CtpFormatChartProps) => {
-  const { data, isLoading } = useQuery({
+  const { data: rawData, isLoading } = useQuery({
     queryKey: ["ctp-formats", filters],
     queryFn: async () => {
       let query = supabase
@@ -48,40 +49,46 @@ export const CtpFormatChart = ({ filters }: CtpFormatChartProps) => {
 
       if (error) throw error;
 
-      const items = ((data || []) as unknown) as Array<{
+      return ((data || []) as unknown) as Array<{
         plate_format_name: string;
         plates_qty: number;
       }>;
-
-      // Group by format and calculate totals
-      const formatTotals = items.reduce((acc, item) => {
-        const format = item.plate_format_name || "Nepoznato";
-        acc[format] = (acc[format] || 0) + (item.plates_qty || 0);
-        return acc;
-      }, {} as Record<string, number>);
-
-      // Sort by total and take top 6
-      const sortedFormats = Object.entries(formatTotals)
-        .sort(([, a], [, b]) => b - a);
-
-      const top6 = sortedFormats.slice(0, 6);
-      const rest = sortedFormats.slice(6);
-      const restTotal = rest.reduce((sum, [, count]) => sum + count, 0);
-
-      // Prepare chart data
-      const chartData = [
-        {
-          name: "Ukupno",
-          ...Object.fromEntries(top6),
-          ...(restTotal > 0 ? { Drugo: restTotal } : {}),
-        },
-      ];
-
-      const formatKeys = [...top6.map(([name]) => name), ...(restTotal > 0 ? ["Drugo"] : [])];
-
-      return { chartData, formatKeys };
     },
+    staleTime: 30000,
   });
+
+  // Memoize chart data transformation
+  const chartData = useMemo(() => {
+    if (!rawData) return null;
+
+    // Group by format and calculate totals
+    const formatTotals = rawData.reduce((acc, item) => {
+      const format = item.plate_format_name || "Nepoznato";
+      acc[format] = (acc[format] || 0) + (item.plates_qty || 0);
+      return acc;
+    }, {} as Record<string, number>);
+
+    // Sort by total and take top 6
+    const sortedFormats = Object.entries(formatTotals)
+      .sort(([, a], [, b]) => b - a);
+
+    const top6 = sortedFormats.slice(0, 6);
+    const rest = sortedFormats.slice(6);
+    const restTotal = rest.reduce((sum, [, count]) => sum + count, 0);
+
+    // Prepare chart data
+    const data = [
+      {
+        name: "Ukupno",
+        ...Object.fromEntries(top6),
+        ...(restTotal > 0 ? { Drugo: restTotal } : {}),
+      },
+    ];
+
+    const formatKeys = [...top6.map(([name]) => name), ...(restTotal > 0 ? ["Drugo"] : [])];
+
+    return { chartData: data, formatKeys };
+  }, [rawData]);
 
   if (isLoading) {
     return (
@@ -103,7 +110,7 @@ export const CtpFormatChart = ({ filters }: CtpFormatChartProps) => {
       </CardHeader>
       <CardContent>
         <ResponsiveContainer width="100%" height={300}>
-          <BarChart data={data?.chartData}>
+          <BarChart data={chartData?.chartData}>
             <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
             <XAxis
               dataKey="name"
@@ -128,7 +135,7 @@ export const CtpFormatChart = ({ filters }: CtpFormatChartProps) => {
               align="right"
               verticalAlign="top"
             />
-            {data?.formatKeys.map((format, index) => (
+            {chartData?.formatKeys.map((format, index) => (
               <Bar
                 key={format}
                 dataKey={format}

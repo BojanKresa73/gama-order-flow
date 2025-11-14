@@ -1,3 +1,4 @@
+import { useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -10,7 +11,7 @@ interface CtpStatsCardsProps {
 }
 
 export const CtpStatsCards = ({ filters }: CtpStatsCardsProps) => {
-  const { data, isLoading } = useQuery({
+  const { data: rawData, isLoading } = useQuery({
     queryKey: ["ctp-stats", filters],
     queryFn: async () => {
       let query = supabase
@@ -39,26 +40,31 @@ export const CtpStatsCards = ({ filters }: CtpStatsCardsProps) => {
 
       if (error) throw error;
 
-      // Calculate stats
-      const items = ((data || []) as unknown) as Array<{
+      return ((data || []) as unknown) as Array<{
         work_order_id: string;
         client_id: string;
         plates_qty: number;
       }>;
-      
-      const totalPlates = items.reduce((sum, item) => sum + (item.plates_qty || 0), 0);
-      const uniqueOrders = new Set(items.map((item) => item.work_order_id)).size;
-      const uniqueClients = new Set(items.map((item) => item.client_id)).size;
-      const avgPlatesPerOrder = uniqueOrders > 0 ? totalPlates / uniqueOrders : 0;
-
-      return {
-        totalPlates,
-        ordersCount: uniqueOrders,
-        avgPlatesPerOrder,
-        clientsCount: uniqueClients,
-      };
     },
+    staleTime: 30000,
   });
+
+  // Memoize stats calculation
+  const stats = useMemo(() => {
+    if (!rawData) return null;
+
+    const totalPlates = rawData.reduce((sum, item) => sum + (item.plates_qty || 0), 0);
+    const uniqueOrders = new Set(rawData.map((item) => item.work_order_id)).size;
+    const uniqueClients = new Set(rawData.map((item) => item.client_id)).size;
+    const avgPlatesPerOrder = uniqueOrders > 0 ? totalPlates / uniqueOrders : 0;
+
+    return {
+      totalPlates,
+      ordersCount: uniqueOrders,
+      avgPlatesPerOrder,
+      clientsCount: uniqueClients,
+    };
+  }, [rawData]);
 
   if (isLoading) {
     return (
@@ -78,28 +84,28 @@ export const CtpStatsCards = ({ filters }: CtpStatsCardsProps) => {
     );
   }
 
-  const cards = [
+  const cards = useMemo(() => [
     {
       title: "Ukupno ploča",
-      value: data?.totalPlates || 0,
+      value: stats?.totalPlates || 0,
       icon: Package,
     },
     {
       title: "Broj CTP naloga",
-      value: data?.ordersCount || 0,
+      value: stats?.ordersCount || 0,
       icon: FileText,
     },
     {
       title: "Prosečno ploča/nalog",
-      value: data?.avgPlatesPerOrder?.toFixed(1) || "0.0",
+      value: stats?.avgPlatesPerOrder?.toFixed(1) || "0.0",
       icon: TrendingUp,
     },
     {
       title: "Broj klijenata",
-      value: data?.clientsCount || 0,
+      value: stats?.clientsCount || 0,
       icon: Users,
     },
-  ];
+  ], [stats]);
 
   return (
     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">

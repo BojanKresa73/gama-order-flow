@@ -1,3 +1,4 @@
+import { useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -11,7 +12,7 @@ interface CtpTopFormatsTableProps {
 }
 
 export const CtpTopFormatsTable = ({ filters }: CtpTopFormatsTableProps) => {
-  const { data, isLoading } = useQuery({
+  const { data: rawData, isLoading } = useQuery({
     queryKey: ["ctp-top-formats", filters],
     queryFn: async () => {
       let query = supabase
@@ -40,44 +41,50 @@ export const CtpTopFormatsTable = ({ filters }: CtpTopFormatsTableProps) => {
 
       if (error) throw error;
 
-      const items = ((data || []) as unknown) as Array<{
+      return ((data || []) as unknown) as Array<{
         plate_format_id: string;
         plate_format_name: string;
         plates_qty: number;
       }>;
-
-      // Group by format
-      const formatStats = items.reduce((acc, item) => {
-        const formatId = item.plate_format_id;
-        if (!acc[formatId]) {
-          acc[formatId] = {
-            formatName: item.plate_format_name || "Nepoznato",
-            totalPlates: 0,
-          };
-        }
-        acc[formatId].totalPlates += item.plates_qty || 0;
-        return acc;
-      }, {} as Record<string, { formatName: string; totalPlates: number }>);
-
-      // Calculate total plates for percentage
-      const totalPlates = Object.values(formatStats).reduce(
-        (sum, format) => sum + format.totalPlates,
-        0
-      );
-
-      // Convert to array and sort
-      const formatsArray = Object.entries(formatStats)
-        .map(([formatId, stats]) => ({
-          formatId,
-          formatName: stats.formatName,
-          totalPlates: stats.totalPlates,
-          percentage: totalPlates > 0 ? (stats.totalPlates / totalPlates) * 100 : 0,
-        }))
-        .sort((a, b) => b.totalPlates - a.totalPlates);
-
-      return formatsArray;
     },
+    staleTime: 30000,
   });
+
+  // Memoize format statistics calculation
+  const formatsData = useMemo(() => {
+    if (!rawData) return null;
+
+    // Group by format
+    const formatStats = rawData.reduce((acc, item) => {
+      const formatId = item.plate_format_id;
+      if (!acc[formatId]) {
+        acc[formatId] = {
+          formatName: item.plate_format_name || "Nepoznato",
+          totalPlates: 0,
+        };
+      }
+      acc[formatId].totalPlates += item.plates_qty || 0;
+      return acc;
+    }, {} as Record<string, { formatName: string; totalPlates: number }>);
+
+    // Calculate total plates for percentage
+    const totalPlates = Object.values(formatStats).reduce(
+      (sum, format) => sum + format.totalPlates,
+      0
+    );
+
+    // Convert to array and sort
+    const formatsArray = Object.entries(formatStats)
+      .map(([formatId, stats]) => ({
+        formatId,
+        formatName: stats.formatName,
+        totalPlates: stats.totalPlates,
+        percentage: totalPlates > 0 ? (stats.totalPlates / totalPlates) * 100 : 0,
+      }))
+      .sort((a, b) => b.totalPlates - a.totalPlates);
+
+    return formatsArray;
+  }, [rawData]);
 
   if (isLoading) {
     return (
@@ -109,8 +116,8 @@ export const CtpTopFormatsTable = ({ filters }: CtpTopFormatsTableProps) => {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {data && data.length > 0 ? (
-                data.map((format, index) => (
+              {formatsData && formatsData.length > 0 ? (
+                formatsData.map((format, index) => (
                   <TableRow key={format.formatId}>
                     <TableCell className="font-medium">{index + 1}</TableCell>
                     <TableCell>{format.formatName}</TableCell>

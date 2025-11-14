@@ -41,13 +41,20 @@ export const SavedReportsDropdown = ({ filters, onFiltersChange }: SavedReportsD
     queryKey: ["saved-reports", "ctp"],
     queryFn: async () => {
       const { data, error } = await supabase
-        .from("saved_reports")
+        .from("saved_reports" as any)
         .select("*")
         .eq("type", "ctp")
         .order("created_at", { ascending: false });
 
       if (error) throw error;
-      return data;
+      return (data as unknown) as Array<{
+        id: string;
+        name: string;
+        type: string;
+        filters: any;
+        is_public: boolean;
+        created_at: string;
+      }>;
     },
   });
 
@@ -56,7 +63,7 @@ export const SavedReportsDropdown = ({ filters, onFiltersChange }: SavedReportsD
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error("User not authenticated");
 
-      const { error } = await supabase.from("saved_reports").insert({
+      const { error } = await supabase.from("saved_reports" as any).insert({
         user_id: user.id,
         name: reportName,
         type: "ctp",
@@ -82,7 +89,7 @@ export const SavedReportsDropdown = ({ filters, onFiltersChange }: SavedReportsD
   const deleteMutation = useMutation({
     mutationFn: async (reportId: string) => {
       const { error } = await supabase
-        .from("saved_reports")
+        .from("saved_reports" as any)
         .delete()
         .eq("id", reportId);
 
