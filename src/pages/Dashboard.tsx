@@ -3,6 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
+import { useAuthz } from "@/hooks/useAuthz";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { LayoutDashboard, FileText, Users, Package, ClipboardList } from "lucide-react";
 import { StatsCards } from "@/components/dashboard/StatsCards";
@@ -17,6 +18,7 @@ const Dashboard = () => {
   const [profile, setProfile] = useState<any>(null);
   const navigate = useNavigate();
   const { toast } = useToast();
+  const { isSuper, isAdmin } = useAuthz();
 
   useEffect(() => {
     checkUser();
@@ -91,6 +93,11 @@ const Dashboard = () => {
             <Button variant="outline" onClick={() => navigate("/stats/ctp")}>
               CTP statistika
             </Button>
+            {(isSuper || isAdmin) && (
+              <Button variant="outline" onClick={() => navigate("/admin/users")}>
+                Administracija
+              </Button>
+            )}
           </div>
         </div>
 
