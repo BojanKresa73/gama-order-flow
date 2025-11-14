@@ -1,10 +1,8 @@
 import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Badge } from "@/components/ui/badge";
 import {
   Table,
   TableBody,
@@ -34,17 +32,10 @@ import { useToast } from "@/hooks/use-toast";
 import { Users, Search, RefreshCw, UserPlus, KeyRound } from "lucide-react";
 import { useAuthz } from "@/hooks/useAuthz";
 import { useNavigate } from "react-router-dom";
+import * as adminUsersService from "@/services/adminUsers";
 
-type AppRole = "superuser" | "admin" | "operator" | "operator_ctp";
-
-interface User {
-  id: string;
-  email: string;
-  full_name: string | null;
-  role: AppRole | null;
-  is_active: boolean;
-  created_at: string;
-}
+type AppRole = adminUsersService.AppRole;
+type User = adminUsersService.User;
 
 export default function AdminUsers() {
   const [search, setSearch] = useState("");
@@ -66,26 +57,13 @@ export default function AdminUsers() {
   // Učitaj korisnike
   const { data: users = [], isLoading, refetch } = useQuery({
     queryKey: ["admin-users", search],
-    queryFn: async () => {
-      const { data, error } = await supabase.rpc("admin_list_users", {
-        p_search: search,
-        p_limit: 100,
-        p_offset: 0,
-      });
-      if (error) throw error;
-      return data as User[];
-    },
+    queryFn: () => adminUsersService.listUsers(search, 100, 0),
   });
 
   // Mutation za promenu role
   const setRoleMutation = useMutation({
-    mutationFn: async ({ userId, role }: { userId: string; role: AppRole }) => {
-      const { error } = await supabase.rpc("admin_set_user_role", {
-        p_user_id: userId,
-        p_role: role,
-      });
-      if (error) throw error;
-    },
+    mutationFn: ({ userId, role }: { userId: string; role: AppRole }) =>
+      adminUsersService.setUserRole(userId, role),
     onSuccess: () => {
       toast({ title: "Rola promenjena" });
       queryClient.invalidateQueries({ queryKey: ["admin-users"] });
@@ -97,13 +75,8 @@ export default function AdminUsers() {
 
   // Mutation za aktivaciju/deaktivaciju
   const setActiveMutation = useMutation({
-    mutationFn: async ({ userId, active }: { userId: string; active: boolean }) => {
-      const { error } = await supabase.rpc("admin_set_user_active", {
-        p_user_id: userId,
-        p_active: active,
-      });
-      if (error) throw error;
-    },
+    mutationFn: ({ userId, active }: { userId: string; active: boolean }) =>
+      adminUsersService.setUserActive(userId, active),
     onSuccess: () => {
       toast({ title: "Status promenjen" });
       queryClient.invalidateQueries({ queryKey: ["admin-users"] });
@@ -123,34 +96,29 @@ export default function AdminUsers() {
 
   // Mutation za pozivanje novog korisnika
   const inviteMutation = useMutation({
-    mutationFn: async (data: { email: string; full_name: string; app_role: AppRole }) => {
-      const { data: result, error } = await supabase.functions.invoke("invite-user", {
-        body: data,
-      });
-      if (error) throw error;
-      return result;
-    },
+    mutationFn: (data: { email: string; full_name: string; app_role: AppRole }) =>
+      adminUsersService.inviteUser(data.email, data.full_name, data.app_role),
     onSuccess: (data) => {
-      toast({ 
-        title: "Korisnik pozvan", 
-        description: "Recovery link je generisan - možete ga poslati korisniku." 
+      toast({
+        title: "Korisnik pozvan",
+        description: "Recovery link je generisan - možete ga poslati korisniku.",
       });
       setInviteOpen(false);
       setInviteEmail("");
       setInviteFullName("");
       setInviteRole("operator");
       queryClient.invalidateQueries({ queryKey: ["admin-users"] });
-      
+
       // Prikaži recovery link u console (za dev)
       if (data?.recovery_link) {
         console.log("Recovery link:", data.recovery_link);
       }
     },
     onError: (error: Error) => {
-      toast({ 
-        title: "Greška pri pozivu", 
-        description: error.message, 
-        variant: "destructive" 
+      toast({
+        title: "Greška pri pozivu",
+        description: error.message,
+        variant: "destructive",
       });
     },
   });
@@ -169,29 +137,23 @@ export default function AdminUsers() {
 
   // Mutation za reset lozinke
   const resetPasswordMutation = useMutation({
-    mutationFn: async (email: string) => {
-      const { data, error } = await supabase.functions.invoke("admin-reset-password", {
-        body: { email },
-      });
-      if (error) throw error;
-      return data;
-    },
+    mutationFn: (email: string) => adminUsersService.resetUserPassword(email),
     onSuccess: (data, email) => {
-      toast({ 
-        title: "Recovery link generisan", 
-        description: `Link za reset lozinke poslat za ${email}` 
+      toast({
+        title: "Recovery link generisan",
+        description: `Link za reset lozinke poslat za ${email}`,
       });
-      
+
       // Prikaži recovery link u console (za dev)
       if (data?.recovery_link) {
         console.log("Recovery link:", data.recovery_link);
       }
     },
     onError: (error: Error) => {
-      toast({ 
-        title: "Greška pri resetu", 
-        description: error.message, 
-        variant: "destructive" 
+      toast({
+        title: "Greška pri resetu",
+        description: error.message,
+        variant: "destructive",
       });
     },
   });
