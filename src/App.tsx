@@ -9,6 +9,7 @@ import Register from "./pages/Register";
 import Dashboard from "./pages/Dashboard";
 import WorkOrders from "./pages/WorkOrders";
 import NewWorkOrder from "./pages/NewWorkOrder";
+import WorkOrderDetails from "./pages/WorkOrderDetails";
 import Clients from "./pages/Clients";
 import Inventory from "./pages/Inventory";
 import Checklist from "./pages/Checklist";
@@ -32,8 +33,9 @@ const App = () => {
             <Route path="/" element={<Index />} />
             <Route path="/register" element={<Register />} />
             <Route path="/dashboard" element={<Dashboard />} />
-            <Route path="/work-orders" element={<WorkOrders />} />
-            <Route path="/work-orders/new" element={<NewWorkOrder />} />
+          <Route path="/work-orders" element={<WorkOrders />} />
+          <Route path="/work-orders/new" element={<NewWorkOrder />} />
+          <Route path="/work-orders/:id" element={<WorkOrderDetails />} />
             <Route path="/work-orders/:orderId/delivery-note" element={<OrderDeliveryNote />} />
             <Route path="/clients" element={<Clients />} />
             <Route path="/inventory" element={<Inventory />} />
