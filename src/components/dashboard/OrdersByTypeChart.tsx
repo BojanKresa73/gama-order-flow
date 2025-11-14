@@ -2,9 +2,40 @@ import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
-import { PieChart, Pie, Cell, ResponsiveContainer, Legend, Tooltip } from "recharts";
+import { PieChart, Pie, Cell, ResponsiveContainer, Legend, Tooltip, Label } from "recharts";
 
-const COLORS = ["#3b82f6", "#10b981", "#f59e0b"];
+const COLORS = {
+  ctp: "#3B82F6",
+  digital: "#22C55E",
+  film: "#F59E0B",
+  other: "#94A3B8"
+};
+
+const CustomLabel = ({ viewBox, totalOrders }: any) => {
+  const { cx, cy } = viewBox;
+  return (
+    <g>
+      <text
+        x={cx}
+        y={cy - 10}
+        className="fill-foreground text-2xl font-bold"
+        textAnchor="middle"
+        dominantBaseline="central"
+      >
+        {totalOrders}
+      </text>
+      <text
+        x={cx}
+        y={cy + 15}
+        className="fill-muted-foreground text-sm"
+        textAnchor="middle"
+        dominantBaseline="central"
+      >
+        Ukupno naloga
+      </text>
+    </g>
+  );
+};
 
 export const OrdersByTypeChart = () => {
   const { data: ordersByType, isLoading } = useQuery({
@@ -17,13 +48,19 @@ export const OrdersByTypeChart = () => {
         return acc;
       }, {} as Record<string, number>) || {};
 
-      return Object.entries(counts).map(([name, value]) => ({ name, value }));
+      return Object.entries(counts).map(([name, value]) => ({ 
+        name, 
+        value,
+        color: COLORS[name as keyof typeof COLORS] || COLORS.other
+      }));
     },
   });
 
+  const totalOrders = ordersByType?.reduce((sum, item) => sum + item.value, 0) || 0;
+
   if (isLoading) {
     return (
-      <Card className="h-[300px] flex flex-col">
+      <Card className="h-[300px] sm:h-[260px] flex flex-col">
         <CardHeader className="pb-3">
           <Skeleton className="h-5 w-36" />
         </CardHeader>
@@ -35,7 +72,7 @@ export const OrdersByTypeChart = () => {
   }
 
   return (
-    <Card className="h-[300px] flex flex-col">
+    <Card className="h-[300px] sm:h-[260px] flex flex-col">
       <CardHeader className="pb-3">
         <CardTitle className="text-lg">Nalozi po Tipu</CardTitle>
       </CardHeader>
@@ -44,20 +81,26 @@ export const OrdersByTypeChart = () => {
           <PieChart>
             <Pie
               data={ordersByType}
-              cx="50%"
+              cx="35%"
               cy="50%"
-              labelLine={false}
-              label={({ name, value }) => `${name}: ${value}`}
-              outerRadius={70}
+              innerRadius={60}
+              outerRadius={80}
               fill="#8884d8"
               dataKey="value"
+              label={false}
             >
               {ordersByType?.map((entry, index) => (
-                <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                <Cell key={`cell-${index}`} fill={entry.color} />
               ))}
+              <Label content={<CustomLabel totalOrders={totalOrders} />} position="center" />
             </Pie>
             <Tooltip />
-            <Legend />
+            <Legend 
+              layout="vertical" 
+              align="right" 
+              verticalAlign="middle"
+              iconType="circle"
+            />
           </PieChart>
         </ResponsiveContainer>
       </CardContent>
