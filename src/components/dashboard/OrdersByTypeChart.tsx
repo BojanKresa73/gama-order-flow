@@ -3,6 +3,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { PieChart, Pie, Cell, ResponsiveContainer, Legend, Tooltip, Label } from "recharts";
+import { useMemo } from "react";
 
 const COLORS = {
   ctp: "#3B82F6",
@@ -38,25 +39,34 @@ const CustomLabel = ({ viewBox, totalOrders }: any) => {
 };
 
 export const OrdersByTypeChart = () => {
-  const { data: ordersByType, isLoading } = useQuery({
+  const { data: rawData, isLoading } = useQuery({
     queryKey: ["orders-by-type"],
+    staleTime: 60_000,
     queryFn: async () => {
       const { data } = await supabase.from("work_orders").select("order_type");
-      
-      const counts = data?.reduce((acc, order) => {
-        acc[order.order_type] = (acc[order.order_type] || 0) + 1;
-        return acc;
-      }, {} as Record<string, number>) || {};
-
-      return Object.entries(counts).map(([name, value]) => ({ 
-        name, 
-        value,
-        color: COLORS[name as keyof typeof COLORS] || COLORS.other
-      }));
+      return data || [];
     },
   });
 
-  const totalOrders = ordersByType?.reduce((sum, item) => sum + item.value, 0) || 0;
+  const ordersByType = useMemo(() => {
+    if (!rawData) return [];
+    
+    const counts = rawData.reduce((acc, order) => {
+      acc[order.order_type] = (acc[order.order_type] || 0) + 1;
+      return acc;
+    }, {} as Record<string, number>);
+
+    return Object.entries(counts).map(([name, value]) => ({ 
+      name, 
+      value,
+      color: COLORS[name as keyof typeof COLORS] || COLORS.other
+    }));
+  }, [rawData]);
+
+  const totalOrders = useMemo(() => 
+    ordersByType.reduce((sum, item) => sum + item.value, 0),
+    [ordersByType]
+  );
 
   if (isLoading) {
     return (

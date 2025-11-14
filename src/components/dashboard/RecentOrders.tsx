@@ -19,6 +19,7 @@ export const RecentOrders = () => {
 
   const { data: orders, isLoading } = useQuery({
     queryKey: ["recent-orders"],
+    staleTime: 60_000,
     queryFn: async () => {
       const { data } = await supabase
         .from("work_orders")

@@ -3,6 +3,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, ResponsiveContainer, Tooltip } from "recharts";
+import { useMemo } from "react";
 
 const CustomTooltip = ({ active, payload }: any) => {
   if (active && payload && payload.length) {
@@ -19,8 +20,9 @@ const CustomTooltip = ({ active, payload }: any) => {
 };
 
 export const ClosedOrdersChart = () => {
-  const { data: ordersTimeline, isLoading } = useQuery({
+  const { data: rawData, isLoading } = useQuery({
     queryKey: ["orders-timeline"],
+    staleTime: 60_000,
     queryFn: async () => {
       const sevenDaysAgo = new Date();
       sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
@@ -31,29 +33,36 @@ export const ClosedOrdersChart = () => {
         .eq("status", "closed")
         .gte("closed_at", sevenDaysAgo.toISOString());
 
-      const dailyCounts: Record<string, number> = {};
-      for (let i = 6; i >= 0; i--) {
-        const date = new Date();
-        date.setDate(date.getDate() - i);
-        const dateStr = date.toISOString().split("T")[0];
-        dailyCounts[dateStr] = 0;
-      }
-
-      data?.forEach((order) => {
-        if (order.closed_at) {
-          const dateStr = order.closed_at.split("T")[0];
-          if (dailyCounts[dateStr] !== undefined) {
-            dailyCounts[dateStr]++;
-          }
-        }
-      });
-
-      return Object.entries(dailyCounts).map(([date, count]) => ({
-        date: new Date(date).toLocaleDateString("sr-RS", { day: "2-digit", month: "2-digit" }),
-        count,
-      }));
+      return data || [];
     },
   });
+
+  const ordersTimeline = useMemo(() => {
+    const dailyCounts: Record<string, number> = {};
+    
+    // Initialize all 7 days with 0
+    for (let i = 6; i >= 0; i--) {
+      const date = new Date();
+      date.setDate(date.getDate() - i);
+      const dateStr = date.toISOString().split("T")[0];
+      dailyCounts[dateStr] = 0;
+    }
+
+    // Count orders per day
+    rawData?.forEach((order) => {
+      if (order.closed_at) {
+        const dateStr = order.closed_at.split("T")[0];
+        if (dailyCounts[dateStr] !== undefined) {
+          dailyCounts[dateStr]++;
+        }
+      }
+    });
+
+    return Object.entries(dailyCounts).map(([date, count]) => ({
+      date: new Date(date).toLocaleDateString("sr-RS", { day: "2-digit", month: "2-digit" }),
+      count,
+    }));
+  }, [rawData]);
 
   if (isLoading) {
     return (
