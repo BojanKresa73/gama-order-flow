@@ -15,11 +15,14 @@ import Clients from "./pages/Clients";
 import Inventory from "./pages/Inventory";
 import Checklist from "./pages/Checklist";
 import AdminPriceListDigital from "./pages/AdminPriceListDigital";
+import AdminUsers from "./pages/AdminUsers";
+import AdminInventory from "./pages/AdminInventory";
 import DevPreview from "./pages/DevPreview";
 import DeliveryNotePreview from "./pages/DeliveryNotePreview";
 import OrderDeliveryNote from "./pages/OrderDeliveryNote";
 import CtpStats from "./pages/CtpStats";
 import NotFound from "./pages/NotFound";
+import AdminGuard from "./components/guards/AdminGuard";
 
 const queryClient = new QueryClient();
 
@@ -43,6 +46,8 @@ const App = () => {
             <Route path="/inventory" element={<Inventory />} />
             <Route path="/checklist" element={<Checklist />} />
             <Route path="/admin/price-list-digital" element={<AdminPriceListDigital />} />
+            <Route path="/admin/users" element={<AdminGuard><AdminUsers /></AdminGuard>} />
+            <Route path="/admin/inventory" element={<AdminGuard><AdminInventory /></AdminGuard>} />
             <Route path="/stats/ctp" element={<CtpStats />} />
             {import.meta.env.VITE_SHOW_DEV_PREVIEW === "true" && (
               <>
