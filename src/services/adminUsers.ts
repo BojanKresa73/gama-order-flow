@@ -41,7 +41,7 @@ export async function inviteUser(
   email: string,
   fullName: string,
   role: AppRole
-): Promise<{ success: boolean; user_id: string; recovery_link: string }> {
+): Promise<{ success: boolean; user_id: string }> {
   const { data, error } = await supabase.functions.invoke("invite-user", {
     body: {
       email,
