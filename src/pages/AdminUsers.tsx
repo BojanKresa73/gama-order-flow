@@ -100,21 +100,16 @@ export default function AdminUsers() {
   const inviteMutation = useMutation({
     mutationFn: (data: { email: string; full_name: string; app_role: AppRole }) =>
       adminUsersService.inviteUser(data.email, data.full_name, data.app_role),
-    onSuccess: (data) => {
+    onSuccess: () => {
       toast({
         title: "Korisnik pozvan",
-        description: "Recovery link je generisan - možete ga poslati korisniku.",
+        description: "Pozivnica je poslata na email adresu korisnika.",
       });
       setInviteOpen(false);
       setInviteEmail("");
       setInviteFullName("");
       setInviteRole("operator");
       queryClient.invalidateQueries({ queryKey: ["admin-users"] });
-
-      // Prikaži recovery link u console (za dev)
-      if (data?.recovery_link) {
-        console.log("Recovery link:", data.recovery_link);
-      }
     },
     onError: (error: Error) => {
       toast({

@@ -15,28 +15,30 @@ serve(async (req) => {
   try {
     console.log("Invite user function called");
     
-    const body = await req.json();
-    const { email, full_name, app_role } = body ?? {};
+    const { email, full_name, app_role } = await req.json();
 
-    if (!email || !app_role) {
-      console.error("Missing required fields:", { email, app_role });
+    const allowed = ["superuser", "admin", "operator", "operator_ctp"] as const;
+    const role = String(app_role ?? "").toLowerCase();
+    
+    if (!email || !allowed.includes(role as any)) {
+      console.error("Invalid input:", { email, role });
       return new Response(
-        JSON.stringify({ error: "email i app_role su obavezni" }), 
+        JSON.stringify({ error: "email/role invalid" }), 
         { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
 
-    console.log("Creating user:", { email, full_name, app_role });
+    console.log("Creating user:", email, "with role:", role);
 
     const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
     const SERVICE_ROLE = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
     const admin = createClient(SUPABASE_URL, SERVICE_ROLE);
 
-    // 1) Kreiraj korisnika (bez lozinke, poslaćemo recovery link)
+    // 1) Kreiraj korisnika (potvrdi email odmah da bi invite radio predvidivo)
     const { data: created, error: errCreate } = await admin.auth.admin.createUser({
       email,
-      user_metadata: { full_name: full_name || email },
       email_confirm: true,
+      user_metadata: { full_name: full_name || email },
     });
     
     if (errCreate) {
@@ -56,7 +58,7 @@ serve(async (req) => {
         is_active: true 
       });
     
-    if (e1) {
+    if (e1 && e1.code !== "23505") {
       console.error("Error creating profile:", e1);
       throw e1;
     }
@@ -65,39 +67,32 @@ serve(async (req) => {
       .from("user_roles")
       .insert({ 
         user_id: user.id, 
-        role: app_role 
+        role 
       });
     
-    if (e2) {
+    if (e2 && e2.code !== "23505") {
       console.error("Error assigning role:", e2);
       throw e2;
     }
 
     console.log("Profile and role assigned successfully");
 
-    // 3) Pošalji link za postavljanje lozinke (recovery)
-    const origin = new URL(req.url).origin;
-    const redirectTo = `${origin}/reset-password`;
-    
-    const { data: linkData, error: linkErr } = await admin.auth.admin.generateLink({
-      type: "recovery",
-      email,
-      options: { redirectTo },
+    // 3) Pošalji pozivnicu (Supabase šalje mail)
+    const { data: inviteData, error: inviteErr } = await admin.auth.admin.inviteUserByEmail(email, {
+      redirectTo: `${new URL(req.url).origin}/reset-password`,
     });
     
-    if (linkErr) {
-      console.error("Error generating recovery link:", linkErr);
-      throw linkErr;
+    if (inviteErr) {
+      console.error("Error sending invite:", inviteErr);
+      throw inviteErr;
     }
 
-    console.log("Recovery link generated successfully");
+    console.log("Invite sent successfully to:", email);
 
     return new Response(
       JSON.stringify({ 
         success: true, 
-        user_id: user.id, 
-        recovery_link: linkData?.properties?.action_link,
-        message: "Korisnik uspešno kreiran. Recovery link možete poslati korisniku."
+        user_id: user.id
       }), 
       {
         status: 200,
