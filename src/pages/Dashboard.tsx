@@ -75,7 +75,7 @@ const Dashboard = () => {
         <div className="flex items-center justify-between mb-6">
           <h2 className="text-2xl font-semibold">Dobrodošli, {profile?.full_name}!</h2>
           <div className="flex items-center gap-3">
-            <Button onClick={() => navigate("/new-work-order")}>
+            <Button onClick={() => navigate("/work-orders/new")}>
               + Novi nalog
             </Button>
             <Button variant="outline" onClick={() => navigate("/clients")}>
