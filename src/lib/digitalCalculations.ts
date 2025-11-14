@@ -16,6 +16,8 @@ export interface DigitalJob {
   qty: number;
   is_test_print: boolean;
   print_sides: string; // e.g. "4/4", "4/0", "1/1", etc.
+  cover_gsm?: number;
+  lamination?: string;
 }
 
 export interface ComputedDigitalJob {
@@ -26,6 +28,8 @@ export interface ComputedDigitalJob {
   computed_mono_clicks: number;
   computed_price_per_sheet: number;
   computed_line_total: number;
+  cover_sheets: number;
+  lamination_sheets: number;
 }
 
 export function computeDigitalJob(
@@ -43,6 +47,8 @@ export function computeDigitalJob(
       computed_mono_clicks: 0,
       computed_price_per_sheet: 0,
       computed_line_total: 0,
+      cover_sheets: 0,
+      lamination_sheets: 0,
     };
   }
 
@@ -112,8 +118,31 @@ export function computeDigitalJob(
       monoClicksPerSheet = 0;
   }
 
-  const totalColorClicks = totalSheets * colorClicksPerSheet;
-  const totalMonoClicks = totalSheets * monoClicksPerSheet;
+  let totalColorClicks = totalSheets * colorClicksPerSheet;
+  let totalMonoClicks = totalSheets * monoClicksPerSheet;
+
+  // 3.5) Calculate cover sheets if cover_gsm is set and pages > 4
+  let coverSheets = 0;
+  if (job.cover_gsm && job.pages > 4) {
+    const coverPages = 2; // Front and back cover
+    const coverSheetsPerCopy = isSingleSided 
+      ? Math.ceil(coverPages / nup)
+      : Math.ceil(coverPages / (2 * nup));
+    coverSheets = Math.ceil(job.qty * coverSheetsPerCopy);
+    
+    // Add cover clicks to total
+    totalColorClicks += coverSheets * colorClicksPerSheet;
+    totalMonoClicks += coverSheets * monoClicksPerSheet;
+  }
+
+  // 3.6) Calculate lamination sheets if lamination is set
+  let laminationSheets = 0;
+  if (job.lamination && job.lamination !== 'none') {
+    laminationSheets = totalSheets + coverSheets;
+  }
+
+  // Update total sheets to include covers
+  const finalTotalSheets = totalSheets + coverSheets;
 
   // 4) Interpolate price per sheet
   let pricePerSheet = 0;
@@ -122,7 +151,7 @@ export function computeDigitalJob(
     // Sort price list by break_qty ascending
     const sortedPriceList = [...priceList].sort((a, b) => a.break_qty - b.break_qty);
 
-    if (totalSheets >= 500) {
+    if (finalTotalSheets >= 500) {
       // Use price at 500 or highest break
       const entry500 = sortedPriceList.find(p => p.break_qty === 500);
       if (entry500) {
@@ -137,17 +166,17 @@ export function computeDigitalJob(
       let upperBreak: PriceListEntry | null = null;
 
       for (let i = 0; i < sortedPriceList.length; i++) {
-        if (sortedPriceList[i].break_qty <= totalSheets) {
+        if (sortedPriceList[i].break_qty <= finalTotalSheets) {
           lowerBreak = sortedPriceList[i];
         }
-        if (sortedPriceList[i].break_qty >= totalSheets && !upperBreak) {
+        if (sortedPriceList[i].break_qty >= finalTotalSheets && !upperBreak) {
           upperBreak = sortedPriceList[i];
         }
       }
 
       if (lowerBreak && upperBreak && lowerBreak.break_qty !== upperBreak.break_qty) {
         // Interpolate
-        const ratio = (totalSheets - lowerBreak.break_qty) / (upperBreak.break_qty - lowerBreak.break_qty);
+        const ratio = (finalTotalSheets - lowerBreak.break_qty) / (upperBreak.break_qty - lowerBreak.break_qty);
         pricePerSheet = lowerBreak.price_per_sheet + 
           ratio * (upperBreak.price_per_sheet - lowerBreak.price_per_sheet);
       } else if (lowerBreak) {
@@ -162,15 +191,17 @@ export function computeDigitalJob(
   }
 
   // 5) Calculate line total
-  const lineTotal = job.is_test_print ? 0 : totalSheets * pricePerSheet;
+  const lineTotal = job.is_test_print ? 0 : finalTotalSheets * pricePerSheet;
 
   return {
     computed_nup: nup,
     computed_sheets_per_copy: sheetsPerCopy,
-    computed_total_sheets: totalSheets,
+    computed_total_sheets: finalTotalSheets,
     computed_color_clicks: totalColorClicks,
     computed_mono_clicks: totalMonoClicks,
     computed_price_per_sheet: pricePerSheet,
     computed_line_total: lineTotal,
+    cover_sheets: coverSheets,
+    lamination_sheets: laminationSheets,
   };
 }
