@@ -331,10 +331,149 @@ export type Database = {
             foreignKeyName: "delivery_notes_work_order_id_fkey"
             columns: ["work_order_id"]
             isOneToOne: false
+            referencedRelation: "v_ctp_items"
+            referencedColumns: ["work_order_id"]
+          },
+          {
+            foreignKeyName: "delivery_notes_work_order_id_fkey"
+            columns: ["work_order_id"]
+            isOneToOne: false
             referencedRelation: "work_orders"
             referencedColumns: ["id"]
           },
         ]
+      }
+      digital_jobs: {
+        Row: {
+          binding: string | null
+          computed_color_clicks: number | null
+          computed_line_total: number | null
+          computed_mono_clicks: number | null
+          computed_nup: number | null
+          computed_price_per_sheet: number | null
+          computed_sheets_per_copy: number | null
+          computed_total_sheets: number | null
+          cover_gsm: number | null
+          cover_sheets: number | null
+          created_at: string
+          file_name: string
+          finished_h_mm: number
+          finished_w_mm: number
+          folds: number | null
+          id: string
+          is_test_print: boolean
+          lamination: string | null
+          lamination_sheets: number | null
+          lamination_type: string | null
+          order_index: number | null
+          pages: number
+          paper_gsm: number | null
+          print_sides: string
+          qty: number
+          updated_at: string
+          work_order_id: string
+        }
+        Insert: {
+          binding?: string | null
+          computed_color_clicks?: number | null
+          computed_line_total?: number | null
+          computed_mono_clicks?: number | null
+          computed_nup?: number | null
+          computed_price_per_sheet?: number | null
+          computed_sheets_per_copy?: number | null
+          computed_total_sheets?: number | null
+          cover_gsm?: number | null
+          cover_sheets?: number | null
+          created_at?: string
+          file_name: string
+          finished_h_mm: number
+          finished_w_mm: number
+          folds?: number | null
+          id?: string
+          is_test_print?: boolean
+          lamination?: string | null
+          lamination_sheets?: number | null
+          lamination_type?: string | null
+          order_index?: number | null
+          pages?: number
+          paper_gsm?: number | null
+          print_sides: string
+          qty: number
+          updated_at?: string
+          work_order_id: string
+        }
+        Update: {
+          binding?: string | null
+          computed_color_clicks?: number | null
+          computed_line_total?: number | null
+          computed_mono_clicks?: number | null
+          computed_nup?: number | null
+          computed_price_per_sheet?: number | null
+          computed_sheets_per_copy?: number | null
+          computed_total_sheets?: number | null
+          cover_gsm?: number | null
+          cover_sheets?: number | null
+          created_at?: string
+          file_name?: string
+          finished_h_mm?: number
+          finished_w_mm?: number
+          folds?: number | null
+          id?: string
+          is_test_print?: boolean
+          lamination?: string | null
+          lamination_sheets?: number | null
+          lamination_type?: string | null
+          order_index?: number | null
+          pages?: number
+          paper_gsm?: number | null
+          print_sides?: string
+          qty?: number
+          updated_at?: string
+          work_order_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "digital_jobs_work_order_id_fkey"
+            columns: ["work_order_id"]
+            isOneToOne: false
+            referencedRelation: "v_ctp_items"
+            referencedColumns: ["work_order_id"]
+          },
+          {
+            foreignKeyName: "digital_jobs_work_order_id_fkey"
+            columns: ["work_order_id"]
+            isOneToOne: false
+            referencedRelation: "work_orders"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      digital_settings: {
+        Row: {
+          created_at: string
+          id: string
+          sheet_height_mm: number
+          sheet_width_mm: number
+          updated_at: string
+          waste_percent: number
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          sheet_height_mm?: number
+          sheet_width_mm?: number
+          updated_at?: string
+          waste_percent?: number
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          sheet_height_mm?: number
+          sheet_width_mm?: number
+          updated_at?: string
+          waste_percent?: number
+        }
+        Relationships: []
       }
       email_log: {
         Row: {
@@ -365,6 +504,13 @@ export type Database = {
           work_order_id?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "email_log_work_order_id_fkey"
+            columns: ["work_order_id"]
+            isOneToOne: false
+            referencedRelation: "v_ctp_items"
+            referencedColumns: ["work_order_id"]
+          },
           {
             foreignKeyName: "email_log_work_order_id_fkey"
             columns: ["work_order_id"]
@@ -418,6 +564,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "plate_formats"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "file_entries_work_order_id_fkey"
+            columns: ["work_order_id"]
+            isOneToOne: false
+            referencedRelation: "v_ctp_items"
+            referencedColumns: ["work_order_id"]
           },
           {
             foreignKeyName: "file_entries_work_order_id_fkey"
@@ -520,6 +673,13 @@ export type Database = {
             foreignKeyName: "film_jobs_work_order_id_fkey"
             columns: ["work_order_id"]
             isOneToOne: false
+            referencedRelation: "v_ctp_items"
+            referencedColumns: ["work_order_id"]
+          },
+          {
+            foreignKeyName: "film_jobs_work_order_id_fkey"
+            columns: ["work_order_id"]
+            isOneToOne: false
             referencedRelation: "work_orders"
             referencedColumns: ["id"]
           },
@@ -614,6 +774,13 @@ export type Database = {
             foreignKeyName: "inventory_history_work_order_id_fkey"
             columns: ["work_order_id"]
             isOneToOne: false
+            referencedRelation: "v_ctp_items"
+            referencedColumns: ["work_order_id"]
+          },
+          {
+            foreignKeyName: "inventory_history_work_order_id_fkey"
+            columns: ["work_order_id"]
+            isOneToOne: false
             referencedRelation: "work_orders"
             referencedColumns: ["id"]
           },
@@ -649,24 +816,84 @@ export type Database = {
         }
         Relationships: []
       }
+      price_list_digital: {
+        Row: {
+          break_qty: number
+          created_at: string
+          id: string
+          price_per_sheet: number
+          updated_at: string
+        }
+        Insert: {
+          break_qty: number
+          created_at?: string
+          id?: string
+          price_per_sheet: number
+          updated_at?: string
+        }
+        Update: {
+          break_qty?: number
+          created_at?: string
+          id?: string
+          price_per_sheet?: number
+          updated_at?: string
+        }
+        Relationships: []
+      }
       profiles: {
         Row: {
           created_at: string
           full_name: string | null
           id: string
+          is_active: boolean
           updated_at: string
         }
         Insert: {
           created_at?: string
           full_name?: string | null
           id: string
+          is_active?: boolean
           updated_at?: string
         }
         Update: {
           created_at?: string
           full_name?: string | null
           id?: string
+          is_active?: boolean
           updated_at?: string
+        }
+        Relationships: []
+      }
+      saved_reports: {
+        Row: {
+          created_at: string
+          filters: Json
+          id: string
+          is_public: boolean
+          name: string
+          type: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          filters: Json
+          id?: string
+          is_public?: boolean
+          name: string
+          type: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          filters?: Json
+          id?: string
+          is_public?: boolean
+          name?: string
+          type?: string
+          updated_at?: string
+          user_id?: string
         }
         Relationships: []
       }
@@ -805,6 +1032,13 @@ export type Database = {
             foreignKeyName: "work_order_checklists_work_order_id_fkey"
             columns: ["work_order_id"]
             isOneToOne: true
+            referencedRelation: "v_ctp_items"
+            referencedColumns: ["work_order_id"]
+          },
+          {
+            foreignKeyName: "work_order_checklists_work_order_id_fkey"
+            columns: ["work_order_id"]
+            isOneToOne: true
             referencedRelation: "work_orders"
             referencedColumns: ["id"]
           },
@@ -836,6 +1070,13 @@ export type Database = {
           work_order_id?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "work_order_events_work_order_id_fkey"
+            columns: ["work_order_id"]
+            isOneToOne: false
+            referencedRelation: "v_ctp_items"
+            referencedColumns: ["work_order_id"]
+          },
           {
             foreignKeyName: "work_order_events_work_order_id_fkey"
             columns: ["work_order_id"]
@@ -882,6 +1123,13 @@ export type Database = {
             foreignKeyName: "work_order_items_work_order_id_fkey"
             columns: ["work_order_id"]
             isOneToOne: false
+            referencedRelation: "v_ctp_items"
+            referencedColumns: ["work_order_id"]
+          },
+          {
+            foreignKeyName: "work_order_items_work_order_id_fkey"
+            columns: ["work_order_id"]
+            isOneToOne: false
             referencedRelation: "work_orders"
             referencedColumns: ["id"]
           },
@@ -893,6 +1141,7 @@ export type Database = {
           clicks_count: number | null
           client_id: string
           closed_at: string | null
+          closed_by: string | null
           created_at: string
           created_by: string
           film_note: string | null
@@ -921,6 +1170,7 @@ export type Database = {
           clicks_count?: number | null
           client_id: string
           closed_at?: string | null
+          closed_by?: string | null
           created_at?: string
           created_by: string
           film_note?: string | null
@@ -949,6 +1199,7 @@ export type Database = {
           clicks_count?: number | null
           client_id?: string
           closed_at?: string | null
+          closed_by?: string | null
           created_at?: string
           created_by?: string
           film_note?: string | null
@@ -991,9 +1242,66 @@ export type Database = {
       }
     }
     Views: {
-      [_ in never]: never
+      v_ctp_daily: {
+        Row: {
+          by_format: Json | null
+          closed_on: string | null
+          orders_cnt: number | null
+          total_plates: number | null
+        }
+        Relationships: []
+      }
+      v_ctp_items: {
+        Row: {
+          client_id: string | null
+          client_name: string | null
+          closed_on: string | null
+          plate_format_id: string | null
+          plate_format_name: string | null
+          plates_qty: number | null
+          work_order_id: string | null
+          work_order_number: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "file_entries_plate_format_id_fkey"
+            columns: ["plate_format_id"]
+            isOneToOne: false
+            referencedRelation: "plate_formats"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "work_orders_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      v_ctp_top_clients: {
+        Row: {
+          client_id: string | null
+          client_name: string | null
+          orders_cnt: number | null
+          total_plates: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "work_orders_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Functions: {
+      close_digital_work_order: {
+        Args: { p_user_id: string; p_work_order_id: string }
+        Returns: Json
+      }
       close_film_work_order: {
         Args: { p_user_id: string; p_work_order_id: string }
         Returns: Json
@@ -1012,7 +1320,12 @@ export type Database = {
       }
     }
     Enums: {
-      app_role: "admin" | "accounting" | "operator"
+      app_role:
+        | "admin"
+        | "accounting"
+        | "operator"
+        | "superuser"
+        | "operator_ctp"
       checklist_item_status:
         | "Pending"
         | "InProgress"
@@ -1148,7 +1461,13 @@ export type CompositeTypes<
 export const Constants = {
   public: {
     Enums: {
-      app_role: ["admin", "accounting", "operator"],
+      app_role: [
+        "admin",
+        "accounting",
+        "operator",
+        "superuser",
+        "operator_ctp",
+      ],
       checklist_item_status: ["Pending", "InProgress", "Blocked", "Done", "NA"],
       work_order_status: ["open", "closed"],
       work_order_type: ["ctp", "digital", "other", "film"],
