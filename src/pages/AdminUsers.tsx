@@ -29,7 +29,7 @@ import {
 } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
-import { Users, Search, RefreshCw, UserPlus, KeyRound, ArrowLeft } from "lucide-react";
+import { Users, Search, RefreshCw, UserPlus, KeyRound, ArrowLeft, Pencil } from "lucide-react";
 import { useAuthz } from "@/hooks/useAuthz";
 import { useNavigate } from "react-router-dom";
 import * as adminUsersService from "@/services/adminUsers";
@@ -43,6 +43,8 @@ export default function AdminUsers() {
   const [inviteEmail, setInviteEmail] = useState("");
   const [inviteFullName, setInviteFullName] = useState("");
   const [inviteRole, setInviteRole] = useState<AppRole>("operator");
+  const [editOpen, setEditOpen] = useState(false);
+  const [editUser, setEditUser] = useState<User | null>(null);
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const { isSuper, isAdmin } = useAuthz();
@@ -178,8 +180,9 @@ export default function AdminUsers() {
         <CardHeader>
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
-              <Button variant="ghost" size="sm" onClick={() => navigate(-1)}>
-                <ArrowLeft className="h-4 w-4" />
+              <Button variant="ghost" size="sm" onClick={() => navigate("/dashboard")}>
+                <ArrowLeft className="h-4 w-4 mr-2" />
+                Dashboard
               </Button>
               <Users className="h-6 w-6" />
               <CardTitle>Administracija korisnika</CardTitle>
@@ -240,6 +243,84 @@ export default function AdminUsers() {
                     </Button>
                     <Button onClick={handleInviteUser} disabled={inviteMutation.isPending}>
                       {inviteMutation.isPending ? "Šaljem..." : "Pozovi"}
+                    </Button>
+                  </DialogFooter>
+                </DialogContent>
+              </Dialog>
+
+              <Dialog open={editOpen} onOpenChange={setEditOpen}>
+                <DialogContent>
+                  <DialogHeader>
+                    <DialogTitle>Izmeni korisnika</DialogTitle>
+                    <DialogDescription>
+                      Izmeni podatke o korisniku.
+                    </DialogDescription>
+                  </DialogHeader>
+                  {editUser && (
+                    <div className="space-y-4 py-4">
+                      <div className="space-y-2">
+                        <Label htmlFor="edit_email">Email</Label>
+                        <Input
+                          id="edit_email"
+                          type="email"
+                          value={editUser.email}
+                          disabled
+                          className="bg-muted"
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="edit_full_name">Ime i prezime</Label>
+                        <Input
+                          id="edit_full_name"
+                          placeholder="Ime Prezime"
+                          value={editUser.full_name || ""}
+                          onChange={(e) => setEditUser({ ...editUser, full_name: e.target.value })}
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="edit_role">Rola</Label>
+                        <Select 
+                          value={editUser.role || ""} 
+                          onValueChange={(v) => setEditUser({ ...editUser, role: v as AppRole })}
+                        >
+                          <SelectTrigger id="edit_role">
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="superuser">Superuser</SelectItem>
+                            <SelectItem value="admin">Admin</SelectItem>
+                            <SelectItem value="operator">Operator</SelectItem>
+                            <SelectItem value="operator_ctp">Operator CTP</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      <div className="flex items-center space-x-2">
+                        <Label htmlFor="edit_active">Status</Label>
+                        <Button
+                          id="edit_active"
+                          variant={editUser.is_active ? "outline" : "secondary"}
+                          size="sm"
+                          onClick={() => setEditUser({ ...editUser, is_active: !editUser.is_active })}
+                        >
+                          {editUser.is_active ? "Aktivan" : "Neaktivan"}
+                        </Button>
+                      </div>
+                    </div>
+                  )}
+                  <DialogFooter>
+                    <Button variant="outline" onClick={() => setEditOpen(false)}>
+                      Otkaži
+                    </Button>
+                    <Button onClick={() => {
+                      if (editUser) {
+                        handleRoleChange(editUser.id, editUser.role);
+                        if (editUser.is_active !== users.find(u => u.id === editUser.id)?.is_active) {
+                          handleToggleActive(editUser.id, !editUser.is_active);
+                        }
+                        setEditOpen(false);
+                      }
+                    }}>
+                      Sačuvaj
                     </Button>
                   </DialogFooter>
                 </DialogContent>
@@ -316,15 +397,28 @@ export default function AdminUsers() {
                         {new Date(user.created_at).toLocaleDateString("sr-RS")}
                       </TableCell>
                       <TableCell className="text-right">
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => handleResetPassword(user.email)}
-                          disabled={resetPasswordMutation.isPending}
-                        >
-                          <KeyRound className="h-4 w-4 mr-1" />
-                          Reset lozinke
-                        </Button>
+                        <div className="flex justify-end gap-2">
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => {
+                              setEditUser(user);
+                              setEditOpen(true);
+                            }}
+                          >
+                            <Pencil className="h-4 w-4 mr-1" />
+                            Izmeni
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => handleResetPassword(user.email)}
+                            disabled={resetPasswordMutation.isPending}
+                          >
+                            <KeyRound className="h-4 w-4 mr-1" />
+                            Reset lozinke
+                          </Button>
+                        </div>
                       </TableCell>
                     </TableRow>
                   ))}
