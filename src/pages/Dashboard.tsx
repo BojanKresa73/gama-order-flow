@@ -10,6 +10,7 @@ import { OrdersByTypeChart } from "@/components/dashboard/OrdersByTypeChart";
 import { ClosedOrdersChart } from "@/components/dashboard/ClosedOrdersChart";
 import { RecentOrders } from "@/components/dashboard/RecentOrders";
 import { LowStockAlerts } from "@/components/dashboard/LowStockAlerts";
+import AdminSection from "@/components/dashboard/AdminSection";
 
 const Dashboard = () => {
   const [loading, setLoading] = useState(true);
@@ -96,19 +97,21 @@ const Dashboard = () => {
         <div className="grid grid-cols-12 gap-6 items-start">
           <StatsCards />
           
-          <div className="col-span-4">
+          <AdminSection />
+          
+          <div className="col-span-12 xl:col-span-4">
             <OrdersByTypeChart />
           </div>
           
-          <div className="col-span-8">
+          <div className="col-span-12 xl:col-span-8">
             <ClosedOrdersChart />
           </div>
 
-          <div className="col-span-7">
+          <div className="col-span-12 xl:col-span-7">
             <RecentOrders />
           </div>
           
-          <div className="col-span-5">
+          <div className="col-span-12 xl:col-span-5">
             <LowStockAlerts />
           </div>
         </div>
