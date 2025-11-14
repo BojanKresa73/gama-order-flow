@@ -58,7 +58,7 @@ const Dashboard = () => {
 
   return (
     <div className="min-h-screen bg-background">
-      <header className="border-b bg-card">
+      <header className="border-b bg-card sticky top-0 z-50">
         <div className="container mx-auto px-4 py-4 flex justify-between items-center">
           <h1 className="text-2xl font-bold">CTP Prepress Sistem</h1>
           <div className="flex items-center gap-4">
@@ -70,24 +70,24 @@ const Dashboard = () => {
         </div>
       </header>
 
-      <main className="max-w-[1400px] mx-auto px-6 py-6">
+      <main className="max-w-[1400px] mx-auto px-6 py-4">
         {/* Quick Actions Bar */}
-        <div className="flex items-center justify-between mb-6">
-          <h2 className="text-2xl font-semibold">Dobrodošli, {profile?.full_name}!</h2>
+        <div className="flex items-center justify-between mb-4">
+          <h2 className="text-xl font-semibold">Dobrodošli, {profile?.full_name}!</h2>
           <div className="flex items-center gap-3">
-            <Button onClick={() => navigate("/new-work-order")}>
+            <Button onClick={() => navigate("/new-work-order")} size="sm">
               + Novi nalog
             </Button>
-            <Button variant="outline" onClick={() => navigate("/clients")}>
+            <Button variant="outline" onClick={() => navigate("/clients")} size="sm">
               Klijenti
             </Button>
-            <Button variant="outline" onClick={() => navigate("/inventory")}>
+            <Button variant="outline" onClick={() => navigate("/inventory")} size="sm">
               Inventar
             </Button>
           </div>
         </div>
 
-        <div className="grid grid-cols-12 gap-6 items-start">
+        <div className="grid grid-cols-12 gap-4 items-start">
           <StatsCards />
           
           <div className="col-span-4">
