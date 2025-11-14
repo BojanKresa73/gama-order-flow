@@ -29,7 +29,7 @@ import {
 } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
-import { Users, Search, RefreshCw, UserPlus, KeyRound, ArrowLeft, Pencil } from "lucide-react";
+import { Users, Search, RefreshCw, UserPlus, KeyRound, ArrowLeft, Pencil, Mail } from "lucide-react";
 import { useAuthz } from "@/hooks/useAuthz";
 import { useNavigate } from "react-router-dom";
 import * as adminUsersService from "@/services/adminUsers";
@@ -157,6 +157,29 @@ export default function AdminUsers() {
 
   const handleResetPassword = (email: string) => {
     resetPasswordMutation.mutate(email);
+  };
+
+  // Mutation za ponovno slanje poziva
+  const resendInviteMutation = useMutation({
+    mutationFn: (user: User) => 
+      adminUsersService.inviteUser(user.email, user.full_name || user.email, user.role as AppRole),
+    onSuccess: (data, user) => {
+      toast({
+        title: "Poziv poslat",
+        description: `Pozivnica je ponovo poslata na ${user.email}`,
+      });
+    },
+    onError: (error: Error) => {
+      toast({
+        title: "Greška pri slanju",
+        description: error.message,
+        variant: "destructive",
+      });
+    },
+  });
+
+  const handleResendInvite = (user: User) => {
+    resendInviteMutation.mutate(user);
   };
 
   const getRoleBadgeVariant = (role: AppRole | null) => {
@@ -403,6 +426,15 @@ export default function AdminUsers() {
                           >
                             <Pencil className="h-4 w-4 mr-1" />
                             Izmeni
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => handleResendInvite(user)}
+                            disabled={resendInviteMutation.isPending}
+                          >
+                            <Mail className="h-4 w-4 mr-1" />
+                            Poziv ponovo
                           </Button>
                           <Button
                             variant="ghost"
