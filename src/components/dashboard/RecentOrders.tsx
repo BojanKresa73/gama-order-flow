@@ -33,11 +33,11 @@ export const RecentOrders = () => {
 
   if (isLoading) {
     return (
-      <Card className="h-[340px] flex flex-col rounded-2xl border-neutral-200 dark:border-neutral-800 shadow-sm hover:shadow-md transition-shadow">
-        <CardHeader className="h-[44px] flex flex-row items-center justify-between pb-0">
+      <Card className="h-[320px] flex flex-col rounded-2xl border-neutral-200 dark:border-neutral-800 shadow-sm hover:shadow-md transition-shadow">
+        <CardHeader className="h-[44px] flex flex-row items-center justify-between pb-0 flex-shrink-0">
           <CardTitle className="text-lg">Skorašnji Nalozi</CardTitle>
         </CardHeader>
-        <CardContent className="flex-1 pt-4 overflow-hidden">
+        <CardContent className="flex-1 pt-2 overflow-hidden min-h-0">
           <div className="space-y-2">
             {[1, 2, 3, 4, 5].map((i) => (
               <Skeleton key={i} className="h-12 w-full" />
@@ -49,19 +49,19 @@ export const RecentOrders = () => {
   }
 
   return (
-    <Card className="h-[340px] flex flex-col rounded-2xl border-neutral-200 dark:border-neutral-800 shadow-sm hover:shadow-md transition-shadow">
-      <CardHeader className="h-[44px] flex flex-row items-center justify-between pb-0">
+    <Card className="h-[320px] flex flex-col rounded-2xl border-neutral-200 dark:border-neutral-800 shadow-sm hover:shadow-md transition-shadow">
+      <CardHeader className="h-[44px] flex flex-row items-center justify-between pb-0 flex-shrink-0">
         <CardTitle className="text-lg">Skorašnji Nalozi</CardTitle>
       </CardHeader>
-      <CardContent className="flex-1 pt-4 overflow-y-auto scrollbar-thin scrollbar-thumb-border scrollbar-track-transparent">
+      <CardContent className="flex-1 pt-2 overflow-y-auto scrollbar-thin scrollbar-thumb-border scrollbar-track-transparent min-h-0">
         <Table>
           <TableHeader className="sticky top-0 bg-card z-10">
             <TableRow>
-              <TableHead className="text-muted-foreground">Broj Naloga</TableHead>
-              <TableHead className="text-muted-foreground">Klijent</TableHead>
-              <TableHead className="text-muted-foreground">Tip</TableHead>
-              <TableHead className="text-muted-foreground">Status</TableHead>
-              <TableHead className="text-muted-foreground">Datum</TableHead>
+              <TableHead className="text-muted-foreground text-xs">Broj Naloga</TableHead>
+              <TableHead className="text-muted-foreground text-xs">Klijent</TableHead>
+              <TableHead className="text-muted-foreground text-xs">Tip</TableHead>
+              <TableHead className="text-muted-foreground text-xs">Status</TableHead>
+              <TableHead className="text-muted-foreground text-xs">Datum</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -71,26 +71,26 @@ export const RecentOrders = () => {
                 className="cursor-pointer hover:bg-muted/50"
               >
                 <TableCell 
-                  className="font-medium text-primary hover:underline"
+                  className="font-medium text-primary hover:underline text-sm"
                   onClick={() => navigate("/work-orders")}
                 >
                   {order.order_number}
                 </TableCell>
-                <TableCell>{(order.clients as any)?.name || "-"}</TableCell>
+                <TableCell className="text-sm">{(order.clients as any)?.name || "-"}</TableCell>
                 <TableCell>
                   <Badge 
                     variant="outline" 
-                    className={ORDER_TYPE_COLORS[order.order_type as keyof typeof ORDER_TYPE_COLORS] || ORDER_TYPE_COLORS.other}
+                    className={`text-xs ${ORDER_TYPE_COLORS[order.order_type as keyof typeof ORDER_TYPE_COLORS] || ORDER_TYPE_COLORS.other}`}
                   >
                     {order.order_type}
                   </Badge>
                 </TableCell>
                 <TableCell>
-                  <Badge variant={order.status === "open" ? "default" : "secondary"}>
+                  <Badge variant={order.status === "open" ? "default" : "secondary"} className="text-xs">
                     {order.status}
                   </Badge>
                 </TableCell>
-                <TableCell>
+                <TableCell className="text-sm">
                   {new Date(order.created_at).toLocaleDateString("sr-RS")}
                 </TableCell>
               </TableRow>
@@ -98,7 +98,7 @@ export const RecentOrders = () => {
           </TableBody>
         </Table>
       </CardContent>
-      <CardFooter className="border-t border-neutral-200 dark:border-neutral-800 pt-3 pb-3">
+      <CardFooter className="border-t border-neutral-200 dark:border-neutral-800 pt-2 pb-2 flex-shrink-0">
         <button
           onClick={() => navigate("/work-orders")}
           className="text-sm text-primary hover:underline flex items-center gap-1 font-medium"

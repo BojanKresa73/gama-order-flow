@@ -66,11 +66,11 @@ export const ClosedOrdersChart = () => {
 
   if (isLoading) {
     return (
-      <Card className="h-[300px] flex flex-col rounded-2xl border-neutral-200 dark:border-neutral-800 shadow-sm hover:shadow-md transition-shadow">
-        <CardHeader className="h-[44px] flex flex-row items-center justify-between pb-0">
+      <Card className="h-[280px] flex flex-col rounded-2xl border-neutral-200 dark:border-neutral-800 shadow-sm hover:shadow-md transition-shadow">
+        <CardHeader className="h-[44px] flex flex-row items-center justify-between pb-0 flex-shrink-0">
           <Skeleton className="h-5 w-48" />
         </CardHeader>
-        <CardContent className="flex-1 pt-4">
+        <CardContent className="flex-1 pt-2 min-h-0">
           <Skeleton className="h-full w-full" />
         </CardContent>
       </Card>
@@ -78,11 +78,11 @@ export const ClosedOrdersChart = () => {
   }
 
   return (
-    <Card className="h-[300px] flex flex-col rounded-2xl border-neutral-200 dark:border-neutral-800 shadow-sm hover:shadow-md transition-shadow">
-      <CardHeader className="h-[44px] flex flex-row items-center justify-between pb-0">
+    <Card className="h-[280px] flex flex-col rounded-2xl border-neutral-200 dark:border-neutral-800 shadow-sm hover:shadow-md transition-shadow overflow-hidden">
+      <CardHeader className="h-[44px] flex flex-row items-center justify-between pb-0 flex-shrink-0">
         <CardTitle className="text-lg">Zatvoreni Nalozi (7 Dana)</CardTitle>
       </CardHeader>
-      <CardContent className="flex-1 pt-4 pb-4">
+      <CardContent className="flex-1 pt-2 pb-3 min-h-0">
         <ResponsiveContainer width="100%" height="100%">
           <AreaChart data={ordersTimeline}>
             <defs>
@@ -94,14 +94,14 @@ export const ClosedOrdersChart = () => {
             <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" opacity={0.5} />
             <XAxis 
               dataKey="date" 
-              tick={{ fontSize: 12, fill: "hsl(var(--muted-foreground))" }}
+              tick={{ fontSize: 11, fill: "hsl(var(--muted-foreground))" }}
               stroke="hsl(var(--border))"
             />
             <YAxis 
-              tick={{ fontSize: 12, fill: "hsl(var(--muted-foreground))" }}
+              tick={{ fontSize: 11, fill: "hsl(var(--muted-foreground))" }}
               stroke="hsl(var(--border))"
             />
-            <Tooltip content={<CustomTooltip />} />
+            <Tooltip content={<CustomTooltip />} wrapperStyle={{ zIndex: 1000 }} />
             <Area 
               type="monotone" 
               dataKey="count" 

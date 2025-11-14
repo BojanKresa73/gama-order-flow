@@ -70,11 +70,11 @@ export const OrdersByTypeChart = () => {
 
   if (isLoading) {
     return (
-      <Card className="h-[300px] sm:h-[260px] flex flex-col rounded-2xl border-neutral-200 dark:border-neutral-800 shadow-sm hover:shadow-md transition-shadow">
-        <CardHeader className="h-[44px] flex flex-row items-center justify-between pb-0">
+      <Card className="h-[280px] sm:h-[250px] flex flex-col rounded-2xl border-neutral-200 dark:border-neutral-800 shadow-sm hover:shadow-md transition-shadow">
+        <CardHeader className="h-[44px] flex flex-row items-center justify-between pb-0 flex-shrink-0">
           <Skeleton className="h-5 w-36" />
         </CardHeader>
-        <CardContent className="flex-1 pt-4">
+        <CardContent className="flex-1 pt-2 min-h-0">
           <Skeleton className="h-full w-full" />
         </CardContent>
       </Card>
@@ -82,19 +82,19 @@ export const OrdersByTypeChart = () => {
   }
 
   return (
-    <Card className="h-[300px] sm:h-[260px] flex flex-col rounded-2xl border-neutral-200 dark:border-neutral-800 shadow-sm hover:shadow-md transition-shadow">
-      <CardHeader className="h-[44px] flex flex-row items-center justify-between pb-0">
+    <Card className="h-[280px] sm:h-[250px] flex flex-col rounded-2xl border-neutral-200 dark:border-neutral-800 shadow-sm hover:shadow-md transition-shadow overflow-hidden">
+      <CardHeader className="h-[44px] flex flex-row items-center justify-between pb-0 flex-shrink-0">
         <CardTitle className="text-lg">Nalozi po Tipu</CardTitle>
       </CardHeader>
-      <CardContent className="flex-1 pt-4 pb-4">
+      <CardContent className="flex-1 pt-2 pb-3 min-h-0">
         <ResponsiveContainer width="100%" height="100%">
           <PieChart>
             <Pie
               data={ordersByType}
               cx="35%"
               cy="50%"
-              innerRadius={60}
-              outerRadius={80}
+              innerRadius={50}
+              outerRadius={70}
               fill="#8884d8"
               dataKey="value"
               label={false}
@@ -104,13 +104,13 @@ export const OrdersByTypeChart = () => {
               ))}
               <Label content={<CustomLabel totalOrders={totalOrders} />} position="center" />
             </Pie>
-            <Tooltip />
+            <Tooltip wrapperStyle={{ zIndex: 1000 }} />
             <Legend 
               layout="vertical" 
               align="right" 
               verticalAlign="middle"
               iconType="circle"
-              wrapperStyle={{ fontSize: '14px' }}
+              wrapperStyle={{ fontSize: '13px', paddingLeft: '10px' }}
               className="text-muted-foreground"
             />
           </PieChart>
