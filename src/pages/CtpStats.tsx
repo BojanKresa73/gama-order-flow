@@ -4,6 +4,8 @@ import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { CtpFilters } from "@/components/stats/CtpFilters";
 import { CtpStatsCards } from "@/components/stats/CtpStatsCards";
+import { CtpDailyChart } from "@/components/stats/CtpDailyChart";
+import { CtpFormatChart } from "@/components/stats/CtpFormatChart";
 import { subDays } from "date-fns";
 import { ChevronLeft } from "lucide-react";
 
@@ -55,6 +57,11 @@ const CtpStats = () => {
       <main className="container mx-auto px-4 py-6 space-y-6">
         <CtpFilters filters={filters} onFiltersChange={setFilters} />
         <CtpStatsCards filters={filters} />
+        
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+          <CtpDailyChart filters={filters} />
+          <CtpFormatChart filters={filters} />
+        </div>
       </main>
     </div>
   );
