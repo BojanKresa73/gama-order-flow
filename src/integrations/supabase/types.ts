@@ -94,13 +94,6 @@ export type Database = {
             referencedRelation: "work_order_checklist_items"
             referencedColumns: ["id"]
           },
-          {
-            foreignKeyName: "checklist_activity_log_created_by_fkey"
-            columns: ["created_by"]
-            isOneToOne: false
-            referencedRelation: "me"
-            referencedColumns: ["user_id"]
-          },
         ]
       }
       checklist_template_items: {
@@ -869,15 +862,7 @@ export type Database = {
           is_active?: boolean
           updated_at?: string
         }
-        Relationships: [
-          {
-            foreignKeyName: "profiles_id_fkey"
-            columns: ["id"]
-            isOneToOne: true
-            referencedRelation: "me"
-            referencedColumns: ["user_id"]
-          },
-        ]
+        Relationships: []
       }
       saved_reports: {
         Row: {
@@ -910,15 +895,7 @@ export type Database = {
           updated_at?: string
           user_id?: string
         }
-        Relationships: [
-          {
-            foreignKeyName: "saved_reports_user_id_fkey"
-            columns: ["user_id"]
-            isOneToOne: false
-            referencedRelation: "me"
-            referencedColumns: ["user_id"]
-          },
-        ]
+        Relationships: []
       }
       user_roles: {
         Row: {
@@ -1003,13 +980,6 @@ export type Database = {
         }
         Relationships: [
           {
-            foreignKeyName: "work_order_checklist_items_assignee_user_id_fkey"
-            columns: ["assignee_user_id"]
-            isOneToOne: false
-            referencedRelation: "me"
-            referencedColumns: ["user_id"]
-          },
-          {
             foreignKeyName: "work_order_checklist_items_checklist_id_fkey"
             columns: ["checklist_id"]
             isOneToOne: false
@@ -1022,13 +992,6 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "file_entries"
             referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "work_order_checklist_items_updated_by_fkey"
-            columns: ["updated_by"]
-            isOneToOne: false
-            referencedRelation: "me"
-            referencedColumns: ["user_id"]
           },
         ]
       }
@@ -1107,13 +1070,6 @@ export type Database = {
           work_order_id?: string
         }
         Relationships: [
-          {
-            foreignKeyName: "work_order_events_created_by_fkey"
-            columns: ["created_by"]
-            isOneToOne: false
-            referencedRelation: "me"
-            referencedColumns: ["user_id"]
-          },
           {
             foreignKeyName: "work_order_events_work_order_id_fkey"
             columns: ["work_order_id"]
@@ -1276,13 +1232,6 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
-            foreignKeyName: "work_orders_closed_by_fkey"
-            columns: ["closed_by"]
-            isOneToOne: false
-            referencedRelation: "me"
-            referencedColumns: ["user_id"]
-          },
-          {
             foreignKeyName: "work_orders_created_by_fkey"
             columns: ["created_by"]
             isOneToOne: false
@@ -1293,14 +1242,6 @@ export type Database = {
       }
     }
     Views: {
-      me: {
-        Row: {
-          app_role: Database["public"]["Enums"]["app_role"] | null
-          is_active: boolean | null
-          user_id: string | null
-        }
-        Relationships: []
-      }
       v_ctp_daily: {
         Row: {
           by_format: Json | null
@@ -1368,6 +1309,11 @@ export type Database = {
       close_work_order_atomic: {
         Args: { p_user_id: string; p_work_order_id: string }
         Returns: Json
+      }
+      current_user_is_active: { Args: never; Returns: boolean }
+      current_user_role: {
+        Args: never
+        Returns: Database["public"]["Enums"]["app_role"]
       }
       generate_order_number: { Args: never; Returns: string }
       has_role: {
