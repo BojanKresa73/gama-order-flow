@@ -8,6 +8,7 @@ import { CtpDailyChart } from "@/components/stats/CtpDailyChart";
 import { CtpFormatChart } from "@/components/stats/CtpFormatChart";
 import { CtpTopClientsTable } from "@/components/stats/CtpTopClientsTable";
 import { CtpTopFormatsTable } from "@/components/stats/CtpTopFormatsTable";
+import { CtpExportButtons } from "@/components/stats/CtpExportButtons";
 import { subDays } from "date-fns";
 import { ChevronLeft } from "lucide-react";
 
@@ -50,9 +51,12 @@ const CtpStats = () => {
             </Button>
             <h1 className="text-2xl font-bold">CTP Statistika</h1>
           </div>
-          <Button variant="outline" onClick={handleLogout}>
-            Odjavi se
-          </Button>
+          <div className="flex items-center gap-4">
+            <CtpExportButtons filters={filters} />
+            <Button variant="outline" onClick={handleLogout}>
+              Odjavi se
+            </Button>
+          </div>
         </div>
       </header>
 
