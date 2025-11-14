@@ -1,10 +1,11 @@
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
-import { AlertTriangle } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { AlertTriangle, Package } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 
 export const LowStockAlerts = () => {
@@ -51,9 +52,24 @@ export const LowStockAlerts = () => {
             Upozorenja o Zalihama
           </CardTitle>
         </CardHeader>
-        <CardContent className="flex-1">
-          <p className="text-sm text-muted-foreground">Sve zalihe su u redu! ✓</p>
+        <CardContent className="flex-1 flex items-center justify-center">
+          <div className="text-center bg-green-50 dark:bg-green-950 rounded-lg p-6 w-full">
+            <p className="text-sm text-green-800 dark:text-green-300 font-medium">
+              Sve zalihe su u redu ✓
+            </p>
+          </div>
         </CardContent>
+        <CardFooter className="border-t pt-3 pb-3">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => navigate("/inventory")}
+            className="w-full"
+          >
+            <Package className="h-4 w-4 mr-2" />
+            Inventar
+          </Button>
+        </CardFooter>
       </Card>
     );
   }
@@ -66,7 +82,7 @@ export const LowStockAlerts = () => {
           Upozorenja o Zalihama
         </CardTitle>
       </CardHeader>
-      <CardContent className="flex-1 overflow-auto">
+      <CardContent className="flex-1 overflow-y-auto scrollbar-thin scrollbar-thumb-border scrollbar-track-transparent">
         <Table>
           <TableHeader className="sticky top-0 bg-card z-10">
             <TableRow>
@@ -97,6 +113,17 @@ export const LowStockAlerts = () => {
           </TableBody>
         </Table>
       </CardContent>
+      <CardFooter className="border-t pt-3 pb-3">
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={() => navigate("/inventory")}
+          className="w-full"
+        >
+          <Package className="h-4 w-4 mr-2" />
+          Inventar
+        </Button>
+      </CardFooter>
     </Card>
   );
 };

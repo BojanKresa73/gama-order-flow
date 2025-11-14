@@ -71,6 +71,22 @@ const Dashboard = () => {
       </header>
 
       <main className="max-w-[1400px] mx-auto px-6 py-6">
+        {/* Quick Actions Bar */}
+        <div className="flex items-center justify-between mb-6">
+          <h2 className="text-2xl font-semibold">Dobrodošli, {profile?.full_name}!</h2>
+          <div className="flex items-center gap-3">
+            <Button onClick={() => navigate("/new-work-order")}>
+              + Novi nalog
+            </Button>
+            <Button variant="outline" onClick={() => navigate("/clients")}>
+              Klijenti
+            </Button>
+            <Button variant="outline" onClick={() => navigate("/inventory")}>
+              Inventar
+            </Button>
+          </div>
+        </div>
+
         <div className="grid grid-cols-12 gap-6 items-start">
           <StatsCards />
           
