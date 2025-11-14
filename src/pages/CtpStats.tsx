@@ -10,6 +10,7 @@ import { CtpTopClientsTable } from "@/components/stats/CtpTopClientsTable";
 import { CtpTopFormatsTable } from "@/components/stats/CtpTopFormatsTable";
 import { CtpExportButtons } from "@/components/stats/CtpExportButtons";
 import { CtpInventoryForecast } from "@/components/stats/CtpInventoryForecast";
+import { SavedReportsDropdown } from "@/components/stats/SavedReportsDropdown";
 import { subDays } from "date-fns";
 import { ChevronLeft } from "lucide-react";
 
@@ -62,6 +63,7 @@ const CtpStats = () => {
       </header>
 
       <main className="container mx-auto px-4 py-6 space-y-6">
+        <SavedReportsDropdown filters={filters} onFiltersChange={setFilters} />
         <CtpFilters filters={filters} onFiltersChange={setFilters} />
         <CtpStatsCards filters={filters} />
         
