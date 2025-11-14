@@ -7,6 +7,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 export const StatsCards = () => {
   const { data: stats, isLoading } = useQuery({
     queryKey: ["dashboard-stats"],
+    staleTime: 60_000,
     queryFn: async () => {
       const [ordersRes, clientsRes, formatsRes] = await Promise.all([
         supabase.from("work_orders").select("status, created_at"),

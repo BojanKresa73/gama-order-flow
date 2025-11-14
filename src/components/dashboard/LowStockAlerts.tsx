@@ -13,6 +13,7 @@ export const LowStockAlerts = () => {
 
   const { data: lowStock, isLoading } = useQuery({
     queryKey: ["low-stock-alerts"],
+    staleTime: 60_000,
     queryFn: async () => {
       const { data } = await supabase
         .from("plate_formats")
