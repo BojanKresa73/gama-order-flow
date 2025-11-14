@@ -24,11 +24,11 @@ export const RecentOrders = () => {
 
   if (isLoading) {
     return (
-      <Card>
-        <CardHeader>
-          <CardTitle>Skorašnji Nalozi</CardTitle>
+      <Card className="h-[340px] flex flex-col">
+        <CardHeader className="pb-3">
+          <CardTitle className="text-lg">Skorašnji Nalozi</CardTitle>
         </CardHeader>
-        <CardContent>
+        <CardContent className="flex-1 overflow-hidden">
           <div className="space-y-2">
             {[1, 2, 3, 4, 5].map((i) => (
               <Skeleton key={i} className="h-12 w-full" />
@@ -40,13 +40,13 @@ export const RecentOrders = () => {
   }
 
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle>Skorašnji Nalogi</CardTitle>
+    <Card className="h-[340px] flex flex-col">
+      <CardHeader className="pb-3">
+        <CardTitle className="text-lg">Skorašnji Nalogi</CardTitle>
       </CardHeader>
-      <CardContent>
+      <CardContent className="flex-1 overflow-auto">
         <Table>
-          <TableHeader>
+          <TableHeader className="sticky top-0 bg-card z-10">
             <TableRow>
               <TableHead>Broj Naloga</TableHead>
               <TableHead>Klijent</TableHead>

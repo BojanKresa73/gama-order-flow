@@ -24,14 +24,14 @@ export const LowStockAlerts = () => {
 
   if (isLoading) {
     return (
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
+      <Card className="h-[340px] flex flex-col">
+        <CardHeader className="pb-3">
+          <CardTitle className="text-lg flex items-center gap-2">
             <AlertTriangle className="h-5 w-5 text-orange-600" />
             Upozorenja o Zalihama
           </CardTitle>
         </CardHeader>
-        <CardContent>
+        <CardContent className="flex-1 overflow-hidden">
           <div className="space-y-2">
             {[1, 2, 3].map((i) => (
               <Skeleton key={i} className="h-12 w-full" />
@@ -44,14 +44,14 @@ export const LowStockAlerts = () => {
 
   if (!lowStock || lowStock.length === 0) {
     return (
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
+      <Card className="h-[340px] flex flex-col">
+        <CardHeader className="pb-3">
+          <CardTitle className="text-lg flex items-center gap-2">
             <AlertTriangle className="h-5 w-5 text-orange-600" />
             Upozorenja o Zalihama
           </CardTitle>
         </CardHeader>
-        <CardContent>
+        <CardContent className="flex-1">
           <p className="text-sm text-muted-foreground">Sve zalihe su u redu! ✓</p>
         </CardContent>
       </Card>
@@ -59,16 +59,16 @@ export const LowStockAlerts = () => {
   }
 
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle className="flex items-center gap-2">
+    <Card className="h-[340px] flex flex-col">
+      <CardHeader className="pb-3">
+        <CardTitle className="text-lg flex items-center gap-2">
           <AlertTriangle className="h-5 w-5 text-orange-600" />
           Upozorenja o Zalihama
         </CardTitle>
       </CardHeader>
-      <CardContent>
+      <CardContent className="flex-1 overflow-auto">
         <Table>
-          <TableHeader>
+          <TableHeader className="sticky top-0 bg-card z-10">
             <TableRow>
               <TableHead>Format</TableHead>
               <TableHead>Trenutno Stanje</TableHead>
