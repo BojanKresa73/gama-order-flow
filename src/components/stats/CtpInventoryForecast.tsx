@@ -1,3 +1,4 @@
+import { useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -11,7 +12,7 @@ import { subDays } from "date-fns";
 export const CtpInventoryForecast = () => {
   const navigate = useNavigate();
 
-  const { data, isLoading } = useQuery({
+  const { data: rawData, isLoading } = useQuery({
     queryKey: ["ctp-inventory-forecast"],
     queryFn: async () => {
       // Fetch plate formats with current stock
@@ -31,41 +32,50 @@ export const CtpInventoryForecast = () => {
 
       if (itemsError) throw itemsError;
 
-      const ctpItems = ((items || []) as unknown) as Array<{
-        plate_format_id: string;
-        plate_format_name: string;
-        plates_qty: number;
-        closed_on: string;
-      }>;
-
-      // Calculate consumption per format
-      const formatConsumption: Record<string, number> = {};
-      ctpItems.forEach(item => {
-        if (item.plate_format_id) {
-          formatConsumption[item.plate_format_id] = 
-            (formatConsumption[item.plate_format_id] || 0) + (item.plates_qty || 0);
-        }
-      });
-
-      // Calculate DoC for each format
-      const forecastData = formats.map(format => {
-        const totalConsumption = formatConsumption[format.id] || 0;
-        const avgDaily = totalConsumption / 30;
-        const daysOfCover = avgDaily > 0 ? format.current_stock / avgDaily : 999;
-
-        return {
-          formatId: format.id,
-          formatName: format.format_name,
-          currentStock: format.current_stock,
-          avgDaily: avgDaily,
-          daysOfCover: daysOfCover,
-        };
-      });
-
-      // Sort by DoC ascending (most critical first)
-      return forecastData.sort((a, b) => a.daysOfCover - b.daysOfCover);
+      return {
+        formats,
+        items: ((items || []) as unknown) as Array<{
+          plate_format_id: string;
+          plate_format_name: string;
+          plates_qty: number;
+          closed_on: string;
+        }>,
+      };
     },
+    staleTime: 60000, // 1 minute
   });
+
+  // Memoize forecast calculation
+  const forecastData = useMemo(() => {
+    if (!rawData) return null;
+
+    // Calculate consumption per format
+    const formatConsumption: Record<string, number> = {};
+    rawData.items.forEach(item => {
+      if (item.plate_format_id) {
+        formatConsumption[item.plate_format_id] = 
+          (formatConsumption[item.plate_format_id] || 0) + (item.plates_qty || 0);
+      }
+    });
+
+    // Calculate DoC for each format
+    const data = rawData.formats.map(format => {
+      const totalConsumption = formatConsumption[format.id] || 0;
+      const avgDaily = totalConsumption / 30;
+      const daysOfCover = avgDaily > 0 ? format.current_stock / avgDaily : 999;
+
+      return {
+        formatId: format.id,
+        formatName: format.format_name,
+        currentStock: format.current_stock,
+        avgDaily: avgDaily,
+        daysOfCover: daysOfCover,
+      };
+    });
+
+    // Sort by DoC ascending (most critical first)
+    return data.sort((a, b) => a.daysOfCover - b.daysOfCover);
+  }, [rawData]);
 
   const getRowColor = (daysOfCover: number) => {
     if (daysOfCover < 7) {
@@ -119,9 +129,9 @@ export const CtpInventoryForecast = () => {
               <TableHead className="text-right">Days of Cover</TableHead>
             </TableRow>
           </TableHeader>
-          <TableBody>
-            {data && data.length > 0 ? (
-              data.map((item) => (
+            <TableBody>
+              {forecastData && forecastData.length > 0 ? (
+                forecastData.map((item) => (
                 <TableRow key={item.formatId} className={getRowColor(item.daysOfCover)}>
                   <TableCell className="font-medium">{item.formatName}</TableCell>
                   <TableCell className="text-right">{item.currentStock}</TableCell>

@@ -1,3 +1,4 @@
+import { useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -11,7 +12,7 @@ interface CtpDailyChartProps {
 }
 
 export const CtpDailyChart = ({ filters }: CtpDailyChartProps) => {
-  const { data, isLoading } = useQuery({
+  const { data: rawData, isLoading } = useQuery({
     queryKey: ["ctp-daily", filters],
     queryFn: async () => {
       let query = supabase
@@ -31,19 +32,24 @@ export const CtpDailyChart = ({ filters }: CtpDailyChartProps) => {
 
       if (error) throw error;
 
-      // Format data for chart
-      const chartData = ((data || []) as unknown as Array<{
+      return ((data || []) as unknown) as Array<{
         closed_on: string;
         total_plates: number;
-      }>).map((item) => ({
-        date: item.closed_on,
-        dateFormatted: format(new Date(item.closed_on), "dd.MM."),
-        plates: Number(item.total_plates) || 0,
-      }));
-
-      return chartData;
+      }>;
     },
+    staleTime: 30000,
   });
+
+  // Memoize chart data transformation
+  const chartData = useMemo(() => {
+    if (!rawData) return [];
+
+    return rawData.map((item) => ({
+      date: item.closed_on,
+      dateFormatted: format(new Date(item.closed_on), "dd.MM."),
+      plates: Number(item.total_plates) || 0,
+    }));
+  }, [rawData]);
 
   if (isLoading) {
     return (
@@ -65,7 +71,7 @@ export const CtpDailyChart = ({ filters }: CtpDailyChartProps) => {
       </CardHeader>
       <CardContent>
         <ResponsiveContainer width="100%" height={300}>
-          <AreaChart data={data}>
+          <AreaChart data={chartData}>
             <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
             <XAxis
               dataKey="dateFormatted"
