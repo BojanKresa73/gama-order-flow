@@ -31,7 +31,7 @@ import {
 } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
-import { Users, Search, RefreshCw, UserPlus } from "lucide-react";
+import { Users, Search, RefreshCw, UserPlus, KeyRound } from "lucide-react";
 import { useAuthz } from "@/hooks/useAuthz";
 import { useNavigate } from "react-router-dom";
 
@@ -167,6 +167,39 @@ export default function AdminUsers() {
     });
   };
 
+  // Mutation za reset lozinke
+  const resetPasswordMutation = useMutation({
+    mutationFn: async (email: string) => {
+      const { data, error } = await supabase.functions.invoke("admin-reset-password", {
+        body: { email },
+      });
+      if (error) throw error;
+      return data;
+    },
+    onSuccess: (data, email) => {
+      toast({ 
+        title: "Recovery link generisan", 
+        description: `Link za reset lozinke poslat za ${email}` 
+      });
+      
+      // Prikaži recovery link u console (za dev)
+      if (data?.recovery_link) {
+        console.log("Recovery link:", data.recovery_link);
+      }
+    },
+    onError: (error: Error) => {
+      toast({ 
+        title: "Greška pri resetu", 
+        description: error.message, 
+        variant: "destructive" 
+      });
+    },
+  });
+
+  const handleResetPassword = (email: string) => {
+    resetPasswordMutation.mutate(email);
+  };
+
   const getRoleBadgeVariant = (role: AppRole | null) => {
     switch (role) {
       case "superuser": return "default";
@@ -281,6 +314,7 @@ export default function AdminUsers() {
                     <TableHead>Rola</TableHead>
                     <TableHead>Status</TableHead>
                     <TableHead>Kreiran</TableHead>
+                    <TableHead className="text-right">Akcije</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -315,6 +349,17 @@ export default function AdminUsers() {
                       </TableCell>
                       <TableCell className="text-muted-foreground text-sm">
                         {new Date(user.created_at).toLocaleDateString("sr-RS")}
+                      </TableCell>
+                      <TableCell className="text-right">
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => handleResetPassword(user.email)}
+                          disabled={resetPasswordMutation.isPending}
+                        >
+                          <KeyRound className="h-4 w-4 mr-1" />
+                          Reset lozinke
+                        </Button>
                       </TableCell>
                     </TableRow>
                   ))}
