@@ -154,14 +154,14 @@ export const ClientsFilters = ({ cities, onFiltersChange }: ClientsFiltersProps)
             <div className="space-y-2">
               <Label htmlFor="grad">Grad</Label>
               <Select
-                value={filters.grad}
-                onValueChange={(value) => setFilters({ ...filters, grad: value })}
+                value={filters.grad || "__all__"}
+                onValueChange={(value) => setFilters({ ...filters, grad: value === "__all__" ? "" : value })}
               >
                 <SelectTrigger id="grad">
                   <SelectValue placeholder="Svi gradovi" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="">Svi</SelectItem>
+                  <SelectItem value="__all__">Svi</SelectItem>
                   {cities.map((city) => (
                     <SelectItem key={city} value={city}>
                       {city}
