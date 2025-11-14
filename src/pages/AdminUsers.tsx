@@ -20,8 +20,18 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
+import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
-import { Users, Search, RefreshCw } from "lucide-react";
+import { Users, Search, RefreshCw, UserPlus } from "lucide-react";
 import { useAuthz } from "@/hooks/useAuthz";
 import { useNavigate } from "react-router-dom";
 
@@ -38,6 +48,10 @@ interface User {
 
 export default function AdminUsers() {
   const [search, setSearch] = useState("");
+  const [inviteOpen, setInviteOpen] = useState(false);
+  const [inviteEmail, setInviteEmail] = useState("");
+  const [inviteFullName, setInviteFullName] = useState("");
+  const [inviteRole, setInviteRole] = useState<AppRole>("operator");
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const { isSuper, isAdmin } = useAuthz();
@@ -107,6 +121,52 @@ export default function AdminUsers() {
     setActiveMutation.mutate({ userId, active: !currentActive });
   };
 
+  // Mutation za pozivanje novog korisnika
+  const inviteMutation = useMutation({
+    mutationFn: async (data: { email: string; full_name: string; app_role: AppRole }) => {
+      const { data: result, error } = await supabase.functions.invoke("invite-user", {
+        body: data,
+      });
+      if (error) throw error;
+      return result;
+    },
+    onSuccess: (data) => {
+      toast({ 
+        title: "Korisnik pozvan", 
+        description: "Recovery link je generisan - možete ga poslati korisniku." 
+      });
+      setInviteOpen(false);
+      setInviteEmail("");
+      setInviteFullName("");
+      setInviteRole("operator");
+      queryClient.invalidateQueries({ queryKey: ["admin-users"] });
+      
+      // Prikaži recovery link u console (za dev)
+      if (data?.recovery_link) {
+        console.log("Recovery link:", data.recovery_link);
+      }
+    },
+    onError: (error: Error) => {
+      toast({ 
+        title: "Greška pri pozivu", 
+        description: error.message, 
+        variant: "destructive" 
+      });
+    },
+  });
+
+  const handleInviteUser = () => {
+    if (!inviteEmail) {
+      toast({ title: "Email je obavezan", variant: "destructive" });
+      return;
+    }
+    inviteMutation.mutate({
+      email: inviteEmail,
+      full_name: inviteFullName || inviteEmail,
+      app_role: inviteRole,
+    });
+  };
+
   const getRoleBadgeVariant = (role: AppRole | null) => {
     switch (role) {
       case "superuser": return "default";
@@ -126,10 +186,72 @@ export default function AdminUsers() {
               <Users className="h-6 w-6" />
               <CardTitle>Administracija korisnika</CardTitle>
             </div>
-            <Button variant="outline" size="sm" onClick={() => refetch()}>
-              <RefreshCw className="h-4 w-4 mr-2" />
-              Osveži
-            </Button>
+            <div className="flex gap-2">
+              <Dialog open={inviteOpen} onOpenChange={setInviteOpen}>
+                <DialogTrigger asChild>
+                  <Button size="sm">
+                    <UserPlus className="h-4 w-4 mr-2" />
+                    Pozovi korisnika
+                  </Button>
+                </DialogTrigger>
+                <DialogContent>
+                  <DialogHeader>
+                    <DialogTitle>Pozovi novog korisnika</DialogTitle>
+                    <DialogDescription>
+                      Korisnik će dobiti email sa linkom za postavljanje lozinke.
+                    </DialogDescription>
+                  </DialogHeader>
+                  <div className="space-y-4 py-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="email">Email *</Label>
+                      <Input
+                        id="email"
+                        type="email"
+                        placeholder="korisnik@example.com"
+                        value={inviteEmail}
+                        onChange={(e) => setInviteEmail(e.target.value)}
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="full_name">Ime i prezime</Label>
+                      <Input
+                        id="full_name"
+                        placeholder="Ime Prezime"
+                        value={inviteFullName}
+                        onChange={(e) => setInviteFullName(e.target.value)}
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="role">Rola *</Label>
+                      <Select value={inviteRole} onValueChange={(v) => setInviteRole(v as AppRole)}>
+                        <SelectTrigger id="role">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="superuser">Superuser</SelectItem>
+                          <SelectItem value="admin">Admin</SelectItem>
+                          <SelectItem value="operator">Operator</SelectItem>
+                          <SelectItem value="operator_ctp">Operator CTP</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  </div>
+                  <DialogFooter>
+                    <Button variant="outline" onClick={() => setInviteOpen(false)}>
+                      Otkaži
+                    </Button>
+                    <Button onClick={handleInviteUser} disabled={inviteMutation.isPending}>
+                      {inviteMutation.isPending ? "Šaljem..." : "Pozovi"}
+                    </Button>
+                  </DialogFooter>
+                </DialogContent>
+              </Dialog>
+              
+              <Button variant="outline" size="sm" onClick={() => refetch()}>
+                <RefreshCw className="h-4 w-4 mr-2" />
+                Osveži
+              </Button>
+            </div>
           </div>
         </CardHeader>
         <CardContent className="space-y-4">
