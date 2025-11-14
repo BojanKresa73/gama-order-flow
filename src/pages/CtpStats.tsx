@@ -9,6 +9,7 @@ import { CtpFormatChart } from "@/components/stats/CtpFormatChart";
 import { CtpTopClientsTable } from "@/components/stats/CtpTopClientsTable";
 import { CtpTopFormatsTable } from "@/components/stats/CtpTopFormatsTable";
 import { CtpExportButtons } from "@/components/stats/CtpExportButtons";
+import { CtpInventoryForecast } from "@/components/stats/CtpInventoryForecast";
 import { subDays } from "date-fns";
 import { ChevronLeft } from "lucide-react";
 
@@ -73,6 +74,8 @@ const CtpStats = () => {
           <CtpTopClientsTable filters={filters} />
           <CtpTopFormatsTable filters={filters} />
         </div>
+
+        <CtpInventoryForecast />
       </main>
     </div>
   );
