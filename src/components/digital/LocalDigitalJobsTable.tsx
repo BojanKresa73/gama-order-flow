@@ -33,6 +33,8 @@ export interface LocalDigitalJob {
   computed_mono_clicks?: number;
   computed_price_per_sheet?: number;
   computed_line_total?: number;
+  cover_sheets?: number;
+  lamination_sheets?: number;
 }
 
 interface LocalDigitalJobsTableProps {
@@ -252,7 +254,15 @@ export const LocalDigitalJobsTable = ({ jobs, onChange, printSides, clientRabatP
                     {job.computed_sheets_per_copy || '-'}
                   </TableCell>
                   <TableCell className="text-right text-muted-foreground">
-                    {job.computed_total_sheets || '-'}
+                    <div className="flex flex-col items-end gap-0.5">
+                      <span>{job.computed_total_sheets || '-'}</span>
+                      {job.cover_sheets && job.cover_sheets > 0 && (
+                        <span className="text-xs text-muted-foreground">+{job.cover_sheets} korice</span>
+                      )}
+                      {job.lamination_sheets && job.lamination_sheets > 0 && (
+                        <span className="text-xs text-muted-foreground">+lam</span>
+                      )}
+                    </div>
                   </TableCell>
                   <TableCell className="text-right text-muted-foreground">
                     {job.computed_color_clicks || '-'}
