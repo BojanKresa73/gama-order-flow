@@ -6,6 +6,8 @@ import { CtpFilters } from "@/components/stats/CtpFilters";
 import { CtpStatsCards } from "@/components/stats/CtpStatsCards";
 import { CtpDailyChart } from "@/components/stats/CtpDailyChart";
 import { CtpFormatChart } from "@/components/stats/CtpFormatChart";
+import { CtpTopClientsTable } from "@/components/stats/CtpTopClientsTable";
+import { CtpTopFormatsTable } from "@/components/stats/CtpTopFormatsTable";
 import { subDays } from "date-fns";
 import { ChevronLeft } from "lucide-react";
 
@@ -61,6 +63,11 @@ const CtpStats = () => {
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
           <CtpDailyChart filters={filters} />
           <CtpFormatChart filters={filters} />
+        </div>
+
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+          <CtpTopClientsTable filters={filters} />
+          <CtpTopFormatsTable filters={filters} />
         </div>
       </main>
     </div>
