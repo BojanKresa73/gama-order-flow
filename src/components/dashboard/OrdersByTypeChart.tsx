@@ -60,11 +60,11 @@ export const OrdersByTypeChart = () => {
 
   if (isLoading) {
     return (
-      <Card className="h-[300px] sm:h-[260px] flex flex-col">
-        <CardHeader className="pb-3">
+      <Card className="h-[300px] sm:h-[260px] flex flex-col rounded-2xl border-neutral-200 dark:border-neutral-800 shadow-sm hover:shadow-md transition-shadow">
+        <CardHeader className="h-[44px] flex flex-row items-center justify-between pb-0">
           <Skeleton className="h-5 w-36" />
         </CardHeader>
-        <CardContent className="flex-1">
+        <CardContent className="flex-1 pt-4">
           <Skeleton className="h-full w-full" />
         </CardContent>
       </Card>
@@ -72,11 +72,11 @@ export const OrdersByTypeChart = () => {
   }
 
   return (
-    <Card className="h-[300px] sm:h-[260px] flex flex-col">
-      <CardHeader className="pb-3">
+    <Card className="h-[300px] sm:h-[260px] flex flex-col rounded-2xl border-neutral-200 dark:border-neutral-800 shadow-sm hover:shadow-md transition-shadow">
+      <CardHeader className="h-[44px] flex flex-row items-center justify-between pb-0">
         <CardTitle className="text-lg">Nalozi po Tipu</CardTitle>
       </CardHeader>
-      <CardContent className="flex-1 pb-4">
+      <CardContent className="flex-1 pt-4 pb-4">
         <ResponsiveContainer width="100%" height="100%">
           <PieChart>
             <Pie
@@ -100,6 +100,8 @@ export const OrdersByTypeChart = () => {
               align="right" 
               verticalAlign="middle"
               iconType="circle"
+              wrapperStyle={{ fontSize: '14px' }}
+              className="text-muted-foreground"
             />
           </PieChart>
         </ResponsiveContainer>

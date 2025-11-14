@@ -25,14 +25,14 @@ export const LowStockAlerts = () => {
 
   if (isLoading) {
     return (
-      <Card className="h-[340px] flex flex-col">
-        <CardHeader className="pb-3">
+      <Card className="h-[340px] flex flex-col rounded-2xl border-neutral-200 dark:border-neutral-800 shadow-sm hover:shadow-md transition-shadow">
+        <CardHeader className="h-[44px] flex flex-row items-center justify-between pb-0">
           <CardTitle className="text-lg flex items-center gap-2">
             <AlertTriangle className="h-5 w-5 text-orange-600" />
             Upozorenja o Zalihama
           </CardTitle>
         </CardHeader>
-        <CardContent className="flex-1 overflow-hidden">
+        <CardContent className="flex-1 pt-4 overflow-hidden">
           <div className="space-y-2">
             {[1, 2, 3].map((i) => (
               <Skeleton key={i} className="h-12 w-full" />
@@ -45,21 +45,21 @@ export const LowStockAlerts = () => {
 
   if (!lowStock || lowStock.length === 0) {
     return (
-      <Card className="h-[340px] flex flex-col">
-        <CardHeader className="pb-3">
+      <Card className="h-[340px] flex flex-col rounded-2xl border-neutral-200 dark:border-neutral-800 shadow-sm hover:shadow-md transition-shadow">
+        <CardHeader className="h-[44px] flex flex-row items-center justify-between pb-0">
           <CardTitle className="text-lg flex items-center gap-2">
             <AlertTriangle className="h-5 w-5 text-orange-600" />
             Upozorenja o Zalihama
           </CardTitle>
         </CardHeader>
-        <CardContent className="flex-1 flex items-center justify-center">
+        <CardContent className="flex-1 pt-4 flex items-center justify-center">
           <div className="text-center bg-green-50 dark:bg-green-950 rounded-lg p-6 w-full">
             <p className="text-sm text-green-800 dark:text-green-300 font-medium">
               Sve zalihe su u redu ✓
             </p>
           </div>
         </CardContent>
-        <CardFooter className="border-t pt-3 pb-3">
+        <CardFooter className="border-t border-neutral-200 dark:border-neutral-800 pt-3 pb-3">
           <Button
             variant="outline"
             size="sm"
@@ -75,21 +75,21 @@ export const LowStockAlerts = () => {
   }
 
   return (
-    <Card className="h-[340px] flex flex-col">
-      <CardHeader className="pb-3">
+    <Card className="h-[340px] flex flex-col rounded-2xl border-neutral-200 dark:border-neutral-800 shadow-sm hover:shadow-md transition-shadow">
+      <CardHeader className="h-[44px] flex flex-row items-center justify-between pb-0">
         <CardTitle className="text-lg flex items-center gap-2">
           <AlertTriangle className="h-5 w-5 text-orange-600" />
           Upozorenja o Zalihama
         </CardTitle>
       </CardHeader>
-      <CardContent className="flex-1 overflow-y-auto scrollbar-thin scrollbar-thumb-border scrollbar-track-transparent">
+      <CardContent className="flex-1 pt-4 overflow-y-auto scrollbar-thin scrollbar-thumb-border scrollbar-track-transparent">
         <Table>
           <TableHeader className="sticky top-0 bg-card z-10">
             <TableRow>
-              <TableHead>Format</TableHead>
-              <TableHead>Trenutno Stanje</TableHead>
-              <TableHead>Prag Upozorenja</TableHead>
-              <TableHead>Status</TableHead>
+              <TableHead className="text-muted-foreground">Format</TableHead>
+              <TableHead className="text-muted-foreground">Trenutno Stanje</TableHead>
+              <TableHead className="text-muted-foreground">Prag Upozorenja</TableHead>
+              <TableHead className="text-muted-foreground">Status</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -113,7 +113,7 @@ export const LowStockAlerts = () => {
           </TableBody>
         </Table>
       </CardContent>
-      <CardFooter className="border-t pt-3 pb-3">
+      <CardFooter className="border-t border-neutral-200 dark:border-neutral-800 pt-3 pb-3">
         <Button
           variant="outline"
           size="sm"

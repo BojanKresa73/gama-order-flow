@@ -32,11 +32,11 @@ export const RecentOrders = () => {
 
   if (isLoading) {
     return (
-      <Card className="h-[340px] flex flex-col">
-        <CardHeader className="pb-3">
+      <Card className="h-[340px] flex flex-col rounded-2xl border-neutral-200 dark:border-neutral-800 shadow-sm hover:shadow-md transition-shadow">
+        <CardHeader className="h-[44px] flex flex-row items-center justify-between pb-0">
           <CardTitle className="text-lg">Skorašnji Nalozi</CardTitle>
         </CardHeader>
-        <CardContent className="flex-1 overflow-hidden">
+        <CardContent className="flex-1 pt-4 overflow-hidden">
           <div className="space-y-2">
             {[1, 2, 3, 4, 5].map((i) => (
               <Skeleton key={i} className="h-12 w-full" />
@@ -48,19 +48,19 @@ export const RecentOrders = () => {
   }
 
   return (
-    <Card className="h-[340px] flex flex-col">
-      <CardHeader className="pb-3">
+    <Card className="h-[340px] flex flex-col rounded-2xl border-neutral-200 dark:border-neutral-800 shadow-sm hover:shadow-md transition-shadow">
+      <CardHeader className="h-[44px] flex flex-row items-center justify-between pb-0">
         <CardTitle className="text-lg">Skorašnji Nalozi</CardTitle>
       </CardHeader>
-      <CardContent className="flex-1 overflow-y-auto scrollbar-thin scrollbar-thumb-border scrollbar-track-transparent">
+      <CardContent className="flex-1 pt-4 overflow-y-auto scrollbar-thin scrollbar-thumb-border scrollbar-track-transparent">
         <Table>
           <TableHeader className="sticky top-0 bg-card z-10">
             <TableRow>
-              <TableHead>Broj Naloga</TableHead>
-              <TableHead>Klijent</TableHead>
-              <TableHead>Tip</TableHead>
-              <TableHead>Status</TableHead>
-              <TableHead>Datum</TableHead>
+              <TableHead className="text-muted-foreground">Broj Naloga</TableHead>
+              <TableHead className="text-muted-foreground">Klijent</TableHead>
+              <TableHead className="text-muted-foreground">Tip</TableHead>
+              <TableHead className="text-muted-foreground">Status</TableHead>
+              <TableHead className="text-muted-foreground">Datum</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -97,7 +97,7 @@ export const RecentOrders = () => {
           </TableBody>
         </Table>
       </CardContent>
-      <CardFooter className="border-t pt-3 pb-3">
+      <CardFooter className="border-t border-neutral-200 dark:border-neutral-800 pt-3 pb-3">
         <button
           onClick={() => navigate("/work-orders")}
           className="text-sm text-primary hover:underline flex items-center gap-1 font-medium"
