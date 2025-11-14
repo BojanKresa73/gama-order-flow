@@ -12,6 +12,7 @@ import NewWorkOrder from "./pages/NewWorkOrder";
 import Clients from "./pages/Clients";
 import Inventory from "./pages/Inventory";
 import Checklist from "./pages/Checklist";
+import AdminPriceListDigital from "./pages/AdminPriceListDigital";
 import DevPreview from "./pages/DevPreview";
 import DeliveryNotePreview from "./pages/DeliveryNotePreview";
 import OrderDeliveryNote from "./pages/OrderDeliveryNote";
@@ -36,6 +37,7 @@ const App = () => {
             <Route path="/clients" element={<Clients />} />
             <Route path="/inventory" element={<Inventory />} />
             <Route path="/checklist" element={<Checklist />} />
+            <Route path="/admin/price-list-digital" element={<AdminPriceListDigital />} />
             {import.meta.env.VITE_SHOW_DEV_PREVIEW === "true" && (
               <>
                 <Route path="/dev/preview" element={<DevPreview />} />
