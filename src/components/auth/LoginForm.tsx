@@ -11,6 +11,9 @@ export const LoginForm = () => {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
+  const [showResetForm, setShowResetForm] = useState(false);
+  const [resetEmail, setResetEmail] = useState("");
+  const [resetLoading, setResetLoading] = useState(false);
   const navigate = useNavigate();
   const { toast } = useToast();
 
@@ -39,6 +42,69 @@ export const LoginForm = () => {
 
     setLoading(false);
   };
+
+  const handleResetPassword = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setResetLoading(true);
+
+    const { error } = await supabase.auth.resetPasswordForEmail(resetEmail, {
+      redirectTo: `${window.location.origin}/reset-password`,
+    });
+
+    if (error) {
+      toast({
+        title: "Greška",
+        description: error.message,
+        variant: "destructive",
+      });
+    } else {
+      toast({
+        title: "Email poslat",
+        description: "Proverite svoj email za instrukcije za reset lozinke.",
+      });
+      setShowResetForm(false);
+      setResetEmail("");
+    }
+
+    setResetLoading(false);
+  };
+
+  if (showResetForm) {
+    return (
+      <Card className="w-full max-w-md">
+        <CardHeader>
+          <CardTitle>Resetuj lozinku</CardTitle>
+          <CardDescription>Unesite svoj email za instrukcije za reset lozinke</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <form onSubmit={handleResetPassword} className="space-y-4">
+            <div className="space-y-2">
+              <Label htmlFor="reset-email">Email</Label>
+              <Input
+                id="reset-email"
+                type="email"
+                value={resetEmail}
+                onChange={(e) => setResetEmail(e.target.value)}
+                required
+                placeholder="vas.email@primer.com"
+              />
+            </div>
+            <Button type="submit" className="w-full" disabled={resetLoading}>
+              {resetLoading ? "Slanje..." : "Pošalji email"}
+            </Button>
+            <Button
+              type="button"
+              variant="outline"
+              className="w-full"
+              onClick={() => setShowResetForm(false)}
+            >
+              Nazad na prijavu
+            </Button>
+          </form>
+        </CardContent>
+      </Card>
+    );
+  }
 
   return (
     <Card className="w-full max-w-md">
@@ -70,6 +136,13 @@ export const LoginForm = () => {
               placeholder="••••••••"
             />
           </div>
+          <button
+            type="button"
+            onClick={() => setShowResetForm(true)}
+            className="text-sm text-primary hover:underline"
+          >
+            Zaboravljena lozinka?
+          </button>
           <Button type="submit" className="w-full" disabled={loading}>
             {loading ? "Prijavljivanje..." : "Prijavi se"}
           </Button>
