@@ -278,11 +278,24 @@ const NewWorkOrder = () => {
   return (
     <div className="min-h-screen bg-background">
       <header className="border-b bg-card">
-        <div className="container mx-auto px-4 py-4 flex items-center gap-4">
-          <Button variant="ghost" size="icon" onClick={() => navigate("/work-orders")}>
-            <ArrowLeft className="h-5 w-5" />
-          </Button>
-          <h1 className="text-2xl font-bold">Novi radni nalog</h1>
+        <div className="container mx-auto px-4 py-4 flex items-center justify-between gap-4">
+          <div className="flex items-center gap-4">
+            <Button variant="ghost" size="icon" onClick={() => navigate("/work-orders")}>
+              <ArrowLeft className="h-5 w-5" />
+            </Button>
+            <h1 className="text-2xl font-bold">Novi radni nalog</h1>
+          </div>
+          <div className="flex gap-2">
+            <Button variant="outline" onClick={() => navigate("/dashboard")}>
+              Dashboard
+            </Button>
+            <Button variant="outline" onClick={() => navigate("/clients")}>
+              Klijenti
+            </Button>
+            <Button variant="outline" onClick={() => navigate("/inventory")}>
+              Inventory
+            </Button>
+          </div>
         </div>
       </header>
 
