@@ -57,11 +57,11 @@ export const ClosedOrdersChart = () => {
 
   if (isLoading) {
     return (
-      <Card className="h-[300px] flex flex-col">
-        <CardHeader className="pb-3">
+      <Card className="h-[300px] flex flex-col rounded-2xl border-neutral-200 dark:border-neutral-800 shadow-sm hover:shadow-md transition-shadow">
+        <CardHeader className="h-[44px] flex flex-row items-center justify-between pb-0">
           <Skeleton className="h-5 w-48" />
         </CardHeader>
-        <CardContent className="flex-1">
+        <CardContent className="flex-1 pt-4">
           <Skeleton className="h-full w-full" />
         </CardContent>
       </Card>
@@ -69,11 +69,11 @@ export const ClosedOrdersChart = () => {
   }
 
   return (
-    <Card className="h-[300px] flex flex-col">
-      <CardHeader className="pb-3">
+    <Card className="h-[300px] flex flex-col rounded-2xl border-neutral-200 dark:border-neutral-800 shadow-sm hover:shadow-md transition-shadow">
+      <CardHeader className="h-[44px] flex flex-row items-center justify-between pb-0">
         <CardTitle className="text-lg">Zatvoreni Nalozi (7 Dana)</CardTitle>
       </CardHeader>
-      <CardContent className="flex-1 pb-4">
+      <CardContent className="flex-1 pt-4 pb-4">
         <ResponsiveContainer width="100%" height="100%">
           <AreaChart data={ordersTimeline}>
             <defs>

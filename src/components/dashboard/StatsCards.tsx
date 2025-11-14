@@ -40,7 +40,7 @@ export const StatsCards = () => {
     return (
       <>
         {[1, 2, 3, 4].map((i) => (
-          <div key={i} className="col-span-3 h-28 rounded-2xl border shadow-sm p-5 bg-card">
+          <div key={i} className="col-span-3 h-28 rounded-2xl border border-neutral-200 dark:border-neutral-800 shadow-sm p-5 bg-card">
             <div className="flex items-start justify-between mb-3">
               <Skeleton className="h-4 w-24" />
               <Skeleton className="h-6 w-6 rounded opacity-60" />
@@ -84,7 +84,7 @@ export const StatsCards = () => {
       {cards.map((card) => (
         <div 
           key={card.title} 
-          className="col-span-3 h-28 rounded-2xl border shadow-sm p-5 bg-card hover:shadow-md transition-shadow"
+          className="col-span-3 h-28 rounded-2xl border border-neutral-200 dark:border-neutral-800 shadow-sm p-5 bg-card hover:shadow-md transition-shadow"
         >
           <div className="flex items-start justify-between mb-3">
             <p className="text-sm text-muted-foreground">{card.title}</p>
