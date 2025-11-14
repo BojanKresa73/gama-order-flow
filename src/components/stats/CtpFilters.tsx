@@ -277,7 +277,7 @@ export function CtpFilters({ filters, onFiltersChange }: CtpFiltersProps) {
                       <X className="h-3 w-3" />
                     </Button>
                   </Badge>
-                );
+                ) : null;
               })}
               {localFilters.plateFormatIds.map((formatId) => {
                 const format = plateFormats.find((f) => f.id === formatId);
@@ -297,7 +297,7 @@ export function CtpFilters({ filters, onFiltersChange }: CtpFiltersProps) {
                       <X className="h-3 w-3" />
                     </Button>
                   </Badge>
-                );
+                ) : null;
               })}
             </div>
           )}
