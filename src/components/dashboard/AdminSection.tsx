@@ -16,29 +16,23 @@ export default function AdminSection() {
         <Shield className="h-5 w-5" />
         <CardTitle>Administracija</CardTitle>
       </CardHeader>
-      <CardContent className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+      <CardContent className="grid grid-cols-2 gap-3">
         <Button
           variant="default"
-          className="h-24 justify-start gap-3 text-left"
+          className="h-20 flex-col gap-2"
           onClick={() => nav("/admin/users")}
         >
-          <Users className="h-5 w-5" />
-          <div>
-            <div className="font-semibold">Korisnici</div>
-            <div className="text-xs opacity-70">Dodavanje, uloge, reset lozinke</div>
-          </div>
+          <Users className="h-6 w-6" />
+          <span className="font-semibold">Korisnici</span>
         </Button>
 
         <Button
           variant="outline"
-          className="h-24 justify-start gap-3 text-left"
+          className="h-20 flex-col gap-2"
           onClick={() => nav("/admin/inventory")}
         >
-          <Boxes className="h-5 w-5" />
-          <div>
-            <div className="font-semibold">Inventar</div>
-            <div className="text-xs opacity-70">Formati ploča, zalihe, upozorenja</div>
-          </div>
+          <Boxes className="h-6 w-6" />
+          <span className="font-semibold">Inventar</span>
         </Button>
       </CardContent>
     </Card>
