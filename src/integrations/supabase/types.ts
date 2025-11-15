@@ -816,6 +816,30 @@ export type Database = {
         }
         Relationships: []
       }
+      plate_usage_stats: {
+        Row: {
+          client_id: string
+          created_at: string
+          plate_format: string
+          plates_used: number
+          usage_date: string
+        }
+        Insert: {
+          client_id: string
+          created_at?: string
+          plate_format: string
+          plates_used?: number
+          usage_date: string
+        }
+        Update: {
+          client_id?: string
+          created_at?: string
+          plate_format?: string
+          plates_used?: number
+          usage_date?: string
+        }
+        Relationships: []
+      }
       price_list_digital: {
         Row: {
           break_qty: number
