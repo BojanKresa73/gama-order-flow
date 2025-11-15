@@ -1320,6 +1320,15 @@ export type Database = {
           },
         ]
       }
+      v_plate_usage_monthly: {
+        Row: {
+          client_id: string | null
+          month: string | null
+          plate_format: string | null
+          plates_used: number | null
+        }
+        Relationships: []
+      }
     }
     Functions: {
       admin_list_users: {
