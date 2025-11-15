@@ -1383,6 +1383,7 @@ export type Database = {
         }
         Returns: boolean
       }
+      refresh_plate_usage_stats: { Args: never; Returns: undefined }
     }
     Enums: {
       app_role:
