@@ -43,3 +43,33 @@ export const safeFileName = (s: string) =>
    .replace(/[^A-Za-z0-9._ -]+/g, '')     // izbaci problematične simbole
    .trim()
    .replace(/\s+/g, '_');
+
+// Izvuci redni broj iz postojećeg koda (uzima poslednji broj u stringu)
+const extractSeq = (code?: string) => {
+  const m = (code ?? '').match(/(\d+)(?!.*\d)/); // poslednja cifra-grupa
+  const n = m ? parseInt(m[1], 10) : 0;
+  return String(isNaN(n) ? 0 : n).padStart(4, '0'); // 0005
+};
+
+// tip u UPPER skraćenici
+const toTypeShort = (t?: string) => {
+  const s = (t ?? '').toLowerCase();
+  if (s === 'ctp') return 'CTP';
+  if (s === 'digital') return 'DIG';
+  if (s === 'film' || s === 'fil') return 'FIL';
+  return 'RAZ';
+};
+
+// finalni prikaz
+export const displayOrderNumber = (o: {
+  order_code?: string;   // npr. CTP-2025-WO-2025-0019
+  created_at?: string;   // ISO datum
+  client_name?: string;  // Test
+  type?: string;         // 'CTP' | 'Digital' | 'film' | 'Ostalo'
+}) => {
+  const seq  = extractSeq(o.order_code);
+  const date = formatDateSR(o.created_at);
+  const typ  = toTypeShort(o.type);
+  const cli  = o.client_name ?? 'Klijent';
+  return `${seq}-${date}-${typ}-${cli}`;
+};
