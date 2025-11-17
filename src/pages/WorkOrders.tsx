@@ -14,7 +14,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Progress } from "@/components/ui/progress";
-import { prefixFor, workOrderDisplay } from "@/lib/orderLabel";
+import { prefixFor, displayOrderNumber } from "@/lib/orderLabel";
 
 const WorkOrders = () => {
   const [workOrders, setWorkOrders] = useState<any[]>([]);
@@ -344,12 +344,7 @@ const WorkOrders = () => {
                         />
                       </TableCell>
                       <TableCell className="font-medium">
-                        {workOrderDisplay({
-                          order_code: order.order_code,
-                          created_at: order.created_at,
-                          client_name: order.clients?.name,
-                          type: order.type
-                        })}
+                        {displayOrderNumber(order)}
                       </TableCell>
                       <TableCell>{order.clients?.name}</TableCell>
                       <TableCell>{getOrderTypeLabel(order.order_type)}</TableCell>
