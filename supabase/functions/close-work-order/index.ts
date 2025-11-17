@@ -2,6 +2,7 @@ import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.75.0";
 import { Resend } from "https://esm.sh/resend@4.0.0";
 import { PDFDocument, rgb, StandardFonts } from "https://esm.sh/pdf-lib@1.17.1";
+import { ensureDir } from "https://deno.land/std@0.190.0/fs/mod.ts";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -21,6 +22,106 @@ function formatDate(dateString: string): string {
   return `${day}.${month}.${year}.`;
 }
 
+// Generate Work Order PDF (Radni Nalog)
+async function generateWorkOrderPDF(
+  workOrder: any,
+  client: any,
+  fileEntries: any[]
+): Promise<Uint8Array> {
+  const pdfDoc = await PDFDocument.create();
+  const page = pdfDoc.addPage([595, 842]); // A4
+  const font = await pdfDoc.embedFont(StandardFonts.Helvetica);
+  const boldFont = await pdfDoc.embedFont(StandardFonts.HelveticaBold);
+
+  let yPos = 800;
+  const margin = 50;
+
+  // Header
+  page.drawText("RADNI NALOG", {
+    x: margin,
+    y: yPos,
+    size: 20,
+    font: boldFont,
+    color: rgb(0, 0, 0),
+  });
+  yPos -= 30;
+
+  // Order info
+  page.drawText(`Broj naloga: ${workOrder.display_order_number || workOrder.order_number}`, {
+    x: margin,
+    y: yPos,
+    size: 12,
+    font: font,
+  });
+  yPos -= 20;
+
+  page.drawText(`Datum otvaranja: ${formatDate(workOrder.created_at)}`, {
+    x: margin,
+    y: yPos,
+    size: 12,
+    font: font,
+  });
+  yPos -= 20;
+
+  page.drawText(`Datum zatvaranja: ${formatDate(workOrder.closed_at || new Date().toISOString())}`, {
+    x: margin,
+    y: yPos,
+    size: 12,
+    font: font,
+  });
+  yPos -= 30;
+
+  // Client info
+  page.drawText(`Klijent: ${client.name}`, {
+    x: margin,
+    y: yPos,
+    size: 12,
+    font: boldFont,
+  });
+  yPos -= 20;
+
+  if (client.pib) {
+    page.drawText(`PIB: ${client.pib}`, {
+      x: margin,
+      y: yPos,
+      size: 10,
+      font: font,
+    });
+    yPos -= 15;
+  }
+
+  yPos -= 20;
+
+  // File entries
+  page.drawText("Stavke:", {
+    x: margin,
+    y: yPos,
+    size: 12,
+    font: boldFont,
+  });
+  yPos -= 25;
+
+  for (const entry of fileEntries) {
+    if (yPos < 100) {
+      break;
+    }
+
+    page.drawText(
+      `${entry.filename} - ${entry.plate_formats?.format_name || "N/A"} x ${entry.quantity || 0}`,
+      {
+        x: margin + 10,
+        y: yPos,
+        size: 10,
+        font: font,
+      }
+    );
+    yPos -= 18;
+  }
+
+  return await pdfDoc.save();
+}
+
+// Generate Delivery Note PDF (Otpremnica)
 async function generateDeliveryNotePDF(
   workOrder: any,
   fileEntries: any[],
@@ -156,38 +257,100 @@ const handler = async (req: Request): Promise<Response> => {
       .select('*, plate_formats(format_name)')
       .eq('work_order_id', work_order_id);
 
+    // Prepare temp directory for PDFs
+    const tmpDir = "/tmp";
+    await ensureDir(tmpDir);
+    
     const deliveryNumber = `DN-${new Date().getFullYear()}-${String(Date.now()).slice(-6)}`;
-    const pdfBuffer = await generateDeliveryNotePDF(workOrder, fileEntries || [], deliveryNumber);
+    const orderNo = workOrder.display_order_number || workOrder.order_number;
+    const clientName = workOrder.clients?.name || "N/A";
+    const orderType = workOrder.order_type.toUpperCase();
 
-    const archiveSubject = `Arhiva – ${workOrder.display_order_number || workOrder.order_number} (${workOrder.order_type})`;
+    // Generate both PDFs
+    console.log("Generating PDFs...");
+    const deliveryNotePdfBytes = await generateDeliveryNotePDF(workOrder, fileEntries || [], deliveryNumber);
+    const workOrderPdfBytes = await generateWorkOrderPDF(workOrder, workOrder.clients, fileEntries || []);
+
+    // Save PDFs to /tmp
+    const deliveryNotePath = `${tmpDir}/otpremnica-${orderNo}.pdf`;
+    const workOrderPath = `${tmpDir}/radni-nalog-${orderNo}.pdf`;
+    
+    await Deno.writeFile(deliveryNotePath, deliveryNotePdfBytes);
+    await Deno.writeFile(workOrderPath, workOrderPdfBytes);
+
+    // Convert to base64 for email attachments
+    const encoder = new TextDecoder();
+    const deliveryNoteBase64 = btoa(String.fromCharCode(...deliveryNotePdfBytes));
+    const workOrderBase64 = btoa(String.fromCharCode(...workOrderPdfBytes));
+
+    // Send email to archive (both PDFs)
+    console.log(`Sending archive email to ${archiveEmail}...`);
+    const archiveSubject = `[RNGU] ${orderNo} – ${clientName} – ${orderType} CLOSED`;
     try {
       await resend.emails.send({
         from: fromEmail,
         to: archiveEmail,
         subject: archiveSubject,
-        text: `Arhiva naloga ${workOrder.display_order_number || workOrder.order_number}`,
-        attachments: [{ filename: `Otpremnica-${workOrder.display_order_number || workOrder.order_number}.pdf`, content: pdfBuffer }]
+        text: `Arhiva naloga ${orderNo}`,
+        attachments: [
+          {
+            filename: `radni-nalog-${orderNo}.pdf`,
+            content: workOrderBase64,
+          },
+          {
+            filename: `otpremnica-${orderNo}.pdf`,
+            content: deliveryNoteBase64,
+          },
+        ],
       });
-      await logEmail(supabase, work_order_id, archiveEmail, archiveSubject, 'success');
+      await logEmail(supabase, work_order_id, archiveEmail, archiveSubject, 'sent', null);
+      console.log("Archive email sent successfully");
     } catch (error: any) {
+      console.error("Failed to send archive email:", error);
       await logEmail(supabase, work_order_id, archiveEmail, archiveSubject, 'error', error?.message || String(error));
     }
 
+    // Send email to client (only delivery note)
     const clientEmail = workOrder.clients?.notification_email || workOrder.clients?.email;
     if (clientEmail) {
-      const clientSubject = `Završen posao – ${workOrder.display_order_number || workOrder.order_number}`;
+      console.log(`Sending client email to ${clientEmail}...`);
+      const clientSubject = `Završen posao – ${clientName} – ${orderNo}`;
       try {
         await resend.emails.send({
           from: fromEmail,
           to: clientEmail,
           subject: clientSubject,
-          text: `Poštovani ${workOrder.clients?.name || ''}, posao "${workOrder.job_name || workOrder.order_number}" je završen. U prilogu je otpremnica.`,
-          attachments: [{ filename: `Otpremnica-${workOrder.display_order_number || workOrder.order_number}.pdf`, content: pdfBuffer }]
+          html: `
+            <p>Poštovani ${clientName},</p>
+            <p>Obaveštavamo Vas da je Vaš nalog <strong>${orderNo}</strong> završen.</p>
+            <p>U prilogu se nalazi otpremnica.</p>
+            <br>
+            <p>Hvala na poverenju,<br><strong>Gama United</strong></p>
+          `,
+          attachments: [
+            {
+              filename: `otpremnica-${orderNo}.pdf`,
+              content: deliveryNoteBase64,
+            },
+          ],
         });
-        await logEmail(supabase, work_order_id, clientEmail, clientSubject, 'success');
+        await logEmail(supabase, work_order_id, clientEmail, clientSubject, 'sent', null);
+        console.log("Client email sent successfully");
       } catch (error: any) {
+        console.error("Failed to send client email:", error);
         await logEmail(supabase, work_order_id, clientEmail, clientSubject, 'error', error?.message || String(error));
       }
+    }
+
+    // Cleanup: Delete PDFs from /tmp
+    console.log("Cleaning up temporary PDF files...");
+    try {
+      await Deno.remove(deliveryNotePath);
+      await Deno.remove(workOrderPath);
+      console.log("Temporary PDFs deleted successfully");
+    } catch (error: any) {
+      console.error("Failed to delete temporary PDFs:", error);
+      // Non-critical error, don't fail the request
     }
 
     await supabase.from('delivery_notes').insert({
