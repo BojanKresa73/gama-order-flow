@@ -14,30 +14,73 @@ interface CloseWorkOrderRequest {
   note?: string;
 }
 
+// Helper functions for order labeling (matching src/lib/orderLabel.ts)
+
+// Extract sequence number from order code
+function extractSeq(code?: string): string {
+  const m = (code ?? '').match(/(\d+)(?!.*\d)/);
+  const n = m ? parseInt(m[1], 10) : 0;
+  return String(isNaN(n) ? 0 : n).padStart(4, '0');
+}
+
+// Format date as dd.MM.yyyy.
+function formatDateSR(iso?: string | Date): string {
+  const d = iso ? new Date(iso) : new Date();
+  const dd = String(d.getDate()).padStart(2, '0');
+  const mm = String(d.getMonth() + 1).padStart(2, '0');
+  const yyyy = d.getFullYear();
+  return `${dd}.${mm}.${yyyy}.`;
+}
+
+// Format date for display (old version for compatibility)
 function formatDate(dateString: string): string {
-  const date = new Date(dateString);
-  const day = String(date.getDate()).padStart(2, '0');
-  const month = String(date.getMonth() + 1).padStart(2, '0');
-  const year = date.getFullYear();
-  return `${day}.${month}.${year}.`;
+  return formatDateSR(dateString);
 }
 
-// Map order type to short code
+// Convert order type to short uppercase code
+function toTypeShort(t?: string): string {
+  const s = (t ?? '').toLowerCase();
+  if (s === 'ctp') return 'CTP';
+  if (s === 'digital') return 'DIG';
+  if (s === 'film' || s === 'fil') return 'FIL';
+  return 'RAZ';
+}
+
+// Map order type to short code (old version for compatibility)
 function shortType(type?: string): string {
-  const map: Record<string, string> = {
-    CTP: 'ctp',
-    Digital: 'dig',
-    film: 'fil',
-    Ostalo: 'raz',
-  };
-  return map[type || ''] ?? 'raz';
+  return toTypeShort(type).toLowerCase();
 }
 
-// Safe filename - remove special characters
+// Generate display label for order: seq-date-type-client
+function displayOrderNumber(o: {
+  order_code?: string;
+  created_at?: string;
+  client_name?: string;
+  type?: string;
+}): string {
+  const seq = extractSeq(o.order_code);
+  const date = formatDateSR(o.created_at);
+  const typ = toTypeShort(o.type);
+  const cli = o.client_name ?? 'Klijent';
+  return `${seq}-${date}-${typ}-${cli}`;
+}
+
+// Convert label to safe PDF filename
+function toPdfFileName(label: string): string {
+  const noDiacritics = label.normalize('NFD').replace(/\p{Diacritic}/gu, '');
+  const safe = noDiacritics
+    .replace(/\./g, '-')
+    .replace(/[^A-Za-z0-9_-]+/g, '-')
+    .replace(/-+/g, '-')
+    .replace(/(^-|-$)/g, '');
+  return `${safe}.pdf`;
+}
+
+// Safe filename - remove special characters (old version for compatibility)
 function safeFileName(s: string): string {
   return s.normalize('NFKD')
-    .replace(/[\u0300-\u036f]/g, '')       // remove diacritics
-    .replace(/[^A-Za-z0-9._ -]+/g, '')     // remove problematic symbols
+    .replace(/[\u0300-\u036f]/g, '')
+    .replace(/[^A-Za-z0-9._ -]+/g, '')
     .trim()
     .replace(/\s+/g, '_');
 }
@@ -355,16 +398,28 @@ const handler = async (req: Request): Promise<Response> => {
     const orderNo = workOrder.display_order_number || workOrder.order_number;
     const clientName = workOrder.clients?.name || "N/A";
     const orderType = workOrder.order_type.toUpperCase();
+    const orderCode = workOrder.order_code || orderNo;
     
-    // Generate structured PDF filenames
+    // Generate order display label using new format
+    const orderLabel = displayOrderNumber({
+      order_code: workOrder.order_code,
+      created_at: workOrder.created_at,
+      client_name: clientName,
+      type: workOrder.order_type
+    });
+    
+    // Convert to safe PDF filename (returns with .pdf extension)
+    const baseFileName = toPdfFileName(orderLabel); // e.g., "0005-17-11-2025-CTP-Klijent.pdf"
+    const baseName = baseFileName.slice(0, -4); // Remove .pdf extension for adding suffixes
+    
+    // Legacy format variables (for storage paths and compatibility)
     const dateISO = new Date(workOrder.created_at).toISOString().slice(0, 10);
     const typeCode = shortType(workOrder.order_type);
     const clientSafe = safeFileName(clientName);
-    const orderCode = workOrder.order_code || orderNo;
 
     // Use consistent filenames for idempotency
-    const deliveryNotePath = `${tmpDir}/${orderCode}_${dateISO}_${typeCode}_${clientSafe}_Otpremnica.pdf`;
-    const workOrderPath = `${tmpDir}/${orderCode}_${dateISO}_${typeCode}_${clientSafe}_RN.pdf`;
+    const deliveryNotePath = `${tmpDir}/${baseName}_Otpremnica.pdf`;
+    const workOrderPath = `${tmpDir}/${baseName}_RN.pdf`;
 
     // Check if PDFs already exist (idempotency within request)
     let deliveryNotePdfBytes: Uint8Array;
@@ -423,8 +478,8 @@ const handler = async (req: Request): Promise<Response> => {
       console.log("Attachments exceed 8 MB, uploading to Storage...");
       
       const timestamp = Date.now();
-      const workOrderStoragePath = `email-archive/${work_order_id}/${orderCode}_${dateISO}_${typeCode}_${clientSafe}_RN_${timestamp}.pdf`;
-      const deliveryNoteStoragePath = `email-archive/${work_order_id}/${orderCode}_${dateISO}_${typeCode}_${clientSafe}_Otpremnica_${timestamp}.pdf`;
+      const workOrderStoragePath = `email-archive/${work_order_id}/${baseName}_RN_${timestamp}.pdf`;
+      const deliveryNoteStoragePath = `email-archive/${work_order_id}/${baseName}_Otpremnica_${timestamp}.pdf`;
 
       // Upload PDFs to Supabase Storage
       const { error: uploadError1 } = await supabase.storage
@@ -471,11 +526,11 @@ const handler = async (req: Request): Promise<Response> => {
       // Use attachments as normal
       archiveAttachments = [
         {
-          filename: `${orderCode}_${dateISO}_${typeCode}_${clientSafe}_RN.pdf`,
+          filename: `${baseName}_RN.pdf`,
           content: workOrderBase64,
         },
         {
-          filename: `${orderCode}_${dateISO}_${typeCode}_${clientSafe}_Otpremnica.pdf`,
+          filename: `${baseName}_Otpremnica.pdf`,
           content: deliveryNoteBase64,
         },
       ];
@@ -530,7 +585,7 @@ const handler = async (req: Request): Promise<Response> => {
             `,
             attachments: [
               {
-                filename: `${orderCode}_${dateISO}_${typeCode}_${clientSafe}_Otpremnica.pdf`,
+                filename: `${baseName}_Otpremnica.pdf`,
                 content: deliveryNoteBase64,
               },
             ],

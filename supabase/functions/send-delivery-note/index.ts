@@ -15,31 +15,73 @@ interface DeliveryNoteRequest {
   workOrderId: string;
 }
 
-// Helper function to format date as dd.MM.yyyy.
+// Helper functions for order labeling (matching src/lib/orderLabel.ts)
+
+// Extract sequence number from order code
+const extractSeq = (code?: string): string => {
+  const m = (code ?? '').match(/(\d+)(?!.*\d)/);
+  const n = m ? parseInt(m[1], 10) : 0;
+  return String(isNaN(n) ? 0 : n).padStart(4, '0');
+};
+
+// Format date as dd.MM.yyyy.
+const formatDateSR = (iso?: string | Date): string => {
+  const d = iso ? new Date(iso) : new Date();
+  const dd = String(d.getDate()).padStart(2, '0');
+  const mm = String(d.getMonth() + 1).padStart(2, '0');
+  const yyyy = d.getFullYear();
+  return `${dd}.${mm}.${yyyy}.`;
+};
+
+// Format date for display (old version for compatibility)
 const formatDate = (dateString: string): string => {
-  const date = new Date(dateString);
-  const day = String(date.getDate()).padStart(2, "0");
-  const month = String(date.getMonth() + 1).padStart(2, "0");
-  const year = date.getFullYear();
-  return `${day}.${month}.${year}.`;
+  return formatDateSR(dateString);
 };
 
-// Map order type to short code
+// Convert order type to short uppercase code
+const toTypeShort = (t?: string): string => {
+  const s = (t ?? '').toLowerCase();
+  if (s === 'ctp') return 'CTP';
+  if (s === 'digital') return 'DIG';
+  if (s === 'film' || s === 'fil') return 'FIL';
+  return 'RAZ';
+};
+
+// Map order type to short code (old version for compatibility)
 const shortType = (type?: string): string => {
-  const map: Record<string, string> = {
-    CTP: 'ctp',
-    Digital: 'dig',
-    film: 'fil',
-    Ostalo: 'raz',
-  };
-  return map[type || ''] ?? 'raz';
+  return toTypeShort(type).toLowerCase();
 };
 
-// Safe filename - remove special characters
+// Generate display label for order: seq-date-type-client
+const displayOrderNumber = (o: {
+  order_code?: string;
+  created_at?: string;
+  client_name?: string;
+  type?: string;
+}): string => {
+  const seq = extractSeq(o.order_code);
+  const date = formatDateSR(o.created_at);
+  const typ = toTypeShort(o.type);
+  const cli = o.client_name ?? 'Klijent';
+  return `${seq}-${date}-${typ}-${cli}`;
+};
+
+// Convert label to safe PDF filename
+const toPdfFileName = (label: string): string => {
+  const noDiacritics = label.normalize('NFD').replace(/\p{Diacritic}/gu, '');
+  const safe = noDiacritics
+    .replace(/\./g, '-')
+    .replace(/[^A-Za-z0-9_-]+/g, '-')
+    .replace(/-+/g, '-')
+    .replace(/(^-|-$)/g, '');
+  return `${safe}.pdf`;
+};
+
+// Safe filename - remove special characters (old version for compatibility)
 const safeFileName = (s: string): string =>
   s.normalize('NFKD')
-   .replace(/[\u0300-\u036f]/g, '')       // remove diacritics
-   .replace(/[^A-Za-z0-9._ -]+/g, '')     // remove problematic symbols
+   .replace(/[\u0300-\u036f]/g, '')
+   .replace(/[^A-Za-z0-9._ -]+/g, '')
    .trim()
    .replace(/\s+/g, '_');
 
@@ -324,10 +366,13 @@ const handler = async (req: Request): Promise<Response> => {
     );
 
     // Upload PDF to storage
-    const dateISO = new Date(workOrder.created_at).toISOString().slice(0, 10);
-    const typeCode = shortType(workOrder.order_type);
-    const clientSafe = safeFileName(workOrder.clients?.name || 'klijent');
-    const pdfFileName = `${workOrder.order_code || workOrder.order_number}_${dateISO}_${typeCode}_${clientSafe}.pdf`;
+    const orderLabel = displayOrderNumber({
+      order_code: workOrder.order_code,
+      created_at: workOrder.created_at,
+      client_name: workOrder.clients?.name || 'klijent',
+      type: workOrder.order_type
+    });
+    const pdfFileName = toPdfFileName(orderLabel);
     const pdfPath = `delivery-notes/${pdfFileName}`;
     
     const { error: uploadError } = await supabaseClient.storage
