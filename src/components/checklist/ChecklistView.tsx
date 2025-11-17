@@ -21,6 +21,7 @@ interface WorkOrder {
   created_at: string;
   closed_at: string | null;
   status: string;
+  type: string | null;
   total_plates: number;
   file_entries?: FileEntry[];
 }
@@ -60,6 +61,7 @@ const ChecklistView = ({ orderType }: ChecklistViewProps) => {
           created_at,
           closed_at,
           status,
+          type,
           order_type,
           clients!inner(name)
         `)
@@ -92,6 +94,7 @@ const ChecklistView = ({ orderType }: ChecklistViewProps) => {
               created_at: order.created_at,
               closed_at: order.closed_at,
               status: order.status,
+              type: order.type,
               total_plates: 0,
               file_entries: [],
             };
@@ -115,6 +118,7 @@ const ChecklistView = ({ orderType }: ChecklistViewProps) => {
             created_at: order.created_at,
             closed_at: order.closed_at,
             status: order.status,
+            type: order.type,
             total_plates: totalPlates,
             file_entries: fileEntries,
           };
@@ -281,6 +285,17 @@ const ChecklistView = ({ orderType }: ChecklistViewProps) => {
     );
   };
 
+  const getTypeBadge = (type: string | null) => {
+    const label = { 
+      ctp: 'CTP', 
+      digital: 'Digital', 
+      film: 'Film', 
+      ostalo: 'Ostalo' 
+    }[type?.toLowerCase() ?? ''] ?? 'CTP';
+    
+    return <Badge variant="outline">{label}</Badge>;
+  };
+
   const openSearchTab = () => {
     const tabsTrigger = document.querySelector('[value="search"]') as HTMLElement;
     if (tabsTrigger) {
@@ -312,6 +327,7 @@ const ChecklistView = ({ orderType }: ChecklistViewProps) => {
             <TableHead className="w-12"></TableHead>
             <TableHead>Broj Naloga</TableHead>
             <TableHead>Klijent</TableHead>
+            <TableHead>Tip</TableHead>
             <TableHead>Datum Otvaranja</TableHead>
             <TableHead>Datum Zatvaranja</TableHead>
             <TableHead>Status</TableHead>
@@ -334,6 +350,7 @@ const ChecklistView = ({ orderType }: ChecklistViewProps) => {
                 </TableCell>
                 <TableCell className="font-medium">{order.order_number}</TableCell>
                 <TableCell>{order.client_name}</TableCell>
+                <TableCell>{getTypeBadge(order.type)}</TableCell>
                 <TableCell>
                   {format(new Date(order.created_at), "dd.MM.yyyy HH:mm")}
                 </TableCell>
