@@ -62,27 +62,9 @@ export const MonthlyPlateUsageChart = () => {
     );
   }
 
-  if (!chartData || chartData.length === 0) {
-    return (
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Package className="h-5 w-5" />
-            Mesečna Potrošnja Ploča
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="flex items-center justify-center h-[300px]">
-            <p className="text-sm text-muted-foreground">Nema podataka</p>
-          </div>
-        </CardContent>
-      </Card>
-    );
-  }
-
   // Get all unique plate formats for legend
   const allFormats = new Set<string>();
-  chartData.forEach(month => {
+  chartData?.forEach(month => {
     Object.keys(month).forEach(key => {
       if (key !== 'month') allFormats.add(key);
     });
@@ -97,6 +79,8 @@ export const MonthlyPlateUsageChart = () => {
     "hsl(var(--chart-5))",
   ];
 
+  const displayData = chartData && chartData.length > 0 ? chartData : [];
+
   return (
     <Card>
       <CardHeader>
@@ -107,7 +91,7 @@ export const MonthlyPlateUsageChart = () => {
       </CardHeader>
       <CardContent>
         <ResponsiveContainer width="100%" height={300}>
-          <BarChart data={chartData}>
+          <BarChart data={displayData}>
             <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
             <XAxis 
               dataKey="month" 
