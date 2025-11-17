@@ -231,6 +231,8 @@ const handler = async (req: Request): Promise<Response> => {
     return new Response(null, { headers: corsHeaders });
   }
 
+  let work_order_id: string | undefined;
+
   try {
     const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
     const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
@@ -260,7 +262,10 @@ const handler = async (req: Request): Promise<Response> => {
     const { data: { user }, error: authError } = await supabase.auth.getUser(token);
     if (authError || !user) throw new Error('Niste autentifikovani');
 
-    const { work_order_id, note }: CloseWorkOrderRequest = await req.json();
+    const requestBody: CloseWorkOrderRequest = await req.json();
+    work_order_id = requestBody.work_order_id;
+    const note = requestBody.note;
+    
     if (!work_order_id) throw new Error('work_order_id je obavezan');
 
     console.log('Closing work order:', work_order_id);
@@ -513,15 +518,15 @@ const handler = async (req: Request): Promise<Response> => {
       .single();
 
     return new Response(
-      JSON.stringify({ success: true, message: 'Nalog uspešno zatvoren i emails poslati', work_order: updatedOrder }),
+      JSON.stringify({ ok: true, message: 'Nalog uspešno zatvoren i emails poslati', work_order: updatedOrder }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 200 }
     );
 
   } catch (error: any) {
-    console.error('Error:', error);
+    console.error('[closeWorkOrder]', { orderId: work_order_id, error: error?.message || error });
     return new Response(
-      JSON.stringify({ error: error.message || 'Došlo je do greške' }),
-      { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 500 }
+      JSON.stringify({ ok: false, error: error.message || 'Došlo je do greške' }),
+      { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 200 }
     );
   }
 };

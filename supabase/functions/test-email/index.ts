@@ -32,8 +32,8 @@ serve(async (req) => {
     // Get authenticated user and check admin role
     const authHeader = req.headers.get('Authorization');
     if (!authHeader) {
-      return new Response(JSON.stringify({ error: 'Missing authorization' }), {
-        status: 401,
+      return new Response(JSON.stringify({ ok: false, error: 'Missing authorization' }), {
+        status: 200,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
     }
@@ -42,8 +42,8 @@ serve(async (req) => {
     const { data: { user }, error: userError } = await supabase.auth.getUser(token);
     
     if (userError || !user) {
-      return new Response(JSON.stringify({ error: 'Unauthorized' }), {
-        status: 401,
+      return new Response(JSON.stringify({ ok: false, error: 'Unauthorized' }), {
+        status: 200,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
     }
@@ -51,8 +51,8 @@ serve(async (req) => {
     // Check if user has admin or superuser role
     const { data: roleData } = await supabase.rpc('current_user_role');
     if (roleData !== 'admin' && roleData !== 'superuser') {
-      return new Response(JSON.stringify({ error: 'Admin access required' }), {
-        status: 403,
+      return new Response(JSON.stringify({ ok: false, error: 'Admin access required' }), {
+        status: 200,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
     }
@@ -63,8 +63,8 @@ serve(async (req) => {
     const toEmail = url.searchParams.get('to');
 
     if (!orderId || !toEmail) {
-      return new Response(JSON.stringify({ error: 'Missing orderId or to parameter' }), {
-        status: 400,
+      return new Response(JSON.stringify({ ok: false, error: 'Missing orderId or to parameter' }), {
+        status: 200,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
     }
@@ -91,8 +91,9 @@ serve(async (req) => {
       .single();
 
     if (orderError || !order) {
-      return new Response(JSON.stringify({ error: 'Order not found' }), {
-        status: 404,
+      console.error('[test-email]', { orderId, error: 'Order not found', orderError });
+      return new Response(JSON.stringify({ ok: false, error: 'Order not found' }), {
+        status: 200,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
     }
@@ -256,7 +257,7 @@ serve(async (req) => {
 
     return new Response(
       JSON.stringify({
-        success: true,
+        ok: true,
         message: `Test emails sent to ${toEmail}`,
         orderId,
         orderNumber: order.display_order_number || order.order_number,
@@ -267,11 +268,12 @@ serve(async (req) => {
       }
     );
   } catch (error: any) {
-    console.error('Error in test-email function:', error);
+    const orderId = new URL(req.url).searchParams.get('orderId');
+    console.error('[test-email]', { orderId, error: error?.message || error });
     return new Response(
-      JSON.stringify({ error: error.message || 'Internal server error' }),
+      JSON.stringify({ ok: false, error: error.message || 'Internal server error' }),
       {
-        status: 500,
+        status: 200,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       }
     );
