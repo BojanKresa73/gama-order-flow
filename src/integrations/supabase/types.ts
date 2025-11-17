@@ -531,6 +531,88 @@ export type Database = {
         }
         Relationships: []
       }
+      email_jobs: {
+        Row: {
+          attachment_url: string | null
+          client_email: string
+          created_at: string
+          error_msg: string | null
+          html_body: string
+          id: number
+          sent_at: string | null
+          status: string
+          subject: string
+          work_order_id: string
+        }
+        Insert: {
+          attachment_url?: string | null
+          client_email: string
+          created_at?: string
+          error_msg?: string | null
+          html_body: string
+          id?: number
+          sent_at?: string | null
+          status?: string
+          subject: string
+          work_order_id: string
+        }
+        Update: {
+          attachment_url?: string | null
+          client_email?: string
+          created_at?: string
+          error_msg?: string | null
+          html_body?: string
+          id?: number
+          sent_at?: string | null
+          status?: string
+          subject?: string
+          work_order_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "email_jobs_work_order_id_fkey"
+            columns: ["work_order_id"]
+            isOneToOne: false
+            referencedRelation: "v_ctp_items"
+            referencedColumns: ["work_order_id"]
+          },
+          {
+            foreignKeyName: "email_jobs_work_order_id_fkey"
+            columns: ["work_order_id"]
+            isOneToOne: false
+            referencedRelation: "work_orders"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "email_jobs_work_order_id_fkey"
+            columns: ["work_order_id"]
+            isOneToOne: false
+            referencedRelation: "work_orders_ctp"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "email_jobs_work_order_id_fkey"
+            columns: ["work_order_id"]
+            isOneToOne: false
+            referencedRelation: "work_orders_digitala"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "email_jobs_work_order_id_fkey"
+            columns: ["work_order_id"]
+            isOneToOne: false
+            referencedRelation: "work_orders_filmovanje"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "email_jobs_work_order_id_fkey"
+            columns: ["work_order_id"]
+            isOneToOne: false
+            referencedRelation: "work_orders_razno"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       email_log: {
         Row: {
           error_message: string | null
