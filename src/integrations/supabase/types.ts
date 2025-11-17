@@ -1526,6 +1526,7 @@ export type Database = {
           test_clicks: number | null
           trial_print: boolean | null
           trial_sheets: number | null
+          type: Database["public"]["Enums"]["wo_type"]
           updated_at: string
         }
         Insert: {
@@ -1557,6 +1558,7 @@ export type Database = {
           test_clicks?: number | null
           trial_print?: boolean | null
           trial_sheets?: number | null
+          type?: Database["public"]["Enums"]["wo_type"]
           updated_at?: string
         }
         Update: {
@@ -1588,6 +1590,7 @@ export type Database = {
           test_clicks?: number | null
           trial_print?: boolean | null
           trial_sheets?: number | null
+          type?: Database["public"]["Enums"]["wo_type"]
           updated_at?: string
         }
         Relationships: [
@@ -2230,6 +2233,7 @@ export type Database = {
         | "Blocked"
         | "Done"
         | "NA"
+      wo_type: "CTP" | "DIGITAL" | "FILM" | "OSTALO"
       work_order_kind: "CTP" | "DIGITALA" | "FILMOVANJE" | "RAZNO"
       work_order_status: "open" | "closed"
       work_order_type: "ctp" | "digital" | "other" | "film"
@@ -2368,6 +2372,7 @@ export const Constants = {
         "operator_ctp",
       ],
       checklist_item_status: ["Pending", "InProgress", "Blocked", "Done", "NA"],
+      wo_type: ["CTP", "DIGITAL", "FILM", "OSTALO"],
       work_order_kind: ["CTP", "DIGITALA", "FILMOVANJE", "RAZNO"],
       work_order_status: ["open", "closed"],
       work_order_type: ["ctp", "digital", "other", "film"],
