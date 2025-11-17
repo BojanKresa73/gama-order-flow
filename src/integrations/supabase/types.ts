@@ -2196,6 +2196,10 @@ export type Database = {
         Args: never
         Returns: Database["public"]["Enums"]["app_role"]
       }
+      enqueue_email_for_work_order: {
+        Args: { _work_order_id: string }
+        Returns: undefined
+      }
       generate_order_number: { Args: never; Returns: string }
       has_any_role: {
         Args: { p_roles: Database["public"]["Enums"]["app_role"][] }

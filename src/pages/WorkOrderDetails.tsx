@@ -87,10 +87,10 @@ const WorkOrderDetails = () => {
   };
 
   const handleResendEmail = async () => {
-    if (!workOrder || !workOrder.clients?.email) {
+    if (!workOrder) {
       toast({
         title: "Greška",
-        description: "Klijent nema email adresu",
+        description: "Nalog nije pronađen",
         variant: "destructive",
       });
       return;
@@ -98,44 +98,12 @@ const WorkOrderDetails = () => {
 
     setResending(true);
     try {
-      // Fetch delivery note to get the PDF path and details
-      const { data: deliveryNote, error: dnError } = await supabase
-        .from("delivery_notes")
-        .select("*")
-        .eq("work_order_id", id)
-        .order("created_at", { ascending: false })
-        .limit(1)
-        .maybeSingle();
+      // Call the database function to enqueue email
+      const { error } = await supabase.rpc('enqueue_email_for_work_order', {
+        _work_order_id: id
+      });
 
-      if (dnError) throw dnError;
-
-      const pdfLink = deliveryNote?.pdf_path 
-        ? `${window.location.origin}/delivery-notes/${deliveryNote.pdf_path}`
-        : "";
-
-      const htmlBody = `
-        <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-          <h2>Otpremnica ${deliveryNote?.delivery_number || workOrder.order_number}</h2>
-          <p>Poštovani ${workOrder.clients.name},</p>
-          <p>U prilogu vam šaljemo otpremnicu za nalog ${workOrder.order_number}.</p>
-          ${pdfLink ? `<p><a href="${pdfLink}" style="display: inline-block; padding: 10px 20px; background-color: #007bff; color: white; text-decoration: none; border-radius: 5px;">Preuzmi PDF</a></p>` : ''}
-          <p>S poštovanjem,<br>Gama United</p>
-        </div>
-      `;
-
-      // Insert new email job
-      const { error: insertError } = await supabase
-        .from("email_jobs")
-        .insert({
-          work_order_id: id,
-          client_email: workOrder.clients.email,
-          subject: `Otpremnica ${deliveryNote?.delivery_number || workOrder.order_number}`,
-          html_body: htmlBody,
-          attachment_url: pdfLink || null,
-          status: "pending"
-        });
-
-      if (insertError) throw insertError;
+      if (error) throw error;
 
       toast({
         title: "Uspešno",
