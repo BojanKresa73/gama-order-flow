@@ -13,6 +13,7 @@ import {
 } from "@/components/ui/table";
 import { ChevronDown, ChevronRight, CheckCircle, XCircle, Search, FileText } from "lucide-react";
 import { format } from "date-fns";
+import { prefixFor } from "@/lib/orderLabel";
 
 interface WorkOrder {
   id: string;
@@ -348,7 +349,13 @@ const ChecklistView = ({ orderType }: ChecklistViewProps) => {
                     )
                   )}
                 </TableCell>
-                <TableCell className="font-medium">{order.order_number}</TableCell>
+                <TableCell className="font-medium">
+                  {(() => {
+                    const year = new Date(order.created_at).getFullYear();
+                    const serial = String(order.order_number).padStart(4, '0');
+                    return `${prefixFor(order.type)}-${year}-${serial}`;
+                  })()}
+                </TableCell>
                 <TableCell>{order.client_name}</TableCell>
                 <TableCell>{getTypeBadge(order.type)}</TableCell>
                 <TableCell>

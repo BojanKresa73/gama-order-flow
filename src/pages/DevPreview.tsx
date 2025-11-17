@@ -9,6 +9,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { ArrowLeft, FileText, Users, Package, CheckSquare, Eye, AlertTriangle, Mail } from "lucide-react";
 import { OrderFilesDialog } from "@/components/work-orders/OrderFilesDialog";
 import { useToast } from "@/hooks/use-toast";
+import { prefixFor } from "@/lib/orderLabel";
 
 const DevPreview = () => {
   const navigate = useNavigate();
@@ -216,7 +217,13 @@ const DevPreview = () => {
                 <TableBody>
                   {workOrders.map((order) => (
                     <TableRow key={order.id}>
-                      <TableCell className="font-medium">{order.order_number}</TableCell>
+                      <TableCell className="font-medium">
+                        {(() => {
+                          const year = new Date(order.created_at).getFullYear();
+                          const serial = String(order.order_number).padStart(4, '0');
+                          return `${prefixFor(order.type)}-${year}-${serial}`;
+                        })()}
+                      </TableCell>
                       <TableCell>{order.clients?.name}</TableCell>
                       <TableCell>{getOrderTypeLabel(order.order_type)}</TableCell>
                       <TableCell>{getStatusBadge(order.status)}</TableCell>

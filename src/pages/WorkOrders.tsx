@@ -14,6 +14,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Progress } from "@/components/ui/progress";
+import { prefixFor } from "@/lib/orderLabel";
 
 const WorkOrders = () => {
   const [workOrders, setWorkOrders] = useState<any[]>([]);
@@ -342,7 +343,13 @@ const WorkOrders = () => {
                           disabled={order.status === 'closed'}
                         />
                       </TableCell>
-                      <TableCell className="font-medium">{order.order_number}</TableCell>
+                      <TableCell className="font-medium">
+                        {(() => {
+                          const year = new Date(order.created_at).getFullYear();
+                          const serial = String(order.order_number).padStart(4, '0');
+                          return `${prefixFor(order.type)}-${year}-${serial}`;
+                        })()}
+                      </TableCell>
                       <TableCell>{order.clients?.name}</TableCell>
                       <TableCell>{getOrderTypeLabel(order.order_type)}</TableCell>
                       <TableCell>{getStatusBadge(order.status)}</TableCell>

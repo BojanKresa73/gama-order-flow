@@ -6,6 +6,7 @@ import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useNavigate } from "react-router-dom";
 import { ArrowRight } from "lucide-react";
+import { prefixFor } from "@/lib/orderLabel";
 
 const ORDER_TYPE_COLORS = {
   ctp: "bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-300",
@@ -23,7 +24,7 @@ export const RecentOrders = () => {
     queryFn: async () => {
       const { data } = await supabase
         .from("work_orders")
-        .select("id, order_number, order_type, status, created_at, clients(name)")
+        .select("id, order_number, order_type, type, status, created_at, clients(name)")
         .order("created_at", { ascending: false })
         .limit(5);
 
@@ -74,7 +75,11 @@ export const RecentOrders = () => {
                   className="font-medium text-primary hover:underline"
                   onClick={() => navigate("/work-orders")}
                 >
-                  {order.order_number}
+                  {(() => {
+                    const year = new Date(order.created_at).getFullYear();
+                    const serial = String(order.order_number).padStart(4, '0');
+                    return `${prefixFor((order as any).type)}-${year}-${serial}`;
+                  })()}
                 </TableCell>
                 <TableCell>{(order.clients as any)?.name || "-"}</TableCell>
                 <TableCell>
