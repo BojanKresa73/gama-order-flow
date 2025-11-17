@@ -33,23 +33,21 @@ async function getNextSerial(
 ): Promise<number> {
   console.log(`Getting next serial for type: ${type}, year: ${year}`);
   
-  // Get the max serial for this type and year
-  const { data, error } = await supabase
-    .from('work_orders')
-    .select('serial')
-    .eq('type', type)
-    .eq('year', year)
-    .order('serial', { ascending: false })
-    .limit(1)
-    .single();
+  // Use INSERT ... ON CONFLICT to atomically increment counter
+  // If row doesn't exist, insert with serial=1
+  // If row exists, increment last_serial and return new value
+  const { data, error } = await supabase.rpc('increment_work_order_counter', {
+    p_type: type,
+    p_year: year,
+  });
 
-  if (error && error.code !== 'PGRST116') { // PGRST116 = no rows found
-    console.error('Error getting max serial:', error);
+  if (error) {
+    console.error('Error incrementing counter:', error);
     throw error;
   }
 
-  const nextSerial = data?.serial ? data.serial + 1 : 1;
-  console.log(`Next serial will be: ${nextSerial}`);
+  const nextSerial = data;
+  console.log(`Next serial: ${nextSerial}`);
   return nextSerial;
 }
 
