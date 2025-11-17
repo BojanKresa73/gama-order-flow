@@ -22,9 +22,10 @@ async function generateDeliveryNotePDF(
 ): Promise<Uint8Array> {
   const pdfDoc = await PDFDocument.create();
   
-  // Load and embed Noto Sans font for proper Serbian character support (č, ć, š, đ, ž)
-  const fontPath = new URL('./NotoSans-Regular.ttf', import.meta.url).pathname;
-  const fontBytes = await Deno.readFile(fontPath);
+  // Fetch Inter font from Google Fonts with Latin Extended subset (includes č, ć, š, đ, ž)
+  const fontUrl = 'https://fonts.gstatic.com/s/inter/v18/UcCO3FwrK3iLTeHuS_fvQtMwCp50KnMw2boKoduKmMEVuLyfAZ9hiA.woff2';
+  const fontResponse = await fetch(fontUrl);
+  const fontBytes = await fontResponse.arrayBuffer();
   const timesRomanFont = await pdfDoc.embedFont(fontBytes, { subset: true });
   const timesRomanBold = await pdfDoc.embedFont(fontBytes, { subset: true });
   const page = pdfDoc.addPage([595.28, 841.89]);
