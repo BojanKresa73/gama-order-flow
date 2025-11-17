@@ -1349,6 +1349,24 @@ export type Database = {
           },
         ]
       }
+      work_order_counters: {
+        Row: {
+          last_serial: number
+          type: string
+          year: number
+        }
+        Insert: {
+          last_serial?: number
+          type: string
+          year: number
+        }
+        Update: {
+          last_serial?: number
+          type?: string
+          year?: number
+        }
+        Relationships: []
+      }
       work_order_events: {
         Row: {
           created_at: string | null
