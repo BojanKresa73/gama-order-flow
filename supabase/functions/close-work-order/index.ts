@@ -30,8 +30,12 @@ async function generateWorkOrderPDF(
 ): Promise<Uint8Array> {
   const pdfDoc = await PDFDocument.create();
   const page = pdfDoc.addPage([595, 842]); // A4
-  const font = await pdfDoc.embedFont(StandardFonts.Helvetica);
-  const boldFont = await pdfDoc.embedFont(StandardFonts.HelveticaBold);
+  
+  // Fetch and embed Inter font for proper Serbian character support
+  const fontUrl = 'https://raw.githubusercontent.com/rsms/inter/refs/heads/master/docs/font-files/Inter-Regular.ttf';
+  const fontBytes = await fetch(fontUrl).then(res => res.arrayBuffer());
+  const font = await pdfDoc.embedFont(fontBytes);
+  const boldFont = await pdfDoc.embedFont(fontBytes); // Using same font for now
 
   let yPos = 800;
   const margin = 50;
@@ -128,8 +132,12 @@ async function generateDeliveryNotePDF(
   deliveryNumber: string
 ): Promise<Uint8Array> {
   const pdfDoc = await PDFDocument.create();
-  const timesRomanFont = await pdfDoc.embedFont(StandardFonts.TimesRoman);
-  const timesRomanBold = await pdfDoc.embedFont(StandardFonts.TimesRomanBold);
+  
+  // Fetch and embed Inter font for proper Serbian character support
+  const fontUrl = 'https://raw.githubusercontent.com/rsms/inter/refs/heads/master/docs/font-files/Inter-Regular.ttf';
+  const fontBytes = await fetch(fontUrl).then(res => res.arrayBuffer());
+  const timesRomanFont = await pdfDoc.embedFont(fontBytes);
+  const timesRomanBold = await pdfDoc.embedFont(fontBytes); // Using same font for now
   const page = pdfDoc.addPage([595.28, 841.89]);
   const { height } = page.getSize();
   let yPosition = height - 50;
