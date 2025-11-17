@@ -621,6 +621,7 @@ export type Database = {
           sent_at: string
           status: string
           subject: string
+          type: string | null
           work_order_id: string
         }
         Insert: {
@@ -630,6 +631,7 @@ export type Database = {
           sent_at?: string
           status: string
           subject: string
+          type?: string | null
           work_order_id: string
         }
         Update: {
@@ -639,6 +641,7 @@ export type Database = {
           sent_at?: string
           status?: string
           subject?: string
+          type?: string | null
           work_order_id?: string
         }
         Relationships: [

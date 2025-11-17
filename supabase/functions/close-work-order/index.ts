@@ -182,11 +182,45 @@ async function generateDeliveryNotePDF(
   return pdfDoc.save();
 }
 
-async function logEmail(supabase: any, workOrderId: string, recipientEmail: string, subject: string, status: string, errorMessage: string | null = null) {
+// Retry helper with exponential backoff
+async function retryWithBackoff<T>(
+  fn: () => Promise<T>,
+  maxRetries: number = 2,
+  initialDelay: number = 1000
+): Promise<T> {
+  let lastError: Error | null = null;
+  
+  for (let attempt = 0; attempt <= maxRetries; attempt++) {
+    try {
+      return await fn();
+    } catch (error: any) {
+      lastError = error;
+      
+      if (attempt < maxRetries) {
+        const delay = initialDelay * Math.pow(2, attempt);
+        console.log(`Attempt ${attempt + 1} failed, retrying in ${delay}ms...`);
+        await new Promise(resolve => setTimeout(resolve, delay));
+      }
+    }
+  }
+  
+  throw lastError;
+}
+
+async function logEmail(
+  supabase: any,
+  workOrderId: string,
+  recipientEmail: string,
+  subject: string,
+  type: 'archive' | 'client',
+  status: string,
+  errorMessage: string | null = null
+) {
   await supabase.from("email_log").insert({
     work_order_id: workOrderId,
     recipient_email: recipientEmail,
     subject: subject,
+    type: type,
     status: status,
     error_message: errorMessage,
   });
@@ -283,62 +317,66 @@ const handler = async (req: Request): Promise<Response> => {
     const deliveryNoteBase64 = btoa(String.fromCharCode(...deliveryNotePdfBytes));
     const workOrderBase64 = btoa(String.fromCharCode(...workOrderPdfBytes));
 
-    // Send email to archive (both PDFs)
+    // Send email to archive (both PDFs) with retry logic
     console.log(`Sending archive email to ${archiveEmail}...`);
     const archiveSubject = `[RNGU] ${orderNo} – ${clientName} – ${orderType} CLOSED`;
     try {
-      await resend.emails.send({
-        from: fromEmail,
-        to: archiveEmail,
-        subject: archiveSubject,
-        text: `Arhiva naloga ${orderNo}`,
-        attachments: [
-          {
-            filename: `radni-nalog-${orderNo}.pdf`,
-            content: workOrderBase64,
-          },
-          {
-            filename: `otpremnica-${orderNo}.pdf`,
-            content: deliveryNoteBase64,
-          },
-        ],
-      });
-      await logEmail(supabase, work_order_id, archiveEmail, archiveSubject, 'sent', null);
-      console.log("Archive email sent successfully");
-    } catch (error: any) {
-      console.error("Failed to send archive email:", error);
-      await logEmail(supabase, work_order_id, archiveEmail, archiveSubject, 'error', error?.message || String(error));
-    }
-
-    // Send email to client (only delivery note)
-    const clientEmail = workOrder.clients?.notification_email || workOrder.clients?.email;
-    if (clientEmail) {
-      console.log(`Sending client email to ${clientEmail}...`);
-      const clientSubject = `Završen posao – ${clientName} – ${orderNo}`;
-      try {
-        await resend.emails.send({
+      await retryWithBackoff(async () => {
+        return await resend.emails.send({
           from: fromEmail,
-          to: clientEmail,
-          subject: clientSubject,
-          html: `
-            <p>Poštovani ${clientName},</p>
-            <p>Obaveštavamo Vas da je Vaš nalog <strong>${orderNo}</strong> završen.</p>
-            <p>U prilogu se nalazi otpremnica.</p>
-            <br>
-            <p>Hvala na poverenju,<br><strong>Gama United</strong></p>
-          `,
+          to: archiveEmail,
+          subject: archiveSubject,
+          text: `Arhiva naloga ${orderNo}`,
           attachments: [
+            {
+              filename: `radni-nalog-${orderNo}.pdf`,
+              content: workOrderBase64,
+            },
             {
               filename: `otpremnica-${orderNo}.pdf`,
               content: deliveryNoteBase64,
             },
           ],
         });
-        await logEmail(supabase, work_order_id, clientEmail, clientSubject, 'sent', null);
+      });
+      await logEmail(supabase, work_order_id, archiveEmail, archiveSubject, 'archive', 'sent', null);
+      console.log("Archive email sent successfully");
+    } catch (error: any) {
+      console.error("Failed to send archive email after retries:", error);
+      await logEmail(supabase, work_order_id, archiveEmail, archiveSubject, 'archive', 'error', error?.message || String(error));
+    }
+
+    // Send email to client (only delivery note) with retry logic
+    const clientEmail = workOrder.clients?.notification_email || workOrder.clients?.email;
+    if (clientEmail) {
+      console.log(`Sending client email to ${clientEmail}...`);
+      const clientSubject = `Završen posao – ${clientName} – ${orderNo}`;
+      try {
+        await retryWithBackoff(async () => {
+          return await resend.emails.send({
+            from: fromEmail,
+            to: clientEmail,
+            subject: clientSubject,
+            html: `
+              <p>Poštovani ${clientName},</p>
+              <p>Obaveštavamo Vas da je Vaš nalog <strong>${orderNo}</strong> završen.</p>
+              <p>U prilogu se nalazi otpremnica.</p>
+              <br>
+              <p>Hvala na poverenju,<br><strong>Gama United</strong></p>
+            `,
+            attachments: [
+              {
+                filename: `otpremnica-${orderNo}.pdf`,
+                content: deliveryNoteBase64,
+              },
+            ],
+          });
+        });
+        await logEmail(supabase, work_order_id, clientEmail, clientSubject, 'client', 'sent', null);
         console.log("Client email sent successfully");
       } catch (error: any) {
-        console.error("Failed to send client email:", error);
-        await logEmail(supabase, work_order_id, clientEmail, clientSubject, 'error', error?.message || String(error));
+        console.error("Failed to send client email after retries:", error);
+        await logEmail(supabase, work_order_id, clientEmail, clientSubject, 'client', 'error', error?.message || String(error));
       }
     }
 
