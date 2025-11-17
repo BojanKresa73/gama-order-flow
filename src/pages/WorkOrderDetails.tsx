@@ -4,7 +4,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { ArrowLeft, FileText } from "lucide-react";
+import { ArrowLeft, FileText, Mail } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -17,6 +17,8 @@ const WorkOrderDetails = () => {
   const { toast } = useToast();
   const [workOrder, setWorkOrder] = useState<any>(null);
   const [loading, setLoading] = useState(true);
+  const [emailStatus, setEmailStatus] = useState<any>(null);
+  const [resending, setResending] = useState(false);
 
   useEffect(() => {
     checkAuth();
@@ -46,6 +48,15 @@ const WorkOrderDetails = () => {
 
       if (error) throw error;
       setWorkOrder(data);
+
+      // Fetch email status
+      const { data: emailData } = await supabase
+        .from("email_job_latest_status")
+        .select("*")
+        .eq("work_order_id", id)
+        .maybeSingle();
+
+      setEmailStatus(emailData);
     } catch (error: any) {
       toast({
         title: "Greška",
@@ -73,6 +84,75 @@ const WorkOrderDetails = () => {
     ) : (
       <Badge variant="secondary">Zatvoren</Badge>
     );
+  };
+
+  const handleResendEmail = async () => {
+    if (!workOrder || !workOrder.clients?.email) {
+      toast({
+        title: "Greška",
+        description: "Klijent nema email adresu",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setResending(true);
+    try {
+      // Fetch delivery note to get the PDF path and details
+      const { data: deliveryNote, error: dnError } = await supabase
+        .from("delivery_notes")
+        .select("*")
+        .eq("work_order_id", id)
+        .order("created_at", { ascending: false })
+        .limit(1)
+        .maybeSingle();
+
+      if (dnError) throw dnError;
+
+      const pdfLink = deliveryNote?.pdf_path 
+        ? `${window.location.origin}/delivery-notes/${deliveryNote.pdf_path}`
+        : "";
+
+      const htmlBody = `
+        <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+          <h2>Otpremnica ${deliveryNote?.delivery_number || workOrder.order_number}</h2>
+          <p>Poštovani ${workOrder.clients.name},</p>
+          <p>U prilogu vam šaljemo otpremnicu za nalog ${workOrder.order_number}.</p>
+          ${pdfLink ? `<p><a href="${pdfLink}" style="display: inline-block; padding: 10px 20px; background-color: #007bff; color: white; text-decoration: none; border-radius: 5px;">Preuzmi PDF</a></p>` : ''}
+          <p>S poštovanjem,<br>Gama United</p>
+        </div>
+      `;
+
+      // Insert new email job
+      const { error: insertError } = await supabase
+        .from("email_jobs")
+        .insert({
+          work_order_id: id,
+          client_email: workOrder.clients.email,
+          subject: `Otpremnica ${deliveryNote?.delivery_number || workOrder.order_number}`,
+          html_body: htmlBody,
+          attachment_url: pdfLink || null,
+          status: "pending"
+        });
+
+      if (insertError) throw insertError;
+
+      toast({
+        title: "Uspešno",
+        description: "Email je dodat u red za slanje",
+      });
+
+      // Refresh email status
+      fetchWorkOrder();
+    } catch (error: any) {
+      toast({
+        title: "Greška",
+        description: error.message,
+        variant: "destructive",
+      });
+    } finally {
+      setResending(false);
+    }
   };
 
   if (loading) {
@@ -125,6 +205,17 @@ const WorkOrderDetails = () => {
           <div className="flex items-center gap-2">
             {getStatusBadge(workOrder.status)}
             <Badge variant="outline">{getOrderTypeLabel(workOrder.order_type)}</Badge>
+            {workOrder.status === "closed" && (
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={handleResendEmail}
+                disabled={resending}
+              >
+                <Mail className="h-4 w-4 mr-2" />
+                {resending ? "Šalje se..." : "Ponovo pošalji"}
+              </Button>
+            )}
           </div>
         </div>
       </header>
@@ -168,6 +259,18 @@ const WorkOrderDetails = () => {
                     <div>
                       <p className="text-sm text-muted-foreground">Datum zatvaranja</p>
                       <p className="font-medium">{format(new Date(workOrder.closed_at), "dd.MM.yyyy HH:mm")}</p>
+                    </div>
+                  )}
+                  {emailStatus && (
+                    <div>
+                      <p className="text-sm text-muted-foreground">Email status</p>
+                      <p className="font-medium">
+                        {emailStatus.status === "sent" && "📧 Poslato"}
+                        {emailStatus.status === "error" && (
+                          <span className="text-destructive">📧 Greška: {emailStatus.error_msg}</span>
+                        )}
+                        {emailStatus.status === "pending" && "📧 Čeka slanje"}
+                      </p>
                     </div>
                   )}
                 </div>
