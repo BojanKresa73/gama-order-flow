@@ -96,58 +96,34 @@ Deno.serve(async (req) => {
     
     console.log(`Generated order code: ${orderCode}`);
 
-    // Insert work order with retry logic for serial conflicts
-    let workOrder;
-    let retries = 3;
-    
-    while (retries > 0) {
-      try {
-        const { data, error } = await supabase
-          .from('work_orders')
-          .insert({
-            client_id: input.client_id,
-            type: input.type,
-            order_type: input.order_type,
-            kind: input.kind || input.type,
-            serial: nextSerial,
-            year: year,
-            order_code: orderCode,
-            order_number: orderCode, // Keep for backwards compatibility
-            job_name: input.job_name,
-            notes: input.notes,
-            print_format: input.print_format,
-            binding: input.binding,
-            print_spec: input.print_spec,
-            lamination: input.lamination,
-            film_note: input.film_note,
-            created_by: user.id,
-            status: 'open',
-          })
-          .select()
-          .single();
+    // Insert work order
+    const { data: workOrder, error: insertError } = await supabase
+      .from('work_orders')
+      .insert({
+        client_id: input.client_id,
+        type: input.type,
+        order_type: input.order_type,
+        kind: input.kind || input.type,
+        serial: nextSerial,
+        year: year,
+        order_code: orderCode,
+        order_number: orderCode, // Keep for backwards compatibility
+        job_name: input.job_name,
+        notes: input.notes,
+        print_format: input.print_format,
+        binding: input.binding,
+        print_spec: input.print_spec,
+        lamination: input.lamination,
+        film_note: input.film_note,
+        created_by: user.id,
+        status: 'open',
+      })
+      .select()
+      .single();
 
-        if (error) {
-          console.error('Insert error:', error);
-          
-          // If unique constraint violation, retry with new serial
-          if (error.code === '23505' && retries > 1) {
-            console.log('Serial conflict detected, retrying...');
-            retries--;
-            const newSerial = await getNextSerial(supabase, input.type, year);
-            const newOrderCode = `${prefixFor(input.type)}-${year}-${String(newSerial).padStart(4, '0')}`;
-            console.log(`Retrying with new order code: ${newOrderCode}`);
-            continue;
-          }
-          
-          throw error;
-        }
-
-        workOrder = data;
-        break;
-      } catch (error) {
-        if (retries <= 1) throw error;
-        retries--;
-      }
+    if (insertError) {
+      console.error('Insert error:', insertError);
+      throw insertError;
     }
 
     console.log(`Work order created successfully: ${workOrder.id}`);

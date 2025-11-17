@@ -2245,6 +2245,10 @@ export type Database = {
         }
         Returns: boolean
       }
+      increment_work_order_counter: {
+        Args: { p_type: string; p_year: number }
+        Returns: number
+      }
       refresh_plate_usage_stats: { Args: never; Returns: undefined }
     }
     Enums: {
