@@ -234,24 +234,38 @@ const handler = async (req: Request): Promise<Response> => {
   let work_order_id: string | undefined;
 
   try {
+    // Validate environment variables FIRST
+    const resendApiKey = Deno.env.get('RESEND_API_KEY');
+    const archiveEmail = Deno.env.get('ARCHIVE_EMAIL');
+    const fromEmail = Deno.env.get('FROM_EMAIL');
+    
+    if (!resendApiKey) {
+      console.error('[closeWorkOrder] Missing RESEND_API_KEY');
+      return new Response(
+        JSON.stringify({ ok: false, error: 'Missing RESEND_API_KEY environment variable' }),
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 200 }
+      );
+    }
+    
+    if (!archiveEmail) {
+      console.error('[closeWorkOrder] Missing ARCHIVE_EMAIL');
+      return new Response(
+        JSON.stringify({ ok: false, error: 'Missing ARCHIVE_EMAIL environment variable' }),
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 200 }
+      );
+    }
+
+    if (!fromEmail) {
+      console.error('[closeWorkOrder] Missing FROM_EMAIL');
+      return new Response(
+        JSON.stringify({ ok: false, error: 'Missing FROM_EMAIL environment variable' }),
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 200 }
+      );
+    }
+
     const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
     const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
     const supabase = createClient(supabaseUrl, supabaseKey);
-
-    const resendApiKey = Deno.env.get('RESEND_API_KEY');
-    const archiveEmail = Deno.env.get('ARCHIVE_EMAIL');
-    
-    // Hard fail if ARCHIVE_EMAIL is missing
-    if (!archiveEmail) {
-      throw new Error('ARCHIVE_EMAIL environment variable is required but not configured');
-    }
-
-    if (!resendApiKey) {
-      throw new Error('RESEND_API_KEY environment variable is required but not configured');
-    }
-
-    // Fallback to noreply@resend.dev if FROM_EMAIL is missing
-    const fromEmail = Deno.env.get('FROM_EMAIL') || 'noreply@resend.dev';
 
     const resend = new Resend(resendApiKey);
 
@@ -453,7 +467,14 @@ const handler = async (req: Request): Promise<Response> => {
 
     // Send email to client (only delivery note) with retry logic
     const clientEmail = workOrder.clients?.notification_email || workOrder.clients?.email;
-    if (clientEmail) {
+    let clientEmailStatus = 'skipped';
+    let clientEmailMessage = '';
+    
+    if (!clientEmail) {
+      console.warn(`[closeWorkOrder] Client email missing for order ${work_order_id}, skipping client email`);
+      clientEmailStatus = 'skipped';
+      clientEmailMessage = 'Klijent nema email adresu, poslat samo arhivski mail';
+    } else {
       console.log(`Sending client email to ${clientEmail}...`);
       const clientSubject = `Završen posao – ${clientName} – ${orderNo}`;
       try {
@@ -481,9 +502,12 @@ const handler = async (req: Request): Promise<Response> => {
         });
         await logEmail(supabase, work_order_id, clientEmail, clientSubject, 'client', 'sent', null);
         console.log("Client email sent successfully");
+        clientEmailStatus = 'sent';
       } catch (error: any) {
         console.error("Failed to send client email after retries:", error);
         await logEmail(supabase, work_order_id, clientEmail, clientSubject, 'client', 'error', error?.message || String(error));
+        clientEmailStatus = 'error';
+        clientEmailMessage = 'Greška pri slanju klijentskog mejla';
       }
     }
 
@@ -517,8 +541,19 @@ const handler = async (req: Request): Promise<Response> => {
       .eq('id', work_order_id)
       .single();
 
+    const successMessage = clientEmailStatus === 'skipped' 
+      ? `Nalog zatvoren. ${clientEmailMessage}. Arhivski mail poslat.`
+      : clientEmailStatus === 'error'
+      ? `Nalog zatvoren. ${clientEmailMessage}. Arhivski mail poslat.`
+      : 'Nalog uspešno zatvoren i emails poslati';
+
     return new Response(
-      JSON.stringify({ ok: true, message: 'Nalog uspešno zatvoren i emails poslati', work_order: updatedOrder }),
+      JSON.stringify({ 
+        ok: true, 
+        message: successMessage,
+        work_order: updatedOrder,
+        clientEmailStatus 
+      }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 200 }
     );
 

@@ -25,9 +25,39 @@ serve(async (req) => {
   }
 
   try {
+    // Validate environment variables FIRST
+    const resendApiKey = Deno.env.get('RESEND_API_KEY');
+    const archiveEmail = Deno.env.get('ARCHIVE_EMAIL');
+    const fromEmail = Deno.env.get('FROM_EMAIL');
+    
+    if (!resendApiKey) {
+      console.error('[test-email] Missing RESEND_API_KEY');
+      return new Response(
+        JSON.stringify({ ok: false, error: 'Missing RESEND_API_KEY environment variable' }),
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 200 }
+      );
+    }
+    
+    if (!archiveEmail) {
+      console.error('[test-email] Missing ARCHIVE_EMAIL');
+      return new Response(
+        JSON.stringify({ ok: false, error: 'Missing ARCHIVE_EMAIL environment variable' }),
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 200 }
+      );
+    }
+
+    if (!fromEmail) {
+      console.error('[test-email] Missing FROM_EMAIL');
+      return new Response(
+        JSON.stringify({ ok: false, error: 'Missing FROM_EMAIL environment variable' }),
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 200 }
+      );
+    }
+
     const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
     const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
     const supabase = createClient(supabaseUrl, supabaseKey);
+    const resend = new Resend(resendApiKey);
 
     // Get authenticated user and check admin role
     const authHeader = req.headers.get('Authorization');
@@ -190,21 +220,7 @@ serve(async (req) => {
     const pdfBytes = await pdfDoc.save();
     const pdfBase64 = btoa(String.fromCharCode(...pdfBytes));
 
-    // Send emails
-    const resendApiKey = Deno.env.get('RESEND_API_KEY');
-    const archiveEmail = Deno.env.get('ARCHIVE_EMAIL');
-    
-    if (!archiveEmail) {
-      throw new Error('ARCHIVE_EMAIL environment variable is required but not configured');
-    }
-
-    if (!resendApiKey) {
-      throw new Error('RESEND_API_KEY environment variable is required but not configured');
-    }
-
-    const fromEmail = Deno.env.get('FROM_EMAIL') || 'noreply@resend.dev';
-    const resend = new Resend(resendApiKey);
-
+    // Send emails (using already validated env vars from top of try block)
     const clientSubject = `[TEST] Nalog ${order.display_order_number || order.order_number} završen`;
     const clientHtml = `
       <p><strong>OVO JE TEST EMAIL</strong></p>
