@@ -237,12 +237,19 @@ const handler = async (req: Request): Promise<Response> => {
     const supabase = createClient(supabaseUrl, supabaseKey);
 
     const resendApiKey = Deno.env.get('RESEND_API_KEY');
-    const fromEmail = Deno.env.get('FROM_EMAIL');
     const archiveEmail = Deno.env.get('ARCHIVE_EMAIL');
-
-    if (!resendApiKey || !fromEmail || !archiveEmail) {
-      throw new Error('Missing email configuration');
+    
+    // Hard fail if ARCHIVE_EMAIL is missing
+    if (!archiveEmail) {
+      throw new Error('ARCHIVE_EMAIL environment variable is required but not configured');
     }
+
+    if (!resendApiKey) {
+      throw new Error('RESEND_API_KEY environment variable is required but not configured');
+    }
+
+    // Fallback to noreply@resend.dev if FROM_EMAIL is missing
+    const fromEmail = Deno.env.get('FROM_EMAIL') || 'noreply@resend.dev';
 
     const resend = new Resend(resendApiKey);
 
