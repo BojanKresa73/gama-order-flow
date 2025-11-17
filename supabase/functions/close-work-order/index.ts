@@ -300,17 +300,33 @@ const handler = async (req: Request): Promise<Response> => {
     const clientName = workOrder.clients?.name || "N/A";
     const orderType = workOrder.order_type.toUpperCase();
 
-    // Generate both PDFs
-    console.log("Generating PDFs...");
-    const deliveryNotePdfBytes = await generateDeliveryNotePDF(workOrder, fileEntries || [], deliveryNumber);
-    const workOrderPdfBytes = await generateWorkOrderPDF(workOrder, workOrder.clients, fileEntries || []);
+    // Use consistent filenames for idempotency
+    const deliveryNotePath = `${tmpDir}/Otpremnica_${orderNo}.pdf`;
+    const workOrderPath = `${tmpDir}/RN_${orderNo}.pdf`;
 
-    // Save PDFs to /tmp
-    const deliveryNotePath = `${tmpDir}/otpremnica-${orderNo}.pdf`;
-    const workOrderPath = `${tmpDir}/radni-nalog-${orderNo}.pdf`;
-    
-    await Deno.writeFile(deliveryNotePath, deliveryNotePdfBytes);
-    await Deno.writeFile(workOrderPath, workOrderPdfBytes);
+    // Check if PDFs already exist (idempotency within request)
+    let deliveryNotePdfBytes: Uint8Array;
+    let workOrderPdfBytes: Uint8Array;
+
+    try {
+      await Deno.stat(deliveryNotePath);
+      console.log(`Delivery note PDF already exists, reusing: ${deliveryNotePath}`);
+      deliveryNotePdfBytes = await Deno.readFile(deliveryNotePath);
+    } catch {
+      console.log("Generating delivery note PDF...");
+      deliveryNotePdfBytes = await generateDeliveryNotePDF(workOrder, fileEntries || [], deliveryNumber);
+      await Deno.writeFile(deliveryNotePath, deliveryNotePdfBytes);
+    }
+
+    try {
+      await Deno.stat(workOrderPath);
+      console.log(`Work order PDF already exists, reusing: ${workOrderPath}`);
+      workOrderPdfBytes = await Deno.readFile(workOrderPath);
+    } catch {
+      console.log("Generating work order PDF...");
+      workOrderPdfBytes = await generateWorkOrderPDF(workOrder, workOrder.clients, fileEntries || []);
+      await Deno.writeFile(workOrderPath, workOrderPdfBytes);
+    }
 
     // Convert to base64 for email attachments
     const deliveryNoteBase64 = btoa(String.fromCharCode(...deliveryNotePdfBytes));
