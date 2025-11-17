@@ -341,6 +341,34 @@ export type Database = {
             referencedRelation: "work_orders"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "delivery_notes_work_order_id_fkey"
+            columns: ["work_order_id"]
+            isOneToOne: false
+            referencedRelation: "work_orders_ctp"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "delivery_notes_work_order_id_fkey"
+            columns: ["work_order_id"]
+            isOneToOne: false
+            referencedRelation: "work_orders_digitala"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "delivery_notes_work_order_id_fkey"
+            columns: ["work_order_id"]
+            isOneToOne: false
+            referencedRelation: "work_orders_filmovanje"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "delivery_notes_work_order_id_fkey"
+            columns: ["work_order_id"]
+            isOneToOne: false
+            referencedRelation: "work_orders_razno"
+            referencedColumns: ["id"]
+          },
         ]
       }
       digital_jobs: {
@@ -446,6 +474,34 @@ export type Database = {
             referencedRelation: "work_orders"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "digital_jobs_work_order_id_fkey"
+            columns: ["work_order_id"]
+            isOneToOne: false
+            referencedRelation: "work_orders_ctp"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "digital_jobs_work_order_id_fkey"
+            columns: ["work_order_id"]
+            isOneToOne: false
+            referencedRelation: "work_orders_digitala"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "digital_jobs_work_order_id_fkey"
+            columns: ["work_order_id"]
+            isOneToOne: false
+            referencedRelation: "work_orders_filmovanje"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "digital_jobs_work_order_id_fkey"
+            columns: ["work_order_id"]
+            isOneToOne: false
+            referencedRelation: "work_orders_razno"
+            referencedColumns: ["id"]
+          },
         ]
       }
       digital_settings: {
@@ -518,6 +574,34 @@ export type Database = {
             referencedRelation: "work_orders"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "email_log_work_order_id_fkey"
+            columns: ["work_order_id"]
+            isOneToOne: false
+            referencedRelation: "work_orders_ctp"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "email_log_work_order_id_fkey"
+            columns: ["work_order_id"]
+            isOneToOne: false
+            referencedRelation: "work_orders_digitala"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "email_log_work_order_id_fkey"
+            columns: ["work_order_id"]
+            isOneToOne: false
+            referencedRelation: "work_orders_filmovanje"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "email_log_work_order_id_fkey"
+            columns: ["work_order_id"]
+            isOneToOne: false
+            referencedRelation: "work_orders_razno"
+            referencedColumns: ["id"]
+          },
         ]
       }
       file_entries: {
@@ -577,6 +661,34 @@ export type Database = {
             columns: ["work_order_id"]
             isOneToOne: false
             referencedRelation: "work_orders"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "file_entries_work_order_id_fkey"
+            columns: ["work_order_id"]
+            isOneToOne: false
+            referencedRelation: "work_orders_ctp"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "file_entries_work_order_id_fkey"
+            columns: ["work_order_id"]
+            isOneToOne: false
+            referencedRelation: "work_orders_digitala"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "file_entries_work_order_id_fkey"
+            columns: ["work_order_id"]
+            isOneToOne: false
+            referencedRelation: "work_orders_filmovanje"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "file_entries_work_order_id_fkey"
+            columns: ["work_order_id"]
+            isOneToOne: false
+            referencedRelation: "work_orders_razno"
             referencedColumns: ["id"]
           },
         ]
@@ -683,6 +795,34 @@ export type Database = {
             referencedRelation: "work_orders"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "film_jobs_work_order_id_fkey"
+            columns: ["work_order_id"]
+            isOneToOne: false
+            referencedRelation: "work_orders_ctp"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "film_jobs_work_order_id_fkey"
+            columns: ["work_order_id"]
+            isOneToOne: false
+            referencedRelation: "work_orders_digitala"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "film_jobs_work_order_id_fkey"
+            columns: ["work_order_id"]
+            isOneToOne: false
+            referencedRelation: "work_orders_filmovanje"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "film_jobs_work_order_id_fkey"
+            columns: ["work_order_id"]
+            isOneToOne: false
+            referencedRelation: "work_orders_razno"
+            referencedColumns: ["id"]
+          },
         ]
       }
       film_settings: {
@@ -782,6 +922,34 @@ export type Database = {
             columns: ["work_order_id"]
             isOneToOne: false
             referencedRelation: "work_orders"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "inventory_history_work_order_id_fkey"
+            columns: ["work_order_id"]
+            isOneToOne: false
+            referencedRelation: "work_orders_ctp"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "inventory_history_work_order_id_fkey"
+            columns: ["work_order_id"]
+            isOneToOne: false
+            referencedRelation: "work_orders_digitala"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "inventory_history_work_order_id_fkey"
+            columns: ["work_order_id"]
+            isOneToOne: false
+            referencedRelation: "work_orders_filmovanje"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "inventory_history_work_order_id_fkey"
+            columns: ["work_order_id"]
+            isOneToOne: false
+            referencedRelation: "work_orders_razno"
             referencedColumns: ["id"]
           },
         ]
@@ -1066,6 +1234,34 @@ export type Database = {
             referencedRelation: "work_orders"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "work_order_checklists_work_order_id_fkey"
+            columns: ["work_order_id"]
+            isOneToOne: true
+            referencedRelation: "work_orders_ctp"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "work_order_checklists_work_order_id_fkey"
+            columns: ["work_order_id"]
+            isOneToOne: true
+            referencedRelation: "work_orders_digitala"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "work_order_checklists_work_order_id_fkey"
+            columns: ["work_order_id"]
+            isOneToOne: true
+            referencedRelation: "work_orders_filmovanje"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "work_order_checklists_work_order_id_fkey"
+            columns: ["work_order_id"]
+            isOneToOne: true
+            referencedRelation: "work_orders_razno"
+            referencedColumns: ["id"]
+          },
         ]
       }
       work_order_events: {
@@ -1106,6 +1302,34 @@ export type Database = {
             columns: ["work_order_id"]
             isOneToOne: false
             referencedRelation: "work_orders"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "work_order_events_work_order_id_fkey"
+            columns: ["work_order_id"]
+            isOneToOne: false
+            referencedRelation: "work_orders_ctp"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "work_order_events_work_order_id_fkey"
+            columns: ["work_order_id"]
+            isOneToOne: false
+            referencedRelation: "work_orders_digitala"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "work_order_events_work_order_id_fkey"
+            columns: ["work_order_id"]
+            isOneToOne: false
+            referencedRelation: "work_orders_filmovanje"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "work_order_events_work_order_id_fkey"
+            columns: ["work_order_id"]
+            isOneToOne: false
+            referencedRelation: "work_orders_razno"
             referencedColumns: ["id"]
           },
         ]
@@ -1157,6 +1381,34 @@ export type Database = {
             referencedRelation: "work_orders"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "work_order_items_work_order_id_fkey"
+            columns: ["work_order_id"]
+            isOneToOne: false
+            referencedRelation: "work_orders_ctp"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "work_order_items_work_order_id_fkey"
+            columns: ["work_order_id"]
+            isOneToOne: false
+            referencedRelation: "work_orders_digitala"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "work_order_items_work_order_id_fkey"
+            columns: ["work_order_id"]
+            isOneToOne: false
+            referencedRelation: "work_orders_filmovanje"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "work_order_items_work_order_id_fkey"
+            columns: ["work_order_id"]
+            isOneToOne: false
+            referencedRelation: "work_orders_razno"
+            referencedColumns: ["id"]
+          },
         ]
       }
       work_orders: {
@@ -1172,6 +1424,7 @@ export type Database = {
           film_price_override_eur_per_m: number | null
           id: string
           job_name: string | null
+          kind: Database["public"]["Enums"]["work_order_kind"]
           lamination: string | null
           notes: string | null
           order_number: string
@@ -1201,6 +1454,7 @@ export type Database = {
           film_price_override_eur_per_m?: number | null
           id?: string
           job_name?: string | null
+          kind?: Database["public"]["Enums"]["work_order_kind"]
           lamination?: string | null
           notes?: string | null
           order_number: string
@@ -1230,6 +1484,7 @@ export type Database = {
           film_price_override_eur_per_m?: number | null
           id?: string
           job_name?: string | null
+          kind?: Database["public"]["Enums"]["work_order_kind"]
           lamination?: string | null
           notes?: string | null
           order_number?: string
@@ -1329,6 +1584,438 @@ export type Database = {
         }
         Relationships: []
       }
+      work_orders_ctp: {
+        Row: {
+          binding: string | null
+          clicks_count: number | null
+          client_id: string | null
+          closed_at: string | null
+          closed_by: string | null
+          created_at: string | null
+          created_by: string | null
+          film_note: string | null
+          film_price_override_eur_per_m: number | null
+          id: string | null
+          job_name: string | null
+          kind: Database["public"]["Enums"]["work_order_kind"] | null
+          lamination: string | null
+          notes: string | null
+          order_number: string | null
+          order_type: Database["public"]["Enums"]["work_order_type"] | null
+          pages: number | null
+          paper_gsm_cover: number | null
+          paper_gsm_text: number | null
+          print_format: string | null
+          print_spec: string | null
+          run_quantity: number | null
+          sheets_used: number | null
+          status: Database["public"]["Enums"]["work_order_status"] | null
+          test_clicks: number | null
+          trial_print: boolean | null
+          trial_sheets: number | null
+          updated_at: string | null
+        }
+        Insert: {
+          binding?: string | null
+          clicks_count?: number | null
+          client_id?: string | null
+          closed_at?: string | null
+          closed_by?: string | null
+          created_at?: string | null
+          created_by?: string | null
+          film_note?: string | null
+          film_price_override_eur_per_m?: number | null
+          id?: string | null
+          job_name?: string | null
+          kind?: Database["public"]["Enums"]["work_order_kind"] | null
+          lamination?: string | null
+          notes?: string | null
+          order_number?: string | null
+          order_type?: Database["public"]["Enums"]["work_order_type"] | null
+          pages?: number | null
+          paper_gsm_cover?: number | null
+          paper_gsm_text?: number | null
+          print_format?: string | null
+          print_spec?: string | null
+          run_quantity?: number | null
+          sheets_used?: number | null
+          status?: Database["public"]["Enums"]["work_order_status"] | null
+          test_clicks?: number | null
+          trial_print?: boolean | null
+          trial_sheets?: number | null
+          updated_at?: string | null
+        }
+        Update: {
+          binding?: string | null
+          clicks_count?: number | null
+          client_id?: string | null
+          closed_at?: string | null
+          closed_by?: string | null
+          created_at?: string | null
+          created_by?: string | null
+          film_note?: string | null
+          film_price_override_eur_per_m?: number | null
+          id?: string | null
+          job_name?: string | null
+          kind?: Database["public"]["Enums"]["work_order_kind"] | null
+          lamination?: string | null
+          notes?: string | null
+          order_number?: string | null
+          order_type?: Database["public"]["Enums"]["work_order_type"] | null
+          pages?: number | null
+          paper_gsm_cover?: number | null
+          paper_gsm_text?: number | null
+          print_format?: string | null
+          print_spec?: string | null
+          run_quantity?: number | null
+          sheets_used?: number | null
+          status?: Database["public"]["Enums"]["work_order_status"] | null
+          test_clicks?: number | null
+          trial_print?: boolean | null
+          trial_sheets?: number | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "work_orders_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "work_orders_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      work_orders_digitala: {
+        Row: {
+          binding: string | null
+          clicks_count: number | null
+          client_id: string | null
+          closed_at: string | null
+          closed_by: string | null
+          created_at: string | null
+          created_by: string | null
+          film_note: string | null
+          film_price_override_eur_per_m: number | null
+          id: string | null
+          job_name: string | null
+          kind: Database["public"]["Enums"]["work_order_kind"] | null
+          lamination: string | null
+          notes: string | null
+          order_number: string | null
+          order_type: Database["public"]["Enums"]["work_order_type"] | null
+          pages: number | null
+          paper_gsm_cover: number | null
+          paper_gsm_text: number | null
+          print_format: string | null
+          print_spec: string | null
+          run_quantity: number | null
+          sheets_used: number | null
+          status: Database["public"]["Enums"]["work_order_status"] | null
+          test_clicks: number | null
+          trial_print: boolean | null
+          trial_sheets: number | null
+          updated_at: string | null
+        }
+        Insert: {
+          binding?: string | null
+          clicks_count?: number | null
+          client_id?: string | null
+          closed_at?: string | null
+          closed_by?: string | null
+          created_at?: string | null
+          created_by?: string | null
+          film_note?: string | null
+          film_price_override_eur_per_m?: number | null
+          id?: string | null
+          job_name?: string | null
+          kind?: Database["public"]["Enums"]["work_order_kind"] | null
+          lamination?: string | null
+          notes?: string | null
+          order_number?: string | null
+          order_type?: Database["public"]["Enums"]["work_order_type"] | null
+          pages?: number | null
+          paper_gsm_cover?: number | null
+          paper_gsm_text?: number | null
+          print_format?: string | null
+          print_spec?: string | null
+          run_quantity?: number | null
+          sheets_used?: number | null
+          status?: Database["public"]["Enums"]["work_order_status"] | null
+          test_clicks?: number | null
+          trial_print?: boolean | null
+          trial_sheets?: number | null
+          updated_at?: string | null
+        }
+        Update: {
+          binding?: string | null
+          clicks_count?: number | null
+          client_id?: string | null
+          closed_at?: string | null
+          closed_by?: string | null
+          created_at?: string | null
+          created_by?: string | null
+          film_note?: string | null
+          film_price_override_eur_per_m?: number | null
+          id?: string | null
+          job_name?: string | null
+          kind?: Database["public"]["Enums"]["work_order_kind"] | null
+          lamination?: string | null
+          notes?: string | null
+          order_number?: string | null
+          order_type?: Database["public"]["Enums"]["work_order_type"] | null
+          pages?: number | null
+          paper_gsm_cover?: number | null
+          paper_gsm_text?: number | null
+          print_format?: string | null
+          print_spec?: string | null
+          run_quantity?: number | null
+          sheets_used?: number | null
+          status?: Database["public"]["Enums"]["work_order_status"] | null
+          test_clicks?: number | null
+          trial_print?: boolean | null
+          trial_sheets?: number | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "work_orders_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "work_orders_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      work_orders_filmovanje: {
+        Row: {
+          binding: string | null
+          clicks_count: number | null
+          client_id: string | null
+          closed_at: string | null
+          closed_by: string | null
+          created_at: string | null
+          created_by: string | null
+          film_note: string | null
+          film_price_override_eur_per_m: number | null
+          id: string | null
+          job_name: string | null
+          kind: Database["public"]["Enums"]["work_order_kind"] | null
+          lamination: string | null
+          notes: string | null
+          order_number: string | null
+          order_type: Database["public"]["Enums"]["work_order_type"] | null
+          pages: number | null
+          paper_gsm_cover: number | null
+          paper_gsm_text: number | null
+          print_format: string | null
+          print_spec: string | null
+          run_quantity: number | null
+          sheets_used: number | null
+          status: Database["public"]["Enums"]["work_order_status"] | null
+          test_clicks: number | null
+          trial_print: boolean | null
+          trial_sheets: number | null
+          updated_at: string | null
+        }
+        Insert: {
+          binding?: string | null
+          clicks_count?: number | null
+          client_id?: string | null
+          closed_at?: string | null
+          closed_by?: string | null
+          created_at?: string | null
+          created_by?: string | null
+          film_note?: string | null
+          film_price_override_eur_per_m?: number | null
+          id?: string | null
+          job_name?: string | null
+          kind?: Database["public"]["Enums"]["work_order_kind"] | null
+          lamination?: string | null
+          notes?: string | null
+          order_number?: string | null
+          order_type?: Database["public"]["Enums"]["work_order_type"] | null
+          pages?: number | null
+          paper_gsm_cover?: number | null
+          paper_gsm_text?: number | null
+          print_format?: string | null
+          print_spec?: string | null
+          run_quantity?: number | null
+          sheets_used?: number | null
+          status?: Database["public"]["Enums"]["work_order_status"] | null
+          test_clicks?: number | null
+          trial_print?: boolean | null
+          trial_sheets?: number | null
+          updated_at?: string | null
+        }
+        Update: {
+          binding?: string | null
+          clicks_count?: number | null
+          client_id?: string | null
+          closed_at?: string | null
+          closed_by?: string | null
+          created_at?: string | null
+          created_by?: string | null
+          film_note?: string | null
+          film_price_override_eur_per_m?: number | null
+          id?: string | null
+          job_name?: string | null
+          kind?: Database["public"]["Enums"]["work_order_kind"] | null
+          lamination?: string | null
+          notes?: string | null
+          order_number?: string | null
+          order_type?: Database["public"]["Enums"]["work_order_type"] | null
+          pages?: number | null
+          paper_gsm_cover?: number | null
+          paper_gsm_text?: number | null
+          print_format?: string | null
+          print_spec?: string | null
+          run_quantity?: number | null
+          sheets_used?: number | null
+          status?: Database["public"]["Enums"]["work_order_status"] | null
+          test_clicks?: number | null
+          trial_print?: boolean | null
+          trial_sheets?: number | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "work_orders_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "work_orders_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      work_orders_razno: {
+        Row: {
+          binding: string | null
+          clicks_count: number | null
+          client_id: string | null
+          closed_at: string | null
+          closed_by: string | null
+          created_at: string | null
+          created_by: string | null
+          film_note: string | null
+          film_price_override_eur_per_m: number | null
+          id: string | null
+          job_name: string | null
+          kind: Database["public"]["Enums"]["work_order_kind"] | null
+          lamination: string | null
+          notes: string | null
+          order_number: string | null
+          order_type: Database["public"]["Enums"]["work_order_type"] | null
+          pages: number | null
+          paper_gsm_cover: number | null
+          paper_gsm_text: number | null
+          print_format: string | null
+          print_spec: string | null
+          run_quantity: number | null
+          sheets_used: number | null
+          status: Database["public"]["Enums"]["work_order_status"] | null
+          test_clicks: number | null
+          trial_print: boolean | null
+          trial_sheets: number | null
+          updated_at: string | null
+        }
+        Insert: {
+          binding?: string | null
+          clicks_count?: number | null
+          client_id?: string | null
+          closed_at?: string | null
+          closed_by?: string | null
+          created_at?: string | null
+          created_by?: string | null
+          film_note?: string | null
+          film_price_override_eur_per_m?: number | null
+          id?: string | null
+          job_name?: string | null
+          kind?: Database["public"]["Enums"]["work_order_kind"] | null
+          lamination?: string | null
+          notes?: string | null
+          order_number?: string | null
+          order_type?: Database["public"]["Enums"]["work_order_type"] | null
+          pages?: number | null
+          paper_gsm_cover?: number | null
+          paper_gsm_text?: number | null
+          print_format?: string | null
+          print_spec?: string | null
+          run_quantity?: number | null
+          sheets_used?: number | null
+          status?: Database["public"]["Enums"]["work_order_status"] | null
+          test_clicks?: number | null
+          trial_print?: boolean | null
+          trial_sheets?: number | null
+          updated_at?: string | null
+        }
+        Update: {
+          binding?: string | null
+          clicks_count?: number | null
+          client_id?: string | null
+          closed_at?: string | null
+          closed_by?: string | null
+          created_at?: string | null
+          created_by?: string | null
+          film_note?: string | null
+          film_price_override_eur_per_m?: number | null
+          id?: string | null
+          job_name?: string | null
+          kind?: Database["public"]["Enums"]["work_order_kind"] | null
+          lamination?: string | null
+          notes?: string | null
+          order_number?: string | null
+          order_type?: Database["public"]["Enums"]["work_order_type"] | null
+          pages?: number | null
+          paper_gsm_cover?: number | null
+          paper_gsm_text?: number | null
+          print_format?: string | null
+          print_spec?: string | null
+          run_quantity?: number | null
+          sheets_used?: number | null
+          status?: Database["public"]["Enums"]["work_order_status"] | null
+          test_clicks?: number | null
+          trial_print?: boolean | null
+          trial_sheets?: number | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "work_orders_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "work_orders_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Functions: {
       admin_list_users: {
@@ -1398,6 +2085,7 @@ export type Database = {
         | "Blocked"
         | "Done"
         | "NA"
+      work_order_kind: "CTP" | "DIGITALA" | "FILMOVANJE" | "RAZNO"
       work_order_status: "open" | "closed"
       work_order_type: "ctp" | "digital" | "other" | "film"
     }
@@ -1535,6 +2223,7 @@ export const Constants = {
         "operator_ctp",
       ],
       checklist_item_status: ["Pending", "InProgress", "Blocked", "Done", "NA"],
+      work_order_kind: ["CTP", "DIGITALA", "FILMOVANJE", "RAZNO"],
       work_order_status: ["open", "closed"],
       work_order_type: ["ctp", "digital", "other", "film"],
     },
