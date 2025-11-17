@@ -16,10 +16,29 @@ export const shortType = (t?: string) => {
   return m[t || ''] ?? 'raz';
 };
 
-// datum kao 17.11.2025
-export const formatDateSR = (iso?: string | Date) => {
+// datum kao dd.MM.yyyy. (s tačkom na kraju)
+const formatDateSR = (iso?: string | Date) => {
   const d = iso ? new Date(iso) : new Date();
-  return d.toLocaleDateString('sr-RS', { day: '2-digit', month: '2-digit', year: 'numeric' });
+  const dd = String(d.getDate()).padStart(2, '0');
+  const mm = String(d.getMonth() + 1).padStart(2, '0');
+  const yyyy = d.getFullYear();
+  return `${dd}.${mm}.${yyyy}.`;
+};
+
+// Izvuci redni broj iz postojećeg koda (uzima poslednji broj u stringu)
+const extractSeq = (code?: string) => {
+  const m = (code ?? '').match(/(\d+)(?!.*\d)/);
+  const n = m ? parseInt(m[1], 10) : 0;
+  return String(isNaN(n) ? 0 : n).padStart(4, '0');
+};
+
+// tip u UPPER skraćenici
+const toTypeShort = (t?: string) => {
+  const s = (t ?? '').toLowerCase();
+  if (s === 'ctp') return 'CTP';
+  if (s === 'digital') return 'DIG';
+  if (s === 'film' || s === 'fil') return 'FIL';
+  return 'RAZ';
 };
 
 // sastavi label za prikaz u tabeli
@@ -44,32 +63,26 @@ export const safeFileName = (s: string) =>
    .trim()
    .replace(/\s+/g, '_');
 
-// Izvuci redni broj iz postojećeg koda (uzima poslednji broj u stringu)
-const extractSeq = (code?: string) => {
-  const m = (code ?? '').match(/(\d+)(?!.*\d)/); // poslednja cifra-grupa
-  const n = m ? parseInt(m[1], 10) : 0;
-  return String(isNaN(n) ? 0 : n).padStart(4, '0'); // 0005
-};
-
-// tip u UPPER skraćenici
-const toTypeShort = (t?: string) => {
-  const s = (t ?? '').toLowerCase();
-  if (s === 'ctp') return 'CTP';
-  if (s === 'digital') return 'DIG';
-  if (s === 'film' || s === 'fil') return 'FIL';
-  return 'RAZ';
-};
-
-// finalni prikaz
 export const displayOrderNumber = (o: {
-  order_code?: string;   // npr. CTP-2025-WO-2025-0019
-  created_at?: string;   // ISO datum
-  client_name?: string;  // Test
-  type?: string;         // 'CTP' | 'Digital' | 'film' | 'Ostalo'
+  order_code?: string;
+  created_at?: string;
+  client_name?: string;
+  type?: string;
 }) => {
   const seq  = extractSeq(o.order_code);
   const date = formatDateSR(o.created_at);
   const typ  = toTypeShort(o.type);
   const cli  = o.client_name ?? 'Klijent';
   return `${seq}-${date}-${typ}-${cli}`;
+};
+
+// Za fajl ime: bez dijakritike i opasnih znakova
+export const toPdfFileName = (label: string) => {
+  const noDiacritics = label.normalize('NFD').replace(/\p{Diacritic}/gu, '');
+  const safe = noDiacritics
+    .replace(/\./g, '-')             // tačke u datumu -> crtice
+    .replace(/[^A-Za-z0-9_-]+/g, '-')// sve ostalo -> crtica
+    .replace(/-+/g, '-')             // duple crtice
+    .replace(/(^-|-$)/g, '');        // trim
+  return `${safe}.pdf`;
 };
