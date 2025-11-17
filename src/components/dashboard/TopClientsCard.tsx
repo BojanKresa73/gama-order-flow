@@ -56,7 +56,7 @@ export const TopClientsCard = () => {
 
   if (isLoading) {
     return (
-      <Card className="col-span-12 lg:col-span-6">
+      <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <Users className="h-5 w-5" />
@@ -79,7 +79,7 @@ export const TopClientsCard = () => {
 
   if (!topClients || topClients.length === 0) {
     return (
-      <Card className="col-span-12 lg:col-span-6">
+      <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <Users className="h-5 w-5" />
@@ -96,7 +96,7 @@ export const TopClientsCard = () => {
   }
 
   return (
-    <Card className="col-span-12 lg:col-span-6">
+    <Card>
       <CardHeader>
         <CardTitle className="flex items-center gap-2">
           <Users className="h-5 w-5" />

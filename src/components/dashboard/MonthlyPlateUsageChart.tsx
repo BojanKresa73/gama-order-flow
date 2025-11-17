@@ -48,7 +48,7 @@ export const MonthlyPlateUsageChart = () => {
 
   if (isLoading) {
     return (
-      <Card className="col-span-12 xl:col-span-6">
+      <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <Package className="h-5 w-5" />
@@ -64,7 +64,7 @@ export const MonthlyPlateUsageChart = () => {
 
   if (!chartData || chartData.length === 0) {
     return (
-      <Card className="col-span-12 xl:col-span-6">
+      <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <Package className="h-5 w-5" />
@@ -98,7 +98,7 @@ export const MonthlyPlateUsageChart = () => {
   ];
 
   return (
-    <Card className="col-span-12 xl:col-span-6">
+    <Card>
       <CardHeader>
         <CardTitle className="flex items-center gap-2">
           <Package className="h-5 w-5" />

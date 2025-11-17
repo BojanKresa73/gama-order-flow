@@ -113,10 +113,16 @@ const Dashboard = () => {
           </div>
           
           <div className="col-span-12 xl:col-span-4">
-            <ClosedOrdersChart />
+            <TopClientsCard />
           </div>
 
-          <MonthlyPlateUsageChart />
+          <div className="col-span-12 xl:col-span-4">
+            <MonthlyPlateUsageChart />
+          </div>
+
+          <div className="col-span-12 xl:col-span-4">
+            <ClosedOrdersChart />
+          </div>
 
           <div className="col-span-12 xl:col-span-7">
             <RecentOrders />
@@ -125,8 +131,6 @@ const Dashboard = () => {
           <div className="col-span-12 xl:col-span-5">
             <LowStockAlerts />
           </div>
-
-          <TopClientsCard />
         </div>
       </main>
     </div>
