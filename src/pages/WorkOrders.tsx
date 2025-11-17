@@ -344,7 +344,7 @@ const WorkOrders = () => {
                         />
                       </TableCell>
                       <TableCell className="font-medium">
-                        {(() => {
+                        {order.order_code || (() => {
                           const year = new Date(order.created_at).getFullYear();
                           const serial = String(order.order_number).padStart(4, '0');
                           return `${prefixFor(order.type)}-${year}-${serial}`;

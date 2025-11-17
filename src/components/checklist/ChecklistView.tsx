@@ -18,6 +18,7 @@ import { prefixFor } from "@/lib/orderLabel";
 interface WorkOrder {
   id: string;
   order_number: string;
+  order_code?: string | null;
   client_name: string;
   created_at: string;
   closed_at: string | null;
@@ -59,6 +60,7 @@ const ChecklistView = ({ orderType }: ChecklistViewProps) => {
         .select(`
           id,
           order_number,
+          order_code,
           created_at,
           closed_at,
           status,
@@ -91,6 +93,7 @@ const ChecklistView = ({ orderType }: ChecklistViewProps) => {
             return {
               id: order.id,
               order_number: order.order_number,
+              order_code: order.order_code,
               client_name: order.clients.name,
               created_at: order.created_at,
               closed_at: order.closed_at,
@@ -115,6 +118,7 @@ const ChecklistView = ({ orderType }: ChecklistViewProps) => {
           return {
             id: order.id,
             order_number: order.order_number,
+            order_code: order.order_code,
             client_name: order.clients.name,
             created_at: order.created_at,
             closed_at: order.closed_at,
@@ -350,7 +354,7 @@ const ChecklistView = ({ orderType }: ChecklistViewProps) => {
                   )}
                 </TableCell>
                 <TableCell className="font-medium">
-                  {(() => {
+                  {order.order_code || (() => {
                     const year = new Date(order.created_at).getFullYear();
                     const serial = String(order.order_number).padStart(4, '0');
                     return `${prefixFor(order.type)}-${year}-${serial}`;

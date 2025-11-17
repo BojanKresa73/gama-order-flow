@@ -1513,6 +1513,7 @@ export type Database = {
           kind: Database["public"]["Enums"]["work_order_kind"]
           lamination: string | null
           notes: string | null
+          order_code: string | null
           order_number: string
           order_type: Database["public"]["Enums"]["work_order_type"]
           pages: number | null
@@ -1521,6 +1522,7 @@ export type Database = {
           print_format: string | null
           print_spec: string | null
           run_quantity: number | null
+          serial: number | null
           sheets_used: number | null
           status: Database["public"]["Enums"]["work_order_status"]
           test_clicks: number | null
@@ -1528,6 +1530,7 @@ export type Database = {
           trial_sheets: number | null
           type: Database["public"]["Enums"]["wo_type"]
           updated_at: string
+          year: number | null
         }
         Insert: {
           binding?: string | null
@@ -1545,6 +1548,7 @@ export type Database = {
           kind?: Database["public"]["Enums"]["work_order_kind"]
           lamination?: string | null
           notes?: string | null
+          order_code?: string | null
           order_number: string
           order_type: Database["public"]["Enums"]["work_order_type"]
           pages?: number | null
@@ -1553,6 +1557,7 @@ export type Database = {
           print_format?: string | null
           print_spec?: string | null
           run_quantity?: number | null
+          serial?: number | null
           sheets_used?: number | null
           status?: Database["public"]["Enums"]["work_order_status"]
           test_clicks?: number | null
@@ -1560,6 +1565,7 @@ export type Database = {
           trial_sheets?: number | null
           type?: Database["public"]["Enums"]["wo_type"]
           updated_at?: string
+          year?: number | null
         }
         Update: {
           binding?: string | null
@@ -1577,6 +1583,7 @@ export type Database = {
           kind?: Database["public"]["Enums"]["work_order_kind"]
           lamination?: string | null
           notes?: string | null
+          order_code?: string | null
           order_number?: string
           order_type?: Database["public"]["Enums"]["work_order_type"]
           pages?: number | null
@@ -1585,6 +1592,7 @@ export type Database = {
           print_format?: string | null
           print_spec?: string | null
           run_quantity?: number | null
+          serial?: number | null
           sheets_used?: number | null
           status?: Database["public"]["Enums"]["work_order_status"]
           test_clicks?: number | null
@@ -1592,6 +1600,7 @@ export type Database = {
           trial_sheets?: number | null
           type?: Database["public"]["Enums"]["wo_type"]
           updated_at?: string
+          year?: number | null
         }
         Relationships: [
           {
