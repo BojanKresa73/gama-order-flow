@@ -99,42 +99,41 @@ const NewWorkOrder = () => {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error("Niste prijavljeni");
 
-      // Generate order number
-      const { data: orderNumberData } = await supabase.rpc("generate_order_number");
-      
-      const workOrderData: any = {
-        order_number: orderNumberData,
-        client_id: formData.client_id,
-        order_type: orderType,
-        created_by: user.id,
-        notes: formData.notes,
+      // Map order type to type enum
+      const typeMap: Record<string, 'CTP' | 'DIGITAL' | 'FILM' | 'OSTALO'> = {
+        'ctp': 'CTP',
+        'digital': 'DIGITAL',
+        'film': 'FILM',
+        'other': 'OSTALO',
       };
 
-      if (orderType === "ctp") {
-        workOrderData.trial_print = formData.trial_print;
-        workOrderData.trial_sheets = formData.trial_sheets;
-      } else if (orderType === "digital") {
-        workOrderData.job_name = formData.job_name;
-        workOrderData.run_quantity = formData.run_quantity;
-        workOrderData.pages = formData.pages;
-        workOrderData.print_format = formData.print_format;
-        workOrderData.binding = formData.binding;
-        workOrderData.print_spec = formData.print_spec;
-        workOrderData.paper_gsm_text = formData.paper_gsm_text;
-        workOrderData.paper_gsm_cover = formData.paper_gsm_cover;
-        workOrderData.lamination = formData.lamination;
-        workOrderData.sheets_used = formData.sheets_used;
-        workOrderData.clicks_count = formData.clicks_count;
-        workOrderData.test_clicks = formData.test_clicks;
-      }
+      // Prepare work order data for edge function
+      const workOrderInput: any = {
+        client_id: formData.client_id,
+        type: typeMap[orderType] || 'CTP',
+        order_type: orderType,
+        kind: typeMap[orderType] || 'CTP',
+        notes: formData.notes,
+        job_name: formData.job_name,
+        print_format: formData.print_format,
+        binding: formData.binding,
+        print_spec: formData.print_spec,
+        lamination: formData.lamination,
+        film_note: formData.notes,
+      };
 
-      const { data: workOrder, error: orderError } = await supabase
-        .from("work_orders")
-        .insert([workOrderData])
-        .select()
-        .single();
+      // Call edge function to create work order with proper serial number
+      const { data: response, error: orderError } = await supabase.functions.invoke(
+        'create-work-order',
+        {
+          body: workOrderInput,
+        }
+      );
 
       if (orderError) throw orderError;
+      if (!response?.success) throw new Error(response?.error || 'Failed to create work order');
+      
+      const workOrder = response.data;
 
       // Insert file entries
       if (ctpItems.length > 0) {

@@ -24,7 +24,7 @@ export const RecentOrders = () => {
     queryFn: async () => {
       const { data } = await supabase
         .from("work_orders")
-        .select("id, order_number, order_type, type, status, created_at, clients(name)")
+        .select("id, order_number, order_code, order_type, type, status, created_at, clients(name)")
         .order("created_at", { ascending: false })
         .limit(5);
 
@@ -75,7 +75,7 @@ export const RecentOrders = () => {
                   className="font-medium text-primary hover:underline"
                   onClick={() => navigate("/work-orders")}
                 >
-                  {(() => {
+                  {(order as any).order_code || (() => {
                     const year = new Date(order.created_at).getFullYear();
                     const serial = String(order.order_number).padStart(4, '0');
                     return `${prefixFor((order as any).type)}-${year}-${serial}`;

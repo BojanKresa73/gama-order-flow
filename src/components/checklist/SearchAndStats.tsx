@@ -9,6 +9,7 @@ import { useEffect } from "react";
 interface WorkOrder {
   id: string;
   order_number: string;
+  order_code?: string | null;
   client_name: string;
   created_at: string;
   closed_at: string | null;
@@ -53,6 +54,7 @@ const SearchAndStats = () => {
         .select(`
           id,
           order_number,
+          order_code,
           created_at,
           closed_at,
           status,
@@ -83,6 +85,7 @@ const SearchAndStats = () => {
             return {
               id: order.id,
               order_number: order.order_number,
+              order_code: order.order_code,
               client_name: order.clients.name,
               created_at: order.created_at,
               closed_at: order.closed_at,
@@ -107,6 +110,7 @@ const SearchAndStats = () => {
           return {
             id: order.id,
             order_number: order.order_number,
+            order_code: order.order_code,
             client_name: order.clients.name,
             created_at: order.created_at,
             closed_at: order.closed_at,
