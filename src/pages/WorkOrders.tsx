@@ -14,7 +14,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Progress } from "@/components/ui/progress";
-import { prefixFor } from "@/lib/orderLabel";
+import { prefixFor, workOrderDisplay } from "@/lib/orderLabel";
 
 const WorkOrders = () => {
   const [workOrders, setWorkOrders] = useState<any[]>([]);
@@ -344,11 +344,12 @@ const WorkOrders = () => {
                         />
                       </TableCell>
                       <TableCell className="font-medium">
-                        {order.order_code || (() => {
-                          const year = new Date(order.created_at).getFullYear();
-                          const serial = String(order.order_number).padStart(4, '0');
-                          return `${prefixFor(order.type)}-${year}-${serial}`;
-                        })()}
+                        {workOrderDisplay({
+                          order_code: order.order_code,
+                          created_at: order.created_at,
+                          client_name: order.clients?.name,
+                          type: order.type
+                        })}
                       </TableCell>
                       <TableCell>{order.clients?.name}</TableCell>
                       <TableCell>{getOrderTypeLabel(order.order_type)}</TableCell>
