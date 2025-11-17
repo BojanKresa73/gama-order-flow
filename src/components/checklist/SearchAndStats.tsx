@@ -13,6 +13,7 @@ interface WorkOrder {
   created_at: string;
   closed_at: string | null;
   status: string;
+  type: string | null;
   total_plates: number;
   order_type: string;
   file_entries?: FileEntry[];
@@ -55,6 +56,7 @@ const SearchAndStats = () => {
           created_at,
           closed_at,
           status,
+          type,
           order_type,
           clients!inner(name)
         `)
@@ -85,6 +87,7 @@ const SearchAndStats = () => {
               created_at: order.created_at,
               closed_at: order.closed_at,
               status: order.status,
+              type: order.type,
               order_type: order.order_type,
               total_plates: 0,
               file_entries: [],
@@ -108,6 +111,7 @@ const SearchAndStats = () => {
             created_at: order.created_at,
             closed_at: order.closed_at,
             status: order.status,
+            type: order.type,
             order_type: order.order_type,
             total_plates: totalPlates,
             file_entries: fileEntries,
