@@ -31,11 +31,11 @@ async function generateWorkOrderPDF(
   const pdfDoc = await PDFDocument.create();
   const page = pdfDoc.addPage([595, 842]); // A4
   
-  // Fetch and embed Inter font for proper Serbian character support
-  const fontUrl = 'https://raw.githubusercontent.com/rsms/inter/refs/heads/master/docs/font-files/Inter-Regular.ttf';
-  const fontBytes = await fetch(fontUrl).then(res => res.arrayBuffer());
-  const font = await pdfDoc.embedFont(fontBytes);
-  const boldFont = await pdfDoc.embedFont(fontBytes); // Using same font for now
+  // Load and embed Noto Sans font for proper Serbian character support (č, ć, š, đ, ž)
+  const fontPath = new URL('./NotoSans-Regular.ttf', import.meta.url).pathname;
+  const fontBytes = await Deno.readFile(fontPath);
+  const font = await pdfDoc.embedFont(fontBytes, { subset: true });
+  const boldFont = await pdfDoc.embedFont(fontBytes, { subset: true });
 
   let yPos = 800;
   const margin = 50;
@@ -133,11 +133,11 @@ async function generateDeliveryNotePDF(
 ): Promise<Uint8Array> {
   const pdfDoc = await PDFDocument.create();
   
-  // Fetch and embed Inter font for proper Serbian character support
-  const fontUrl = 'https://raw.githubusercontent.com/rsms/inter/refs/heads/master/docs/font-files/Inter-Regular.ttf';
-  const fontBytes = await fetch(fontUrl).then(res => res.arrayBuffer());
-  const timesRomanFont = await pdfDoc.embedFont(fontBytes);
-  const timesRomanBold = await pdfDoc.embedFont(fontBytes); // Using same font for now
+  // Load and embed Noto Sans font for proper Serbian character support (č, ć, š, đ, ž)
+  const fontPath = new URL('./NotoSans-Regular.ttf', import.meta.url).pathname;
+  const fontBytes = await Deno.readFile(fontPath);
+  const timesRomanFont = await pdfDoc.embedFont(fontBytes, { subset: true });
+  const timesRomanBold = await pdfDoc.embedFont(fontBytes, { subset: true });
   const page = pdfDoc.addPage([595.28, 841.89]);
   const { height } = page.getSize();
   let yPosition = height - 50;
