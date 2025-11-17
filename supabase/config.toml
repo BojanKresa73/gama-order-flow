@@ -8,3 +8,6 @@ verify_jwt = true
 
 [functions.send-email-jobs]
 verify_jwt = false
+
+[functions.get-delivery-note-pdf]
+verify_jwt = true
