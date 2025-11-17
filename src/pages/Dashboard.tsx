@@ -9,6 +9,7 @@ import { LayoutDashboard, FileText, Users, Package, ClipboardList } from "lucide
 import { StatsCards } from "@/components/dashboard/StatsCards";
 import { OrdersByTypeChart } from "@/components/dashboard/OrdersByTypeChart";
 import { ClosedOrdersChart } from "@/components/dashboard/ClosedOrdersChart";
+import { MonthlyPlateUsageChart } from "@/components/dashboard/MonthlyPlateUsageChart";
 import { RecentOrders } from "@/components/dashboard/RecentOrders";
 import { LowStockAlerts } from "@/components/dashboard/LowStockAlerts";
 import { TopClientsCard } from "@/components/dashboard/TopClientsCard";
@@ -111,9 +112,11 @@ const Dashboard = () => {
             <OrdersByTypeChart />
           </div>
           
-          <div className="col-span-12 xl:col-span-8">
+          <div className="col-span-12 xl:col-span-4">
             <ClosedOrdersChart />
           </div>
+
+          <MonthlyPlateUsageChart />
 
           <div className="col-span-12 xl:col-span-7">
             <RecentOrders />
