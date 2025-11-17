@@ -1420,6 +1420,7 @@ export type Database = {
           closed_by: string | null
           created_at: string
           created_by: string
+          display_order_number: string | null
           film_note: string | null
           film_price_override_eur_per_m: number | null
           id: string
@@ -1450,6 +1451,7 @@ export type Database = {
           closed_by?: string | null
           created_at?: string
           created_by: string
+          display_order_number?: string | null
           film_note?: string | null
           film_price_override_eur_per_m?: number | null
           id?: string
@@ -1480,6 +1482,7 @@ export type Database = {
           closed_by?: string | null
           created_at?: string
           created_by?: string
+          display_order_number?: string | null
           film_note?: string | null
           film_price_override_eur_per_m?: number | null
           id?: string
