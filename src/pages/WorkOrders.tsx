@@ -51,7 +51,11 @@ const WorkOrders = () => {
         .select(`
           *,
           clients (name),
-          profiles (full_name)
+          profiles (full_name),
+          email_job_latest_status (
+            status,
+            error_msg
+          )
         `)
         .order("created_at", { ascending: false });
 
@@ -83,6 +87,28 @@ const WorkOrders = () => {
     ) : (
       <Badge variant="secondary">Zatvoren</Badge>
     );
+  };
+
+  const getEmailStatusBadge = (emailStatus: any) => {
+    if (!emailStatus) return null;
+    
+    if (emailStatus.status === "sent") {
+      return <span title="Email poslat">📧 poslato</span>;
+    } else if (emailStatus.status === "error") {
+      return (
+        <TooltipProvider>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <span className="text-destructive cursor-help">📧 greška</span>
+            </TooltipTrigger>
+            <TooltipContent>
+              <p className="max-w-xs">{emailStatus.error_msg || "Greška pri slanju"}</p>
+            </TooltipContent>
+          </Tooltip>
+        </TooltipProvider>
+      );
+    }
+    return null;
   };
 
   const handleSendDeliveryNote = async (workOrderId: string, e: React.MouseEvent) => {
@@ -295,6 +321,7 @@ const WorkOrders = () => {
                     <TableHead>Klijent</TableHead>
                     <TableHead>Tip</TableHead>
                     <TableHead>Status</TableHead>
+                    <TableHead>Email</TableHead>
                     <TableHead>Kreirao</TableHead>
                     <TableHead>Datum</TableHead>
                     <TableHead className="text-right">Akcije</TableHead>
@@ -319,6 +346,9 @@ const WorkOrders = () => {
                       <TableCell>{order.clients?.name}</TableCell>
                       <TableCell>{getOrderTypeLabel(order.order_type)}</TableCell>
                       <TableCell>{getStatusBadge(order.status)}</TableCell>
+                      <TableCell>
+                        {getEmailStatusBadge(order.email_job_latest_status?.[0])}
+                      </TableCell>
                       <TableCell>{order.profiles?.full_name}</TableCell>
                       <TableCell>{new Date(order.created_at).toLocaleDateString('sr-RS')}</TableCell>
                       <TableCell>
