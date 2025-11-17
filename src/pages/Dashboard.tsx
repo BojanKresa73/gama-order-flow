@@ -11,6 +11,7 @@ import { OrdersByTypeChart } from "@/components/dashboard/OrdersByTypeChart";
 import { ClosedOrdersChart } from "@/components/dashboard/ClosedOrdersChart";
 import { RecentOrders } from "@/components/dashboard/RecentOrders";
 import { LowStockAlerts } from "@/components/dashboard/LowStockAlerts";
+import { TopClientsCard } from "@/components/dashboard/TopClientsCard";
 import AdminSection from "@/components/dashboard/AdminSection";
 
 const Dashboard = () => {
@@ -121,6 +122,8 @@ const Dashboard = () => {
           <div className="col-span-12 xl:col-span-5">
             <LowStockAlerts />
           </div>
+
+          <TopClientsCard />
         </div>
       </main>
     </div>
