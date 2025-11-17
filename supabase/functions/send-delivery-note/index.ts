@@ -24,6 +24,25 @@ const formatDate = (dateString: string): string => {
   return `${day}.${month}.${year}.`;
 };
 
+// Map order type to short code
+const shortType = (type?: string): string => {
+  const map: Record<string, string> = {
+    CTP: 'ctp',
+    Digital: 'dig',
+    film: 'fil',
+    Ostalo: 'raz',
+  };
+  return map[type || ''] ?? 'raz';
+};
+
+// Safe filename - remove special characters
+const safeFileName = (s: string): string =>
+  s.normalize('NFKD')
+   .replace(/[\u0300-\u036f]/g, '')       // remove diacritics
+   .replace(/[^A-Za-z0-9._ -]+/g, '')     // remove problematic symbols
+   .trim()
+   .replace(/\s+/g, '_');
+
 // Helper function to generate PDF
 const generateDeliveryNotePDF = async (
   workOrder: any,
@@ -305,7 +324,10 @@ const handler = async (req: Request): Promise<Response> => {
     );
 
     // Upload PDF to storage
-    const pdfFileName = `${workOrder.order_number}.pdf`;
+    const dateISO = new Date(workOrder.created_at).toISOString().slice(0, 10);
+    const typeCode = shortType(workOrder.order_type);
+    const clientSafe = safeFileName(workOrder.clients?.name || 'klijent');
+    const pdfFileName = `${workOrder.order_code || workOrder.order_number}_${dateISO}_${typeCode}_${clientSafe}.pdf`;
     const pdfPath = `delivery-notes/${pdfFileName}`;
     
     const { error: uploadError } = await supabaseClient.storage
