@@ -1,7 +1,18 @@
+// Supabase Edge Functions run on Deno runtime (not Node.js)
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts';
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.39.3';
 import { Resend } from 'https://esm.sh/resend@2.0.0';
 import { PDFDocument, rgb, StandardFonts } from 'https://esm.sh/pdf-lib@1.17.1';
+
+// Helper to encode Serbian text (replaces unsupported chars with ASCII equivalents)
+function encodeSerbianText(text: string): string {
+  const map: Record<string, string> = {
+    'č': 'c', 'Č': 'C', 'ć': 'c', 'Ć': 'C',
+    'š': 's', 'Š': 'S', 'ž': 'z', 'Ž': 'Z',
+    'đ': 'd', 'Đ': 'D'
+  };
+  return text.replace(/[čČćĆšŠžŽđĐ]/g, (m) => map[m] || m);
+}
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -133,19 +144,19 @@ serve(async (req) => {
 
     let yPos = 800;
 
-    page.drawText('OTPREMNICA', { x: 50, y: yPos, size: 20, font: boldFont });
+    page.drawText(encodeSerbianText('OTPREMNICA'), { x: 50, y: yPos, size: 20, font: boldFont });
     yPos -= 40;
 
-    page.drawText(`Broj naloga: ${order.display_order_number || order.order_number}`, {
+    page.drawText(encodeSerbianText(`Broj naloga: ${order.display_order_number || order.order_number}`), {
       x: 50, y: yPos, size: 12, font
     });
     yPos -= 20;
 
-    page.drawText(`Klijent: ${order.clients.name}`, { x: 50, y: yPos, size: 12, font });
+    page.drawText(encodeSerbianText(`Klijent: ${order.clients.name}`), { x: 50, y: yPos, size: 12, font });
     yPos -= 20;
 
     if (order.clients.pib) {
-      page.drawText(`PIB: ${order.clients.pib}`, { x: 50, y: yPos, size: 12, font });
+      page.drawText(encodeSerbianText(`PIB: ${order.clients.pib}`), { x: 50, y: yPos, size: 12, font });
       yPos -= 20;
     }
 
@@ -156,22 +167,22 @@ serve(async (req) => {
     ].filter(Boolean).join(', ');
 
     if (address) {
-      page.drawText(`Adresa: ${address}`, { x: 50, y: yPos, size: 10, font });
+      page.drawText(encodeSerbianText(`Adresa: ${address}`), { x: 50, y: yPos, size: 10, font });
       yPos -= 25;
     }
 
-    page.drawText('Stavke:', { x: 50, y: yPos, size: 12, font: boldFont });
+    page.drawText(encodeSerbianText('Stavke:'), { x: 50, y: yPos, size: 12, font: boldFont });
     yPos -= 20;
 
     for (const item of deliveryItems) {
-      page.drawText(`• ${item.filename} - ${item.format} (${item.quantity}x)`, {
+      page.drawText(encodeSerbianText(`• ${item.filename} - ${item.format} (${item.quantity}x)`), {
         x: 60, y: yPos, size: 10, font
       });
       yPos -= 18;
     }
 
     yPos -= 20;
-    page.drawText(`Datum: ${new Date().toLocaleDateString('sr-RS')}`, {
+    page.drawText(encodeSerbianText(`Datum: ${new Date().toLocaleDateString('sr-RS')}`), {
       x: 50, y: yPos, size: 10, font
     });
 
