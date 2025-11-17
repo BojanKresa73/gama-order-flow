@@ -339,8 +339,22 @@ const handler = async (req: Request): Promise<Response> => {
 
     console.log(`Total attachment size: ${totalSizeMB.toFixed(2)} MB`);
 
+    // Get user who closed the order
+    const { data: closedByUser } = await supabase
+      .from('profiles')
+      .select('full_name')
+      .eq('id', user.id)
+      .single();
+    
+    const closedByName = closedByUser?.full_name || 'N/A';
+    const closedAtFormatted = formatDate(workOrder.closed_at || new Date().toISOString());
+
     let archiveAttachments: Array<{ filename: string; content: string }> = [];
-    let archiveEmailBody = `Arhiva naloga ${orderNo}`;
+    let archiveEmailBody = `
+      <p>Arhiva – zatvoreni nalog ${orderNo} (${orderType})</p>
+      <p>Klijent: ${clientName}</p>
+      <p>Zatvorio: ${closedByName} u ${closedAtFormatted}</p>
+    `;
     
     // If attachments exceed 8 MB, upload to Storage and send links
     if (totalSizeMB > MAX_SIZE_MB) {
@@ -381,7 +395,10 @@ const handler = async (req: Request): Promise<Response> => {
 
       // Create email with download links
       archiveEmailBody = `
-        <p>Arhiva naloga ${orderNo}</p>
+        <p>Arhiva – zatvoreni nalog ${orderNo} (${orderType})</p>
+        <p>Klijent: ${clientName}</p>
+        <p>Zatvorio: ${closedByName} u ${closedAtFormatted}</p>
+        <br>
         <p>Prilozi su preveliki za email (${totalSizeMB.toFixed(2)} MB). Preuzmite fajlove putem linkova ispod:</p>
         <ul>
           <li><a href="${workOrderUrl?.signedUrl}">Radni Nalog - ${orderNo}</a> (važi 60 minuta)</li>
@@ -434,11 +451,13 @@ const handler = async (req: Request): Promise<Response> => {
             to: clientEmail,
             subject: clientSubject,
             html: `
-              <p>Poštovani ${clientName},</p>
-              <p>Obaveštavamo Vas da je Vaš nalog <strong>${orderNo}</strong> završen.</p>
-              <p>U prilogu se nalazi otpremnica.</p>
+              <p>Poštovani/na ${clientName},</p>
               <br>
-              <p>Hvala na poverenju,<br><strong>Gama United</strong></p>
+              <p>Obaveštavamo vas da je posao <strong>${orderNo}</strong> (${orderType}) završen.</p>
+              <p>U prilogu je otpremnica.</p>
+              <p>Ovaj mail je automatski generisan i operateri ne odgovaraju na dodatna pitanja, za kontakt sa operaterima koristite standardan mail: <a href="mailto:ctp@gamaunited.rs">ctp@gamaunited.rs</a></p>
+              <br>
+              <p>Srdačno,<br><strong>GAMA UNITED</strong></p>
             `,
             attachments: [
               {
