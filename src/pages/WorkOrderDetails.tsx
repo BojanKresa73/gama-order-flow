@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ArrowLeft, FileText, Mail } from "lucide-react";
-import { useToast } from "@/hooks/use-toast";
+import { toast } from "sonner";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { WorkOrderChecklistTab } from "@/components/work-orders/WorkOrderChecklistTab";
@@ -14,7 +14,6 @@ import { format } from "date-fns";
 const WorkOrderDetails = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
-  const { toast } = useToast();
   const [workOrder, setWorkOrder] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [emailStatus, setEmailStatus] = useState<any>(null);
@@ -58,11 +57,7 @@ const WorkOrderDetails = () => {
 
       setEmailStatus(emailData);
     } catch (error: any) {
-      toast({
-        title: "Greška",
-        description: error.message,
-        variant: "destructive",
-      });
+      toast.error("Greška: " + error.message);
     } finally {
       setLoading(false);
     }
@@ -88,11 +83,7 @@ const WorkOrderDetails = () => {
 
   const handleResendEmail = async () => {
     if (!workOrder) {
-      toast({
-        title: "Greška",
-        description: "Nalog nije pronađen",
-        variant: "destructive",
-      });
+      toast.error("Nalog nije pronađen");
       return;
     }
 
@@ -105,19 +96,12 @@ const WorkOrderDetails = () => {
 
       if (error) throw error;
 
-      toast({
-        title: "Uspešno",
-        description: "Email je dodat u red za slanje",
-      });
+      toast.success("Email je dodat u red za slanje");
 
       // Refresh email status
       fetchWorkOrder();
     } catch (error: any) {
-      toast({
-        title: "Greška",
-        description: error.message,
-        variant: "destructive",
-      });
+      toast.error("Greška: " + error.message);
     } finally {
       setResending(false);
     }
