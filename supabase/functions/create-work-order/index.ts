@@ -31,24 +31,11 @@ async function getNextSerial(
   type: string,
   year: number
 ): Promise<number> {
-  console.log(`Getting next serial for type: ${type}, year: ${year}`);
-  
-  // Use INSERT ... ON CONFLICT to atomically increment counter
-  // If row doesn't exist, insert with serial=1
-  // If row exists, increment last_serial and return new value
-  const { data, error } = await supabase.rpc('increment_work_order_counter', {
+  const { data } = await supabase.rpc('increment_work_order_counter', {
     p_type: type,
     p_year: year,
   });
-
-  if (error) {
-    console.error('Error incrementing counter:', error);
-    throw error;
-  }
-
-  const nextSerial = data;
-  console.log(`Next serial: ${nextSerial}`);
-  return nextSerial;
+  return data;
 }
 
 Deno.serve(async (req) => {
