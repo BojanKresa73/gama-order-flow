@@ -358,13 +358,6 @@ const handler = async (req: Request): Promise<Response> => {
     const deliveryNoteBase64 = btoa(String.fromCharCode(...deliveryNotePdfBytes));
     const workOrderBase64 = btoa(String.fromCharCode(...workOrderPdfBytes));
 
-    // Calculate total attachment size in bytes
-    const totalSizeBytes = deliveryNotePdfBytes.length + workOrderPdfBytes.length;
-    const totalSizeMB = totalSizeBytes / (1024 * 1024);
-    const MAX_SIZE_MB = 8;
-
-    console.log(`Total attachment size: ${totalSizeMB.toFixed(2)} MB`);
-
     // Get user who closed the order
     const { data: closedByUser } = await supabase
       .from('profiles')
@@ -375,75 +368,23 @@ const handler = async (req: Request): Promise<Response> => {
     const closedByName = closedByUser?.full_name || 'N/A';
     const closedAtFormatted = formatDate(workOrder.closed_at || new Date().toISOString());
 
-    let archiveAttachments: Array<{ filename: string; content: string }> = [];
-    let archiveEmailBody = `
+    // Prepare archive email attachments
+    const archiveAttachments = [
+      {
+        filename: `RN_${orderNo}.pdf`,
+        content: workOrderBase64,
+      },
+      {
+        filename: `Otpremnica_${orderNo}.pdf`,
+        content: deliveryNoteBase64,
+      },
+    ];
+
+    const archiveEmailBody = `
       <p>Arhiva – zatvoreni nalog ${orderNo} (${orderType})</p>
       <p>Klijent: ${clientName}</p>
       <p>Zatvorio: ${closedByName} u ${closedAtFormatted}</p>
     `;
-    
-    // If attachments exceed 8 MB, upload to Storage and send links
-    if (totalSizeMB > MAX_SIZE_MB) {
-      console.log("Attachments exceed 8 MB, uploading to Storage...");
-      
-      const timestamp = Date.now();
-      const workOrderStoragePath = `email-archive/${work_order_id}/radni-nalog-${orderNo}-${timestamp}.pdf`;
-      const deliveryNoteStoragePath = `email-archive/${work_order_id}/otpremnica-${orderNo}-${timestamp}.pdf`;
-
-      // Upload PDFs to Supabase Storage
-      const { error: uploadError1 } = await supabase.storage
-        .from('email-archive')
-        .upload(workOrderStoragePath, workOrderPdfBytes, {
-          contentType: 'application/pdf',
-          upsert: false
-        });
-
-      const { error: uploadError2 } = await supabase.storage
-        .from('email-archive')
-        .upload(deliveryNoteStoragePath, deliveryNotePdfBytes, {
-          contentType: 'application/pdf',
-          upsert: false
-        });
-
-      if (uploadError1 || uploadError2) {
-        console.error("Storage upload error:", uploadError1 || uploadError2);
-        throw new Error("Failed to upload PDFs to storage");
-      }
-
-      // Generate signed URLs (60 minutes)
-      const { data: workOrderUrl } = await supabase.storage
-        .from('email-archive')
-        .createSignedUrl(workOrderStoragePath, 3600);
-
-      const { data: deliveryNoteUrl } = await supabase.storage
-        .from('email-archive')
-        .createSignedUrl(deliveryNoteStoragePath, 3600);
-
-      // Create email with download links
-      archiveEmailBody = `
-        <p>Arhiva – zatvoreni nalog ${orderNo} (${orderType})</p>
-        <p>Klijent: ${clientName}</p>
-        <p>Zatvorio: ${closedByName} u ${closedAtFormatted}</p>
-        <br>
-        <p>Prilozi su preveliki za email (${totalSizeMB.toFixed(2)} MB). Preuzmite fajlove putem linkova ispod:</p>
-        <ul>
-          <li><a href="${workOrderUrl?.signedUrl}">Radni Nalog - ${orderNo}</a> (važi 60 minuta)</li>
-          <li><a href="${deliveryNoteUrl?.signedUrl}">Otpremnica - ${orderNo}</a> (važi 60 minuta)</li>
-        </ul>
-      `;
-    } else {
-      // Use attachments as normal
-      archiveAttachments = [
-        {
-          filename: `radni-nalog-${orderNo}.pdf`,
-          content: workOrderBase64,
-        },
-        {
-          filename: `otpremnica-${orderNo}.pdf`,
-          content: deliveryNoteBase64,
-        },
-      ];
-    }
 
     // Send email to archive with retry logic
     console.log(`Sending archive email to ${archiveEmail}...`);
@@ -455,7 +396,7 @@ const handler = async (req: Request): Promise<Response> => {
           to: archiveEmail,
           subject: archiveSubject,
           html: archiveEmailBody,
-          attachments: archiveAttachments.length > 0 ? archiveAttachments : undefined,
+          attachments: archiveAttachments,
         });
       });
       await logEmail(supabase, work_order_id, archiveEmail, archiveSubject, 'archive', 'sent', null);
@@ -494,7 +435,7 @@ const handler = async (req: Request): Promise<Response> => {
             `,
             attachments: [
               {
-                filename: `otpremnica-${orderNo}.pdf`,
+                filename: `Otpremnica_${orderNo}.pdf`,
                 content: deliveryNoteBase64,
               },
             ],
