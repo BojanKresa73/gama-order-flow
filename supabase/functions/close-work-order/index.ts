@@ -22,6 +22,26 @@ function formatDate(dateString: string): string {
   return `${day}.${month}.${year}.`;
 }
 
+// Map order type to short code
+function shortType(type?: string): string {
+  const map: Record<string, string> = {
+    CTP: 'ctp',
+    Digital: 'dig',
+    film: 'fil',
+    Ostalo: 'raz',
+  };
+  return map[type || ''] ?? 'raz';
+}
+
+// Safe filename - remove special characters
+function safeFileName(s: string): string {
+  return s.normalize('NFKD')
+    .replace(/[\u0300-\u036f]/g, '')       // remove diacritics
+    .replace(/[^A-Za-z0-9._ -]+/g, '')     // remove problematic symbols
+    .trim()
+    .replace(/\s+/g, '_');
+}
+
 // Generate Work Order PDF (Radni Nalog)
 async function generateWorkOrderPDF(
   workOrder: any,
@@ -335,10 +355,16 @@ const handler = async (req: Request): Promise<Response> => {
     const orderNo = workOrder.display_order_number || workOrder.order_number;
     const clientName = workOrder.clients?.name || "N/A";
     const orderType = workOrder.order_type.toUpperCase();
+    
+    // Generate structured PDF filenames
+    const dateISO = new Date(workOrder.created_at).toISOString().slice(0, 10);
+    const typeCode = shortType(workOrder.order_type);
+    const clientSafe = safeFileName(clientName);
+    const orderCode = workOrder.order_code || orderNo;
 
     // Use consistent filenames for idempotency
-    const deliveryNotePath = `${tmpDir}/Otpremnica_${orderNo}.pdf`;
-    const workOrderPath = `${tmpDir}/RN_${orderNo}.pdf`;
+    const deliveryNotePath = `${tmpDir}/${orderCode}_${dateISO}_${typeCode}_${clientSafe}_Otpremnica.pdf`;
+    const workOrderPath = `${tmpDir}/${orderCode}_${dateISO}_${typeCode}_${clientSafe}_RN.pdf`;
 
     // Check if PDFs already exist (idempotency within request)
     let deliveryNotePdfBytes: Uint8Array;
@@ -397,8 +423,8 @@ const handler = async (req: Request): Promise<Response> => {
       console.log("Attachments exceed 8 MB, uploading to Storage...");
       
       const timestamp = Date.now();
-      const workOrderStoragePath = `email-archive/${work_order_id}/RN_${orderNo}_${timestamp}.pdf`;
-      const deliveryNoteStoragePath = `email-archive/${work_order_id}/Otpremnica_${orderNo}_${timestamp}.pdf`;
+      const workOrderStoragePath = `email-archive/${work_order_id}/${orderCode}_${dateISO}_${typeCode}_${clientSafe}_RN_${timestamp}.pdf`;
+      const deliveryNoteStoragePath = `email-archive/${work_order_id}/${orderCode}_${dateISO}_${typeCode}_${clientSafe}_Otpremnica_${timestamp}.pdf`;
 
       // Upload PDFs to Supabase Storage
       const { error: uploadError1 } = await supabase.storage
@@ -445,11 +471,11 @@ const handler = async (req: Request): Promise<Response> => {
       // Use attachments as normal
       archiveAttachments = [
         {
-          filename: `RN_${orderNo}.pdf`,
+          filename: `${orderCode}_${dateISO}_${typeCode}_${clientSafe}_RN.pdf`,
           content: workOrderBase64,
         },
         {
-          filename: `Otpremnica_${orderNo}.pdf`,
+          filename: `${orderCode}_${dateISO}_${typeCode}_${clientSafe}_Otpremnica.pdf`,
           content: deliveryNoteBase64,
         },
       ];
@@ -504,7 +530,7 @@ const handler = async (req: Request): Promise<Response> => {
             `,
             attachments: [
               {
-                filename: `Otpremnica_${orderNo}.pdf`,
+                filename: `${orderCode}_${dateISO}_${typeCode}_${clientSafe}_Otpremnica.pdf`,
                 content: deliveryNoteBase64,
               },
             ],
