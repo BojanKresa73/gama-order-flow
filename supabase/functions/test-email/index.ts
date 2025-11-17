@@ -218,7 +218,10 @@ serve(async (req) => {
     });
 
     const pdfBytes = await pdfDoc.save();
-    const pdfBase64 = btoa(String.fromCharCode(...pdfBytes));
+    
+    // Write PDF to /tmp
+    const pdfPath = `/tmp/Otpremnica_${order.display_order_number || order.order_number}.pdf`;
+    await Deno.writeFile(pdfPath, pdfBytes);
 
     // Send emails (using already validated env vars from top of try block)
     const clientSubject = `[TEST] Nalog ${order.display_order_number || order.order_number} završen`;
@@ -230,6 +233,9 @@ serve(async (req) => {
     `;
 
     // Send to test address (client email)
+    // Read PDF from /tmp
+    const pdfContent = await Deno.readFile(pdfPath);
+    
     const { error: clientEmailError } = await resend.emails.send({
       from: fromEmail,
       to: [toEmail],
@@ -237,7 +243,7 @@ serve(async (req) => {
       html: clientHtml,
       attachments: [{
         filename: `otpremnica-${order.display_order_number || order.order_number}.pdf`,
-        content: pdfBase64,
+        content: btoa(String.fromCharCode(...pdfContent)),
       }],
     });
 
@@ -253,6 +259,9 @@ serve(async (req) => {
       <p>Arhivski primerak otpremnice za nalog ${order.display_order_number || order.order_number}</p>
     `;
 
+    // Read PDF from /tmp
+    const pdfContent2 = await Deno.readFile(pdfPath);
+    
     const { error: archiveEmailError } = await resend.emails.send({
       from: fromEmail,
       to: [toEmail],
@@ -260,7 +269,7 @@ serve(async (req) => {
       html: archiveHtml,
       attachments: [{
         filename: `otpremnica-${order.display_order_number || order.order_number}.pdf`,
-        content: pdfBase64,
+        content: btoa(String.fromCharCode(...pdfContent2)),
       }],
     });
 
@@ -268,6 +277,9 @@ serve(async (req) => {
       console.error('Archive email error:', archiveEmailError);
       throw archiveEmailError;
     }
+
+    // Clean up temporary PDF file
+    await Deno.remove(pdfPath).catch(() => {});
 
     console.log(`Test emails sent successfully to ${toEmail}`);
 
