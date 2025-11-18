@@ -15,6 +15,7 @@ interface FilmItem {
 
 interface OpenFilmOrderRequest {
   client_id: string;
+  order_type: string;
   client_email?: string;
   note?: string;
   items: FilmItem[];
@@ -24,6 +25,8 @@ Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
   }
+
+  let payloadCopy: any;
 
   try {
     // Use service role key for all operations
@@ -54,13 +57,64 @@ Deno.serve(async (req) => {
     }
 
     const payload: OpenFilmOrderRequest = await req.json();
+    const payloadCopy = JSON.parse(JSON.stringify(payload)); // For error logging
 
-    // Validate payload
-    if (!payload.client_id || !payload.items || payload.items.length === 0) {
+    // Validate required fields
+    if (!payload.client_id) {
       return new Response(
-        JSON.stringify({ ok: false, error: 'Nedostaju obavezni podaci (client_id, items)' }),
+        JSON.stringify({ ok: false, error: 'client_id is required' }),
         { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
+    }
+
+    // Validate order_type (must be exactly 'film')
+    const orderType = (payload as any).order_type;
+    if (!orderType || orderType !== 'film') {
+      return new Response(
+        JSON.stringify({ ok: false, error: 'order_type must be "film"' }),
+        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    // Validate items array
+    if (!Array.isArray(payload.items) || payload.items.length === 0) {
+      return new Response(
+        JSON.stringify({ ok: false, error: 'items[] required and cannot be empty' }),
+        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    // Validate each item
+    for (let i = 0; i < payload.items.length; i++) {
+      const item = payload.items[i];
+      
+      if (!item.width_mm || typeof item.width_mm !== 'number' || item.width_mm < 10) {
+        return new Response(
+          JSON.stringify({ ok: false, error: `Item ${i + 1}: width_mm must be >= 10` }),
+          { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+
+      if (!item.height_mm || typeof item.height_mm !== 'number' || item.height_mm < 10) {
+        return new Response(
+          JSON.stringify({ ok: false, error: `Item ${i + 1}: height_mm must be >= 10` }),
+          { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+
+      if (!item.quantity || typeof item.quantity !== 'number' || item.quantity < 1) {
+        return new Response(
+          JSON.stringify({ ok: false, error: `Item ${i + 1}: quantity must be >= 1` }),
+          { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+
+      if (!item.file_name || typeof item.file_name !== 'string' || item.file_name.trim() === '') {
+        return new Response(
+          JSON.stringify({ ok: false, error: `Item ${i + 1}: file_name is required` }),
+          { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
     }
 
     console.log('Opening film work order:', { 
@@ -147,9 +201,11 @@ Deno.serve(async (req) => {
         client_id: payload.client_id,
         order_type: 'film',
         type: 'FILM',
+        kind: 'FILMOVANJE',
         status: 'open',
         created_by: user.id,
         order_number: orderNumber,
+        order_code: orderNumber,
         display_order_number: orderNumber,
         serial: serial,
         year: currentYear,
@@ -160,8 +216,17 @@ Deno.serve(async (req) => {
 
     if (workOrderError) {
       console.error('Work order error:', workOrderError);
+      
+      // Check for unique constraint violation (23505)
+      if (workOrderError.code === '23505') {
+        return new Response(
+          JSON.stringify({ ok: false, error: 'Order number conflict - please retry' }),
+          { status: 409, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+      
       return new Response(
-        JSON.stringify({ ok: false, error: 'Greška pri kreiranju radnog naloga: ' + workOrderError.message }),
+        JSON.stringify({ ok: false, error: `Failed to create work order: ${workOrderError.message}` }),
         { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
@@ -224,8 +289,10 @@ Deno.serve(async (req) => {
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
   } catch (error) {
-    console.error('Error in open-film-work-order:', error);
-    const message = error instanceof Error ? error.message : 'Nepoznata greška';
+    const message = error instanceof Error ? error.message : JSON.stringify(error);
+    console.error('Error in open-film-work-order:', message, { 
+      payload: typeof payloadCopy !== 'undefined' ? payloadCopy : 'not available' 
+    });
     return new Response(
       JSON.stringify({ ok: false, error: message }),
       { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
