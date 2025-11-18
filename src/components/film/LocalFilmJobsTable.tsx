@@ -109,6 +109,8 @@ export const LocalFilmJobsTable = ({ jobs, onChange }: LocalFilmJobsTableProps) 
 
         // Map results back to indices
         const computed: Record<number, any> = {};
+        const updatedJobs = [...jobs];
+        
         if (data?.items) {
           itemsToCompute.forEach((item, i) => {
             const result = data.items[i];
@@ -118,11 +120,20 @@ export const LocalFilmJobsTable = ({ jobs, onChange }: LocalFilmJobsTableProps) 
                 computed_total_m: result.total_m,
                 computed_rotation_deg: result.rotation,
               };
+              // Update the job with computed values
+              updatedJobs[item.index] = {
+                ...updatedJobs[item.index],
+                computed_m_per_piece: result.m_per_piece,
+                computed_total_m: result.total_m,
+                computed_rotation_deg: result.rotation,
+              };
             }
           });
         }
 
         setComputedJobs(computed);
+        // Propagate updated jobs to parent
+        onChange(updatedJobs);
       } catch (err) {
         console.error('Exception computing film jobs:', err);
         toast({
@@ -134,7 +145,7 @@ export const LocalFilmJobsTable = ({ jobs, onChange }: LocalFilmJobsTableProps) 
     };
     
     computeAllJobs();
-  }, [jobs, toast]);
+  }, [jobs, toast, onChange]);
 
   const handleFieldChange = (index: number, field: keyof LocalFilmJob, value: number) => {
     // Clear existing debounce timer

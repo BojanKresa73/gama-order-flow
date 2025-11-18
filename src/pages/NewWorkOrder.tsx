@@ -14,9 +14,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { LocalFilmJobsTable, LocalFilmJob } from "@/components/film/LocalFilmJobsTable";
 import { FilmJobsSummary } from "@/components/film/FilmJobsSummary";
 import { LocalDigitalJobsTable, LocalDigitalJob } from "@/components/digital/LocalDigitalJobsTable";
-
 import { useFilmSettings } from "@/hooks/useFilmSettings";
-import { computeFilmJobClient } from "@/lib/filmCalculations";
 
 const NewWorkOrder = () => {
   const [searchParams] = useSearchParams();
@@ -233,18 +231,43 @@ const NewWorkOrder = () => {
         }
       }
 
-      // Insert film jobs
+      // Handle film jobs via edge function
       if (orderType === "film" && filmJobs.length > 0) {
-        const jobs = filmJobs.map(job => ({
-          work_order_id: workOrder.id,
-          ...job,
-        }));
+        // Film orders use dedicated edge function
+        const { data: filmResponse, error: filmError } = await supabase.functions.invoke(
+          'open-film-work-order',
+          {
+            body: {
+              client_id: formData.client_id,
+              client_email: formData.notification_email,
+              note: formData.notes,
+              items: filmJobs.map(job => ({
+                file_name: job.file_name,
+                width_mm: job.width_mm,
+                height_mm: job.height_mm,
+                quantity: job.qty,
+                note: job.note,
+              })),
+            },
+          }
+        );
 
-        const { error: jobsError } = await supabase
-          .from("film_jobs")
-          .insert(jobs);
+        if (filmError) throw new Error(filmError.message);
+        if (!filmResponse?.ok) throw new Error(filmResponse?.error || 'Greška pri kreiranju film naloga');
 
-        if (jobsError) throw jobsError;
+        // Show warning if fallback was used
+        if (filmResponse.warn) {
+          console.warn('Film calculation fallback:', filmResponse.warn);
+        }
+
+        // Film order was created by edge function, skip standard flow
+        toast({
+          title: "Uspeh",
+          description: `Film nalog ${filmResponse.order_number} je kreiran`,
+        });
+
+        navigate("/work-orders");
+        return;
       }
 
       toast({
@@ -706,8 +729,7 @@ const NewWorkOrder = () => {
                     {filmSettings && filmJobs.length > 0 && (
                       <FilmJobsSummary
                         totalMeters={filmJobs.reduce((sum, job) => {
-                          const result = computeFilmJobClient(job, filmSettings);
-                          return sum + (('error' in result) ? 0 : result.computed_total_m);
+                          return sum + (job.computed_total_m || 0);
                         }, 0)}
                         clientDiscount={
                           clients.find(c => c.id === formData.client_id)?.rabat_procenat || 0

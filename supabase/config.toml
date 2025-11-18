@@ -11,3 +11,9 @@ verify_jwt = false
 
 [functions.get-delivery-note-pdf]
 verify_jwt = true
+
+[functions.compute-film-job]
+verify_jwt = false
+
+[functions.open-film-work-order]
+verify_jwt = true
