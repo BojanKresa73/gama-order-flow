@@ -139,17 +139,14 @@ Deno.serve(async (req) => {
       }
     );
 
-  } catch (error) {
-    console.error('Function error:', error);
-    const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : JSON.stringify(err);
+    console.error('create-work-order error:', msg, { payload: await req.clone().json().catch(() => ({})) });
     return new Response(
-      JSON.stringify({ 
-        success: false, 
-        error: errorMessage 
-      }),
-      {
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-        status: 400,
+      JSON.stringify({ ok: false, error: msg }), 
+      { 
+        status: 500, 
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
       }
     );
   }
