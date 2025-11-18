@@ -41,6 +41,15 @@ const toTypeShort = (t?: string) => {
   return 'RAZ';
 };
 
+// konverzija u enum vrednost za bazu
+export const toEnumType = (t: string) => {
+  const s = t.toLowerCase();
+  if (s === 'ctp') return 'ctp';
+  if (s === 'digital') return 'digital';
+  if (s === 'film' || s === 'fil') return 'film';
+  return 'razno';
+};
+
 // sastavi label za prikaz u tabeli
 export const workOrderDisplay = (o: {
   order_code?: string;     // interni broj naloga iz baze
