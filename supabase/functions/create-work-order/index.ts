@@ -26,6 +26,14 @@ const prefixFor = (t?: string) => ({
   'OSTALO': 'OST',
 }[t || ''] ?? 'WO');
 
+// UI type to database enum mapping
+const UI_TO_DB_KIND: Record<string, 'CTP'|'DIGITALA'|'FILMOVANJE'|'RAZNO'> = {
+  CTP: 'CTP',
+  DIGITAL: 'DIGITALA',
+  FILM: 'FILMOVANJE',
+  OSTALO: 'RAZNO',
+};
+
 async function getNextSerial(
   supabase: any,
   type: string,
@@ -84,13 +92,15 @@ Deno.serve(async (req) => {
     console.log(`Generated order code: ${orderCode}`);
 
     // Insert work order
+    const dbKind = UI_TO_DB_KIND[input.type] || input.type;
+    
     const { data: workOrder, error: insertError } = await supabase
       .from('work_orders')
       .insert({
         client_id: input.client_id,
         type: input.type,
         order_type: input.order_type,
-        kind: input.type === 'FILM' ? 'FILMOVANJE' : input.type, // Map FILM -> FILMOVANJE for enum
+        kind: dbKind,
         serial: nextSerial,
         year: year,
         order_code: orderCode,
