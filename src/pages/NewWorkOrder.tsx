@@ -245,7 +245,7 @@ const NewWorkOrder = () => {
                 file_name: job.file_name,
                 width_mm: job.width_mm,
                 height_mm: job.height_mm,
-                quantity: job.qty,
+                quantity: job.quantity,
                 note: job.note,
               })),
             },
