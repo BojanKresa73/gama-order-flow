@@ -98,15 +98,18 @@ const generateDeliveryNotePDF = async (
     // Register fontkit for custom font support
     pdfDoc.registerFontkit(fontkit);
     
-    // Fetch Noto Sans from Google Fonts (supports Serbian characters)
-    const regularFontUrl = 'https://fonts.gstatic.com/s/notosans/v36/o-0mIpQlx3QUlC5A4PNB6Ryti20_6n1iPHjcz6L1SoM-jCpoiyD9A-9a6Vc.ttf';
-    const boldFontUrl = 'https://fonts.gstatic.com/s/notosans/v36/o-0mIpQlx3QUlC5A4PNB6Ryti20_6n1iPHjcz6L1SoM-jCpoiyD9AHA76Vc.ttf';
+    // Load local Noto Sans fonts (supports Serbian characters)
+    const regularFontBytes = await fetch(
+      new URL('../../../src/assets/fonts/NotoSans-Regular.ttf', import.meta.url)
+    ).then(r => r.arrayBuffer());
     
-    const regularFontResponse = await fetch(regularFontUrl);
-    const boldFontResponse = await fetch(boldFontUrl);
+    const boldFontBytes = await fetch(
+      new URL('../../../src/assets/fonts/NotoSans-Bold.ttf', import.meta.url)
+    ).then(r => r.arrayBuffer());
     
-    const regularFontBytes = await regularFontResponse.arrayBuffer();
-    const boldFontBytes = await boldFontResponse.arrayBuffer();
+    // Diagnostic - check font signature
+    const sig = String.fromCharCode(...new Uint8Array(regularFontBytes).slice(0, 4));
+    console.log('Font signature:', sig);
     
     const font = await pdfDoc.embedFont(regularFontBytes, { subset: true });
     const fontBold = await pdfDoc.embedFont(boldFontBytes, { subset: true });
