@@ -21,6 +21,12 @@ async function generateDeliveryNotePDF(
   fileEntries: any[],
   deliveryNumber: string
 ): Promise<Uint8Array> {
+  // Helper to validate font format
+  function isSupportedFont(bytes: ArrayBuffer) {
+    const sig = String.fromCharCode(...new Uint8Array(bytes).slice(0,4));
+    return sig === '\x00\x01\x00\x00' || sig === 'OTTO'; // TTF or OTF
+  }
+
   try {
     const pdfDoc = await PDFDocument.create();
     
@@ -36,6 +42,13 @@ async function generateDeliveryNotePDF(
     
     const regularFontBytes = await regularFontResponse.arrayBuffer();
     const boldFontBytes = await boldFontResponse.arrayBuffer();
+    
+    if (!isSupportedFont(regularFontBytes)) {
+      throw new Error('Regular font is not TTF/OTF – got wrong format (likely WOFF/HTML).');
+    }
+    if (!isSupportedFont(boldFontBytes)) {
+      throw new Error('Bold font is not TTF/OTF – got wrong format (likely WOFF/HTML).');
+    }
     
     const notoFont = await pdfDoc.embedFont(regularFontBytes, { subset: true });
     const notoBold = await pdfDoc.embedFont(boldFontBytes, { subset: true });
