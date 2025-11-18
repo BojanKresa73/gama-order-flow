@@ -105,6 +105,46 @@ const NewWorkOrder = () => {
         'other': 'OSTALO',
       };
 
+      // Handle film orders separately with dedicated edge function
+      if (orderType === "film" && filmJobs.length > 0) {
+        const { data: filmResponse, error: filmError } = await supabase.functions.invoke(
+          'open-film-work-order',
+          {
+            body: {
+              client_id: formData.client_id,
+              client_email: formData.notification_email,
+              order_type: 'film',
+              note: formData.notes,
+              items: filmJobs.map(job => ({
+                file_name: job.file_name,
+                width_mm: job.width_mm,
+                height_mm: job.height_mm,
+                quantity: job.quantity,
+                note: job.note,
+              })),
+            },
+          }
+        );
+
+        if (filmError) throw new Error(filmError.message);
+        if (!filmResponse?.ok) throw new Error(filmResponse?.error || 'Greška pri kreiranju film naloga');
+
+        // Show warning if fallback was used
+        if (filmResponse.warn) {
+          console.warn('Film calculation fallback:', filmResponse.warn);
+        }
+
+        toast({
+          title: "Uspeh",
+          description: `Film nalog ${filmResponse.order_number} je kreiran`,
+        });
+
+        navigate("/work-orders");
+        setLoading(false);
+        return;
+      }
+
+      // For non-film orders, use standard create-work-order flow
       // Prepare work order data for edge function
       const workOrderInput: any = {
         client_id: formData.client_id,
@@ -229,45 +269,6 @@ const NewWorkOrder = () => {
 
           if (itemsError) throw itemsError;
         }
-      }
-
-      // Handle film jobs via edge function
-      if (orderType === "film" && filmJobs.length > 0) {
-        // Film orders use dedicated edge function
-        const { data: filmResponse, error: filmError } = await supabase.functions.invoke(
-          'open-film-work-order',
-          {
-            body: {
-              client_id: formData.client_id,
-              client_email: formData.notification_email,
-              note: formData.notes,
-              items: filmJobs.map(job => ({
-                file_name: job.file_name,
-                width_mm: job.width_mm,
-                height_mm: job.height_mm,
-                quantity: job.quantity,
-                note: job.note,
-              })),
-            },
-          }
-        );
-
-        if (filmError) throw new Error(filmError.message);
-        if (!filmResponse?.ok) throw new Error(filmResponse?.error || 'Greška pri kreiranju film naloga');
-
-        // Show warning if fallback was used
-        if (filmResponse.warn) {
-          console.warn('Film calculation fallback:', filmResponse.warn);
-        }
-
-        // Film order was created by edge function, skip standard flow
-        toast({
-          title: "Uspeh",
-          description: `Film nalog ${filmResponse.order_number} je kreiran`,
-        });
-
-        navigate("/work-orders");
-        return;
       }
 
       toast({
