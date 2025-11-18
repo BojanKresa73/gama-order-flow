@@ -1,6 +1,7 @@
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.75.0";
-import { PDFDocument, rgb, StandardFonts } from "https://esm.sh/pdf-lib@1.17.1";
+import { PDFDocument, rgb } from "https://esm.sh/pdf-lib@1.17.1";
+import fontkit from "https://esm.sh/@pdf-lib/fontkit@1.1.1";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -20,66 +21,80 @@ async function generateDeliveryNotePDF(
   fileEntries: any[],
   deliveryNumber: string
 ): Promise<Uint8Array> {
-  const pdfDoc = await PDFDocument.create();
-  
-  // Fetch Inter font from Google Fonts with Latin Extended subset (includes č, ć, š, đ, ž)
-  const fontUrl = 'https://fonts.gstatic.com/s/inter/v18/UcCO3FwrK3iLTeHuS_fvQtMwCp50KnMw2boKoduKmMEVuLyfAZ9hiA.woff2';
-  const fontResponse = await fetch(fontUrl);
-  const fontBytes = await fontResponse.arrayBuffer();
-  const timesRomanFont = await pdfDoc.embedFont(fontBytes, { subset: true });
-  const timesRomanBold = await pdfDoc.embedFont(fontBytes, { subset: true });
+  try {
+    const pdfDoc = await PDFDocument.create();
+    
+    // Register fontkit for custom font support
+    pdfDoc.registerFontkit(fontkit);
+    
+    // Fetch Noto Sans from Google Fonts (supports Serbian characters)
+    const regularFontUrl = 'https://fonts.gstatic.com/s/notosans/v36/o-0mIpQlx3QUlC5A4PNB6Ryti20_6n1iPHjcz6L1SoM-jCpoiyD9A-9a6Vc.ttf';
+    const boldFontUrl = 'https://fonts.gstatic.com/s/notosans/v36/o-0mIpQlx3QUlC5A4PNB6Ryti20_6n1iPHjcz6L1SoM-jCpoiyD9AHA76Vc.ttf';
+    
+    const regularFontResponse = await fetch(regularFontUrl);
+    const boldFontResponse = await fetch(boldFontUrl);
+    
+    const regularFontBytes = await regularFontResponse.arrayBuffer();
+    const boldFontBytes = await boldFontResponse.arrayBuffer();
+    
+    const notoFont = await pdfDoc.embedFont(regularFontBytes, { subset: true });
+    const notoBold = await pdfDoc.embedFont(boldFontBytes, { subset: true });
   const page = pdfDoc.addPage([595.28, 841.89]);
   const { height } = page.getSize();
   let yPosition = height - 50;
 
-  page.drawText("GAMA UNITED d.o.o.", { x: 50, y: yPosition, size: 16, font: timesRomanBold, color: rgb(0, 0, 0) });
-  yPosition -= 25;
-  page.drawText("Šumadijska 29, 11000 Beograd", { x: 50, y: yPosition, size: 10, font: timesRomanFont });
-  yPosition -= 15;
-  page.drawText("PIB: 112345678 | MB: 21234567", { x: 50, y: yPosition, size: 10, font: timesRomanFont });
-  yPosition -= 40;
-  page.drawText("OTPREMNICA", { x: 50, y: yPosition, size: 18, font: timesRomanBold });
-  yPosition -= 30;
-  page.drawText(`Broj: ${deliveryNumber}`, { x: 50, y: yPosition, size: 12, font: timesRomanFont });
-  yPosition -= 20;
-  page.drawText(`Datum otvaranja: ${formatDate(workOrder.created_at)}`, { x: 50, y: yPosition, size: 10, font: timesRomanFont });
-  yPosition -= 15;
-  
-  const closedDate = workOrder.closed_at || new Date().toISOString();
-  page.drawText(`Datum zatvaranja: ${formatDate(closedDate)}`, { x: 50, y: yPosition, size: 10, font: timesRomanFont });
-  yPosition -= 30;
-  page.drawText("Klijent:", { x: 50, y: yPosition, size: 12, font: timesRomanBold });
-  yPosition -= 20;
-  page.drawText(workOrder.clients?.name || "N/A", { x: 50, y: yPosition, size: 11, font: timesRomanFont });
-
-  if (workOrder.clients?.pib) {
+    page.drawText("GAMA UNITED d.o.o.", { x: 50, y: yPosition, size: 16, font: notoBold, color: rgb(0, 0, 0) });
+    yPosition -= 25;
+    page.drawText("Šumadijska 29, 11000 Beograd", { x: 50, y: yPosition, size: 10, font: notoFont });
     yPosition -= 15;
-    page.drawText(`PIB: ${workOrder.clients.pib}`, { x: 50, y: yPosition, size: 10, font: timesRomanFont });
-  }
+    page.drawText("PIB: 112345678 | MB: 21234567", { x: 50, y: yPosition, size: 10, font: notoFont });
+    yPosition -= 40;
+    page.drawText("OTPREMNICA", { x: 50, y: yPosition, size: 18, font: notoBold });
+    yPosition -= 30;
+    page.drawText(`Broj: ${deliveryNumber}`, { x: 50, y: yPosition, size: 12, font: notoFont });
+    yPosition -= 20;
+    page.drawText(`Datum otvaranja: ${formatDate(workOrder.created_at)}`, { x: 50, y: yPosition, size: 10, font: notoFont });
+    yPosition -= 15;
+    
+    const closedDate = workOrder.closed_at || new Date().toISOString();
+    page.drawText(`Datum zatvaranja: ${formatDate(closedDate)}`, { x: 50, y: yPosition, size: 10, font: notoFont });
+    yPosition -= 30;
+    page.drawText("Klijent:", { x: 50, y: yPosition, size: 12, font: notoBold });
+    yPosition -= 20;
+    page.drawText(workOrder.clients?.name || "N/A", { x: 50, y: yPosition, size: 11, font: notoFont });
 
-  yPosition -= 40;
-  page.drawText("Stavke:", { x: 50, y: yPosition, size: 12, font: timesRomanBold });
-  yPosition -= 25;
-  
-  const colWidths = [250, 150, 100];
-  let xPos = 50;
-  ["Naziv fajla", "Format ploče", "Količina"].forEach((header, i) => {
-    page.drawText(header, { x: xPos, y: yPosition, size: 10, font: timesRomanBold });
-    xPos += colWidths[i];
-  });
+    if (workOrder.clients?.pib) {
+      yPosition -= 15;
+      page.drawText(`PIB: ${workOrder.clients.pib}`, { x: 50, y: yPosition, size: 10, font: notoFont });
+    }
 
-  yPosition -= 20;
-  fileEntries.forEach((entry: any) => {
-    if (yPosition < 100) return;
-    xPos = 50;
-    [entry.filename || "N/A", entry.plate_formats?.format_name || "N/A", String(entry.quantity || 0)].forEach((text, i) => {
-      page.drawText(text.substring(0, 30), { x: xPos, y: yPosition, size: 9, font: timesRomanFont });
+    yPosition -= 40;
+    page.drawText("Stavke:", { x: 50, y: yPosition, size: 12, font: notoBold });
+    yPosition -= 25;
+    
+    const colWidths = [250, 150, 100];
+    let xPos = 50;
+    ["Naziv fajla", "Format ploče", "Količina"].forEach((header, i) => {
+      page.drawText(header, { x: xPos, y: yPosition, size: 10, font: notoBold });
       xPos += colWidths[i];
     });
-    yPosition -= 18;
-  });
 
-  return pdfDoc.save();
+    yPosition -= 20;
+    fileEntries.forEach((entry: any) => {
+      if (yPosition < 100) return;
+      xPos = 50;
+      [entry.filename || "N/A", entry.plate_formats?.format_name || "N/A", String(entry.quantity || 0)].forEach((text, i) => {
+        page.drawText(text.substring(0, 30), { x: xPos, y: yPosition, size: 9, font: notoFont });
+        xPos += colWidths[i];
+      });
+      yPosition -= 18;
+    });
+
+    return pdfDoc.save();
+  } catch (err: any) {
+    console.error('PDF generation error:', err?.message, err?.stack);
+    throw new Error(`PDF font error: ${err?.message}`);
+  }
 }
 
 const handler = async (req: Request): Promise<Response> => {
@@ -124,12 +139,15 @@ const handler = async (req: Request): Promise<Response> => {
     const deliveryNumber = `DN-${new Date().getFullYear()}-${String(Date.now()).slice(-6)}`;
     const pdfBuffer = await generateDeliveryNotePDF(workOrder, fileEntries || [], deliveryNumber);
 
+    // Generate filename matching work order number format
+    const fileName = `Otpremnica-${workOrder.display_order_number || workOrder.order_number}.pdf`;
+    
     return new Response(pdfBuffer as any, {
       status: 200,
       headers: {
         ...corsHeaders,
         'Content-Type': 'application/pdf',
-        'Content-Disposition': `inline; filename="Otpremnica-${workOrder.display_order_number || workOrder.order_number}.pdf"`,
+        'Content-Disposition': `inline; filename="${fileName}"`,
         'Cache-Control': 'no-store',
       },
     });

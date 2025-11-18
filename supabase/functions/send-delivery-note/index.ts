@@ -1,7 +1,8 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.3";
 import { Resend } from "https://esm.sh/resend@4.0.0";
-import { PDFDocument, StandardFonts, rgb } from "https://esm.sh/pdf-lib@1.17.1";
+import { PDFDocument, rgb } from "https://esm.sh/pdf-lib@1.17.1";
+import fontkit from "https://esm.sh/@pdf-lib/fontkit@1.1.1";
 
 const resend = new Resend(Deno.env.get("RESEND_API_KEY"));
 
@@ -91,10 +92,26 @@ const generateDeliveryNotePDF = async (
   fileEntries: any[],
   deliveryNumber: string
 ): Promise<Uint8Array> => {
-  const pdfDoc = await PDFDocument.create();
-  const page = pdfDoc.addPage([595, 420]); // A5 landscape (595x420 points)
-  const font = await pdfDoc.embedFont(StandardFonts.Helvetica);
-  const fontBold = await pdfDoc.embedFont(StandardFonts.HelveticaBold);
+  try {
+    const pdfDoc = await PDFDocument.create();
+    
+    // Register fontkit for custom font support
+    pdfDoc.registerFontkit(fontkit);
+    
+    // Fetch Noto Sans from Google Fonts (supports Serbian characters)
+    const regularFontUrl = 'https://fonts.gstatic.com/s/notosans/v36/o-0mIpQlx3QUlC5A4PNB6Ryti20_6n1iPHjcz6L1SoM-jCpoiyD9A-9a6Vc.ttf';
+    const boldFontUrl = 'https://fonts.gstatic.com/s/notosans/v36/o-0mIpQlx3QUlC5A4PNB6Ryti20_6n1iPHjcz6L1SoM-jCpoiyD9AHA76Vc.ttf';
+    
+    const regularFontResponse = await fetch(regularFontUrl);
+    const boldFontResponse = await fetch(boldFontUrl);
+    
+    const regularFontBytes = await regularFontResponse.arrayBuffer();
+    const boldFontBytes = await boldFontResponse.arrayBuffer();
+    
+    const font = await pdfDoc.embedFont(regularFontBytes, { subset: true });
+    const fontBold = await pdfDoc.embedFont(boldFontBytes, { subset: true });
+  
+    const page = pdfDoc.addPage([595, 420]); // A5 landscape (595x420 points)
   
   const { width, height } = page.getSize();
   let yPosition = height - 40;
@@ -238,6 +255,10 @@ const generateDeliveryNotePDF = async (
 
   const pdfBytes = await pdfDoc.save();
   return pdfBytes;
+} catch (err: any) {
+  console.error('PDF generation error:', err?.message, err?.stack);
+  throw new Error(`PDF font error: ${err?.message}`);
+}
 };
 
 const handler = async (req: Request): Promise<Response> => {
