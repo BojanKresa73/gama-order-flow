@@ -86,6 +86,12 @@ const safeFileName = (s: string): string =>
    .trim()
    .replace(/\s+/g, '_');
 
+// Helper function to validate font format
+function isSupportedFont(bytes: ArrayBuffer) {
+  const sig = String.fromCharCode(...new Uint8Array(bytes).slice(0,4));
+  return sig === '\x00\x01\x00\x00' || sig === 'OTTO'; // TTF or OTF
+}
+
 // Helper function to generate PDF
 const generateDeliveryNotePDF = async (
   workOrder: any,
@@ -107,6 +113,13 @@ const generateDeliveryNotePDF = async (
     
     const regularFontBytes = await regularFontResponse.arrayBuffer();
     const boldFontBytes = await boldFontResponse.arrayBuffer();
+    
+    if (!isSupportedFont(regularFontBytes)) {
+      throw new Error('Regular font is not TTF/OTF – got wrong format (likely WOFF/HTML).');
+    }
+    if (!isSupportedFont(boldFontBytes)) {
+      throw new Error('Bold font is not TTF/OTF – got wrong format (likely WOFF/HTML).');
+    }
     
     const font = await pdfDoc.embedFont(regularFontBytes, { subset: true });
     const fontBold = await pdfDoc.embedFont(boldFontBytes, { subset: true });

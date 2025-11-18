@@ -86,6 +86,12 @@ function safeFileName(s: string): string {
     .replace(/\s+/g, '_');
 }
 
+// Helper to validate font format
+function isSupportedFont(bytes: ArrayBuffer) {
+  const sig = String.fromCharCode(...new Uint8Array(bytes).slice(0,4));
+  return sig === '\x00\x01\x00\x00' || sig === 'OTTO'; // TTF or OTF
+}
+
 // Generate Work Order PDF (Radni Nalog)
 async function generateWorkOrderPDF(
   workOrder: any,
@@ -107,6 +113,13 @@ async function generateWorkOrderPDF(
     
     const regularFontBytes = await regularFontResponse.arrayBuffer();
     const boldFontBytes = await boldFontResponse.arrayBuffer();
+    
+    if (!isSupportedFont(regularFontBytes)) {
+      throw new Error('Work Order regular font is not TTF/OTF – got wrong format (likely WOFF/HTML).');
+    }
+    if (!isSupportedFont(boldFontBytes)) {
+      throw new Error('Work Order bold font is not TTF/OTF – got wrong format (likely WOFF/HTML).');
+    }
     
     const font = await pdfDoc.embedFont(regularFontBytes, { subset: true });
     const boldFont = await pdfDoc.embedFont(boldFontBytes, { subset: true });
@@ -226,6 +239,13 @@ async function generateDeliveryNotePDF(
     
     const regularFontBytes = await regularFontResponse.arrayBuffer();
     const boldFontBytes = await boldFontResponse.arrayBuffer();
+    
+    if (!isSupportedFont(regularFontBytes)) {
+      throw new Error('Delivery Note regular font is not TTF/OTF – got wrong format (likely WOFF/HTML).');
+    }
+    if (!isSupportedFont(boldFontBytes)) {
+      throw new Error('Delivery Note bold font is not TTF/OTF – got wrong format (likely WOFF/HTML).');
+    }
     
     const font = await pdfDoc.embedFont(regularFontBytes, { subset: true });
     const boldFont = await pdfDoc.embedFont(boldFontBytes, { subset: true });
