@@ -90,7 +90,7 @@ Deno.serve(async (req) => {
         client_id: input.client_id,
         type: input.type,
         order_type: input.order_type,
-        kind: input.kind || input.type,
+        kind: input.type === 'FILM' ? 'FILMOVANJE' : input.type, // Map FILM -> FILMOVANJE for enum
         serial: nextSerial,
         year: year,
         order_code: orderCode,
