@@ -51,10 +51,11 @@ export const AddFilmJobsModal = ({ open, onOpenChange, onAddJobs }: AddFilmJobsM
       const dimensions = parseDimensionsFromFilename(file.name);
       
       newJobs.push({
+        id: crypto.randomUUID(),
         file_name: nameWithoutExt,
         width_mm: dimensions.width || 0,
         height_mm: dimensions.height || 0,
-        qty: 1,
+        quantity: 1,
         allow_rotate_90: true,
         margin_mm: 0,
         note: "",
@@ -78,10 +79,11 @@ export const AddFilmJobsModal = ({ open, onOpenChange, onAddJobs }: AddFilmJobsM
       const dimensions = parseDimensionsFromFilename(trimmedLine);
       
       return {
+        id: crypto.randomUUID(),
         file_name: trimmedLine,
         width_mm: dimensions.width || 0,
         height_mm: dimensions.height || 0,
-        qty: 1,
+        quantity: 1,
         allow_rotate_90: true,
         margin_mm: 0,
         note: "",
