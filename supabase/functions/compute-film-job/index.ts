@@ -5,89 +5,95 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
-interface FilmJob {
+interface FilmJobItem {
+  file_name: string;
   width_mm: number;
   height_mm: number;
-  qty: number;
-  allow_rotate_90: boolean;
-  margin_mm: number;
+  quantity: number;
 }
 
-interface FilmSettings {
+interface BatchComputeRequest {
   roll_width_mm: number;
-  side_margin_mm: number;
-  lead_trim_mm: number;
-  tail_trim_mm: number;
-  gap_mm: number;
+  smart_rotation: boolean;
   waste_percent: number;
+  items: FilmJobItem[];
 }
 
-interface ComputeResult {
-  computed_rotation_deg: number;
-  computed_m_per_piece: number;
-  computed_total_m: number;
-  cut_info: {
-    rotation_deg: number;
-    copies_per_row: number;
-    rows_needed: number;
-    length_m: number;
-  };
+interface ComputeResultItem {
+  file_name: string;
+  m_per_piece: number;
+  total_m: number;
+  used_width_mm: number;
+  rotation: number;
+  waste_m: number;
+  error?: string;
 }
 
-function computeFilmJob(job: FilmJob, settings: FilmSettings): ComputeResult | { error: string } {
-  const ROLL_WIDTH_MM = 508;
+function computeSingleFilmJob(
+  item: FilmJobItem,
+  rollWidthMm: number,
+  wastePercent: number,
+  smartRotation: boolean
+): ComputeResultItem {
   const MAX_COMPONENT_WIDTH_MM = 500;
-  const WASTE_PERCENT = 3;
 
   // Check if dimensions exceed maximum allowed width
-  if (job.width_mm > MAX_COMPONENT_WIDTH_MM || job.height_mm > MAX_COMPONENT_WIDTH_MM) {
-    return { error: `Preširoko za rolu (max ${MAX_COMPONENT_WIDTH_MM} mm)` };
+  if (item.width_mm > MAX_COMPONENT_WIDTH_MM || item.height_mm > MAX_COMPONENT_WIDTH_MM) {
+    return {
+      file_name: item.file_name,
+      m_per_piece: 0,
+      total_m: 0,
+      used_width_mm: 0,
+      rotation: 0,
+      waste_m: 0,
+      error: `Preširoko za rolu (max ${MAX_COMPONENT_WIDTH_MM} mm)`,
+    };
   }
 
-  let best: { rotation: number; copies: number; rows: number; totalMm: number } | null = null;
+  let best: { rotation: number; usedWidth: number; totalMm: number } | null = null;
 
   // Try 0° orientation
-  const copiesPerRow0 = Math.floor(ROLL_WIDTH_MM / job.width_mm);
-  if (copiesPerRow0 >= 1) {
-    const rows0 = Math.ceil(job.qty / copiesPerRow0);
-    const total0Mm = rows0 * job.height_mm;
-    best = { rotation: 0, copies: copiesPerRow0, rows: rows0, totalMm: total0Mm };
+  if (item.width_mm <= rollWidthMm) {
+    const totalMm0 = item.height_mm * item.quantity;
+    best = { rotation: 0, usedWidth: item.width_mm, totalMm: totalMm0 };
   }
 
-  // Try 90° orientation if allowed
-  if (job.allow_rotate_90) {
-    const copiesPerRow90 = Math.floor(ROLL_WIDTH_MM / job.height_mm);
-    if (copiesPerRow90 >= 1) {
-      const rows90 = Math.ceil(job.qty / copiesPerRow90);
-      const total90Mm = rows90 * job.width_mm;
-      
-      if (!best || total90Mm < best.totalMm) {
-        best = { rotation: 90, copies: copiesPerRow90, rows: rows90, totalMm: total90Mm };
-      }
+  // Try 90° orientation if smart_rotation enabled
+  if (smartRotation && item.height_mm <= rollWidthMm) {
+    const totalMm90 = item.width_mm * item.quantity;
+    if (!best || totalMm90 < best.totalMm) {
+      best = { rotation: 90, usedWidth: item.height_mm, totalMm: totalMm90 };
     }
   }
 
   if (!best) {
-    return { error: `Preširoko za rolu (max ${MAX_COMPONENT_WIDTH_MM} mm)` };
+    return {
+      file_name: item.file_name,
+      m_per_piece: 0,
+      total_m: 0,
+      used_width_mm: 0,
+      rotation: 0,
+      waste_m: 0,
+      error: `Preširoko za rolu (max ${rollWidthMm} mm)`,
+    };
   }
 
-  // Apply 3% waste
-  const totalMmWithWaste = best.totalMm * (1 + WASTE_PERCENT / 100);
+  // Apply waste percentage
+  const wasteMm = best.totalMm * (wastePercent / 100);
+  const totalMmWithWaste = best.totalMm + wasteMm;
   
-  // Ceiling to centimeter (0.01 m)
-  const totalLengthM = Math.ceil(totalMmWithWaste / 10) / 100;
-  const mPerPiece = totalLengthM / job.qty;
+  // Convert to meters and round to 2 decimals
+  const totalM = Number((totalMmWithWaste / 1000).toFixed(2));
+  const mPerPiece = Number((totalM / item.quantity).toFixed(4));
+  const wasteM = Number((wasteMm / 1000).toFixed(2));
 
   return {
-    computed_rotation_deg: best.rotation,
-    computed_m_per_piece: Number(mPerPiece.toFixed(4)),
-    computed_total_m: Number(totalLengthM.toFixed(2)),
-    cut_info: {
-      rotation_deg: best.rotation,
-      copies_per_row: best.copies,
-      rows_needed: best.rows,
-      length_m: totalLengthM,
-    },
+    file_name: item.file_name,
+    m_per_piece: mPerPiece,
+    total_m: totalM,
+    used_width_mm: best.usedWidth,
+    rotation: best.rotation,
+    waste_m: wasteM,
   };
 }
 
@@ -97,38 +103,37 @@ Deno.serve(async (req) => {
   }
 
   try {
-    const supabase = createClient(
-      Deno.env.get('SUPABASE_URL') ?? '',
-      Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
-    );
+    const body: BatchComputeRequest = await req.json();
+    
+    console.log('Received compute request:', {
+      roll_width_mm: body.roll_width_mm,
+      smart_rotation: body.smart_rotation,
+      waste_percent: body.waste_percent,
+      items_count: body.items?.length || 0,
+    });
 
-    const { job } = await req.json();
-
-    // Fetch film settings
-    const { data: settings, error: settingsError } = await supabase
-      .from('film_settings')
-      .select('*')
-      .single();
-
-    if (settingsError || !settings) {
-      console.error('Failed to fetch film settings:', settingsError);
+    // Validate request
+    if (!body.items || !Array.isArray(body.items)) {
       return new Response(
-        JSON.stringify({ error: 'Failed to fetch film settings' }),
-        { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
-    }
-
-    const result = computeFilmJob(job, settings);
-
-    if ('error' in result) {
-      return new Response(
-        JSON.stringify({ error: result.error }),
+        JSON.stringify({ error: 'Items array is required' }),
         { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
 
+    // Default values
+    const rollWidthMm = body.roll_width_mm || 500;
+    const smartRotation = body.smart_rotation ?? false;
+    const wastePercent = body.waste_percent ?? 0;
+
+    // Compute all items
+    const results: ComputeResultItem[] = body.items.map((item) =>
+      computeSingleFilmJob(item, rollWidthMm, wastePercent, smartRotation)
+    );
+
+    console.log('Computed results:', results);
+
     return new Response(
-      JSON.stringify(result),
+      JSON.stringify({ items: results }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
   } catch (error) {

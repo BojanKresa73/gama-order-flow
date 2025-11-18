@@ -12,7 +12,6 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { supabase } from "@/integrations/supabase/client";
-import { computeFilmJobClient } from "@/lib/filmCalculations";
 import { useToast } from "@/hooks/use-toast";
 import { cn } from "@/lib/utils";
 
@@ -42,49 +41,100 @@ export const LocalFilmJobsTable = ({ jobs, onChange }: LocalFilmJobsTableProps) 
   const debounceTimers = useRef<Record<number, NodeJS.Timeout>>({});
   const inputRefs = useRef<Record<string, HTMLInputElement | null>>({});
 
-  // Compute all jobs
+  // Compute all jobs via edge function
   useEffect(() => {
     const computeAllJobs = async () => {
-      const { data: settings } = await supabase
-        .from('film_settings')
-        .select('*')
-        .single();
+      if (jobs.length === 0) {
+        setComputedJobs({});
+        setValidationErrors({});
+        return;
+      }
+
+      const errors: Record<number, { width?: string; height?: string; qty?: string }> = {};
       
-      if (settings) {
-        const computed: Record<number, any> = {};
-        const errors: Record<number, { width?: string; height?: string; qty?: string }> = {};
-        
-        jobs.forEach((job, index) => {
-          // Validate
-          if (job.width_mm > 500) {
-            errors[index] = { ...errors[index], width: "Preširoko za rolu (max 500 mm)" };
-          }
-          if (job.width_mm < 10 && job.width_mm > 0) {
-            errors[index] = { ...errors[index], width: "Minimalna širina je 10 mm" };
-          }
-          if (job.height_mm < 10 && job.height_mm > 0) {
-            errors[index] = { ...errors[index], height: "Minimalna visina je 10 mm" };
-          }
-          if (job.qty < 1 && job.qty > 0) {
-            errors[index] = { ...errors[index], qty: "Minimalna količina je 1" };
-          }
-          
-          // Compute if valid
-          if (job.width_mm && job.height_mm && job.qty && !errors[index]?.width) {
-            const result = computeFilmJobClient(job, settings);
-            if (!('error' in result)) {
-              computed[index] = result;
-            }
-          }
+      // Validate locally first
+      jobs.forEach((job, index) => {
+        if (job.width_mm > 500) {
+          errors[index] = { ...errors[index], width: "Preširoko za rolu (max 500 mm)" };
+        }
+        if (job.width_mm < 10 && job.width_mm > 0) {
+          errors[index] = { ...errors[index], width: "Minimalna širina je 10 mm" };
+        }
+        if (job.height_mm < 10 && job.height_mm > 0) {
+          errors[index] = { ...errors[index], height: "Minimalna visina je 10 mm" };
+        }
+        if (job.qty < 1 && job.qty > 0) {
+          errors[index] = { ...errors[index], qty: "Minimalna količina je 1" };
+        }
+      });
+
+      setValidationErrors(errors);
+
+      // Prepare items for batch compute
+      const itemsToCompute = jobs
+        .map((job, index) => ({
+          index,
+          file_name: job.file_name || `Item ${index + 1}`,
+          width_mm: job.width_mm || 0,
+          height_mm: job.height_mm || 0,
+          quantity: job.qty || 0,
+        }))
+        .filter((item) => item.width_mm > 0 && item.height_mm > 0 && item.quantity > 0);
+
+      if (itemsToCompute.length === 0) {
+        setComputedJobs({});
+        return;
+      }
+
+      try {
+        // Call edge function
+        const { data, error } = await supabase.functions.invoke('compute-film-job', {
+          body: {
+            roll_width_mm: 500,
+            smart_rotation: false,
+            waste_percent: 0,
+            items: itemsToCompute,
+          },
         });
-        
+
+        if (error) {
+          console.error('Error computing film jobs:', error);
+          toast({
+            title: "Greška",
+            description: "Nije moguće izračunati potrošnju filma",
+            variant: "destructive",
+          });
+          return;
+        }
+
+        // Map results back to indices
+        const computed: Record<number, any> = {};
+        if (data?.items) {
+          itemsToCompute.forEach((item, i) => {
+            const result = data.items[i];
+            if (result && !result.error) {
+              computed[item.index] = {
+                computed_m_per_piece: result.m_per_piece,
+                computed_total_m: result.total_m,
+                computed_rotation_deg: result.rotation,
+              };
+            }
+          });
+        }
+
         setComputedJobs(computed);
-        setValidationErrors(errors);
+      } catch (err) {
+        console.error('Exception computing film jobs:', err);
+        toast({
+          title: "Greška",
+          description: "Greška pri računanju potrošnje filma",
+          variant: "destructive",
+        });
       }
     };
     
     computeAllJobs();
-  }, [jobs]);
+  }, [jobs, toast]);
 
   const handleFieldChange = (index: number, field: keyof LocalFilmJob, value: number) => {
     // Clear existing debounce timer
