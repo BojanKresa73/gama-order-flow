@@ -94,16 +94,20 @@ const WorkOrderDetails = () => {
 
     setResending(true);
     try {
-      // Call the database function to enqueue email
-      const { error } = await supabase.rpc('enqueue_email_for_work_order', {
-        _work_order_id: id
+      // Call the edge function to resend delivery note
+      const { data, error } = await supabase.functions.invoke('send-delivery-note', {
+        body: { workOrderId: id }
       });
 
       if (error) throw error;
 
-      toast.success("Email je dodat u red za slanje");
+      if (data?.success) {
+        toast.success("Otpremnica poslata klijentu");
+      } else {
+        throw new Error(data?.error || "Greška pri slanju");
+      }
 
-      // Refresh email status
+      // Refresh work order
       fetchWorkOrder();
     } catch (error: any) {
       toast.error("Greška: " + error.message);
