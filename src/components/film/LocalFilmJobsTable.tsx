@@ -109,6 +109,8 @@ export const LocalFilmJobsTable = ({ jobs, onChange }: LocalFilmJobsTableProps) 
               <TableHead>Širina (mm)</TableHead>
               <TableHead>Visina (mm)</TableHead>
               <TableHead>Količina</TableHead>
+              <TableHead>Staje po širini</TableHead>
+              <TableHead>Orijentacija</TableHead>
               <TableHead>m/kom</TableHead>
               <TableHead>Ukupno m</TableHead>
               <TableHead className="w-[100px]">Akcije</TableHead>
@@ -117,7 +119,7 @@ export const LocalFilmJobsTable = ({ jobs, onChange }: LocalFilmJobsTableProps) 
           <TableBody>
             {jobs.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={7} className="text-center text-muted-foreground">
+                <TableCell colSpan={9} className="text-center text-muted-foreground">
                   Nema stavki. Dodajte stavku ili importujte fajlove.
                 </TableCell>
               </TableRow>

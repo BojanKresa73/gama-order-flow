@@ -1,73 +1,47 @@
-interface FilmJob {
-  width_mm: number;
-  height_mm: number;
-  qty: number;
-  allow_rotate_90: boolean;
-  margin_mm: number;
+export interface FitResult {
+  orientation: 0 | 90;    // izabrana orijentacija
+  across: number;         // koliko komada staje po širini role
+  rows: number;           // broj "redova" (poteza) dužine pieceH
+  m_per_piece: number;    // dužina po komadu u metrima
+  total_m: number;        // ukupno metara (sa otp.) za traženu količinu
 }
 
-interface FilmSettings {
-  roll_width_mm: number;
-  side_margin_mm: number;
-  lead_trim_mm: number;
-  tail_trim_mm: number;
-  gap_mm: number;
-  waste_percent: number;
-}
+export function fitOnRoll(
+  w_mm: number,           // širina fajla (uneta)
+  h_mm: number,           // visina fajla (uneta)
+  qty: number,
+  roll_mm = 500,          // širina role
+  margin_mm = 0,          // bočni razmak (svaka strana)
+  gap_mm = 0,             // razmak između komada po širini
+  waste_pct = 0           // procenat otpada (0…1)
+): FitResult {
+  const tryOrient = (o: 0 | 90) => {
+    const pieceW = o === 0 ? w_mm : h_mm;
+    const pieceH = o === 0 ? h_mm : w_mm;
 
-export interface ComputeResult {
-  computed_rotation_deg: number;
-  computed_m_per_piece: number;
-  computed_total_m: number;
-}
+    const usable = roll_mm - 2 * margin_mm;
+    if (pieceW > usable) return null;
 
-export function computeFilmJobClient(job: FilmJob, settings: FilmSettings): ComputeResult | { error: string } {
-  const ROLL_WIDTH_MM = 508;
-  const MAX_COMPONENT_WIDTH_MM = 500;
-  const WASTE_PERCENT = 3;
+    const across = Math.max(1, Math.floor((usable + gap_mm) / (pieceW + gap_mm)));
+    const rows = Math.ceil(qty / across);
+    const m_per_piece = pieceH / 1000;
+    const total_m_raw = rows * m_per_piece;
+    const total_m = total_m_raw * (1 + waste_pct);
 
-  // Check if dimensions exceed maximum allowed width
-  if (job.width_mm > MAX_COMPONENT_WIDTH_MM || job.height_mm > MAX_COMPONENT_WIDTH_MM) {
-    return { error: `Preširoko za rolu (max ${MAX_COMPONENT_WIDTH_MM} mm)` };
-  }
-
-  let best: { rotation: number; copies: number; rows: number; totalMm: number } | null = null;
-
-  // Try 0° orientation
-  const copiesPerRow0 = Math.floor(ROLL_WIDTH_MM / job.width_mm);
-  if (copiesPerRow0 >= 1) {
-    const rows0 = Math.ceil(job.qty / copiesPerRow0);
-    const total0Mm = rows0 * job.height_mm;
-    best = { rotation: 0, copies: copiesPerRow0, rows: rows0, totalMm: total0Mm };
-  }
-
-  // Try 90° orientation if allowed
-  if (job.allow_rotate_90) {
-    const copiesPerRow90 = Math.floor(ROLL_WIDTH_MM / job.height_mm);
-    if (copiesPerRow90 >= 1) {
-      const rows90 = Math.ceil(job.qty / copiesPerRow90);
-      const total90Mm = rows90 * job.width_mm;
-      
-      if (!best || total90Mm < best.totalMm) {
-        best = { rotation: 90, copies: copiesPerRow90, rows: rows90, totalMm: total90Mm };
-      }
-    }
-  }
-
-  if (!best) {
-    return { error: `Preširoko za rolu (max ${MAX_COMPONENT_WIDTH_MM} mm)` };
-  }
-
-  // Apply 3% waste
-  const totalMmWithWaste = best.totalMm * (1 + WASTE_PERCENT / 100);
-  
-  // Ceiling to centimeter (0.01 m)
-  const totalLengthM = Math.ceil(totalMmWithWaste / 10) / 100;
-  const mPerPiece = totalLengthM / job.qty;
-
-  return {
-    computed_rotation_deg: best.rotation,
-    computed_m_per_piece: Number(mPerPiece.toFixed(4)),
-    computed_total_m: Number(totalLengthM.toFixed(2)),
+    return { orientation: o, across, rows, m_per_piece, total_m };
   };
+
+  const o0 = tryOrient(0);
+  const o90 = tryOrient(90);
+
+  if (!o0 && !o90) {
+    throw new Error('NE_STAJE_U_ROLNU'); // ni jedna orijentacija ne staje u 500 mm
+  }
+  if (o0 && o90) {
+    // biramo ekonomičniju (manji total_m), a može i veći across ako su isti
+    if (o90.total_m < o0.total_m) return o90;
+    if (o90.total_m === o0.total_m && o90.across > o0.across) return o90;
+    return o0;
+  }
+  return (o0 ?? o90)!;
 }

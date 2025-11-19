@@ -14,6 +14,8 @@ export interface FilmRow {
   computed_m_per_piece?: number;
   computed_total_m?: number;
   computed_rotation_deg?: number;
+  across_count?: number;
+  rows_needed?: number;
 }
 
 interface Props {
@@ -68,7 +70,8 @@ export default React.memo(function FilmItemRow({ row, index, onCommit, onDelete,
       const { data, error: invokeError } = await supabase.functions.invoke('compute-film-job', {
         body: {
           roll_width_mm: 500,
-          smart_rotation: false,
+          margin_mm: 0,
+          gap_mm: 0,
           waste_percent: 0,
           items: [{
             file_name: row.file_name,
@@ -94,6 +97,8 @@ export default React.memo(function FilmItemRow({ row, index, onCommit, onDelete,
           computed_m_per_piece: result.m_per_piece,
           computed_total_m: result.total_m,
           computed_rotation_deg: result.rotation,
+          across_count: result.across,
+          rows_needed: result.rows,
         });
       }
     } catch (err) {
@@ -269,6 +274,20 @@ export default React.memo(function FilmItemRow({ row, index, onCommit, onDelete,
           className="w-20"
           placeholder="≥1"
         />
+      </td>
+      <td className="p-2">
+        {row.across_count ? (
+          <span className="text-sm font-medium">{row.across_count}</span>
+        ) : (
+          <span className="text-sm text-muted-foreground">-</span>
+        )}
+      </td>
+      <td className="p-2">
+        {row.computed_rotation_deg !== undefined ? (
+          <span className="text-sm font-medium">{row.computed_rotation_deg}°</span>
+        ) : (
+          <span className="text-sm text-muted-foreground">-</span>
+        )}
       </td>
       <td className="p-2">
         {isPending ? (
