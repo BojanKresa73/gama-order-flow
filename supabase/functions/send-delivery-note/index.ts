@@ -104,9 +104,13 @@ const generateDeliveryNotePDF = async (
     // Register fontkit for custom font support
     pdfDoc.registerFontkit(fontkit);
     
-    // Fetch Noto Sans from Google Fonts (supports Serbian characters)
-    const regularFontUrl = 'https://fonts.gstatic.com/s/notosans/v36/o-0mIpQlx3QUlC5A4PNB6Ryti20_6n1iPHjcz6L1SoM-jCpoiyD9A-9a6Vc.ttf';
-    const boldFontUrl = 'https://fonts.gstatic.com/s/notosans/v36/o-0mIpQlx3QUlC5A4PNB6Ryti20_6n1iPHjcz6L1SoM-jCpoiyD9AHA76Vc.ttf';
+    // Fetch fonts from Supabase Storage using secrets
+    const regularFontUrl = Deno.env.get('FONT_REGULAR_URL');
+    const boldFontUrl = Deno.env.get('FONT_BOLD_URL');
+    
+    if (!regularFontUrl || !boldFontUrl) {
+      throw new Error('Font URLs not configured. Please set FONT_REGULAR_URL and FONT_BOLD_URL secrets.');
+    }
     
     const regularFontResponse = await fetch(regularFontUrl);
     const boldFontResponse = await fetch(boldFontUrl);
