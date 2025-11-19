@@ -1,4 +1,5 @@
 import { Resend } from "https://esm.sh/resend@4.0.0";
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
 const resend = new Resend(Deno.env.get('RESEND_API_KEY')!);
 const FROM = Deno.env.get('RESEND_FROM') || Deno.env.get('FROM_EMAIL') || 'noreply@resend.dev';
@@ -19,17 +20,20 @@ async function fetchPdfAsBase64(
   bucket: string,
   path: string
 ): Promise<string> {
-  const url = `${sbUrl}/storage/v1/object/public/${bucket}/${path}?download=1`;
-  const resp = await fetch(url, {
-    headers: { Authorization: `Bearer ${serviceKey}` },
-    cache: 'no-store',
-  });
+  // Use Supabase client to download file
+  const supabase = createClient(sbUrl, serviceKey);
   
-  if (!resp.ok) {
-    throw new Error(`PDF fetch failed: ${resp.status} ${resp.statusText}`);
+  const { data, error } = await supabase.storage
+    .from(bucket)
+    .download(path);
+  
+  if (error || !data) {
+    console.error(`PDF fetch failed for ${bucket}/${path}:`, error);
+    throw new Error(`PDF fetch failed: ${error?.message || 'File not found'}`);
   }
   
-  const ab = await resp.arrayBuffer();
+  // Convert Blob to ArrayBuffer then to base64
+  const ab = await data.arrayBuffer();
   
   // Convert ArrayBuffer to base64
   let binary = '';
