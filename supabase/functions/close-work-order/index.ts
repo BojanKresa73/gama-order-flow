@@ -1070,9 +1070,24 @@ const handler = async (req: Request): Promise<Response> => {
           clientEmailStatus = 'sent';
         } catch (error: any) {
           console.error("Failed to send client email after retries:", error);
-          await logEmail(supabase, work_order_id, clientEmail, clientSubject, 'client', 'error', error?.message || String(error));
-          clientEmailStatus = 'error';
-          clientEmailMessage = 'Greška pri slanju klijentskog mejla';
+          
+          // Queue for retry in email_outbox
+          await supabase.from('email_outbox').insert({
+            work_order_id: work_order_id,
+            email_type: 'delivery_note',
+            recipient_emails: [clientEmail],
+            subject: clientSubject,
+            pdf_bucket: 'email-archive',
+            pdf_path: deliveryNoteStoragePath,
+            try_count: 0,
+            last_error: error?.message || String(error),
+            next_retry_at: new Date(Date.now() + 5 * 60 * 1000).toISOString(), // retry in 5 minutes
+          });
+          console.log("Email queued in outbox for retry");
+          
+          await logEmail(supabase, work_order_id, clientEmail, clientSubject, 'client', 'queued_retry', error?.message || String(error));
+          clientEmailStatus = 'queued';
+          clientEmailMessage = 'Email dodat u red za slanje';
         }
       }
     }

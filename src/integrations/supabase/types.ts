@@ -689,6 +689,97 @@ export type Database = {
           },
         ]
       }
+      email_outbox: {
+        Row: {
+          created_at: string
+          email_type: string
+          id: string
+          last_error: string | null
+          max_tries: number
+          next_retry_at: string
+          pdf_bucket: string
+          pdf_path: string
+          recipient_emails: string[]
+          sent_at: string | null
+          subject: string
+          try_count: number
+          work_order_id: string
+        }
+        Insert: {
+          created_at?: string
+          email_type?: string
+          id?: string
+          last_error?: string | null
+          max_tries?: number
+          next_retry_at?: string
+          pdf_bucket: string
+          pdf_path: string
+          recipient_emails: string[]
+          sent_at?: string | null
+          subject: string
+          try_count?: number
+          work_order_id: string
+        }
+        Update: {
+          created_at?: string
+          email_type?: string
+          id?: string
+          last_error?: string | null
+          max_tries?: number
+          next_retry_at?: string
+          pdf_bucket?: string
+          pdf_path?: string
+          recipient_emails?: string[]
+          sent_at?: string | null
+          subject?: string
+          try_count?: number
+          work_order_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "email_outbox_work_order_id_fkey"
+            columns: ["work_order_id"]
+            isOneToOne: false
+            referencedRelation: "v_ctp_items"
+            referencedColumns: ["work_order_id"]
+          },
+          {
+            foreignKeyName: "email_outbox_work_order_id_fkey"
+            columns: ["work_order_id"]
+            isOneToOne: false
+            referencedRelation: "work_orders"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "email_outbox_work_order_id_fkey"
+            columns: ["work_order_id"]
+            isOneToOne: false
+            referencedRelation: "work_orders_ctp"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "email_outbox_work_order_id_fkey"
+            columns: ["work_order_id"]
+            isOneToOne: false
+            referencedRelation: "work_orders_digitala"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "email_outbox_work_order_id_fkey"
+            columns: ["work_order_id"]
+            isOneToOne: false
+            referencedRelation: "work_orders_filmovanje"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "email_outbox_work_order_id_fkey"
+            columns: ["work_order_id"]
+            isOneToOne: false
+            referencedRelation: "work_orders_razno"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       file_entries: {
         Row: {
           created_at: string

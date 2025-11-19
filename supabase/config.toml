@@ -17,3 +17,9 @@ verify_jwt = false
 
 [functions.open-film-work-order]
 verify_jwt = true
+
+[functions.send-delivery-note]
+verify_jwt = true
+
+[functions.drain-email-outbox]
+verify_jwt = false
