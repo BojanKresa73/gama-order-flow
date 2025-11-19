@@ -92,6 +92,184 @@ function isSupportedFont(bytes: ArrayBuffer) {
   return sig === '\x00\x01\x00\x00' || sig === 'OTTO'; // TTF or OTF
 }
 
+// Film job computation logic (matching compute-film-job edge function)
+interface FilmJobItem {
+  id: string;
+  width_mm: number;
+  height_mm: number;
+  qty: number;
+  allow_rotate_90: boolean;
+}
+
+interface ComputeResult {
+  rotation_deg: number;
+  m_per_piece: number;
+  total_m: number;
+  copies_per_row: number;
+  rows_needed: number;
+}
+
+function computeSingleFilmJob(
+  item: FilmJobItem,
+  rollWidthMm: number,
+  wastePercent: number
+): ComputeResult {
+  const MAX_COMPONENT_WIDTH_MM = 500;
+
+  // Check dimensions
+  if (item.width_mm > MAX_COMPONENT_WIDTH_MM || item.height_mm > MAX_COMPONENT_WIDTH_MM) {
+    throw new Error(`Preširoko za rolu (max ${MAX_COMPONENT_WIDTH_MM} mm) – stavka ${item.id}`);
+  }
+
+  let best: { rotation: number; copies: number; rows: number; totalMm: number } | null = null;
+
+  // Try 0° orientation
+  const copiesPerRow0 = Math.floor(rollWidthMm / item.width_mm);
+  if (copiesPerRow0 >= 1) {
+    const rows0 = Math.ceil(item.qty / copiesPerRow0);
+    const total0Mm = rows0 * item.height_mm;
+    best = { rotation: 0, copies: copiesPerRow0, rows: rows0, totalMm: total0Mm };
+  }
+
+  // Try 90° orientation if allowed
+  if (item.allow_rotate_90) {
+    const copiesPerRow90 = Math.floor(rollWidthMm / item.height_mm);
+    if (copiesPerRow90 >= 1) {
+      const rows90 = Math.ceil(item.qty / copiesPerRow90);
+      const total90Mm = rows90 * item.width_mm;
+      
+      if (!best || total90Mm < best.totalMm) {
+        best = { rotation: 90, copies: copiesPerRow90, rows: rows90, totalMm: total90Mm };
+      }
+    }
+  }
+
+  if (!best) {
+    throw new Error(`Preširoko za rolu (max ${MAX_COMPONENT_WIDTH_MM} mm) – stavka ${item.id}`);
+  }
+
+  // Apply waste percentage
+  const totalMmWithWaste = best.totalMm * (1 + wastePercent / 100);
+  
+  // Ceiling to centimeter (0.01 m)
+  const totalLengthM = Math.ceil(totalMmWithWaste / 10) / 100;
+  const mPerPiece = totalLengthM / item.qty;
+
+  return {
+    rotation_deg: best.rotation,
+    m_per_piece: Number(mPerPiece.toFixed(4)),
+    total_m: Number(totalLengthM.toFixed(2)),
+    copies_per_row: best.copies,
+    rows_needed: best.rows
+  };
+}
+
+// Ensure all film jobs have computed values before closing
+async function ensureFilmComputations(supabase: any, workOrderId: string) {
+  console.log(`Checking film job computations for work order ${workOrderId}...`);
+  
+  // Fetch film settings
+  const { data: settings, error: settingsError } = await supabase
+    .from('film_settings')
+    .select('roll_width_mm, waste_percent')
+    .single();
+
+  if (settingsError) throw new Error('Greška pri učitavanju podešavanja filmovanja');
+
+  const rollWidthMm = settings?.roll_width_mm || 500;
+  const wastePercent = settings?.waste_percent || 3;
+
+  // Fetch all film jobs for this order
+  const { data: filmJobs, error: fetchError } = await supabase
+    .from('film_jobs')
+    .select('id, width_mm, height_mm, qty, allow_rotate_90, computed_total_m')
+    .eq('work_order_id', workOrderId);
+
+  if (fetchError) throw new Error('Greška pri učitavanju filmskih stavki');
+
+  if (!filmJobs || filmJobs.length === 0) {
+    console.log('No film jobs found for this order');
+    return;
+  }
+
+  // Find jobs that need computation
+  const jobsNeedingComputation = filmJobs.filter(
+    (job: any) => !job.computed_total_m || job.computed_total_m <= 0
+  );
+
+  if (jobsNeedingComputation.length === 0) {
+    console.log('All film jobs already computed');
+    return;
+  }
+
+  console.log(`Computing ${jobsNeedingComputation.length} film jobs...`);
+
+  // Compute each job and prepare updates
+  const updates = [];
+  for (const job of jobsNeedingComputation) {
+    try {
+      const result = computeSingleFilmJob(
+        {
+          id: job.id,
+          width_mm: job.width_mm,
+          height_mm: job.height_mm,
+          qty: job.qty,
+          allow_rotate_90: job.allow_rotate_90
+        },
+        rollWidthMm,
+        wastePercent
+      );
+
+      updates.push({
+        id: job.id,
+        computed_rotation_deg: result.rotation_deg,
+        computed_m_per_piece: result.m_per_piece,
+        computed_total_m: result.total_m
+      });
+
+      // Also update film_cuts table
+      await supabase
+        .from('film_cuts')
+        .delete()
+        .eq('film_job_id', job.id);
+
+      await supabase
+        .from('film_cuts')
+        .insert({
+          film_job_id: job.id,
+          rotation_deg: result.rotation_deg,
+          copies_per_row: result.copies_per_row,
+          rows_needed: result.rows_needed,
+          length_m: result.total_m
+        });
+
+    } catch (error: any) {
+      throw new Error(`Greška pri izračunavanju filmske stavke: ${error.message}`);
+    }
+  }
+
+  // Update all computed jobs
+  if (updates.length > 0) {
+    for (const update of updates) {
+      const { error: updateError } = await supabase
+        .from('film_jobs')
+        .update({
+          computed_rotation_deg: update.computed_rotation_deg,
+          computed_m_per_piece: update.computed_m_per_piece,
+          computed_total_m: update.computed_total_m,
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', update.id);
+
+      if (updateError) {
+        throw new Error(`Greška pri ažuriranju filmske stavke: ${updateError.message}`);
+      }
+    }
+
+    console.log(`Successfully computed ${updates.length} film jobs`);
+  }
+}
+
 // Generate Work Order PDF (Radni Nalog)
 async function generateWorkOrderPDF(
   workOrder: any,
@@ -424,6 +602,11 @@ const handler = async (req: Request): Promise<Response> => {
 
     if (fetchError || !workOrder) throw new Error('Radni nalog nije pronađen');
     if (workOrder.status === 'closed') throw new Error('Nalog je već zatvoren');
+
+    // Ensure all film jobs are computed before closing
+    if (workOrder.order_type === 'film') {
+      await ensureFilmComputations(supabase, work_order_id);
+    }
 
     const functionName = workOrder.order_type === 'film' ? 'close_film_work_order' : 'close_work_order_atomic';
     const { data: closeResult, error: closeError } = await supabase.rpc(functionName, {
