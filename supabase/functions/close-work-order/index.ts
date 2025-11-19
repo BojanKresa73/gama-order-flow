@@ -21,6 +21,102 @@ class AppError extends Error {
   }
 }
 
+// Unified helper to get order items
+type UiItem = {
+  id: string;
+  label: string;
+  qty: number;
+  unit: string;
+  total?: number;
+  details?: string;
+  note?: string;
+  status?: string;
+};
+
+async function getOrderItems(sb: any, orderId: string): Promise<UiItem[]> {
+  // Get work order type
+  const { data: order, error: orderError } = await sb
+    .from('work_orders')
+    .select('id, order_type')
+    .eq('id', orderId)
+    .single();
+
+  if (orderError || !order) {
+    console.error('[getOrderItems] Error fetching work order:', orderError);
+    return [];
+  }
+
+  // Fetch items based on order type
+  if (order.order_type === 'film') {
+    const { data, error } = await sb
+      .from('film_jobs')
+      .select('id, file_name, width_mm, height_mm, qty, computed_total_m, note')
+      .eq('work_order_id', orderId)
+      .order('created_at');
+
+    if (error) {
+      console.error('[getOrderItems] Error fetching film jobs:', error);
+      return [];
+    }
+
+    return (data || []).map((item: any) => ({
+      id: item.id,
+      label: item.file_name || 'Bez naziva',
+      qty: item.qty,
+      unit: 'm',
+      total: item.computed_total_m || 0,
+      details: `${item.width_mm}×${item.height_mm} mm`,
+      note: item.note || undefined,
+    }));
+  }
+
+  if (order.order_type === 'digital') {
+    const { data, error } = await sb
+      .from('digital_jobs')
+      .select('id, file_name, finished_w_mm, finished_h_mm, qty, pages, computed_total_sheets')
+      .eq('work_order_id', orderId)
+      .order('order_index');
+
+    if (error) {
+      console.error('[getOrderItems] Error fetching digital jobs:', error);
+      return [];
+    }
+
+    return (data || []).map((item: any) => ({
+      id: item.id,
+      label: item.file_name || 'Bez naziva',
+      qty: item.qty,
+      unit: 'tab',
+      total: item.computed_total_sheets || 0,
+      details: `${item.finished_w_mm}×${item.finished_h_mm} mm, ${item.pages} str`,
+    }));
+  }
+
+  if (order.order_type === 'ctp') {
+    const { data, error } = await sb
+      .from('file_entries')
+      .select('id, filename, quantity, status, plate_formats(format_name)')
+      .eq('work_order_id', orderId)
+      .order('created_at');
+
+    if (error) {
+      console.error('[getOrderItems] Error fetching file entries:', error);
+      return [];
+    }
+
+    return (data || []).map((item: any) => ({
+      id: item.id,
+      label: item.filename || 'Bez naziva',
+      qty: item.quantity || 0,
+      unit: 'kom',
+      details: item.plate_formats?.format_name || 'N/A',
+      status: item.status,
+    }));
+  }
+
+  return [];
+}
+
 interface CloseWorkOrderRequest {
   work_order_id: string;
   note?: string;
@@ -643,33 +739,11 @@ const handler = async (req: Request): Promise<Response> => {
       throw new AppError('CLIENT_REQUIRED', 'Nalog nema klijenta');
     }
     
-    // Validate items exist based on order type
-    if (workOrder.order_type === 'ctp') {
-      const { data: fileEntriesCheck, error: fileCheckError } = await supabase
-        .from('file_entries')
-        .select('id')
-        .eq('work_order_id', work_order_id);
-      
-      if (fileCheckError) {
-        throw new AppError('FILE_FETCH_FAILED', `Greška pri učitavanju fajlova: ${fileCheckError.message}`);
-      }
-      
-      if (!fileEntriesCheck || fileEntriesCheck.length === 0) {
-        throw new AppError('NO_ITEMS', 'CTP nalog mora da ima bar jednu stavku');
-      }
-    } else if (workOrder.order_type === 'digital') {
-      const { data: digitalCheck, error: digitalCheckError } = await supabase
-        .from('digital_jobs')
-        .select('id')
-        .eq('work_order_id', work_order_id);
-      
-      if (digitalCheckError) {
-        throw new AppError('DIGITAL_FETCH_FAILED', `Greška pri učitavanju digital stavki: ${digitalCheckError.message}`);
-      }
-      
-      if (!digitalCheck || digitalCheck.length === 0) {
-        throw new AppError('NO_ITEMS', 'Digital nalog mora da ima bar jednu stavku');
-      }
+    // Get items using unified helper
+    const items = await getOrderItems(supabase, work_order_id);
+    
+    if (items.length === 0) {
+      throw new AppError('NO_ITEMS', 'Nalog mora da ima bar jednu stavku');
     }
 
     // For film orders, validate dimensions and ensure all jobs are computed
@@ -751,39 +825,16 @@ const handler = async (req: Request): Promise<Response> => {
       });
     }
 
-    // Fetch items based on order type
-    let items: any[] = [];
-    if (workOrder.order_type === 'film') {
-      const { data: filmJobs } = await supabase
-        .from('film_jobs')
-        .select('id, file_name, width_mm, height_mm, qty, computed_total_m, computed_m_per_piece, note')
-        .eq('work_order_id', work_order_id);
-      items = (filmJobs || []).map(job => ({
-        filename: job.file_name,
-        format_name: `${job.width_mm}×${job.height_mm} mm`,
-        quantity: job.qty,
-        total_meters: job.computed_total_m,
-        note: job.note
-      }));
-    } else if (workOrder.order_type === 'digital') {
-      const { data: digitalJobs } = await supabase
-        .from('digital_jobs')
-        .select('id, file_name, finished_w_mm, finished_h_mm, qty, pages, computed_total_sheets')
-        .eq('work_order_id', work_order_id);
-      items = (digitalJobs || []).map(job => ({
-        filename: job.file_name,
-        format_name: `${job.finished_w_mm}×${job.finished_h_mm} mm`,
-        quantity: job.qty,
-        pages: job.pages,
-        total_sheets: job.computed_total_sheets
-      }));
-    } else {
-      const { data: fileEntries } = await supabase
-        .from('file_entries')
-        .select('*, plate_formats(format_name)')
-        .eq('work_order_id', work_order_id);
-      items = fileEntries || [];
-    }
+    // Items already fetched via getOrderItems() - map to PDF format
+    const pdfItems = items.map(item => ({
+      filename: item.label,
+      format_name: item.details || '',
+      quantity: item.qty,
+      total_meters: item.unit === 'm' ? item.total : undefined,
+      total_sheets: item.unit === 'tab' ? item.total : undefined,
+      pages: item.unit === 'tab' ? undefined : undefined, // Pages info not in unified format yet
+      note: item.note
+    }));
 
     // Prepare temp directory for PDFs
     const tmpDir = "/tmp";
@@ -826,7 +877,7 @@ const handler = async (req: Request): Promise<Response> => {
       deliveryNotePdfBytes = await Deno.readFile(deliveryNotePath);
     } catch {
       console.log("Generating delivery note PDF...");
-      deliveryNotePdfBytes = await generateDeliveryNotePDF(workOrder, items, deliveryNumber);
+      deliveryNotePdfBytes = await generateDeliveryNotePDF(workOrder, pdfItems, deliveryNumber);
       await Deno.writeFile(deliveryNotePath, deliveryNotePdfBytes);
     }
 
@@ -836,7 +887,7 @@ const handler = async (req: Request): Promise<Response> => {
       workOrderPdfBytes = await Deno.readFile(workOrderPath);
     } catch {
       console.log("Generating work order PDF...");
-      workOrderPdfBytes = await generateWorkOrderPDF(workOrder, workOrder.clients, items);
+      workOrderPdfBytes = await generateWorkOrderPDF(workOrder, workOrder.clients, pdfItems);
       await Deno.writeFile(workOrderPath, workOrderPdfBytes);
     }
 
@@ -1016,7 +1067,7 @@ const handler = async (req: Request): Promise<Response> => {
       client_pib: workOrder.clients?.pib,
       opened_at: workOrder.created_at,
       closed_at: new Date().toISOString(),
-      items: items || [],
+      items: pdfItems || [],
       sent_at: new Date().toISOString(),
       sent_to_email: clientEmail,
     });
