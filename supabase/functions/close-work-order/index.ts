@@ -1133,7 +1133,8 @@ const handler = async (req: Request): Promise<Response> => {
         ok: true, 
         message: successMessage,
         work_order: updatedOrder,
-        clientEmailStatus 
+        clientEmailStatus,
+        delivery_note_sent: clientEmailStatus === 'sent'
       }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 200 }
     );
