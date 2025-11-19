@@ -15,6 +15,8 @@ export interface FilmJob {
   computed_rotation_deg?: number;
   computed_m_per_piece?: number;
   computed_total_m?: number;
+  across_count?: number;
+  rows_needed?: number;
 }
 
 export const useFilmJobs = (workOrderId: string | undefined) => {
@@ -40,26 +42,38 @@ export const useFilmJobs = (workOrderId: string | undefined) => {
 
   const createFilmJob = useMutation({
     mutationFn: async (filmJob: FilmJob) => {
-      // Call compute function
+      // Get film settings
+      const { data: settings } = await supabase
+        .from('film_settings')
+        .select('*')
+        .single();
+      
+      if (!settings) throw new Error('Film settings not found');
+
+      // Call compute function with new API format
       const { data: computed, error: computeError } = await supabase.functions.invoke(
         'compute-film-job',
         {
           body: {
-            job: {
+            roll_width_mm: settings.roll_width_mm,
+            margin_mm: settings.side_margin_mm,
+            gap_mm: settings.gap_mm,
+            waste_percent: settings.waste_percent,
+            items: [{
+              file_name: filmJob.file_name,
               width_mm: filmJob.width_mm,
               height_mm: filmJob.height_mm,
-              qty: filmJob.qty,
-              allow_rotate_90: filmJob.allow_rotate_90,
-              margin_mm: filmJob.margin_mm,
-            },
+              quantity: filmJob.qty,
+            }],
           },
         }
       );
 
-      if (computeError || computed?.error) {
-        throw new Error(computed?.error || 'Failed to compute film job');
+      if (computeError || computed?.error || computed?.items?.[0]?.error) {
+        throw new Error(computed?.items?.[0]?.error || computed?.error || 'Failed to compute film job');
       }
 
+      const result = computed.items[0];
       const insertData = {
         work_order_id: filmJob.work_order_id!,
         file_name: filmJob.file_name,
@@ -69,9 +83,11 @@ export const useFilmJobs = (workOrderId: string | undefined) => {
         allow_rotate_90: filmJob.allow_rotate_90,
         margin_mm: filmJob.margin_mm,
         note: filmJob.note,
-        computed_rotation_deg: computed.computed_rotation_deg,
-        computed_m_per_piece: computed.computed_m_per_piece,
-        computed_total_m: computed.computed_total_m,
+        computed_rotation_deg: result.rotation,
+        computed_m_per_piece: result.m_per_piece,
+        computed_total_m: result.total_m,
+        across_count: result.across,
+        rows_needed: result.rows,
       };
       
       const { data, error } = await supabase
@@ -81,16 +97,6 @@ export const useFilmJobs = (workOrderId: string | undefined) => {
         .single();
 
       if (error) throw error;
-
-      // Insert cut info
-      await supabase.from("film_cuts").insert([{
-        film_job_id: data.id,
-        rotation_deg: computed.cut_info.rotation_deg,
-        copies_per_row: computed.cut_info.copies_per_row,
-        rows_needed: computed.cut_info.rows_needed,
-        length_m: computed.cut_info.length_m,
-      }]);
-
       return data;
     },
     onSuccess: () => {
@@ -112,31 +118,45 @@ export const useFilmJobs = (workOrderId: string | undefined) => {
 
   const updateFilmJob = useMutation({
     mutationFn: async ({ id, ...filmJob }: FilmJob & { id: string }) => {
-      // Call compute function
+      // Get film settings
+      const { data: settings } = await supabase
+        .from('film_settings')
+        .select('*')
+        .single();
+      
+      if (!settings) throw new Error('Film settings not found');
+
+      // Call compute function with new API format
       const { data: computed, error: computeError } = await supabase.functions.invoke(
         'compute-film-job',
         {
           body: {
-            job: {
+            roll_width_mm: settings.roll_width_mm,
+            margin_mm: settings.side_margin_mm,
+            gap_mm: settings.gap_mm,
+            waste_percent: settings.waste_percent,
+            items: [{
+              file_name: filmJob.file_name,
               width_mm: filmJob.width_mm,
               height_mm: filmJob.height_mm,
-              qty: filmJob.qty,
-              allow_rotate_90: filmJob.allow_rotate_90,
-              margin_mm: filmJob.margin_mm,
-            },
+              quantity: filmJob.qty,
+            }],
           },
         }
       );
 
-      if (computeError || computed?.error) {
-        throw new Error(computed?.error || 'Failed to compute film job');
+      if (computeError || computed?.error || computed?.items?.[0]?.error) {
+        throw new Error(computed?.items?.[0]?.error || computed?.error || 'Failed to compute film job');
       }
 
+      const result = computed.items[0];
       const updateData = {
         ...filmJob,
-        computed_rotation_deg: computed.computed_rotation_deg,
-        computed_m_per_piece: computed.computed_m_per_piece,
-        computed_total_m: computed.computed_total_m,
+        computed_rotation_deg: result.rotation,
+        computed_m_per_piece: result.m_per_piece,
+        computed_total_m: result.total_m,
+        across_count: result.across,
+        rows_needed: result.rows,
       };
 
       const { data, error } = await supabase
@@ -147,17 +167,6 @@ export const useFilmJobs = (workOrderId: string | undefined) => {
         .single();
 
       if (error) throw error;
-
-      // Delete old cut info and insert new
-      await supabase.from("film_cuts").delete().eq("film_job_id", id);
-      await supabase.from("film_cuts").insert([{
-        film_job_id: id,
-        rotation_deg: computed.cut_info.rotation_deg,
-        copies_per_row: computed.cut_info.copies_per_row,
-        rows_needed: computed.cut_info.rows_needed,
-        length_m: computed.cut_info.length_m,
-      }]);
-
       return data;
     },
     onSuccess: () => {

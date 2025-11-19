@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { Plus, Edit, Trash2, X, Check } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
-import { computeFilmJobClient } from "@/lib/filmCalculations";
+import { fitOnRoll, FitResult } from "@/lib/filmCalculations";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -38,7 +38,7 @@ export const FilmJobsTable = ({ workOrderId }: FilmJobsTableProps) => {
   const [isAdding, setIsAdding] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [errors, setErrors] = useState<Record<string, string>>({});
-  const [previewCompute, setPreviewCompute] = useState<any>(null);
+  const [previewCompute, setPreviewCompute] = useState<FitResult | null>(null);
 
   const [formData, setFormData] = useState<Partial<FilmJob>>({
     file_name: "",
@@ -60,15 +60,21 @@ export const FilmJobsTable = ({ workOrderId }: FilmJobsTableProps) => {
           .single();
         
         if (settings) {
-          const result = computeFilmJobClient({
-            width_mm: formData.width_mm || 0,
-            height_mm: formData.height_mm || 0,
-            qty: formData.qty || 1,
-            allow_rotate_90: formData.allow_rotate_90 ?? true,
-            margin_mm: formData.margin_mm || 0,
-          }, settings);
-          
-          setPreviewCompute('error' in result ? null : result);
+          try {
+            const result = fitOnRoll(
+              formData.width_mm || 0,
+              formData.height_mm || 0,
+              formData.qty || 1,
+              settings.roll_width_mm,
+              settings.side_margin_mm,
+              settings.gap_mm,
+              settings.waste_percent
+            );
+            
+            setPreviewCompute(result);
+          } catch (error) {
+            setPreviewCompute(null);
+          }
         }
       }
     };
@@ -220,13 +226,13 @@ export const FilmJobsTable = ({ workOrderId }: FilmJobsTableProps) => {
         )}
       </TableCell>
       <TableCell>
-        {previewCompute ? `${previewCompute.computed_rotation_deg}°` : '-'}
+        {previewCompute ? `${previewCompute.orientation}°` : '-'}
       </TableCell>
       <TableCell>
-        {previewCompute ? previewCompute.computed_m_per_piece.toFixed(4) : '-'}
+        {previewCompute ? previewCompute.m_per_piece.toFixed(4) : '-'}
       </TableCell>
       <TableCell>
-        {previewCompute ? previewCompute.computed_total_m.toFixed(2) : '-'}
+        {previewCompute ? previewCompute.total_m.toFixed(2) : '-'}
       </TableCell>
       <TableCell>
         <Textarea

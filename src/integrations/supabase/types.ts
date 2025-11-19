@@ -909,6 +909,7 @@ export type Database = {
       }
       film_jobs: {
         Row: {
+          across_count: number | null
           allow_rotate_90: boolean
           computed_m_per_piece: number | null
           computed_rotation_deg: number | null
@@ -920,11 +921,13 @@ export type Database = {
           margin_mm: number
           note: string | null
           qty: number
+          rows_needed: number | null
           updated_at: string | null
           width_mm: number
           work_order_id: string
         }
         Insert: {
+          across_count?: number | null
           allow_rotate_90?: boolean
           computed_m_per_piece?: number | null
           computed_rotation_deg?: number | null
@@ -936,11 +939,13 @@ export type Database = {
           margin_mm?: number
           note?: string | null
           qty: number
+          rows_needed?: number | null
           updated_at?: string | null
           width_mm: number
           work_order_id: string
         }
         Update: {
+          across_count?: number | null
           allow_rotate_90?: boolean
           computed_m_per_piece?: number | null
           computed_rotation_deg?: number | null
@@ -952,6 +957,7 @@ export type Database = {
           margin_mm?: number
           note?: string | null
           qty?: number
+          rows_needed?: number | null
           updated_at?: string | null
           width_mm?: number
           work_order_id?: string
