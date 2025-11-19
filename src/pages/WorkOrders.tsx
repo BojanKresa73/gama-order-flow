@@ -146,13 +146,28 @@ const WorkOrders = () => {
 
       const result = data as { 
         success: boolean; 
-        error?: string; 
+        error?: string;
+        code?: string;
         message?: string;
         delivery_note_sent?: boolean;
       };
       
       if (!result?.success) {
-        throw new Error(result?.error || "Greška pri zatvaranju naloga");
+        // Map error codes to Serbian messages
+        const errorMessages: Record<string, string> = {
+          'CLIENT_REQUIRED': 'Izaberi klijenta pre zatvaranja naloga.',
+          'FILM_COMPUTE_MISSING': 'Neka stavka nema izračunatu dužinu (m).',
+          'NO_ITEMS': 'Nalog mora da ima bar jednu stavku.',
+          'INVALID_DIMENSIONS': 'Neka stavka ima neispravne dimenzije.',
+          'PDF_GENERATION_FAILED': 'Greška pri generisanju PDF-a.',
+          'EMAIL_SEND_FAILED': 'Greška pri slanju email-a.',
+        };
+        
+        const errorMsg = result.code 
+          ? errorMessages[result.code] || `Greška pri zatvaranju naloga (kod: ${result.code})`
+          : result.error || "Greška pri zatvaranju naloga";
+        
+        throw new Error(errorMsg);
       }
 
       // Show appropriate toast based on delivery note status

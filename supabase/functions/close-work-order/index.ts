@@ -10,6 +10,17 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
+// Custom error class for structured error handling
+class AppError extends Error {
+  code: string;
+  
+  constructor(code: string, message: string) {
+    super(message);
+    this.code = code;
+    this.name = 'AppError';
+  }
+}
+
 interface CloseWorkOrderRequest {
   work_order_id: string;
   note?: string;
