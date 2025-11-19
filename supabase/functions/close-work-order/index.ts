@@ -616,31 +616,7 @@ async function generateDeliveryNotePDF(
   }
 }
 
-// Retry helper with exponential backoff
-async function retryWithBackoff<T>(
-  fn: () => Promise<T>,
-  maxRetries: number = 2,
-  initialDelay: number = 1000
-): Promise<T> {
-  let lastError: Error | null = null;
-  
-  for (let attempt = 0; attempt <= maxRetries; attempt++) {
-    try {
-      return await fn();
-    } catch (error: any) {
-      lastError = error;
-      
-      if (attempt < maxRetries) {
-        const delay = initialDelay * Math.pow(2, attempt);
-        console.log(`Attempt ${attempt + 1} failed, retrying in ${delay}ms...`);
-        await new Promise(resolve => setTimeout(resolve, delay));
-      }
-    }
-  }
-  
-  throw lastError;
-}
-
+// Email logging helper
 async function logEmail(
   supabase: any,
   workOrderId: string,
@@ -893,16 +869,37 @@ const handler = async (req: Request): Promise<Response> => {
       await Deno.writeFile(workOrderPath, workOrderPdfBytes);
     }
 
-    // Convert to base64 for email attachments
-    const deliveryNoteBase64 = btoa(String.fromCharCode(...deliveryNotePdfBytes));
-    const workOrderBase64 = btoa(String.fromCharCode(...workOrderPdfBytes));
-
-    // Calculate total attachment size in bytes
+    // Calculate total attachment size
     const totalSizeBytes = deliveryNotePdfBytes.length + workOrderPdfBytes.length;
     const totalSizeMB = totalSizeBytes / (1024 * 1024);
     const MAX_SIZE_MB = 8;
-
     console.log(`Total attachment size: ${totalSizeMB.toFixed(2)} MB`);
+
+    // Upload PDFs to storage (for all cases)
+    const timestamp = Date.now();
+    const workOrderStoragePath = `email-archive/${work_order_id}/${baseName}_RN_${timestamp}.pdf`;
+    const deliveryNoteStoragePath = `email-archive/${work_order_id}/${baseName}_Otpremnica_${timestamp}.pdf`;
+
+    console.log("Uploading PDFs to Storage...");
+    const { error: uploadError1 } = await supabase.storage
+      .from('email-archive')
+      .upload(workOrderStoragePath, workOrderPdfBytes, {
+        contentType: 'application/pdf',
+        upsert: false
+      });
+
+    const { error: uploadError2 } = await supabase.storage
+      .from('email-archive')
+      .upload(deliveryNoteStoragePath, deliveryNotePdfBytes, {
+        contentType: 'application/pdf',
+        upsert: false
+      });
+
+    if (uploadError1 || uploadError2) {
+      console.error("Storage upload error:", uploadError1 || uploadError2);
+      throw new Error("Failed to upload PDFs to storage");
+    }
+    console.log("PDFs uploaded successfully");
 
     // Get user who closed the order
     const { data: closedByUser } = await supabase
@@ -914,40 +911,23 @@ const handler = async (req: Request): Promise<Response> => {
     const closedByName = closedByUser?.full_name || 'N/A';
     const closedAtFormatted = formatDate(workOrder.closed_at || new Date().toISOString());
 
-    let archiveAttachments: Array<{ filename: string; content: string }> = [];
-    let archiveEmailBody = `
+    const archiveEmailBody = `
       <p>Arhiva – zatvoreni nalog ${orderNo} (${orderType})</p>
       <p>Klijent: ${clientName}</p>
       <p>Zatvorio: ${closedByName} u ${closedAtFormatted}</p>
     `;
+
+    // Import email helpers
+    const { sendWorkOrderArchiveEmail, sendDeliveryNoteEmail, retryWithBackoff: retryHelper } = 
+      await import('../_shared/email-helpers.ts');
+
+    const clientEmail = workOrder.clients?.notification_email || workOrder.clients?.email;
+    let clientEmailStatus = 'skipped';
+    let clientEmailMessage = '';
     
-    // If attachments exceed 8 MB, upload to Storage and send links
+    // Check if attachments exceed 8 MB
     if (totalSizeMB > MAX_SIZE_MB) {
-      console.log("Attachments exceed 8 MB, uploading to Storage...");
-      
-      const timestamp = Date.now();
-      const workOrderStoragePath = `email-archive/${work_order_id}/${baseName}_RN_${timestamp}.pdf`;
-      const deliveryNoteStoragePath = `email-archive/${work_order_id}/${baseName}_Otpremnica_${timestamp}.pdf`;
-
-      // Upload PDFs to Supabase Storage
-      const { error: uploadError1 } = await supabase.storage
-        .from('email-archive')
-        .upload(workOrderStoragePath, workOrderPdfBytes, {
-          contentType: 'application/pdf',
-          upsert: false
-        });
-
-      const { error: uploadError2 } = await supabase.storage
-        .from('email-archive')
-        .upload(deliveryNoteStoragePath, deliveryNotePdfBytes, {
-          contentType: 'application/pdf',
-          upsert: false
-        });
-
-      if (uploadError1 || uploadError2) {
-        console.error("Storage upload error:", uploadError1 || uploadError2);
-        throw new Error("Failed to upload PDFs to storage");
-      }
+      console.log(`Attachments exceed ${MAX_SIZE_MB} MB, sending download links...`);
 
       // Generate signed URLs (60 minutes)
       const { data: workOrderUrl } = await supabase.storage
@@ -958,11 +938,9 @@ const handler = async (req: Request): Promise<Response> => {
         .from('email-archive')
         .createSignedUrl(deliveryNoteStoragePath, 3600);
 
-      // Create email with download links
-      archiveEmailBody = `
-        <p>Arhiva – zatvoreni nalog ${orderNo} (${orderType})</p>
-        <p>Klijent: ${clientName}</p>
-        <p>Zatvorio: ${closedByName} u ${closedAtFormatted}</p>
+      // Send archive email with links
+      const archiveEmailBodyWithLinks = `
+        ${archiveEmailBody}
         <br>
         <p>Prilozi su preveliki za email (${totalSizeMB.toFixed(2)} MB). Preuzmite fajlove putem linkova ispod:</p>
         <ul>
@@ -970,83 +948,132 @@ const handler = async (req: Request): Promise<Response> => {
           <li><a href="${deliveryNoteUrl?.signedUrl}">Otpremnica - ${orderNo}</a> (važi 60 minuta)</li>
         </ul>
       `;
-    } else {
-      // Use attachments as normal
-      archiveAttachments = [
-        {
-          filename: `${baseName}_RN.pdf`,
-          content: workOrderBase64,
-        },
-        {
-          filename: `${baseName}_Otpremnica.pdf`,
-          content: deliveryNoteBase64,
-        },
-      ];
-    }
 
-    // Send email to archive with retry logic
-    console.log(`Sending archive email to ${archiveEmail}...`);
-    const archiveSubject = `[RNGU] ${orderNo} – ${clientName} – ${orderType} CLOSED`;
-    try {
-      await retryWithBackoff(async () => {
-        return await resend.emails.send({
-          from: fromEmail,
-          to: archiveEmail,
-          subject: archiveSubject,
-          html: archiveEmailBody,
-          attachments: archiveAttachments.length > 0 ? archiveAttachments : undefined,
-        });
-      });
-      await logEmail(supabase, work_order_id, archiveEmail, archiveSubject, 'archive', 'sent', null);
-      console.log("Archive email sent successfully");
-    } catch (error: any) {
-      console.error("Failed to send archive email after retries:", error);
-      await logEmail(supabase, work_order_id, archiveEmail, archiveSubject, 'archive', 'error', error?.message || String(error));
-    }
-
-    // Send email to client (only delivery note) with retry logic
-    const clientEmail = workOrder.clients?.notification_email || workOrder.clients?.email;
-    let clientEmailStatus = 'skipped';
-    let clientEmailMessage = '';
-    
-    if (!clientEmail) {
-      console.warn(`[closeWorkOrder] Client email missing for order ${work_order_id}, skipping client email`);
-      clientEmailStatus = 'skipped';
-      clientEmailMessage = 'Klijent nema email adresu, poslat samo arhivski mail';
-    } else {
-      console.log(`Sending client email to ${clientEmail}...`);
-      const clientSubject = `Završen posao – ${clientName} – ${orderNo}`;
+      console.log(`Sending archive email with links to ${archiveEmail}...`);
+      const archiveSubject = `[RNGU] ${orderNo} – ${clientName} – ${orderType} CLOSED`;
       try {
-        await retryWithBackoff(async () => {
+        await retryHelper(async () => {
           return await resend.emails.send({
             from: fromEmail,
-            to: clientEmail,
-            subject: clientSubject,
-            html: `
-              <p>Poštovani/na ${clientName},</p>
-              <br>
-              <p>Obaveštavamo vas da je posao <strong>${orderNo}</strong> (${orderType}) završen.</p>
-              <p>U prilogu je otpremnica.</p>
-              <p>Ovaj mail je automatski generisan i operateri ne odgovaraju na dodatna pitanja, za kontakt sa operaterima koristite standardan mail: <a href="mailto:ctp@gamaunited.rs">ctp@gamaunited.rs</a></p>
-              <br>
-              <p>Srdačno,<br><strong>GAMA UNITED</strong></p>
-            `,
-            attachments: [
-              {
-                filename: `${baseName}_Otpremnica.pdf`,
-                content: deliveryNoteBase64,
-              },
-            ],
+            to: archiveEmail,
+            subject: archiveSubject,
+            html: archiveEmailBodyWithLinks,
           });
         });
-        await logEmail(supabase, work_order_id, clientEmail, clientSubject, 'client', 'sent', null);
-        console.log("Client email sent successfully");
-        clientEmailStatus = 'sent';
+        await logEmail(supabase, work_order_id, archiveEmail, archiveSubject, 'archive', 'sent', null);
+        console.log("Archive email with links sent successfully");
       } catch (error: any) {
-        console.error("Failed to send client email after retries:", error);
-        await logEmail(supabase, work_order_id, clientEmail, clientSubject, 'client', 'error', error?.message || String(error));
-        clientEmailStatus = 'error';
-        clientEmailMessage = 'Greška pri slanju klijentskog mejla';
+        console.error("Failed to send archive email after retries:", error);
+        await logEmail(supabase, work_order_id, archiveEmail, archiveSubject, 'archive', 'error', error?.message || String(error));
+      }
+      
+      // Send client email with link
+      if (!clientEmail) {
+        console.warn(`[closeWorkOrder] Client email missing, skipping`);
+        clientEmailMessage = 'Klijent nema email adresu';
+      } else {
+        const clientSubject = `Završen posao – ${clientName} – ${orderNo}`;
+        const clientEmailBodyWithLink = `
+          <p>Poštovani/na ${clientName},</p>
+          <br>
+          <p>Obaveštavamo vas da je posao <strong>${orderNo}</strong> (${orderType}) završen.</p>
+          <p>Otpremnicu možete preuzeti putem linka ispod (važi 60 minuta):</p>
+          <p><a href="${deliveryNoteUrl?.signedUrl}">Preuzmi otpremnicu</a></p>
+          <p>Ovaj mail je automatski generisan i operateri ne odgovaraju na dodatna pitanja, za kontakt koristite: <a href="mailto:ctp@gamaunited.rs">ctp@gamaunited.rs</a></p>
+          <br>
+          <p>Srdačno,<br><strong>GAMA UNITED</strong></p>
+        `;
+        
+        try {
+          await retryHelper(async () => {
+            return await resend.emails.send({
+              from: fromEmail,
+              to: clientEmail,
+              subject: clientSubject,
+              html: clientEmailBodyWithLink,
+            });
+          });
+          await logEmail(supabase, work_order_id, clientEmail, clientSubject, 'client', 'sent', null);
+          console.log("Client email with link sent successfully");
+          clientEmailStatus = 'sent';
+        } catch (error: any) {
+          console.error("Failed to send client email after retries:", error);
+          await logEmail(supabase, work_order_id, clientEmail, clientSubject, 'client', 'error', error?.message || String(error));
+          clientEmailStatus = 'error';
+          clientEmailMessage = 'Greška pri slanju klijentskog mejla';
+        }
+      }
+    } else {
+      // Use email helpers to send attachments from storage (<8MB)
+      console.log("Sending emails with attachments from storage...");
+
+      // Send archive email with both PDFs
+      console.log(`Sending archive email to ${archiveEmail}...`);
+      const archiveSubject = `[RNGU] ${orderNo} – ${clientName} – ${orderType} CLOSED`;
+      try {
+        await retryHelper(async () => {
+          return await sendWorkOrderArchiveEmail({
+            subject: archiveSubject,
+            html: archiveEmailBody,
+            workOrderPdf: {
+              bucket: 'email-archive',
+              path: workOrderStoragePath,
+              filename: `${baseName}_RN.pdf`,
+            },
+            deliveryNotePdf: {
+              bucket: 'email-archive',
+              path: deliveryNoteStoragePath,
+              filename: `${baseName}_Otpremnica.pdf`,
+            },
+            sbUrl: supabaseUrl,
+            serviceKey: supabaseKey,
+          });
+        });
+        await logEmail(supabase, work_order_id, archiveEmail, archiveSubject, 'archive', 'sent', null);
+        console.log("Archive email sent successfully");
+      } catch (error: any) {
+        console.error("Failed to send archive email after retries:", error);
+        await logEmail(supabase, work_order_id, archiveEmail, archiveSubject, 'archive', 'error', error?.message || String(error));
+      }
+
+      // Send client email (only delivery note)
+      if (!clientEmail) {
+        console.warn(`[closeWorkOrder] Client email missing, skipping`);
+        clientEmailMessage = 'Klijent nema email adresu';
+      } else {
+        console.log(`Sending client email to ${clientEmail}...`);
+        const clientSubject = `Završen posao – ${clientName} – ${orderNo}`;
+        const clientEmailHtml = `
+          <p>Poštovani/na ${clientName},</p>
+          <br>
+          <p>Obaveštavamo vas da je posao <strong>${orderNo}</strong> (${orderType}) završen.</p>
+          <p>U prilogu je otpremnica.</p>
+          <p>Ovaj mail je automatski generisan i operateri ne odgovaraju na dodatna pitanja, za kontakt koristite: <a href="mailto:ctp@gamaunited.rs">ctp@gamaunited.rs</a></p>
+          <br>
+          <p>Srdačno,<br><strong>GAMA UNITED</strong></p>
+        `;
+
+        try {
+          await retryHelper(async () => {
+            return await sendDeliveryNoteEmail({
+              subject: clientSubject,
+              to: [clientEmail],
+              pdfBucket: 'email-archive',
+              pdfPath: deliveryNoteStoragePath,
+              html: clientEmailHtml,
+              sbUrl: supabaseUrl,
+              serviceKey: supabaseKey,
+            });
+          });
+          await logEmail(supabase, work_order_id, clientEmail, clientSubject, 'client', 'sent', null);
+          console.log("Client email sent successfully");
+          clientEmailStatus = 'sent';
+        } catch (error: any) {
+          console.error("Failed to send client email after retries:", error);
+          await logEmail(supabase, work_order_id, clientEmail, clientSubject, 'client', 'error', error?.message || String(error));
+          clientEmailStatus = 'error';
+          clientEmailMessage = 'Greška pri slanju klijentskog mejla';
+        }
       }
     }
 
