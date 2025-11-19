@@ -10,6 +10,7 @@ import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { WorkOrderChecklistTab } from "@/components/work-orders/WorkOrderChecklistTab";
 import { format } from "date-fns";
+import { getOrderItems } from "@/lib/orderItems";
 
 const WorkOrderDetails = () => {
   const { id } = useParams<{ id: string }>();
@@ -47,46 +48,8 @@ const WorkOrderDetails = () => {
 
       if (error) throw error;
       
-      // Fetch items based on order type
-      let items: any[] = [];
-      if (data.order_type === 'film') {
-        const { data: filmJobs } = await supabase
-          .from('film_jobs')
-          .select('*')
-          .eq('work_order_id', id)
-          .order('created_at');
-        items = (filmJobs || []).map(job => ({
-          id: job.id,
-          label: job.file_name,
-          details: `${job.width_mm}×${job.height_mm} mm, ${job.qty} kom`,
-          computed: job.computed_total_m ? `${job.computed_total_m.toFixed(2)}m` : null,
-          note: job.note
-        }));
-      } else if (data.order_type === 'digital') {
-        const { data: digitalJobs } = await supabase
-          .from('digital_jobs')
-          .select('*')
-          .eq('work_order_id', id)
-          .order('order_index');
-        items = (digitalJobs || []).map(job => ({
-          id: job.id,
-          label: job.file_name,
-          details: `${job.finished_w_mm}×${job.finished_h_mm} mm, ${job.qty} kom, ${job.pages} str`,
-          computed: job.computed_total_sheets ? `${job.computed_total_sheets} tabaka` : null
-        }));
-      } else if (data.order_type === 'ctp') {
-        const { data: fileEntries } = await supabase
-          .from('file_entries')
-          .select('*, plate_formats(format_name)')
-          .eq('work_order_id', id)
-          .order('created_at');
-        items = (fileEntries || []).map(entry => ({
-          id: entry.id,
-          label: entry.filename,
-          details: `${entry.plate_formats?.format_name || 'N/A'}, ${entry.quantity || 0} kom`,
-          status: entry.status
-        }));
-      }
+      // Use unified helper to fetch items
+      const items = await getOrderItems(id!);
       
       setWorkOrder({ ...data, items });
 
@@ -298,8 +261,10 @@ const WorkOrderDetails = () => {
                             {item.note && <p className="text-xs text-muted-foreground mt-1">Napomena: {item.note}</p>}
                           </div>
                           <div className="text-right">
-                            {item.computed && (
-                              <p className="text-sm font-medium text-primary">{item.computed}</p>
+                            {item.total !== undefined && item.total > 0 && (
+                              <p className="text-sm font-medium text-primary">
+                                {item.total.toFixed(2)} {item.unit}
+                              </p>
                             )}
                             {item.status && (
                               <Badge variant={item.status === 'open' ? 'default' : 'secondary'} className="mt-1">
