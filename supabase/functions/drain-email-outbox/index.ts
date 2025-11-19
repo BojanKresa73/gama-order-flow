@@ -16,7 +16,6 @@ serve(async (_req) => {
       .from('email_outbox')
       .select('*')
       .is('sent_at', null)
-      .lt('try_count', supabase.rpc('max_tries'))
       .lte('next_retry_at', new Date().toISOString())
       .order('created_at', { ascending: true })
       .limit(50);
@@ -36,8 +35,13 @@ serve(async (_req) => {
     let successCount = 0;
     let failCount = 0;
     
-    // Process each email
-    for (const email of pendingEmails) {
+      for (const email of pendingEmails) {
+      // Filter in memory: only process if try_count < max_tries
+      if (email.try_count >= email.max_tries) {
+        console.log(`[drain-email-outbox] Skipping email ${email.id} - max retries reached`);
+        continue;
+      }
+      
       try {
         console.log(`[drain-email-outbox] Processing email ${email.id} (attempt ${email.try_count + 1}/${email.max_tries})...`);
         
