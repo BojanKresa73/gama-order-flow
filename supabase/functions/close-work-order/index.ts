@@ -601,7 +601,14 @@ const handler = async (req: Request): Promise<Response> => {
     work_order_id = requestBody.work_order_id;
     const note = requestBody.note;
     
-    if (!work_order_id) throw new Error('work_order_id je obavezan');
+    if (!work_order_id) throw new AppError('MISSING_PARAM', 'work_order_id je obavezan');
+    
+    // Check for dry run mode
+    const url = new URL(req.url);
+    const isDryRun = url.searchParams.get('dry') === '1';
+    if (isDryRun) {
+      console.log('DRY RUN MODE: Will skip PDF generation and email sending');
+    }
 
     console.log('Closing work order:', work_order_id);
 
@@ -611,12 +618,86 @@ const handler = async (req: Request): Promise<Response> => {
       .eq('id', work_order_id)
       .single();
 
-    if (fetchError || !workOrder) throw new Error('Radni nalog nije pronađen');
-    if (workOrder.status === 'closed') throw new Error('Nalog je već zatvoren');
+    if (fetchError || !workOrder) throw new AppError('ORDER_NOT_FOUND', 'Radni nalog nije pronađen');
+    if (workOrder.status === 'closed') throw new AppError('ALREADY_CLOSED', 'Nalog je već zatvoren');
+    
+    // Validate client exists
+    if (!workOrder.client_id) {
+      throw new AppError('CLIENT_REQUIRED', 'Nalog nema klijenta');
+    }
+    
+    // Validate file entries exist
+    const { data: fileEntriesCheck, error: fileCheckError } = await supabase
+      .from('file_entries')
+      .select('id')
+      .eq('work_order_id', work_order_id);
+    
+    if (fileCheckError) {
+      throw new AppError('FILE_FETCH_FAILED', `Greška pri učitavanju fajlova: ${fileCheckError.message}`);
+    }
+    
+    if (!fileEntriesCheck || fileEntriesCheck.length === 0) {
+      throw new AppError('NO_ITEMS', 'Nalog mora da ima bar jednu stavku');
+    }
 
-    // Ensure all film jobs are computed before closing
+    // For film orders, validate dimensions and ensure all jobs are computed
     if (workOrder.order_type === 'film') {
+      const { data: filmJobs, error: filmErr } = await supabase
+        .from('film_jobs')
+        .select('id, width_mm, height_mm, qty, computed_total_m, file_name')
+        .eq('work_order_id', work_order_id);
+      
+      if (filmErr) {
+        throw new AppError('FILM_FETCH_FAILED', `Greška pri učitavanju film stavki: ${filmErr.message}`);
+      }
+      
+      if (!filmJobs || filmJobs.length === 0) {
+        throw new AppError('NO_ITEMS', 'Film nalog mora da ima bar jednu stavku');
+      }
+      
+      // Validate dimensions and quantity
+      for (const job of filmJobs) {
+        if (job.width_mm < 10) {
+          throw new AppError('INVALID_DIMENSIONS', `Stavka "${job.file_name}" ima širinu manju od 10mm`);
+        }
+        if (job.height_mm < 10) {
+          throw new AppError('INVALID_DIMENSIONS', `Stavka "${job.file_name}" ima visinu manju od 10mm`);
+        }
+        if (job.qty < 1) {
+          throw new AppError('INVALID_DIMENSIONS', `Stavka "${job.file_name}" ima količinu manju od 1`);
+        }
+      }
+      
+      // Ensure computations
       await ensureFilmComputations(supabase, work_order_id);
+      
+      // Verify all jobs have computed_total_m after computation
+      const { data: verifyJobs, error: verifyErr } = await supabase
+        .from('film_jobs')
+        .select('id, computed_total_m, file_name')
+        .eq('work_order_id', work_order_id);
+      
+      if (verifyErr) {
+        throw new AppError('FILM_VERIFY_FAILED', `Greška pri proveri izračunavanja: ${verifyErr.message}`);
+      }
+      
+      const missingComputed = verifyJobs?.filter(j => !j.computed_total_m || j.computed_total_m <= 0) || [];
+      if (missingComputed.length > 0) {
+        throw new AppError('FILM_COMPUTE_MISSING', `Nedostaju izračunati metri za: ${missingComputed.map(j => j.file_name).join(', ')}`);
+      }
+    }
+    
+    // If dry run, stop here after validation
+    if (isDryRun) {
+      console.log('DRY RUN: Validation passed, skipping actual closure');
+      return new Response(
+        JSON.stringify({ 
+          ok: true,
+          dry_run: true,
+          message: 'Dry run successful - validation passed',
+        }),
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 200 }
+      );
     }
 
     const functionName = workOrder.order_type === 'film' ? 'close_film_work_order' : 'close_work_order_atomic';
@@ -903,8 +984,24 @@ const handler = async (req: Request): Promise<Response> => {
 
   } catch (error: any) {
     console.error('[closeWorkOrder]', { orderId: work_order_id, error: error?.message || error });
+    
+    // Check if it's our custom AppError with code
+    if (error.name === 'AppError' && 'code' in error) {
+      const appError = error as AppError;
+      return new Response(
+        JSON.stringify({ 
+          ok: false, 
+          success: false,
+          error: appError.message,
+          code: appError.code
+        }),
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 400 }
+      );
+    }
+    
+    // Generic error
     return new Response(
-      JSON.stringify({ ok: false, error: error.message || 'Došlo je do greške' }),
+      JSON.stringify({ ok: false, success: false, error: error.message || 'Došlo je do greške' }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 200 }
     );
   }
