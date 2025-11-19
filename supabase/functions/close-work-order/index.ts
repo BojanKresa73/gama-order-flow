@@ -671,7 +671,9 @@ const handler = async (req: Request): Promise<Response> => {
     // Validate environment variables FIRST
     const resendApiKey = Deno.env.get('RESEND_API_KEY');
     const archiveEmail = Deno.env.get('ARCHIVE_EMAIL');
-    let fromEmail = Deno.env.get('FROM_EMAIL');
+    
+    // Priority: RESEND_FROM > FROM_EMAIL > fallback
+    let fromEmail = Deno.env.get('RESEND_FROM') || Deno.env.get('FROM_EMAIL');
     
     if (!resendApiKey) {
       console.error('[closeWorkOrder] Missing RESEND_API_KEY');
@@ -689,12 +691,12 @@ const handler = async (req: Request): Promise<Response> => {
       );
     }
 
-    // Use fallback if FROM_EMAIL is not configured (domain not verified in Resend)
+    // Use fallback if neither RESEND_FROM nor FROM_EMAIL is configured
     if (!fromEmail) {
       fromEmail = 'noreply@resend.dev';
-      console.warn('[closeWorkOrder] FROM_EMAIL not set, using fallback: noreply@resend.dev (verify your domain in Resend to use custom sender)');
+      console.warn('[closeWorkOrder] RESEND_FROM/FROM_EMAIL not set, using fallback: noreply@resend.dev (verify your domain in Resend to use custom sender)');
     } else {
-      console.log('[closeWorkOrder] Using FROM_EMAIL:', fromEmail);
+      console.log('[closeWorkOrder] Using sender email:', fromEmail);
     }
 
     const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
