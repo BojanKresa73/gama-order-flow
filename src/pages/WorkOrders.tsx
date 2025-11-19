@@ -123,8 +123,78 @@ const WorkOrders = () => {
     setFilesDialogOpen(true);
   };
 
-  const handleCloseOrder = (order: any, e: React.MouseEvent) => {
+  const validateOrderBeforeClose = async (order: any): Promise<{ valid: boolean; error?: string }> => {
+    // Check if client exists
+    if (!order.client_id) {
+      return { valid: false, error: "Izaberi klijenta pre zatvaranja naloga." };
+    }
+
+    // For film orders, validate film jobs
+    if (order.order_type === 'film') {
+      const { data: filmJobs, error: filmError } = await supabase
+        .from('film_jobs')
+        .select('id, width_mm, height_mm, qty, computed_total_m, file_name')
+        .eq('work_order_id', order.id);
+
+      if (filmError) {
+        return { valid: false, error: "Greška pri učitavanju stavki filmovanja." };
+      }
+
+      if (!filmJobs || filmJobs.length === 0) {
+        return { valid: false, error: "Nalog mora da ima bar jednu stavku filmovanja." };
+      }
+
+      // Check each film job
+      for (const job of filmJobs) {
+        if (job.width_mm < 10) {
+          return { valid: false, error: `Stavka "${job.file_name}" ima širinu manju od 10mm (${job.width_mm}mm).` };
+        }
+        if (job.height_mm < 10) {
+          return { valid: false, error: `Stavka "${job.file_name}" ima visinu manju od 10mm (${job.height_mm}mm).` };
+        }
+        if (job.qty < 1) {
+          return { valid: false, error: `Stavka "${job.file_name}" ima količinu manju od 1 (${job.qty}).` };
+        }
+        if (!job.computed_total_m || job.computed_total_m <= 0) {
+          return { valid: false, error: `Stavka "${job.file_name}" nema izračunatu dužinu (m). Izračunaj pre zatvaranja.` };
+        }
+      }
+    }
+
+    // For CTP orders, check file entries
+    if (order.order_type === 'ctp') {
+      const { data: fileEntries, error: fileError } = await supabase
+        .from('file_entries')
+        .select('id')
+        .eq('work_order_id', order.id);
+
+      if (fileError) {
+        return { valid: false, error: "Greška pri učitavanju fajlova." };
+      }
+
+      if (!fileEntries || fileEntries.length === 0) {
+        return { valid: false, error: "Nalog mora da ima bar jedan fajl." };
+      }
+    }
+
+    return { valid: true };
+  };
+
+  const handleCloseOrder = async (order: any, e: React.MouseEvent) => {
     e.stopPropagation();
+    if (order.status === 'closed') return;
+    
+    // Validate order before opening dialog
+    const validation = await validateOrderBeforeClose(order);
+    if (!validation.valid) {
+      toast({
+        title: "Validaciona greška",
+        description: validation.error,
+        variant: "destructive",
+      });
+      return;
+    }
+    
     setOrderToClose(order);
     setClosingNote("");
     setCloseDialogOpen(true);
@@ -141,18 +211,21 @@ const WorkOrders = () => {
           note: closingNote.trim() || undefined
         }
       });
-
       if (error) throw error;
 
       const result = data as { 
-        success: boolean; 
+        ok?: boolean;
+        success?: boolean; 
         error?: string;
         code?: string;
         message?: string;
         delivery_note_sent?: boolean;
       };
       
-      if (!result?.success) {
+      // Handle both ok and success fields (backend uses ok)
+      const isSuccess = result?.ok || result?.success;
+      
+      if (!isSuccess) {
         // Map error codes to Serbian messages
         const errorMessages: Record<string, string> = {
           'CLIENT_REQUIRED': 'Izaberi klijenta pre zatvaranja naloga.',
