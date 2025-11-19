@@ -46,7 +46,49 @@ const WorkOrderDetails = () => {
         .single();
 
       if (error) throw error;
-      setWorkOrder(data);
+      
+      // Fetch items based on order type
+      let items: any[] = [];
+      if (data.order_type === 'film') {
+        const { data: filmJobs } = await supabase
+          .from('film_jobs')
+          .select('*')
+          .eq('work_order_id', id)
+          .order('created_at');
+        items = (filmJobs || []).map(job => ({
+          id: job.id,
+          label: job.file_name,
+          details: `${job.width_mm}×${job.height_mm} mm, ${job.qty} kom`,
+          computed: job.computed_total_m ? `${job.computed_total_m.toFixed(2)}m` : null,
+          note: job.note
+        }));
+      } else if (data.order_type === 'digital') {
+        const { data: digitalJobs } = await supabase
+          .from('digital_jobs')
+          .select('*')
+          .eq('work_order_id', id)
+          .order('order_index');
+        items = (digitalJobs || []).map(job => ({
+          id: job.id,
+          label: job.file_name,
+          details: `${job.finished_w_mm}×${job.finished_h_mm} mm, ${job.qty} kom, ${job.pages} str`,
+          computed: job.computed_total_sheets ? `${job.computed_total_sheets} tabaka` : null
+        }));
+      } else if (data.order_type === 'ctp') {
+        const { data: fileEntries } = await supabase
+          .from('file_entries')
+          .select('*, plate_formats(format_name)')
+          .eq('work_order_id', id)
+          .order('created_at');
+        items = (fileEntries || []).map(entry => ({
+          id: entry.id,
+          label: entry.filename,
+          details: `${entry.plate_formats?.format_name || 'N/A'}, ${entry.quantity || 0} kom`,
+          status: entry.status
+        }));
+      }
+      
+      setWorkOrder({ ...data, items });
 
       // Fetch email status
       const { data: emailData } = await supabase
@@ -241,11 +283,37 @@ const WorkOrderDetails = () => {
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
                   <FileText className="h-5 w-5" />
-                  Fajlovi
+                  Stavke
                 </CardTitle>
               </CardHeader>
               <CardContent>
-                <p className="text-muted-foreground">Lista fajlova se prikazuje ovde...</p>
+                {workOrder.items && workOrder.items.length > 0 ? (
+                  <div className="space-y-3">
+                    {workOrder.items.map((item: any) => (
+                      <div key={item.id} className="border-b pb-3 last:border-b-0">
+                        <div className="flex justify-between items-start">
+                          <div>
+                            <p className="font-medium">{item.label}</p>
+                            <p className="text-sm text-muted-foreground">{item.details}</p>
+                            {item.note && <p className="text-xs text-muted-foreground mt-1">Napomena: {item.note}</p>}
+                          </div>
+                          <div className="text-right">
+                            {item.computed && (
+                              <p className="text-sm font-medium text-primary">{item.computed}</p>
+                            )}
+                            {item.status && (
+                              <Badge variant={item.status === 'open' ? 'default' : 'secondary'} className="mt-1">
+                                {item.status === 'open' ? 'Otvoren' : 'Zatvoren'}
+                              </Badge>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <p className="text-muted-foreground">Nema stavki</p>
+                )}
               </CardContent>
             </Card>
           </TabsContent>

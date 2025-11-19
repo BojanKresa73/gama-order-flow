@@ -378,7 +378,7 @@ async function generateWorkOrderPDF(
 
   yPos -= 20;
 
-  // File entries
+  // Items (works for all order types)
   page.drawText("Stavke:", {
     x: margin,
     y: yPos,
@@ -392,15 +392,22 @@ async function generateWorkOrderPDF(
       break;
     }
 
-    page.drawText(
-      `${entry.filename} - ${entry.plate_formats?.format_name || "N/A"} x ${entry.quantity || 0}`,
-      {
-        x: margin + 10,
-        y: yPos,
-        size: 10,
-        font: font,
-      }
-    );
+    let itemText = entry.filename;
+    if (entry.plate_formats?.format_name) {
+      itemText += ` - ${entry.plate_formats.format_name} x ${entry.quantity || 0}`;
+    } else if (entry.format_name) {
+      itemText += ` - ${entry.format_name}`;
+      if (entry.quantity) itemText += ` x ${entry.quantity}`;
+      if (entry.total_meters) itemText += ` (${entry.total_meters.toFixed(2)}m)`;
+      if (entry.total_sheets) itemText += ` (${entry.total_sheets} tabaka)`;
+    }
+
+    page.drawText(itemText, {
+      x: margin + 10,
+      y: yPos,
+      size: 10,
+      font: font,
+    });
     yPos -= 18;
   }
 
@@ -480,7 +487,7 @@ async function generateDeliveryNotePDF(
     
     const colWidths = [250, 150, 100];
     let xPos = 50;
-    ["Naziv fajla", "Format ploče", "Količina"].forEach((header, i) => {
+    ["Naziv", "Detalji", "Količina"].forEach((header, i) => {
       page.drawText(header, { x: xPos, y: yPosition, size: 10, font: boldFont });
       xPos += colWidths[i];
     });
@@ -489,7 +496,17 @@ async function generateDeliveryNotePDF(
     fileEntries.forEach((entry: any) => {
       if (yPosition < 100) return;
       xPos = 50;
-      [entry.filename || "N/A", entry.plate_formats?.format_name || "N/A", String(entry.quantity || 0)].forEach((text, i) => {
+      
+      const filename = entry.filename || "N/A";
+      let details = "";
+      if (entry.plate_formats?.format_name) {
+        details = entry.plate_formats.format_name;
+      } else if (entry.format_name) {
+        details = entry.format_name;
+      }
+      const quantity = String(entry.quantity || 0);
+      
+      [filename, details, quantity].forEach((text, i) => {
         page.drawText(text.substring(0, 30), { x: xPos, y: yPosition, size: 9, font: font });
         xPos += colWidths[i];
       });
@@ -626,18 +643,33 @@ const handler = async (req: Request): Promise<Response> => {
       throw new AppError('CLIENT_REQUIRED', 'Nalog nema klijenta');
     }
     
-    // Validate file entries exist
-    const { data: fileEntriesCheck, error: fileCheckError } = await supabase
-      .from('file_entries')
-      .select('id')
-      .eq('work_order_id', work_order_id);
-    
-    if (fileCheckError) {
-      throw new AppError('FILE_FETCH_FAILED', `Greška pri učitavanju fajlova: ${fileCheckError.message}`);
-    }
-    
-    if (!fileEntriesCheck || fileEntriesCheck.length === 0) {
-      throw new AppError('NO_ITEMS', 'Nalog mora da ima bar jednu stavku');
+    // Validate items exist based on order type
+    if (workOrder.order_type === 'ctp') {
+      const { data: fileEntriesCheck, error: fileCheckError } = await supabase
+        .from('file_entries')
+        .select('id')
+        .eq('work_order_id', work_order_id);
+      
+      if (fileCheckError) {
+        throw new AppError('FILE_FETCH_FAILED', `Greška pri učitavanju fajlova: ${fileCheckError.message}`);
+      }
+      
+      if (!fileEntriesCheck || fileEntriesCheck.length === 0) {
+        throw new AppError('NO_ITEMS', 'CTP nalog mora da ima bar jednu stavku');
+      }
+    } else if (workOrder.order_type === 'digital') {
+      const { data: digitalCheck, error: digitalCheckError } = await supabase
+        .from('digital_jobs')
+        .select('id')
+        .eq('work_order_id', work_order_id);
+      
+      if (digitalCheckError) {
+        throw new AppError('DIGITAL_FETCH_FAILED', `Greška pri učitavanju digital stavki: ${digitalCheckError.message}`);
+      }
+      
+      if (!digitalCheck || digitalCheck.length === 0) {
+        throw new AppError('NO_ITEMS', 'Digital nalog mora da ima bar jednu stavku');
+      }
     }
 
     // For film orders, validate dimensions and ensure all jobs are computed
@@ -719,10 +751,39 @@ const handler = async (req: Request): Promise<Response> => {
       });
     }
 
-    const { data: fileEntries } = await supabase
-      .from('file_entries')
-      .select('*, plate_formats(format_name)')
-      .eq('work_order_id', work_order_id);
+    // Fetch items based on order type
+    let items: any[] = [];
+    if (workOrder.order_type === 'film') {
+      const { data: filmJobs } = await supabase
+        .from('film_jobs')
+        .select('id, file_name, width_mm, height_mm, qty, computed_total_m, computed_m_per_piece, note')
+        .eq('work_order_id', work_order_id);
+      items = (filmJobs || []).map(job => ({
+        filename: job.file_name,
+        format_name: `${job.width_mm}×${job.height_mm} mm`,
+        quantity: job.qty,
+        total_meters: job.computed_total_m,
+        note: job.note
+      }));
+    } else if (workOrder.order_type === 'digital') {
+      const { data: digitalJobs } = await supabase
+        .from('digital_jobs')
+        .select('id, file_name, finished_w_mm, finished_h_mm, qty, pages, computed_total_sheets')
+        .eq('work_order_id', work_order_id);
+      items = (digitalJobs || []).map(job => ({
+        filename: job.file_name,
+        format_name: `${job.finished_w_mm}×${job.finished_h_mm} mm`,
+        quantity: job.qty,
+        pages: job.pages,
+        total_sheets: job.computed_total_sheets
+      }));
+    } else {
+      const { data: fileEntries } = await supabase
+        .from('file_entries')
+        .select('*, plate_formats(format_name)')
+        .eq('work_order_id', work_order_id);
+      items = fileEntries || [];
+    }
 
     // Prepare temp directory for PDFs
     const tmpDir = "/tmp";
@@ -765,7 +826,7 @@ const handler = async (req: Request): Promise<Response> => {
       deliveryNotePdfBytes = await Deno.readFile(deliveryNotePath);
     } catch {
       console.log("Generating delivery note PDF...");
-      deliveryNotePdfBytes = await generateDeliveryNotePDF(workOrder, fileEntries || [], deliveryNumber);
+      deliveryNotePdfBytes = await generateDeliveryNotePDF(workOrder, items, deliveryNumber);
       await Deno.writeFile(deliveryNotePath, deliveryNotePdfBytes);
     }
 
@@ -775,7 +836,7 @@ const handler = async (req: Request): Promise<Response> => {
       workOrderPdfBytes = await Deno.readFile(workOrderPath);
     } catch {
       console.log("Generating work order PDF...");
-      workOrderPdfBytes = await generateWorkOrderPDF(workOrder, workOrder.clients, fileEntries || []);
+      workOrderPdfBytes = await generateWorkOrderPDF(workOrder, workOrder.clients, items);
       await Deno.writeFile(workOrderPath, workOrderPdfBytes);
     }
 
@@ -955,7 +1016,7 @@ const handler = async (req: Request): Promise<Response> => {
       client_pib: workOrder.clients?.pib,
       opened_at: workOrder.created_at,
       closed_at: new Date().toISOString(),
-      items: fileEntries || [],
+      items: items || [],
       sent_at: new Date().toISOString(),
       sent_to_email: clientEmail,
     });
