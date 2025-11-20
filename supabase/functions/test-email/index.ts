@@ -1,5 +1,6 @@
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts';
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.39.3';
+import nodemailer from 'https://esm.sh/nodemailer@6.9.7';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -14,20 +15,24 @@ serve(async (req) => {
   try {
     console.log('[test-email] Starting test email function');
 
-    // Get Resend API key
-    const resendApiKey = Deno.env.get('RESEND_API_KEY');
-    const fromEmail = Deno.env.get('FROM_EMAIL') || 'gamaunitedobavestenje@gmail.com';
-    const archiveEmail = Deno.env.get('ARCHIVE_EMAIL') || 'novi.nalozi@gamaunited.rs';
+    // Get SMTP config from environment
+    const SMTP_HOST = Deno.env.get('SMTP_HOST');
+    const SMTP_PORT = parseInt(Deno.env.get('SMTP_PORT') || '587');
+    const SMTP_USER = Deno.env.get('SMTP_USER');
+    const SMTP_PASS = Deno.env.get('SMTP_PASS');
+    const FROM_EMAIL = Deno.env.get('FROM_EMAIL') || 'gamaunitedobavestenje@gmail.com';
+    const ARCHIVE_EMAIL = Deno.env.get('ARCHIVE_EMAIL') || 'novi.nalozi@gamaunited.rs';
     
-    if (!resendApiKey) {
-      console.error('[test-email] Missing RESEND_API_KEY');
+    if (!SMTP_HOST || !SMTP_USER || !SMTP_PASS) {
+      console.error('[test-email] Missing SMTP configuration');
       return new Response(
-        JSON.stringify({ success: false, error: 'Nedostaje Resend API ključ' }),
+        JSON.stringify({ success: false, error: 'Nedostaje SMTP konfiguracija' }),
         { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 200 }
       );
     }
 
-    console.log('[test-email] Using FROM_EMAIL:', fromEmail);
+    console.log('[test-email] Using SMTP:', SMTP_HOST, 'Port:', SMTP_PORT, 'User:', SMTP_USER);
+    console.log('[test-email] Using FROM_EMAIL:', FROM_EMAIL);
 
     const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
     const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
@@ -86,22 +91,35 @@ serve(async (req) => {
       });
     }
 
-    console.log(`[test-email] Sending test email to ${toEmail}`);
+    console.log(`[test-email] Sending test email to ${toEmail} via Gmail SMTP`);
 
-    // Send email using Resend API
+    // Create nodemailer transporter for Gmail SMTP
+    const transporter = nodemailer.createTransport({
+      host: SMTP_HOST,
+      port: SMTP_PORT,
+      secure: false, // false for port 587 with STARTTLS
+      requireTLS: true, // force TLS
+      auth: {
+        user: SMTP_USER,
+        pass: SMTP_PASS,
+      },
+    });
+
     const emailHtml = `
       <html>
         <body style="font-family: Arial, sans-serif; line-height: 1.6; color: #333;">
           <div style="max-width: 600px; margin: 0 auto; padding: 20px;">
-            <h1 style="color: #2563eb;">Test Email - Email Konfiguracija</h1>
+            <h1 style="color: #2563eb;">Test Email - Gmail SMTP Konfiguracija</h1>
             <p>Poštovani,</p>
-            <p>Ovo je testna poruka da proverite da li email konfiguracija ispravno funkcioniše.</p>
+            <p>Ovo je testna poruka da proverite da li Gmail SMTP konfiguracija ispravno funkcioniše.</p>
             <div style="background-color: #f3f4f6; padding: 15px; border-radius: 5px; margin: 20px 0;">
               <h3 style="margin-top: 0;">Detalji konfiguracije:</h3>
               <ul>
-                <li><strong>From Email:</strong> ${fromEmail}</li>
-                <li><strong>Reply-To Email:</strong> ${archiveEmail}</li>
-                <li><strong>Email Service:</strong> Resend API</li>
+                <li><strong>SMTP Host:</strong> ${SMTP_HOST}</li>
+                <li><strong>SMTP Port:</strong> ${SMTP_PORT} (STARTTLS)</li>
+                <li><strong>From Email:</strong> ${FROM_EMAIL}</li>
+                <li><strong>Reply-To Email:</strong> ${ARCHIVE_EMAIL}</li>
+                <li><strong>Email Service:</strong> Gmail SMTP</li>
               </ul>
             </div>
             <p>Ako primate ovu poruku, email sistem je uspešno konfigurisan i radi kako treba.</p>
@@ -114,29 +132,43 @@ serve(async (req) => {
       </html>
     `;
 
-    const resendResponse = await fetch('https://api.resend.com/emails', {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${resendApiKey}`,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        from: fromEmail,
-        to: [toEmail],
-        reply_to: archiveEmail,
-        subject: 'Test Email - Email Konfiguracija',
+    try {
+      const info = await transporter.sendMail({
+        from: FROM_EMAIL,
+        to: toEmail,
+        bcc: ARCHIVE_EMAIL, // Archive copy
+        replyTo: ARCHIVE_EMAIL,
+        subject: 'Test Email - Gmail SMTP Konfiguracija',
         html: emailHtml,
-      }),
-    });
+        text: `Test Email - Gmail SMTP Konfiguracija\n\nAko primate ovu poruku, email sistem je uspešno konfigurisan.`,
+      });
 
-    const resendData = await resendResponse.json();
+      console.log('[test-email] Email sent successfully via Gmail SMTP to', toEmail);
+      console.log('[test-email] Message ID:', info.messageId);
 
-    if (!resendResponse.ok) {
-      console.error('[test-email] Resend API error:', resendData);
+      return new Response(
+        JSON.stringify({ 
+          success: true, 
+          message: `Test email uspešno poslat na ${toEmail} preko Gmail SMTP`,
+          messageId: info.messageId,
+          smtp: {
+            host: SMTP_HOST,
+            port: SMTP_PORT,
+            user: SMTP_USER
+          }
+        }),
+        {
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+          status: 200,
+        }
+      );
+
+    } catch (smtpError: any) {
+      console.error('[test-email] Gmail SMTP error:', smtpError);
       return new Response(
         JSON.stringify({ 
           success: false, 
-          error: `Greška pri slanju preko Resend: ${resendData.message || 'Nepoznata greška'}` 
+          error: `Greška pri slanju preko Gmail SMTP: ${smtpError.message}` 
         }),
         {
           headers: { ...corsHeaders, 'Content-Type': 'application/json' },
@@ -144,20 +176,6 @@ serve(async (req) => {
         }
       );
     }
-
-    console.log('[test-email] Email sent successfully via Resend to', toEmail, 'ID:', resendData.id);
-
-    return new Response(
-      JSON.stringify({ 
-        success: true, 
-        message: `Test email uspešno poslat na ${toEmail} preko Resend servisa`,
-        emailId: resendData.id
-      }),
-      {
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-        status: 200,
-      }
-    );
 
   } catch (error: any) {
     console.error('[test-email] Error:', error);
