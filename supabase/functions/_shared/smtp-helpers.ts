@@ -6,7 +6,8 @@ const ARCHIVE_EMAIL = Deno.env.get('ARCHIVE_EMAIL')!;
 const SMTP_HOST = Deno.env.get('SMTP_HOST')!;
 const SMTP_PORT = parseInt(Deno.env.get('SMTP_PORT') || '587');
 const SMTP_USER = Deno.env.get('SMTP_USER')!;
-const SMTP_PASS = Deno.env.get('SMTP_PASS')!;
+// Remove all spaces from App Password (Gmail App Passwords have no spaces)
+const SMTP_PASS = (Deno.env.get('SMTP_PASS') || '').replace(/\s+/g, '');
 
 interface EmailAttachment {
   filename: string;
