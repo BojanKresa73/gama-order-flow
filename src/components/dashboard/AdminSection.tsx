@@ -89,7 +89,7 @@ export default function AdminSection() {
           disabled={testingEmail}
         >
           <Mail className="h-6 w-6" />
-          <span className="font-semibold">Test Email (SMTP)</span>
+          <span className="font-semibold">Test Email</span>
         </Button>
       </CardContent>
     </Card>
