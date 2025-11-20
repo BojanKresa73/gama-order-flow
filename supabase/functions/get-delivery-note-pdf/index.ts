@@ -21,123 +21,237 @@ async function generateDeliveryNotePDF(
   fileEntries: any[],
   deliveryNumber: string
 ): Promise<Uint8Array> {
-  // Helper to validate font format
+  // Config
+  const CONFIG = {
+    pageSize: [595, 420] as [number, number], // A5 landscape
+    margin: 24,
+    logo: { width: 180, gap: 16 },
+    table: {
+      cols: { rbr: 40, filename: 250, details: 160, quantity: 60 },
+      rowHeight: 22,
+      headerBg: rgb(0.95, 0.95, 0.95),
+    },
+    signature: { lineWidth: 180, yOffset: 60 },
+  };
+
   function isSupportedFont(bytes: ArrayBuffer) {
-    const sig = String.fromCharCode(...new Uint8Array(bytes).slice(0,4));
-    return sig === '\x00\x01\x00\x00' || sig === 'OTTO'; // TTF or OTF
+    const sig = String.fromCharCode(...new Uint8Array(bytes).slice(0, 4));
+    return sig === '\x00\x01\x00\x00' || sig === 'OTTO';
   }
 
   try {
     const pdfDoc = await PDFDocument.create();
-    
-    // Register fontkit for custom font support
     pdfDoc.registerFontkit(fontkit);
-    
-    // Fetch fonts from Supabase Storage using secrets
+
+    // Load fonts
     const regularFontUrl = Deno.env.get('FONT_REGULAR_URL');
     const boldFontUrl = Deno.env.get('FONT_BOLD_URL');
-    
     if (!regularFontUrl || !boldFontUrl) {
-      throw new Error('Font URLs not configured. Please set FONT_REGULAR_URL and FONT_BOLD_URL secrets.');
+      throw new Error('Font URLs not configured');
     }
-    
-    const regularFontResponse = await fetch(regularFontUrl);
-    const boldFontResponse = await fetch(boldFontUrl);
-    
-    const regularFontBytes = await regularFontResponse.arrayBuffer();
-    const boldFontBytes = await boldFontResponse.arrayBuffer();
-    
-    if (!isSupportedFont(regularFontBytes)) {
-      throw new Error('Regular font is not TTF/OTF – got wrong format (likely WOFF/HTML).');
+    const [regularResp, boldResp] = await Promise.all([
+      fetch(regularFontUrl),
+      fetch(boldFontUrl),
+    ]);
+    const regularBytes = await regularResp.arrayBuffer();
+    const boldBytes = await boldResp.arrayBuffer();
+    if (!isSupportedFont(regularBytes) || !isSupportedFont(boldBytes)) {
+      throw new Error('Invalid font format');
     }
-    if (!isSupportedFont(boldFontBytes)) {
-      throw new Error('Bold font is not TTF/OTF – got wrong format (likely WOFF/HTML).');
-    }
-    
-    const notoFont = await pdfDoc.embedFont(regularFontBytes, { subset: true });
-    const notoBold = await pdfDoc.embedFont(boldFontBytes, { subset: true });
-  const page = pdfDoc.addPage([595, 420]); // A5 landscape
-  const { height } = page.getSize();
-  let yPosition = height - 24; // 24pt margin
+    const notoFont = await pdfDoc.embedFont(regularBytes, { subset: true });
+    const notoBold = await pdfDoc.embedFont(boldBytes, { subset: true });
 
-    // Try to render logo (fail-safe)
+    // Load logo
+    let logoImg: any = null;
     let logoHeight = 0;
     const logoUrl = Deno.env.get('LOGO_URL');
     if (logoUrl) {
       try {
-        const logoResponse = await fetch(logoUrl, { cache: 'no-store' });
-        if (logoResponse.ok) {
-          const logoBytes = await logoResponse.arrayBuffer();
-          const logoImage = await pdfDoc.embedPng(logoBytes);
-          const targetWidth = 180;
-          const aspectRatio = logoImage.height / logoImage.width;
-          logoHeight = targetWidth * aspectRatio;
-          
-          page.drawImage(logoImage, {
-            x: 24,
-            y: height - 24 - logoHeight,
-            width: targetWidth,
-            height: logoHeight,
-          });
+        const logoResp = await fetch(logoUrl, { cache: 'no-store' });
+        if (logoResp.ok) {
+          const logoBytes = await logoResp.arrayBuffer();
+          logoImg = await pdfDoc.embedPng(logoBytes);
+          const aspectRatio = logoImg.height / logoImg.width;
+          logoHeight = CONFIG.logo.width * aspectRatio;
         }
       } catch (err) {
-        console.warn('Failed to load logo, continuing without it:', err);
+        console.warn('Failed to load logo:', err);
       }
     }
 
-    // Company info block - positioned to the right of logo (24 + 180 + 16 = 220)
-    const companyTextX = 220;
-    page.drawText("GAMA UNITED d.o.o.", { x: companyTextX, y: yPosition, size: 16, font: notoBold, color: rgb(0, 0, 0) });
-    yPosition -= 25;
-    page.drawText("Šumadijska 29, 11000 Beograd", { x: companyTextX, y: yPosition, size: 10, font: notoFont });
-    yPosition -= 15;
-    page.drawText("PIB: 112345678 | MB: 21234567", { x: companyTextX, y: yPosition, size: 10, font: notoFont });
-    yPosition -= 40;
-    page.drawText("OTPREMNICA", { x: 50, y: yPosition, size: 18, font: notoBold });
-    yPosition -= 30;
-    page.drawText(`Broj: ${deliveryNumber}`, { x: 50, y: yPosition, size: 12, font: notoFont });
-    yPosition -= 20;
-    page.drawText(`Datum otvaranja: ${formatDate(workOrder.created_at)}`, { x: 50, y: yPosition, size: 10, font: notoFont });
-    yPosition -= 15;
-    
-    const closedDate = workOrder.closed_at || new Date().toISOString();
-    page.drawText(`Datum zatvaranja: ${formatDate(closedDate)}`, { x: 50, y: yPosition, size: 10, font: notoFont });
-    yPosition -= 30;
-    page.drawText("Klijent:", { x: 50, y: yPosition, size: 12, font: notoBold });
-    yPosition -= 20;
-    page.drawText(workOrder.clients?.name || "N/A", { x: 50, y: yPosition, size: 11, font: notoFont });
+    const companyX = CONFIG.margin + CONFIG.logo.width + CONFIG.logo.gap;
+    const tableStartY = CONFIG.pageSize[1] - CONFIG.margin - 160;
+    const signatureY = CONFIG.signature.yOffset;
 
-    if (workOrder.clients?.pib) {
-      yPosition -= 15;
-      page.drawText(`PIB: ${workOrder.clients.pib}`, { x: 50, y: yPosition, size: 10, font: notoFont });
-    }
+    // Helper: draw header on page
+    const drawHeader = (page: any) => {
+      const { height } = page.getSize();
+      let y = height - CONFIG.margin;
 
-    yPosition -= 40;
-    page.drawText("Stavke:", { x: 50, y: yPosition, size: 12, font: notoBold });
-    yPosition -= 25;
-    
-    const colWidths = [250, 150, 100];
-    let xPos = 50;
-    ["Naziv fajla", "Format ploče", "Količina"].forEach((header, i) => {
-      page.drawText(header, { x: xPos, y: yPosition, size: 10, font: notoBold });
-      xPos += colWidths[i];
+      // Logo
+      if (logoImg) {
+        page.drawImage(logoImg, {
+          x: CONFIG.margin,
+          y: height - CONFIG.margin - logoHeight,
+          width: CONFIG.logo.width,
+          height: logoHeight,
+        });
+      }
+
+      // Company info
+      page.drawText('GAMA UNITED d.o.o.', { x: companyX, y, size: 11, font: notoBold });
+      y -= 14;
+      page.drawText('Šumadijska 29, 11000 Beograd', { x: companyX, y, size: 10, font: notoFont });
+      y -= 14;
+      page.drawText('PIB: 112345678 | MB: 21234567', { x: companyX, y, size: 10, font: notoFont });
+    };
+
+    // Helper: draw meta section
+    const drawMeta = (page: any, startY: number): number => {
+      let y = startY;
+      page.drawText('OTPREMNICA', { x: CONFIG.margin, y, size: 18, font: notoBold });
+      y -= 24;
+      page.drawText(`Broj: ${deliveryNumber}`, { x: CONFIG.margin, y, size: 11, font: notoFont });
+      y -= 16;
+      page.drawText(
+        `Datum otvaranja: ${formatDate(workOrder.created_at)}`,
+        { x: CONFIG.margin, y, size: 10, font: notoFont }
+      );
+      y -= 14;
+      page.drawText(
+        `Datum zatvaranja: ${formatDate(workOrder.closed_at || new Date().toISOString())}`,
+        { x: CONFIG.margin, y, size: 10, font: notoFont }
+      );
+      y -= 16;
+      page.drawText('Klijent:', { x: CONFIG.margin, y, size: 11, font: notoBold });
+      y -= 14;
+      page.drawText(workOrder.clients?.name || 'N/A', { x: CONFIG.margin, y, size: 10, font: notoFont });
+      if (workOrder.clients?.pib) {
+        y -= 14;
+        page.drawText(`PIB: ${workOrder.clients.pib}`, { x: CONFIG.margin, y, size: 10, font: notoFont });
+      }
+      y -= 20;
+      return y;
+    };
+
+    // Helper: draw table header
+    const drawTableHeader = (page: any, y: number): number => {
+      const { rbr, filename, details, quantity } = CONFIG.table.cols;
+      // Gray background
+      page.drawRectangle({
+        x: CONFIG.margin,
+        y: y - CONFIG.table.rowHeight,
+        width: rbr + filename + details + quantity,
+        height: CONFIG.table.rowHeight,
+        color: CONFIG.table.headerBg,
+      });
+      let x = CONFIG.margin + 4;
+      const headers = ['R.br', 'Naziv fajla', 'Detalji', 'Količina'];
+      const widths = [rbr, filename, details, quantity];
+      headers.forEach((h, i) => {
+        page.drawText(h, { x, y: y - 14, size: 10, font: notoBold });
+        x += widths[i];
+      });
+      return y - CONFIG.table.rowHeight - 4;
+    };
+
+    // Helper: draw table row
+    const drawTableRow = (page: any, y: number, rbr: number, entry: any): number => {
+      const { rbr: rbrW, filename: fnW, details: detW, quantity: qtyW } = CONFIG.table.cols;
+      let x = CONFIG.margin + 4;
+      const texts = [
+        String(rbr),
+        (entry.filename || 'N/A').substring(0, 35),
+        (entry.plate_formats?.format_name || 'N/A').substring(0, 25),
+        String(entry.quantity || 0),
+      ];
+      const widths = [rbrW, fnW, detW, qtyW];
+      texts.forEach((t, i) => {
+        page.drawText(t, { x, y: y - 14, size: 9, font: notoFont });
+        x += widths[i];
+      });
+      return y - CONFIG.table.rowHeight;
+    };
+
+    // Helper: draw signature block
+    const drawSignature = (page: any) => {
+      const y = signatureY;
+      // Signature line
+      page.drawLine({
+        start: { x: CONFIG.margin, y },
+        end: { x: CONFIG.margin + CONFIG.signature.lineWidth, y },
+        thickness: 0.5,
+      });
+      page.drawText('Robu preuzeo', { x: CONFIG.margin, y: y - 12, size: 9, font: notoFont });
+
+      // ID line
+      const idX = CONFIG.margin + CONFIG.signature.lineWidth + 20;
+      page.drawLine({
+        start: { x: idX, y },
+        end: { x: idX + 100, y },
+        thickness: 0.5,
+      });
+      page.drawText('Broj lične karte', { x: idX, y: y - 12, size: 9, font: notoFont });
+
+      // Date line
+      const dateX = idX + 120;
+      page.drawLine({
+        start: { x: dateX, y },
+        end: { x: dateX + 80, y },
+        thickness: 0.5,
+      });
+      page.drawText('Datum', { x: dateX, y: y - 12, size: 9, font: notoFont });
+    };
+
+    // Helper: draw pagination
+    const drawPagination = (page: any, pageNum: number, totalPages: number) => {
+      const text = `Strana ${pageNum}/${totalPages}`;
+      const width = notoFont.widthOfTextAtSize(text, 9);
+      page.drawText(text, {
+        x: CONFIG.pageSize[0] - CONFIG.margin - width,
+        y: 16,
+        size: 9,
+        font: notoFont,
+      });
+    };
+
+    // Build pages
+    let currentPage = pdfDoc.addPage(CONFIG.pageSize);
+    drawHeader(currentPage);
+    let y = drawMeta(currentPage, tableStartY);
+    y -= 8;
+    currentPage.drawText('Stavke:', { x: CONFIG.margin, y, size: 11, font: notoBold });
+    y -= 20;
+    y = drawTableHeader(currentPage, y);
+
+    let pageNum = 1;
+    const pages = [currentPage];
+
+    fileEntries.forEach((entry, idx) => {
+      const needsNewPage = y < signatureY + 40;
+      if (needsNewPage) {
+        currentPage = pdfDoc.addPage(CONFIG.pageSize);
+        pages.push(currentPage);
+        pageNum++;
+        drawHeader(currentPage);
+        y = CONFIG.pageSize[1] - CONFIG.margin - 80;
+        y = drawTableHeader(currentPage, y);
+      }
+      y = drawTableRow(currentPage, y, idx + 1, entry);
     });
 
-    yPosition -= 20;
-    fileEntries.forEach((entry: any) => {
-      if (yPosition < 100) return;
-      xPos = 50;
-      [entry.filename || "N/A", entry.plate_formats?.format_name || "N/A", String(entry.quantity || 0)].forEach((text, i) => {
-        page.drawText(text.substring(0, 30), { x: xPos, y: yPosition, size: 9, font: notoFont });
-        xPos += colWidths[i];
-      });
-      yPosition -= 18;
+    // Draw signature and pagination on all pages
+    pages.forEach((p, i) => {
+      drawSignature(p);
+      if (pages.length > 1) {
+        drawPagination(p, i + 1, pages.length);
+      }
     });
 
     return pdfDoc.save();
   } catch (err: any) {
     console.error('PDF generation error:', err?.message, err?.stack);
-    throw new Error(`PDF font error: ${err?.message}`);
+    throw new Error(`PDF error: ${err?.message}`);
   }
 }
 
@@ -180,7 +294,8 @@ const handler = async (req: Request): Promise<Response> => {
       .select('*, plate_formats(format_name)')
       .eq('work_order_id', workOrderId);
 
-    const deliveryNumber = `DN-${new Date().getFullYear()}-${String(Date.now()).slice(-6)}`;
+    // Use work order number as delivery number
+    const deliveryNumber = workOrder.display_order_number || workOrder.order_number;
     const pdfBuffer = await generateDeliveryNotePDF(workOrder, fileEntries || [], deliveryNumber);
 
     // Generate filename matching work order number format
