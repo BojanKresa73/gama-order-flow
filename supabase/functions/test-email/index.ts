@@ -1,10 +1,6 @@
-import { Buffer } from "node:buffer";
-// @ts-ignore
-(globalThis as any).Buffer = (globalThis as any).Buffer ?? Buffer;
-
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts';
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.39.3';
-import nodemailer from 'https://esm.sh/nodemailer@6.9.7';
+import { sendMail } from '../_shared/email-provider.ts';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -18,26 +14,6 @@ serve(async (req) => {
 
   try {
     console.log('[test-email] Starting test email function');
-
-    // Get SMTP config from environment
-    const SMTP_HOST = Deno.env.get('SMTP_HOST');
-    const SMTP_PORT = parseInt(Deno.env.get('SMTP_PORT') || '587');
-    const SMTP_USER = Deno.env.get('SMTP_USER');
-    // Remove all spaces from App Password (Gmail App Passwords have no spaces)
-    const SMTP_PASS = (Deno.env.get('SMTP_PASS') || '').replace(/\s+/g, '');
-    const FROM_EMAIL = Deno.env.get('FROM_EMAIL') || 'gamaunitedobavestenje@gmail.com';
-    const ARCHIVE_EMAIL = Deno.env.get('ARCHIVE_EMAIL') || 'novi.nalozi@gamaunited.rs';
-    
-    if (!SMTP_HOST || !SMTP_USER || !SMTP_PASS) {
-      console.error('[test-email] Missing SMTP configuration');
-      return new Response(
-        JSON.stringify({ success: false, error: 'Nedostaje SMTP konfiguracija' }),
-        { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 200 }
-      );
-    }
-
-    console.log('[test-email] Using SMTP:', SMTP_HOST, 'Port:', SMTP_PORT, 'User:', SMTP_USER);
-    console.log('[test-email] Using FROM_EMAIL:', FROM_EMAIL);
 
     const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
     const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
@@ -96,72 +72,64 @@ serve(async (req) => {
       });
     }
 
-    console.log(`[test-email] Sending test email to ${toEmail} via Gmail SMTP`);
+    console.log(`[test-email] Sending test email to ${toEmail}`);
 
-    // Create nodemailer transporter for Gmail SMTP
-    const transporter = nodemailer.createTransport({
-      host: SMTP_HOST,
-      port: SMTP_PORT,
-      secure: false, // false for port 587 with STARTTLS
-      requireTLS: true, // force TLS
-      auth: {
-        user: SMTP_USER,
-        pass: SMTP_PASS,
-      },
-    });
-
+    const emailProvider = Deno.env.get('EMAIL_PROVIDER') || 'resend';
     const emailHtml = `
+      <!DOCTYPE html>
       <html>
-        <body style="font-family: Arial, sans-serif; line-height: 1.6; color: #333;">
-          <div style="max-width: 600px; margin: 0 auto; padding: 20px;">
-            <h1 style="color: #2563eb;">Test Email - Gmail SMTP Konfiguracija</h1>
-            <p>Poštovani,</p>
-            <p>Ovo je testna poruka da proverite da li Gmail SMTP konfiguracija ispravno funkcioniše.</p>
-            <div style="background-color: #f3f4f6; padding: 15px; border-radius: 5px; margin: 20px 0;">
-              <h3 style="margin-top: 0;">Detalji konfiguracije:</h3>
-              <ul>
-                <li><strong>SMTP Host:</strong> ${SMTP_HOST}</li>
-                <li><strong>SMTP Port:</strong> ${SMTP_PORT} (STARTTLS)</li>
-                <li><strong>From Email:</strong> ${FROM_EMAIL}</li>
-                <li><strong>Reply-To Email:</strong> ${ARCHIVE_EMAIL}</li>
-                <li><strong>Email Service:</strong> Gmail SMTP</li>
-              </ul>
+        <head>
+          <meta charset="utf-8">
+          <style>
+            body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; }
+            .container { max-width: 600px; margin: 0 auto; padding: 20px; }
+            .header { background-color: #4f46e5; color: white; padding: 20px; text-align: center; }
+            .content { padding: 20px; background-color: #ffffff; }
+          </style>
+        </head>
+        <body>
+          <div class="container">
+            <div class="header">
+              <h1>Test Email - Gama United</h1>
             </div>
-            <p>Ako primate ovu poruku, email sistem je uspešno konfigurisan i radi kako treba.</p>
-            <p style="margin-top: 30px; color: #6b7280; font-size: 12px;">
-              Ova poruka je automatski generisana iz sistema.<br>
-              Vreme slanja: ${new Date().toLocaleString('sr-RS')}
-            </p>
+            <div class="content">
+              <p>Poštovani,</p>
+              <p>Ovo je testna poruka da proverite da li email konfiguracija ispravno funkcioniše.</p>
+              <div style="background-color: #f3f4f6; padding: 15px; border-radius: 5px; margin: 20px 0;">
+                <h3 style="margin-top: 0;">Detalji konfiguracije:</h3>
+                <ul>
+                  <li><strong>Email Provider:</strong> ${emailProvider}</li>
+                  <li><strong>From Email:</strong> ${Deno.env.get('FROM_EMAIL')}</li>
+                  <li><strong>Reply-To Email:</strong> ${Deno.env.get('REPLY_TO')}</li>
+                </ul>
+              </div>
+              <p>Ako primate ovu poruku, email sistem je uspešno konfigurisan i radi kako treba.</p>
+              <p style="margin-top: 30px; color: #6b7280; font-size: 12px;">
+                Ova poruka je automatski generisana iz sistema.<br>
+                Vreme slanja: ${new Date().toLocaleString('sr-RS')}
+              </p>
+            </div>
           </div>
         </body>
       </html>
     `;
 
     try {
-      const info = await transporter.sendMail({
-        from: FROM_EMAIL,
+      await sendMail({
         to: toEmail,
-        bcc: ARCHIVE_EMAIL, // Archive copy
-        replyTo: ARCHIVE_EMAIL,
-        subject: 'Test Email - Gmail SMTP Konfiguracija',
+        subject: 'Test Email - Gama United',
         html: emailHtml,
-        text: `Test Email - Gmail SMTP Konfiguracija\n\nAko primate ovu poruku, email sistem je uspešno konfigurisan.`,
+        text: `Test Email - Gama United\n\nAko primate ovu poruku, email sistem je uspešno konfigurisan.`,
       });
 
-      console.log('[test-email] Email sent successfully via Gmail SMTP to', toEmail);
-      console.log('[test-email] Message ID:', info.messageId);
+      console.log('[test-email] Email sent successfully to', toEmail);
 
       return new Response(
         JSON.stringify({ 
           ok: true,
           success: true, 
-          message: `Test email uspešno poslat na ${toEmail} preko Gmail SMTP`,
-          messageId: info.messageId,
-          smtp: {
-            host: SMTP_HOST,
-            port: SMTP_PORT,
-            user: SMTP_USER
-          }
+          message: `Test email uspešno poslat na ${toEmail}`,
+          provider: emailProvider
         }),
         {
           headers: { ...corsHeaders, 'Content-Type': 'application/json' },
@@ -169,13 +137,13 @@ serve(async (req) => {
         }
       );
 
-    } catch (smtpError: any) {
-      console.error('[test-email] Gmail SMTP error:', smtpError);
+    } catch (emailError: any) {
+      console.error('[test-email] Email sending error:', emailError);
       return new Response(
         JSON.stringify({ 
           ok: false,
           success: false, 
-          error: `Greška pri slanju preko Gmail SMTP: ${smtpError.message}` 
+          error: `Greška pri slanju: ${emailError.message}` 
         }),
         {
           headers: { ...corsHeaders, 'Content-Type': 'application/json' },
@@ -190,7 +158,7 @@ serve(async (req) => {
       JSON.stringify({ 
         ok: false,
         success: false, 
-        error: `Greška pri slanju: ${error.message}` 
+        error: `Greška: ${error.message}` 
       }),
       {
         status: 200,
