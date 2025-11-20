@@ -1,6 +1,5 @@
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts';
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.39.3';
-import { SMTPClient } from 'https://deno.land/x/denomailer@1.6.0/mod.ts';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -15,26 +14,15 @@ serve(async (req) => {
   try {
     console.log('[test-email] Starting test email function');
 
-    // Validate SMTP environment variables
-    const smtpHost = Deno.env.get('SMTP_HOST');
-    const smtpPort = Deno.env.get('SMTP_PORT');
-    const smtpUser = Deno.env.get('SMTP_USER');
-    const smtpPass = Deno.env.get('SMTP_PASS');
-    const fromEmail = Deno.env.get('FROM_EMAIL');
-    const archiveEmail = Deno.env.get('ARCHIVE_EMAIL');
+    // Get Resend API key
+    const resendApiKey = Deno.env.get('RESEND_API_KEY');
+    const fromEmail = Deno.env.get('FROM_EMAIL') || 'gamaunitedobavestenje@gmail.com';
+    const archiveEmail = Deno.env.get('ARCHIVE_EMAIL') || 'novi.nalozi@gamaunited.rs';
     
-    if (!smtpHost || !smtpPort || !smtpUser || !smtpPass) {
-      console.error('[test-email] Missing SMTP configuration');
+    if (!resendApiKey) {
+      console.error('[test-email] Missing RESEND_API_KEY');
       return new Response(
-        JSON.stringify({ success: false, error: 'Nedostaje SMTP konfiguracija' }),
-        { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 200 }
-      );
-    }
-
-    if (!fromEmail) {
-      console.error('[test-email] Missing FROM_EMAIL');
-      return new Response(
-        JSON.stringify({ success: false, error: 'Nedostaje FROM_EMAIL konfiguracija' }),
+        JSON.stringify({ success: false, error: 'Nedostaje Resend API ključ' }),
         { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 200 }
       );
     }
@@ -68,7 +56,7 @@ serve(async (req) => {
 
     console.log('[test-email] User authenticated:', user.id);
 
-    // Check if user has admin or superuser role by querying user_roles table directly
+    // Check if user has admin or superuser role
     const { data: roleData, error: roleError } = await supabase
       .from('user_roles')
       .select('role')
@@ -100,37 +88,23 @@ serve(async (req) => {
 
     console.log(`[test-email] Sending test email to ${toEmail}`);
 
-    // Initialize SMTP client with STARTTLS for port 587
-    const client = new SMTPClient({
-      connection: {
-        hostname: smtpHost,
-        port: parseInt(smtpPort),
-        tls: false, // Use STARTTLS for port 587, not direct TLS
-        auth: {
-          username: smtpUser,
-          password: smtpPass,
-        },
-      },
-    });
-
-    // Send test email
-    const emailContent = `
+    // Send email using Resend API
+    const emailHtml = `
       <html>
         <body style="font-family: Arial, sans-serif; line-height: 1.6; color: #333;">
           <div style="max-width: 600px; margin: 0 auto; padding: 20px;">
-            <h1 style="color: #2563eb;">Test Email - SMTP Konfiguracija</h1>
+            <h1 style="color: #2563eb;">Test Email - Email Konfiguracija</h1>
             <p>Poštovani,</p>
-            <p>Ovo je testna poruka da proverite da li SMTP konfiguracija ispravno funkcioniše.</p>
+            <p>Ovo je testna poruka da proverite da li email konfiguracija ispravno funkcioniše.</p>
             <div style="background-color: #f3f4f6; padding: 15px; border-radius: 5px; margin: 20px 0;">
               <h3 style="margin-top: 0;">Detalji konfiguracije:</h3>
               <ul>
-                <li><strong>SMTP Host:</strong> ${smtpHost}</li>
-                <li><strong>SMTP Port:</strong> ${smtpPort}</li>
                 <li><strong>From Email:</strong> ${fromEmail}</li>
-                <li><strong>Archive Email:</strong> ${archiveEmail || 'Nije podešen'}</li>
+                <li><strong>Reply-To Email:</strong> ${archiveEmail}</li>
+                <li><strong>Email Service:</strong> Resend API</li>
               </ul>
             </div>
-            <p>Ako primate ovu poruku, SMTP je uspešno konfigurisan i radi kako treba.</p>
+            <p>Ako primate ovu poruku, email sistem je uspešno konfigurisan i radi kako treba.</p>
             <p style="margin-top: 30px; color: #6b7280; font-size: 12px;">
               Ova poruka je automatski generisana iz sistema.<br>
               Vreme slanja: ${new Date().toLocaleString('sr-RS')}
@@ -140,23 +114,44 @@ serve(async (req) => {
       </html>
     `;
 
-    await client.send({
-      from: fromEmail,
-      to: toEmail,
-      replyTo: archiveEmail || fromEmail,
-      subject: 'Test Email - SMTP Konfiguracija',
-      content: 'Ovo je testna poruka za proveru SMTP konfiguracije.',
-      html: emailContent,
+    const resendResponse = await fetch('https://api.resend.com/emails', {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${resendApiKey}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        from: fromEmail,
+        to: [toEmail],
+        reply_to: archiveEmail,
+        subject: 'Test Email - Email Konfiguracija',
+        html: emailHtml,
+      }),
     });
 
-    await client.close();
+    const resendData = await resendResponse.json();
 
-    console.log('[test-email] Email sent successfully to', toEmail);
+    if (!resendResponse.ok) {
+      console.error('[test-email] Resend API error:', resendData);
+      return new Response(
+        JSON.stringify({ 
+          success: false, 
+          error: `Greška pri slanju preko Resend: ${resendData.message || 'Nepoznata greška'}` 
+        }),
+        {
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+          status: 200,
+        }
+      );
+    }
+
+    console.log('[test-email] Email sent successfully via Resend to', toEmail, 'ID:', resendData.id);
 
     return new Response(
       JSON.stringify({ 
         success: true, 
-        message: `Test email uspešno poslat na ${toEmail}` 
+        message: `Test email uspešno poslat na ${toEmail} preko Resend servisa`,
+        emailId: resendData.id
       }),
       {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
