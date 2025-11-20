@@ -1,10 +1,10 @@
-import { SMTPClient } from "https://deno.land/x/denomailer@1.6.0/mod.ts";
+import nodemailer from "https://esm.sh/nodemailer@6.9.7";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
 const FROM_EMAIL = Deno.env.get('FROM_EMAIL')!;
 const ARCHIVE_EMAIL = Deno.env.get('ARCHIVE_EMAIL')!;
 const SMTP_HOST = Deno.env.get('SMTP_HOST')!;
-const SMTP_PORT = parseInt(Deno.env.get('SMTP_PORT') || '465');
+const SMTP_PORT = parseInt(Deno.env.get('SMTP_PORT') || '587');
 const SMTP_USER = Deno.env.get('SMTP_USER')!;
 const SMTP_PASS = Deno.env.get('SMTP_PASS')!;
 
@@ -25,7 +25,7 @@ interface SendEmailOptions {
 }
 
 /**
- * Send email using Gmail SMTP
+ * Send email using Gmail SMTP with nodemailer
  */
 export async function sendEmailWithSMTP(options: SendEmailOptions): Promise<void> {
   const {
@@ -40,53 +40,55 @@ export async function sendEmailWithSMTP(options: SendEmailOptions): Promise<void
 
   const recipients = Array.isArray(to) ? to : [to];
   
-  // Add archive email if requested and not already in recipients
-  if (includeArchive && !recipients.includes(ARCHIVE_EMAIL)) {
-    recipients.push(ARCHIVE_EMAIL);
-  }
+  // Add archive email to BCC if requested and not already in recipients
+  const bcc = includeArchive && !recipients.includes(ARCHIVE_EMAIL) ? [ARCHIVE_EMAIL] : [];
 
   console.log('[SMTP] Sending email:', {
     from: FROM_EMAIL,
     to: recipients,
+    bcc,
     subject,
     replyTo,
     attachmentCount: attachments.length,
   });
 
-  const client = new SMTPClient({
-    connection: {
-      hostname: SMTP_HOST,
-      port: SMTP_PORT,
-      tls: true,
-      auth: {
-        username: SMTP_USER,
-        password: SMTP_PASS,
-      },
+  const transporter = nodemailer.createTransport({
+    host: SMTP_HOST,
+    port: SMTP_PORT,
+    secure: false, // false for port 587
+    requireTLS: true, // force TLS
+    auth: {
+      user: SMTP_USER,
+      pass: SMTP_PASS,
     },
   });
 
   try {
-    await client.send({
+    const mailOptions: any = {
       from: FROM_EMAIL,
       to: recipients.join(', '),
+      bcc: bcc.length > 0 ? bcc.join(', ') : undefined,
       replyTo: replyTo,
       subject,
-      content: text || html,
+      text: text || '',
       html,
       attachments: attachments.map(att => ({
         filename: att.filename,
         content: att.content,
-        contentType: att.contentType || 'application/pdf',
         encoding: 'base64',
+        contentType: att.contentType || 'application/pdf',
       })),
-    });
+    };
 
-    console.log('[SMTP] Email sent successfully to:', recipients);
+    const info = await transporter.sendMail(mailOptions);
+    console.log('[SMTP] Email sent successfully:', info.messageId);
+    console.log('[SMTP] Recipients:', recipients);
+    if (bcc.length > 0) {
+      console.log('[SMTP] BCC:', bcc);
+    }
   } catch (error) {
     console.error('[SMTP] Failed to send email:', error);
     throw error;
-  } finally {
-    await client.close();
   }
 }
 
@@ -133,7 +135,7 @@ export async function sendDeliveryNoteEmail(options: {
   to: string[];
   pdfBucket: string;
   pdfPath: string;
-  html: string;
+  html?: string;
   text?: string;
   sbUrl: string;
   serviceKey: string;
@@ -145,17 +147,28 @@ export async function sendDeliveryNoteEmail(options: {
   
   const filename = pdfPath.split('/').pop() || 'otpremnica.pdf';
 
+  const defaultHtml = html || `
+    <html>
+      <body style="font-family: Arial, sans-serif;">
+        <p>Poštovani,</p>
+        <p>U prilogu se nalazi otpremnica.</p>
+        <p>Srdačan pozdrav</p>
+      </body>
+    </html>
+  `;
+
   await sendEmailWithSMTP({
     to,
     subject,
-    html,
-    text,
+    html: defaultHtml,
+    text: text || 'U prilogu je otpremnica.',
     attachments: [{
       filename,
       content: pdfBase64,
       contentType: 'application/pdf',
     }],
     includeArchive: true,
+    replyTo: ARCHIVE_EMAIL,
   });
 }
 
