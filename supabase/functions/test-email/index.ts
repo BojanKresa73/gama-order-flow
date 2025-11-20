@@ -100,12 +100,12 @@ serve(async (req) => {
 
     console.log(`[test-email] Sending test email to ${toEmail}`);
 
-    // Initialize SMTP client
+    // Initialize SMTP client with STARTTLS for port 587
     const client = new SMTPClient({
       connection: {
         hostname: smtpHost,
         port: parseInt(smtpPort),
-        tls: true,
+        tls: false, // Use STARTTLS for port 587, not direct TLS
         auth: {
           username: smtpUser,
           password: smtpPass,
