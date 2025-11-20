@@ -42,7 +42,7 @@ export default function AdminSection() {
         return;
       }
 
-      if (data?.success) {
+      if (data?.ok || data?.success) {
         toast.success(`Test email uspešno poslat na ${email}!`, { id: 'test-email' });
       } else {
         toast.error(data?.error || 'Nepoznata greška', { id: 'test-email' });

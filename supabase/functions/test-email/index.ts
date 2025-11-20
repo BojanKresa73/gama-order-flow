@@ -19,7 +19,8 @@ serve(async (req) => {
     const SMTP_HOST = Deno.env.get('SMTP_HOST');
     const SMTP_PORT = parseInt(Deno.env.get('SMTP_PORT') || '587');
     const SMTP_USER = Deno.env.get('SMTP_USER');
-    const SMTP_PASS = Deno.env.get('SMTP_PASS');
+    // Remove all spaces from App Password (Gmail App Passwords have no spaces)
+    const SMTP_PASS = (Deno.env.get('SMTP_PASS') || '').replace(/\s+/g, '');
     const FROM_EMAIL = Deno.env.get('FROM_EMAIL') || 'gamaunitedobavestenje@gmail.com';
     const ARCHIVE_EMAIL = Deno.env.get('ARCHIVE_EMAIL') || 'novi.nalozi@gamaunited.rs';
     
@@ -148,6 +149,7 @@ serve(async (req) => {
 
       return new Response(
         JSON.stringify({ 
+          ok: true,
           success: true, 
           message: `Test email uspešno poslat na ${toEmail} preko Gmail SMTP`,
           messageId: info.messageId,
@@ -167,6 +169,7 @@ serve(async (req) => {
       console.error('[test-email] Gmail SMTP error:', smtpError);
       return new Response(
         JSON.stringify({ 
+          ok: false,
           success: false, 
           error: `Greška pri slanju preko Gmail SMTP: ${smtpError.message}` 
         }),
@@ -181,6 +184,7 @@ serve(async (req) => {
     console.error('[test-email] Error:', error);
     return new Response(
       JSON.stringify({ 
+        ok: false,
         success: false, 
         error: `Greška pri slanju: ${error.message}` 
       }),

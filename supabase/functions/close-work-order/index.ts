@@ -1,9 +1,10 @@
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.75.0";
-import { SMTPClient } from "https://deno.land/x/denomailer@1.6.0/mod.ts";
 import { PDFDocument, rgb } from "https://esm.sh/pdf-lib@1.17.1";
 import fontkit from "https://esm.sh/@pdf-lib/fontkit@1.1.1";
 import { ensureDir } from "https://deno.land/std@0.190.0/fs/mod.ts";
+import { sendDeliveryNoteEmail, sendWorkOrderArchiveEmail, retryWithBackoff } from "../_shared/email-helpers.ts";
+import { sendEmailWithSMTP } from "../_shared/smtp-helpers.ts";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -644,47 +645,27 @@ const handler = async (req: Request): Promise<Response> => {
   let work_order_id: string | undefined;
 
   try {
-    // Validate environment variables FIRST
-    const resendApiKey = Deno.env.get('RESEND_API_KEY');
-    const archiveEmail = Deno.env.get('ARCHIVE_EMAIL');
+    // Validate SMTP configuration
+    const SMTP_HOST = Deno.env.get('SMTP_HOST');
+    const SMTP_PORT = Deno.env.get('SMTP_PORT');
+    const SMTP_USER = Deno.env.get('SMTP_USER');
+    const SMTP_PASS = Deno.env.get('SMTP_PASS');
+    const FROM_EMAIL = Deno.env.get('FROM_EMAIL');
+    const ARCHIVE_EMAIL = Deno.env.get('ARCHIVE_EMAIL');
     
-    // Priority: RESEND_FROM > FROM_EMAIL > fallback
-    let fromEmail = Deno.env.get('RESEND_FROM') || Deno.env.get('FROM_EMAIL');
-    
-    if (!resendApiKey) {
-      console.error('[closeWorkOrder] Missing RESEND_API_KEY');
+    if (!SMTP_HOST || !SMTP_USER || !SMTP_PASS || !FROM_EMAIL || !ARCHIVE_EMAIL) {
+      console.error('[closeWorkOrder] Missing SMTP configuration');
       return new Response(
-        JSON.stringify({ ok: false, error: 'Missing RESEND_API_KEY environment variable' }),
+        JSON.stringify({ ok: false, error: 'Nedostaje SMTP konfiguracija' }),
         { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 200 }
       );
     }
     
-    if (!archiveEmail) {
-      console.error('[closeWorkOrder] Missing ARCHIVE_EMAIL');
-      return new Response(
-        JSON.stringify({ ok: false, error: 'Missing ARCHIVE_EMAIL environment variable' }),
-        { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 200 }
-      );
-    }
-
-    // Use fallback if neither RESEND_FROM nor FROM_EMAIL is configured
-    if (!fromEmail) {
-      fromEmail = 'noreply@resend.dev';
-      console.warn('[closeWorkOrder] RESEND_FROM/FROM_EMAIL not set, using fallback: noreply@resend.dev (verify your domain in Resend to use custom sender)');
-    } else {
-      console.log('[closeWorkOrder] Using sender email:', fromEmail);
-    }
+    console.log('[closeWorkOrder] Using SMTP:', SMTP_HOST, 'Port:', SMTP_PORT, 'From:', FROM_EMAIL);
 
     const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
     const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
     const supabase = createClient(supabaseUrl, supabaseKey);
-
-    // SMTP Configuration for Gmail
-    const smtpHost = Deno.env.get('SMTP_HOST')!;
-    const smtpPort = parseInt(Deno.env.get('SMTP_PORT') || '465');
-    const smtpUser = Deno.env.get('SMTP_USER')!;
-    const smtpPass = Deno.env.get('SMTP_PASS')!;
-    const replyToEmail = Deno.env.get('ARCHIVE_EMAIL') || 'novi.nalozi@gamaunited.rs';
 
     const authHeader = req.headers.get('Authorization');
     if (!authHeader) throw new Error('Nedostaje autorizacija');
@@ -922,10 +903,6 @@ const handler = async (req: Request): Promise<Response> => {
       <p>Zatvorio: ${closedByName} u ${closedAtFormatted}</p>
     `;
 
-    // Import SMTP helpers
-    const { sendWorkOrderArchiveEmail, sendDeliveryNoteEmail, retryWithBackoff: retryHelper, sendEmailWithSMTP } = 
-      await import('../_shared/smtp-helpers.ts');
-
     const clientEmail = workOrder.clients?.notification_email || workOrder.clients?.email;
     let clientEmailStatus = 'skipped';
     let clientEmailMessage = '';
@@ -954,23 +931,23 @@ const handler = async (req: Request): Promise<Response> => {
         </ul>
       `;
 
-      console.log(`Sending archive email with links to ${archiveEmail}...`);
+      console.log(`Sending archive email with links to ${ARCHIVE_EMAIL}...`);
       const archiveSubject = `[RNGU] ${orderNo} – ${clientName} – ${orderType} CLOSED`;
       try {
-        await retryHelper(async () => {
+        await retryWithBackoff(async () => {
           return await sendEmailWithSMTP({
-            to: archiveEmail,
+            to: ARCHIVE_EMAIL,
             subject: archiveSubject,
             html: archiveEmailBodyWithLinks,
-            replyTo: archiveEmail,
+            replyTo: ARCHIVE_EMAIL,
             includeArchive: false,
           });
         });
-        await logEmail(supabase, work_order_id, archiveEmail, archiveSubject, 'archive', 'sent', null);
+        await logEmail(supabase, work_order_id, ARCHIVE_EMAIL, archiveSubject, 'archive', 'sent', null);
         console.log("Archive email with links sent successfully");
       } catch (error: any) {
         console.error("Failed to send archive email after retries:", error);
-        await logEmail(supabase, work_order_id, archiveEmail, archiveSubject, 'archive', 'error', error?.message || String(error));
+        await logEmail(supabase, work_order_id, ARCHIVE_EMAIL, archiveSubject, 'archive', 'error', error?.message || String(error));
       }
       
       // Send client email with link
@@ -991,12 +968,12 @@ const handler = async (req: Request): Promise<Response> => {
         `;
         
         try {
-          await retryHelper(async () => {
+          await retryWithBackoff(async () => {
             return await sendEmailWithSMTP({
               to: clientEmail,
               subject: clientSubject,
               html: clientEmailBodyWithLink,
-              replyTo: archiveEmail,
+              replyTo: ARCHIVE_EMAIL,
               includeArchive: true,
             });
           });
@@ -1015,10 +992,10 @@ const handler = async (req: Request): Promise<Response> => {
       console.log("Sending emails with attachments from storage...");
 
       // Send archive email with both PDFs
-      console.log(`Sending archive email to ${archiveEmail}...`);
+      console.log(`Sending archive email to ${ARCHIVE_EMAIL}...`);
       const archiveSubject = `[RNGU] ${orderNo} – ${clientName} – ${orderType} CLOSED`;
       try {
-        await retryHelper(async () => {
+        await retryWithBackoff(async () => {
           return await sendWorkOrderArchiveEmail({
             subject: archiveSubject,
             html: archiveEmailBody,
@@ -1036,11 +1013,11 @@ const handler = async (req: Request): Promise<Response> => {
             serviceKey: supabaseKey,
           });
         });
-        await logEmail(supabase, work_order_id, archiveEmail, archiveSubject, 'archive', 'sent', null);
+        await logEmail(supabase, work_order_id, ARCHIVE_EMAIL, archiveSubject, 'archive', 'sent', null);
         console.log("Archive email sent successfully");
       } catch (error: any) {
         console.error("Failed to send archive email after retries:", error);
-        await logEmail(supabase, work_order_id, archiveEmail, archiveSubject, 'archive', 'error', error?.message || String(error));
+        await logEmail(supabase, work_order_id, ARCHIVE_EMAIL, archiveSubject, 'archive', 'error', error?.message || String(error));
       }
 
       // Send client email (only delivery note)
@@ -1061,7 +1038,7 @@ const handler = async (req: Request): Promise<Response> => {
         `;
 
         try {
-          await retryHelper(async () => {
+          await retryWithBackoff(async () => {
             return await sendDeliveryNoteEmail({
               subject: clientSubject,
               to: [clientEmail],
