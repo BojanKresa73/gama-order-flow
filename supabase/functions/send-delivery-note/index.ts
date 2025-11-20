@@ -133,24 +133,24 @@ const generateDeliveryNotePDF = async (
     const page = pdfDoc.addPage([595, 420]); // A5 landscape (595x420 points)
   
   const { width, height } = page.getSize();
-  let yPosition = height - 40;
+  let yPosition = height - 24; // 24pt margin
 
   // Try to render logo (fail-safe)
   let logoHeight = 0;
   const logoUrl = Deno.env.get('LOGO_URL');
   if (logoUrl) {
     try {
-      const logoResponse = await fetch(logoUrl);
+      const logoResponse = await fetch(logoUrl, { cache: 'no-store' });
       if (logoResponse.ok) {
         const logoBytes = await logoResponse.arrayBuffer();
         const logoImage = await pdfDoc.embedPng(logoBytes);
-        const targetWidth = 180; // ~63mm
+        const targetWidth = 180;
         const aspectRatio = logoImage.height / logoImage.width;
         logoHeight = targetWidth * aspectRatio;
         
         page.drawImage(logoImage, {
-          x: 40,
-          y: height - 40 - logoHeight,
+          x: 24,
+          y: height - 24 - logoHeight,
           width: targetWidth,
           height: logoHeight,
         });
@@ -160,8 +160,8 @@ const generateDeliveryNotePDF = async (
     }
   }
 
-  // Header - Company Info (positioned to the right of logo)
-  const companyTextX = 240;
+  // Header - Company Info (positioned to the right of logo: 24 + 180 + 16 = 220)
+  const companyTextX = 220;
   page.drawText("Gama United", {
     x: companyTextX,
     y: yPosition,
@@ -178,7 +178,7 @@ const generateDeliveryNotePDF = async (
 
   // Header - Delivery Info (right side)
   const rightX = width - 200;
-  yPosition = height - 40;
+  yPosition = height - 24; // Reset to top margin
   page.drawText("OTPREMNICA", {
     x: rightX,
     y: yPosition,
