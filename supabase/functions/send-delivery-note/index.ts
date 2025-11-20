@@ -135,20 +135,46 @@ const generateDeliveryNotePDF = async (
   const { width, height } = page.getSize();
   let yPosition = height - 40;
 
-  // Header - Company Info
+  // Try to render logo (fail-safe)
+  let logoHeight = 0;
+  const logoUrl = Deno.env.get('LOGO_URL');
+  if (logoUrl) {
+    try {
+      const logoResponse = await fetch(logoUrl);
+      if (logoResponse.ok) {
+        const logoBytes = await logoResponse.arrayBuffer();
+        const logoImage = await pdfDoc.embedPng(logoBytes);
+        const targetWidth = 180; // ~63mm
+        const aspectRatio = logoImage.height / logoImage.width;
+        logoHeight = targetWidth * aspectRatio;
+        
+        page.drawImage(logoImage, {
+          x: 40,
+          y: height - 40 - logoHeight,
+          width: targetWidth,
+          height: logoHeight,
+        });
+      }
+    } catch (err) {
+      console.warn('Failed to load logo, continuing without it:', err);
+    }
+  }
+
+  // Header - Company Info (positioned to the right of logo)
+  const companyTextX = 240;
   page.drawText("Gama United", {
-    x: 40,
+    x: companyTextX,
     y: yPosition,
     size: 14,
     font: fontBold,
     color: rgb(0, 0, 0),
   });
   yPosition -= 15;
-  page.drawText("Adresa vaše firme", { x: 40, y: yPosition, size: 9, font });
+  page.drawText("Adresa vaše firme", { x: companyTextX, y: yPosition, size: 9, font });
   yPosition -= 12;
-  page.drawText("Grad, Poštanski broj", { x: 40, y: yPosition, size: 9, font });
+  page.drawText("Grad, Poštanski broj", { x: companyTextX, y: yPosition, size: 9, font });
   yPosition -= 12;
-  page.drawText("PIB: 123456789", { x: 40, y: yPosition, size: 9, font });
+  page.drawText("PIB: 123456789", { x: companyTextX, y: yPosition, size: 9, font });
 
   // Header - Delivery Info (right side)
   const rightX = width - 200;

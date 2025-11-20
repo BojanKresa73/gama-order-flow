@@ -60,11 +60,38 @@ async function generateDeliveryNotePDF(
   const { height } = page.getSize();
   let yPosition = height - 50;
 
-    page.drawText("GAMA UNITED d.o.o.", { x: 50, y: yPosition, size: 16, font: notoBold, color: rgb(0, 0, 0) });
+    // Try to render logo (fail-safe)
+    let logoHeight = 0;
+    const logoUrl = Deno.env.get('LOGO_URL');
+    if (logoUrl) {
+      try {
+        const logoResponse = await fetch(logoUrl);
+        if (logoResponse.ok) {
+          const logoBytes = await logoResponse.arrayBuffer();
+          const logoImage = await pdfDoc.embedPng(logoBytes);
+          const targetWidth = 180; // ~63mm
+          const aspectRatio = logoImage.height / logoImage.width;
+          logoHeight = targetWidth * aspectRatio;
+          
+          page.drawImage(logoImage, {
+            x: 40,
+            y: height - 40 - logoHeight,
+            width: targetWidth,
+            height: logoHeight,
+          });
+        }
+      } catch (err) {
+        console.warn('Failed to load logo, continuing without it:', err);
+      }
+    }
+
+    // Company info block - positioned to the right of logo
+    const companyTextX = 240;
+    page.drawText("GAMA UNITED d.o.o.", { x: companyTextX, y: yPosition, size: 16, font: notoBold, color: rgb(0, 0, 0) });
     yPosition -= 25;
-    page.drawText("Šumadijska 29, 11000 Beograd", { x: 50, y: yPosition, size: 10, font: notoFont });
+    page.drawText("Šumadijska 29, 11000 Beograd", { x: companyTextX, y: yPosition, size: 10, font: notoFont });
     yPosition -= 15;
-    page.drawText("PIB: 112345678 | MB: 21234567", { x: 50, y: yPosition, size: 10, font: notoFont });
+    page.drawText("PIB: 112345678 | MB: 21234567", { x: companyTextX, y: yPosition, size: 10, font: notoFont });
     yPosition -= 40;
     page.drawText("OTPREMNICA", { x: 50, y: yPosition, size: 18, font: notoBold });
     yPosition -= 30;
