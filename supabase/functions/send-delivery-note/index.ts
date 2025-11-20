@@ -1,10 +1,8 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.3";
-import { Resend } from "https://esm.sh/resend@4.0.0";
+import { SMTPClient } from "https://deno.land/x/denomailer@1.6.0/mod.ts";
 import { PDFDocument, rgb } from "https://esm.sh/pdf-lib@1.17.1";
 import fontkit from "https://esm.sh/@pdf-lib/fontkit@1.1.1";
-
-const resend = new Resend(Deno.env.get("RESEND_API_KEY"));
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -698,14 +696,45 @@ const handler = async (req: Request): Promise<Response> => {
         </html>
       `;
 
-      const emailResponse = await resend.emails.send({
-        from: "Gama United <obavestenje@gamaunited.rs>",
-        to: [workOrder.client.notification_email],
-        subject: `Otpremnica ${deliveryNumber} - ${workOrder.order_number}`,
-        html: emailContent,
+      // Send email using SMTP
+      const smtpHost = Deno.env.get('SMTP_HOST');
+      const smtpPort = Deno.env.get('SMTP_PORT');
+      const smtpUser = Deno.env.get('SMTP_USER');
+      const smtpPass = Deno.env.get('SMTP_PASS');
+      const fromEmail = Deno.env.get('FROM_EMAIL');
+      const archiveEmail = Deno.env.get('ARCHIVE_EMAIL');
+
+      if (!smtpHost || !smtpPort || !smtpUser || !smtpPass || !fromEmail) {
+        console.error('[send-delivery-note] SMTP configuration missing');
+        throw new Error('SMTP configuration incomplete');
+      }
+
+      console.log('[send-delivery-note] Sending email to:', workOrder.client.notification_email);
+
+      const smtpClient = new SMTPClient({
+        connection: {
+          hostname: smtpHost,
+          port: parseInt(smtpPort),
+          tls: true,
+          auth: {
+            username: smtpUser,
+            password: smtpPass,
+          },
+        },
       });
 
-      console.log("Email sent:", emailResponse);
+      await smtpClient.send({
+        from: fromEmail,
+        to: workOrder.client.notification_email,
+        replyTo: archiveEmail,
+        subject: `Otpremnica ${deliveryNumber} - ${workOrder.order_number}`,
+        html: emailContent,
+        content: emailContent,
+      });
+
+      await smtpClient.close();
+
+      console.log("[send-delivery-note] Email sent successfully");
 
       // Update delivery note with sent timestamp
       await supabaseClient

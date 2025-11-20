@@ -1,6 +1,6 @@
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.75.0";
-import { Resend } from "https://esm.sh/resend@4.0.0";
+import { SMTPClient } from "https://deno.land/x/denomailer@1.6.0/mod.ts";
 import { PDFDocument, rgb } from "https://esm.sh/pdf-lib@1.17.1";
 import fontkit from "https://esm.sh/@pdf-lib/fontkit@1.1.1";
 import { ensureDir } from "https://deno.land/std@0.190.0/fs/mod.ts";
@@ -679,7 +679,12 @@ const handler = async (req: Request): Promise<Response> => {
     const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
     const supabase = createClient(supabaseUrl, supabaseKey);
 
-    const resend = new Resend(resendApiKey);
+    // SMTP Configuration for Gmail
+    const smtpHost = Deno.env.get('SMTP_HOST')!;
+    const smtpPort = parseInt(Deno.env.get('SMTP_PORT') || '465');
+    const smtpUser = Deno.env.get('SMTP_USER')!;
+    const smtpPass = Deno.env.get('SMTP_PASS')!;
+    const replyToEmail = Deno.env.get('ARCHIVE_EMAIL') || 'novi.nalozi@gamaunited.rs';
 
     const authHeader = req.headers.get('Authorization');
     if (!authHeader) throw new Error('Nedostaje autorizacija');
@@ -917,9 +922,9 @@ const handler = async (req: Request): Promise<Response> => {
       <p>Zatvorio: ${closedByName} u ${closedAtFormatted}</p>
     `;
 
-    // Import email helpers
-    const { sendWorkOrderArchiveEmail, sendDeliveryNoteEmail, retryWithBackoff: retryHelper } = 
-      await import('../_shared/email-helpers.ts');
+    // Import SMTP helpers
+    const { sendWorkOrderArchiveEmail, sendDeliveryNoteEmail, retryWithBackoff: retryHelper, sendEmailWithSMTP } = 
+      await import('../_shared/smtp-helpers.ts');
 
     const clientEmail = workOrder.clients?.notification_email || workOrder.clients?.email;
     let clientEmailStatus = 'skipped';
@@ -953,11 +958,12 @@ const handler = async (req: Request): Promise<Response> => {
       const archiveSubject = `[RNGU] ${orderNo} – ${clientName} – ${orderType} CLOSED`;
       try {
         await retryHelper(async () => {
-          return await resend.emails.send({
-            from: fromEmail,
+          return await sendEmailWithSMTP({
             to: archiveEmail,
             subject: archiveSubject,
             html: archiveEmailBodyWithLinks,
+            replyTo: archiveEmail,
+            includeArchive: false,
           });
         });
         await logEmail(supabase, work_order_id, archiveEmail, archiveSubject, 'archive', 'sent', null);
@@ -986,11 +992,12 @@ const handler = async (req: Request): Promise<Response> => {
         
         try {
           await retryHelper(async () => {
-            return await resend.emails.send({
-              from: fromEmail,
+            return await sendEmailWithSMTP({
               to: clientEmail,
               subject: clientSubject,
               html: clientEmailBodyWithLink,
+              replyTo: archiveEmail,
+              includeArchive: true,
             });
           });
           await logEmail(supabase, work_order_id, clientEmail, clientSubject, 'client', 'sent', null);
