@@ -297,6 +297,7 @@ export type Database = {
           sent_at: string | null
           sent_to_email: string | null
           work_order_id: string
+          work_order_number: string | null
         }
         Insert: {
           client_name: string
@@ -311,6 +312,7 @@ export type Database = {
           sent_at?: string | null
           sent_to_email?: string | null
           work_order_id: string
+          work_order_number?: string | null
         }
         Update: {
           client_name?: string
@@ -325,6 +327,7 @@ export type Database = {
           sent_at?: string | null
           sent_to_email?: string | null
           work_order_id?: string
+          work_order_number?: string | null
         }
         Relationships: [
           {

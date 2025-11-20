@@ -363,14 +363,8 @@ const handler = async (req: Request): Promise<Response> => {
       );
     }
 
-    // Generate delivery number
-    const { count: deliveryCount } = await supabaseClient
-      .from("delivery_notes")
-      .select("id", { count: "exact", head: true });
-
-    const deliveryNumber = `OTR-${new Date().getFullYear()}-${String(
-      (deliveryCount || 0) + 1
-    ).padStart(4, "0")}`;
+    // Use work order number as delivery number
+    const deliveryNumber = workOrder.display_order_number || workOrder.order_number;
 
     // Create delivery note
     const { data: deliveryNote, error: dnError } = await supabaseClient
@@ -378,6 +372,7 @@ const handler = async (req: Request): Promise<Response> => {
       .insert({
         work_order_id: workOrderId,
         delivery_number: deliveryNumber,
+        work_order_number: deliveryNumber,
         client_name: workOrder.client.name,
         client_pib: workOrder.client.pib,
         opened_at: workOrder.created_at,
@@ -708,7 +703,7 @@ const handler = async (req: Request): Promise<Response> => {
 
       await retryWithBackoff(async () => {
         await sendDeliveryNoteEmail({
-          subject: `Otpremnica ${deliveryNumber} - ${workOrder.order_number}`,
+          subject: `Završen posao – ${workOrder.client.name} – ${deliveryNumber}`,
           to: [workOrder.client.notification_email],
           pdfBucket: 'delivery-notes',
           pdfPath: deliveryNote.pdf_path!,
@@ -733,7 +728,7 @@ const handler = async (req: Request): Promise<Response> => {
       await supabaseClient.from("email_log").insert({
         work_order_id: workOrderId,
         recipient_email: workOrder.client.notification_email,
-        subject: `Otpremnica ${deliveryNumber}`,
+        subject: `Završen posao – ${workOrder.client.name} – ${deliveryNumber}`,
         status: "sent",
         type: "delivery_note",
       });
