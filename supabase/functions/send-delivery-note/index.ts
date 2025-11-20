@@ -1,6 +1,10 @@
+import { Buffer } from "node:buffer";
+// @ts-ignore
+(globalThis as any).Buffer = (globalThis as any).Buffer ?? Buffer;
+
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.3";
-import { SMTPClient } from "https://deno.land/x/denomailer@1.6.0/mod.ts";
+import { sendDeliveryNoteEmail, retryWithBackoff } from '../_shared/email-helpers.ts';
 import { PDFDocument, rgb } from "https://esm.sh/pdf-lib@1.17.1";
 import fontkit from "https://esm.sh/@pdf-lib/fontkit@1.1.1";
 
@@ -696,50 +700,33 @@ const handler = async (req: Request): Promise<Response> => {
         </html>
       `;
 
-      // Send email using SMTP
-      const smtpHost = Deno.env.get('SMTP_HOST');
-      const smtpPort = Deno.env.get('SMTP_PORT');
-      const smtpUser = Deno.env.get('SMTP_USER');
-      const smtpPass = Deno.env.get('SMTP_PASS');
-      const fromEmail = Deno.env.get('FROM_EMAIL');
-      const archiveEmail = Deno.env.get('ARCHIVE_EMAIL');
-
-      if (!smtpHost || !smtpPort || !smtpUser || !smtpPass || !fromEmail) {
-        console.error('[send-delivery-note] SMTP configuration missing');
-        throw new Error('SMTP configuration incomplete');
-      }
-
+      // Send email using Gmail SMTP helper
       console.log('[send-delivery-note] Sending email to:', workOrder.client.notification_email);
 
-      const smtpClient = new SMTPClient({
-        connection: {
-          hostname: smtpHost,
-          port: parseInt(smtpPort),
-          tls: true,
-          auth: {
-            username: smtpUser,
-            password: smtpPass,
-          },
-        },
-      });
+      const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
+      const serviceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
 
-      await smtpClient.send({
-        from: fromEmail,
-        to: workOrder.client.notification_email,
-        replyTo: archiveEmail,
-        subject: `Otpremnica ${deliveryNumber} - ${workOrder.order_number}`,
-        html: emailContent,
-        content: emailContent,
-      });
-
-      await smtpClient.close();
+      await retryWithBackoff(async () => {
+        await sendDeliveryNoteEmail({
+          subject: `Otpremnica ${deliveryNumber} - ${workOrder.order_number}`,
+          to: [workOrder.client.notification_email],
+          pdfBucket: 'delivery-notes',
+          pdfPath: deliveryNote.pdf_path!,
+          html: emailContent,
+          sbUrl: supabaseUrl,
+          serviceKey: serviceKey,
+        });
+      }, 2, 1000);
 
       console.log("[send-delivery-note] Email sent successfully");
 
-      // Update delivery note with sent timestamp
+      // Update delivery note with sent timestamp and email
       await supabaseClient
         .from("delivery_notes")
-        .update({ sent_at: new Date().toISOString() })
+        .update({ 
+          sent_at: new Date().toISOString(),
+          sent_to_email: workOrder.client.notification_email
+        })
         .eq("id", deliveryNote.id);
 
       // Log email
@@ -748,6 +735,7 @@ const handler = async (req: Request): Promise<Response> => {
         recipient_email: workOrder.client.notification_email,
         subject: `Otpremnica ${deliveryNumber}`,
         status: "sent",
+        type: "delivery_note",
       });
     }
 

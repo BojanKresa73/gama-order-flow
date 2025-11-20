@@ -1,3 +1,8 @@
+import { Buffer } from "node:buffer";
+// Polyfill za Deno/Edge runtime - ako Buffer ne postoji, postavi ga
+// @ts-ignore
+(globalThis as any).Buffer = (globalThis as any).Buffer ?? Buffer;
+
 import nodemailer from "https://esm.sh/nodemailer@6.9.7";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
@@ -75,8 +80,7 @@ export async function sendEmailWithSMTP(options: SendEmailOptions): Promise<void
       html,
       attachments: attachments.map(att => ({
         filename: att.filename,
-        content: att.content,
-        encoding: 'base64',
+        content: Buffer.from(att.content, 'base64'),
         contentType: att.contentType || 'application/pdf',
       })),
     };
@@ -114,12 +118,8 @@ async function fetchPdfAsBase64(
   }
   
   const ab = await data.arrayBuffer();
-  let binary = '';
-  const bytes = new Uint8Array(ab);
-  for (let i = 0; i < bytes.length; i++) {
-    binary += String.fromCharCode(bytes[i]);
-  }
-  return btoa(binary);
+  const pdfBuf = new Uint8Array(ab);
+  return Buffer.from(pdfBuf).toString('base64');
 }
 
 interface PdfAttachment {
