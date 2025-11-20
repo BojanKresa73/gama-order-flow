@@ -7,8 +7,7 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2.75.0";
 import { PDFDocument, rgb } from "https://esm.sh/pdf-lib@1.17.1";
 import fontkit from "https://esm.sh/@pdf-lib/fontkit@1.1.1";
 import { ensureDir } from "https://deno.land/std@0.190.0/fs/mod.ts";
-import { sendDeliveryNoteEmail, sendWorkOrderArchiveEmail, retryWithBackoff } from "../_shared/email-helpers.ts";
-import { sendEmailWithSMTP } from "../_shared/smtp-helpers.ts";
+import { sendMail, retryWithBackoff } from "../_shared/email-provider.ts";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -649,23 +648,16 @@ const handler = async (req: Request): Promise<Response> => {
   let work_order_id: string | undefined;
 
   try {
-    // Validate SMTP configuration
-    const SMTP_HOST = Deno.env.get('SMTP_HOST');
-    const SMTP_PORT = Deno.env.get('SMTP_PORT');
-    const SMTP_USER = Deno.env.get('SMTP_USER');
-    const SMTP_PASS = Deno.env.get('SMTP_PASS');
-    const FROM_EMAIL = Deno.env.get('FROM_EMAIL');
+    // Get environment configuration
     const ARCHIVE_EMAIL = Deno.env.get('ARCHIVE_EMAIL');
     
-    if (!SMTP_HOST || !SMTP_USER || !SMTP_PASS || !FROM_EMAIL || !ARCHIVE_EMAIL) {
-      console.error('[closeWorkOrder] Missing SMTP configuration');
+    if (!ARCHIVE_EMAIL) {
+      console.error('[closeWorkOrder] Missing ARCHIVE_EMAIL configuration');
       return new Response(
-        JSON.stringify({ ok: false, error: 'Nedostaje SMTP konfiguracija' }),
+        JSON.stringify({ ok: false, error: 'Nedostaje ARCHIVE_EMAIL konfiguracija' }),
         { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 200 }
       );
     }
-    
-    console.log('[closeWorkOrder] Using SMTP:', SMTP_HOST, 'Port:', SMTP_PORT, 'From:', FROM_EMAIL);
 
     const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
     const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
@@ -939,12 +931,11 @@ const handler = async (req: Request): Promise<Response> => {
       const archiveSubject = `[RNGU] ${orderNo} – ${clientName} – ${orderType} CLOSED`;
       try {
         await retryWithBackoff(async () => {
-          return await sendEmailWithSMTP({
+          return await sendMail({
             to: ARCHIVE_EMAIL,
             subject: archiveSubject,
             html: archiveEmailBodyWithLinks,
             replyTo: ARCHIVE_EMAIL,
-            includeArchive: false,
           });
         });
         await logEmail(supabase, work_order_id, ARCHIVE_EMAIL, archiveSubject, 'archive', 'sent', null);
@@ -973,12 +964,11 @@ const handler = async (req: Request): Promise<Response> => {
         
         try {
           await retryWithBackoff(async () => {
-            return await sendEmailWithSMTP({
+            return await sendMail({
               to: clientEmail,
               subject: clientSubject,
               html: clientEmailBodyWithLink,
               replyTo: ARCHIVE_EMAIL,
-              includeArchive: true,
             });
           });
           await logEmail(supabase, work_order_id, clientEmail, clientSubject, 'client', 'sent', null);
@@ -1000,21 +990,38 @@ const handler = async (req: Request): Promise<Response> => {
       const archiveSubject = `[RNGU] ${orderNo} – ${clientName} – ${orderType} CLOSED`;
       try {
         await retryWithBackoff(async () => {
-          return await sendWorkOrderArchiveEmail({
+          // Fetch PDFs from storage
+          const { data: woData, error: woError } = await supabase.storage
+            .from('email-archive')
+            .download(workOrderStoragePath);
+          
+          const { data: dnData, error: dnError } = await supabase.storage
+            .from('email-archive')
+            .download(deliveryNoteStoragePath);
+          
+          if (woError || !woData) throw new Error(`Failed to fetch work order PDF: ${woError?.message}`);
+          if (dnError || !dnData) throw new Error(`Failed to fetch delivery note PDF: ${dnError?.message}`);
+          
+          const woBytes = new Uint8Array(await woData.arrayBuffer());
+          const dnBytes = new Uint8Array(await dnData.arrayBuffer());
+          
+          return await sendMail({
+            to: ARCHIVE_EMAIL,
             subject: archiveSubject,
             html: archiveEmailBody,
-            workOrderPdf: {
-              bucket: 'email-archive',
-              path: workOrderStoragePath,
-              filename: `${baseName}_RN.pdf`,
-            },
-            deliveryNotePdf: {
-              bucket: 'email-archive',
-              path: deliveryNoteStoragePath,
-              filename: `${baseName}_Otpremnica.pdf`,
-            },
-            sbUrl: supabaseUrl,
-            serviceKey: supabaseKey,
+            replyTo: ARCHIVE_EMAIL,
+            attachments: [
+              {
+                filename: `${baseName}_RN.pdf`,
+                content: woBytes,
+                contentType: 'application/pdf',
+              },
+              {
+                filename: `${baseName}_Otpremnica.pdf`,
+                content: dnBytes,
+                contentType: 'application/pdf',
+              },
+            ],
           });
         });
         await logEmail(supabase, work_order_id, ARCHIVE_EMAIL, archiveSubject, 'archive', 'sent', null);
@@ -1043,14 +1050,27 @@ const handler = async (req: Request): Promise<Response> => {
 
         try {
           await retryWithBackoff(async () => {
-            return await sendDeliveryNoteEmail({
+            // Fetch PDF from storage
+            const { data: pdfData, error: pdfError } = await supabase.storage
+              .from('email-archive')
+              .download(deliveryNoteStoragePath);
+            
+            if (pdfError || !pdfData) throw new Error(`Failed to fetch delivery note PDF: ${pdfError?.message}`);
+            
+            const pdfBytes = new Uint8Array(await pdfData.arrayBuffer());
+            
+            return await sendMail({
+              to: clientEmail,
               subject: clientSubject,
-              to: [clientEmail],
-              pdfBucket: 'email-archive',
-              pdfPath: deliveryNoteStoragePath,
               html: clientEmailHtml,
-              sbUrl: supabaseUrl,
-              serviceKey: supabaseKey,
+              replyTo: ARCHIVE_EMAIL,
+              attachments: [
+                {
+                  filename: `Otpremnica_${baseName}.pdf`,
+                  content: pdfBytes,
+                  contentType: 'application/pdf',
+                },
+              ],
             });
           });
           await logEmail(supabase, work_order_id, clientEmail, clientSubject, 'client', 'sent', null);
