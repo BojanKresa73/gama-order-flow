@@ -800,8 +800,9 @@ const handler = async (req: Request): Promise<Response> => {
     const tmpDir = "/tmp";
     await ensureDir(tmpDir);
     
-    const deliveryNumber = `DN-${new Date().getFullYear()}-${String(Date.now()).slice(-6)}`;
+    // Use work order number as delivery number
     const orderNo = workOrder.display_order_number || workOrder.order_number;
+    const deliveryNumber = orderNo;
     const clientName = workOrder.clients?.name || "N/A";
     const orderType = workOrder.order_type.toUpperCase();
     const orderCode = workOrder.order_code || orderNo;
@@ -1115,6 +1116,7 @@ const handler = async (req: Request): Promise<Response> => {
     await supabase.from('delivery_notes').insert({
       work_order_id: work_order_id,
       delivery_number: deliveryNumber,
+      work_order_number: orderNo,
       client_name: workOrder.clients?.name || 'N/A',
       client_pib: workOrder.clients?.pib,
       opened_at: workOrder.created_at,
