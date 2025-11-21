@@ -5,9 +5,9 @@ const CONFIG = {
   pageWidth: 595.28, // A5 landscape width in points
   pageHeight: 419.53, // A5 landscape height in points
   margin: 20,
-  logo: { width: 150 },
+  logo: { width: 140 },
   table: {
-    cols: { rbr: 40, filename: 250, details: 160, quantity: 60 },
+    cols: { rbr: 40, filename: 280, details: 120, quantity: 70 },
     rowHeight: 20,
     headerBg: rgb(0.95, 0.95, 0.95),
   },
@@ -26,6 +26,38 @@ function formatDate(dateString: string): string {
   const month = String(date.getMonth() + 1).padStart(2, '0');
   const year = date.getFullYear();
   return `${day}.${month}.${year}.`;
+}
+
+function getDetailsText(entry: any, orderKind: string): string {
+  // For CTP orders, show plate format
+  if (orderKind === 'CTP') {
+    if (entry.plate_formats?.format_name) {
+      return entry.plate_formats.format_name;
+    }
+    if (entry.width_mm && entry.height_mm) {
+      return `${entry.width_mm}×${entry.height_mm} mm`;
+    }
+    return 'Format ploče – N/A';
+  }
+  
+  // For FILMOVANJE, show dimensions if available
+  if (orderKind === 'FILMOVANJE') {
+    if (entry.width_mm && entry.height_mm) {
+      return `${entry.width_mm}×${entry.height_mm} mm`;
+    }
+    if (entry.computed_total_m) {
+      return `${entry.computed_total_m.toFixed(2)} m`;
+    }
+  }
+  
+  // For DIGITALA, show format if available
+  if (orderKind === 'DIGITALA') {
+    if (entry.finished_w_mm && entry.finished_h_mm) {
+      return `${entry.finished_w_mm}×${entry.finished_h_mm} mm`;
+    }
+  }
+  
+  return 'N/A';
 }
 
 function isSupportedFont(bytes: ArrayBuffer) {
@@ -86,15 +118,16 @@ export async function generateDeliveryNotePDF(
 
     const { notoFont, notoBold, logoImg, logoHeight } = await loadAssets(pdfDoc);
 
-    const tableStartY = CONFIG.pageHeight - CONFIG.margin - 120;
+    const tableStartY = CONFIG.pageHeight - CONFIG.margin - 130;
     const signatureY = CONFIG.signature.yOffset;
 
-    // Helper: draw first page header (logo + company info)
+    // Helper: draw first page header (logo + company info LEFT, client info RIGHT)
     const drawFirstPageHeader = (page: any): number => {
       const { height } = page.getSize();
       let y = height - CONFIG.margin;
+      const rightX = CONFIG.pageWidth - CONFIG.margin - 200; // Right column starts here
 
-      // Logo
+      // LEFT: Logo and company info
       if (logoImg) {
         page.drawImage(logoImg, {
           x: CONFIG.margin,
@@ -102,47 +135,43 @@ export async function generateDeliveryNotePDF(
           width: CONFIG.logo.width,
           height: logoHeight,
         });
-        y = height - CONFIG.margin - logoHeight - 10;
       }
-
-      // Company info (below logo)
-      page.drawText('GAMA UNITED d.o.o.', { x: CONFIG.margin, y, size: 10, font: notoBold });
-      y -= 12;
-      page.drawText('Veljka Milićevića 2/10, Beograd', { x: CONFIG.margin, y, size: 9, font: notoFont });
-      y -= 12;
-      page.drawText('PIB: 1114876455', { x: CONFIG.margin, y, size: 9, font: notoFont });
       
-      return y - 16; // Return Y position after header
-    };
+      let leftY = height - CONFIG.margin - logoHeight - 10;
+      page.drawText('GAMA UNITED d.o.o.', { x: CONFIG.margin, y: leftY, size: 9, font: notoBold });
+      leftY -= 12;
+      page.drawText('Veljka Milićevića 2/10, Beograd', { x: CONFIG.margin, y: leftY, size: 9, font: notoFont });
+      leftY -= 12;
+      page.drawText('PIB: 1114876455', { x: CONFIG.margin, y: leftY, size: 9, font: notoFont });
 
-    // Helper: draw meta section (only on first page)
-    const drawMeta = (page: any, startY: number): number => {
-      let y = startY;
-      page.drawText('OTPREMNICA', { x: CONFIG.margin, y, size: 16, font: notoBold });
-      y -= 20;
+      // RIGHT: Title and client info
+      let rightY = y;
+      page.drawText('OTPREMNICA', { x: rightX, y: rightY, size: 14, font: notoBold });
+      rightY -= 18;
       
       const deliveryNumber = workOrder.display_order_number || workOrder.order_number;
-      page.drawText(`Broj: ${deliveryNumber}`, { x: CONFIG.margin, y, size: 10, font: notoFont });
-      y -= 14;
-      page.drawText(
-        `Datum otvaranja: ${formatDate(workOrder.created_at)}`,
-        { x: CONFIG.margin, y, size: 9, font: notoFont }
-      );
-      y -= 13;
-      page.drawText(
-        `Datum zatvaranja: ${formatDate(workOrder.closed_at || new Date().toISOString())}`,
-        { x: CONFIG.margin, y, size: 9, font: notoFont }
-      );
-      y -= 14;
-      page.drawText('Klijent:', { x: CONFIG.margin, y, size: 10, font: notoBold });
-      y -= 13;
-      page.drawText(workOrder.clients?.name || 'N/A', { x: CONFIG.margin, y, size: 9, font: notoFont });
+      page.drawText(`Broj: ${deliveryNumber}`, { x: rightX, y: rightY, size: 9, font: notoFont });
+      rightY -= 12;
+      page.drawText(`Datum otvaranja: ${formatDate(workOrder.created_at)}`, { x: rightX, y: rightY, size: 9, font: notoFont });
+      rightY -= 12;
+      page.drawText(`Datum zatvaranja: ${formatDate(workOrder.closed_at || new Date().toISOString())}`, { x: rightX, y: rightY, size: 9, font: notoFont });
+      rightY -= 14;
+      
+      page.drawText('Klijent:', { x: rightX, y: rightY, size: 9, font: notoBold });
+      rightY -= 12;
+      page.drawText(workOrder.clients?.name || 'N/A', { x: rightX, y: rightY, size: 9, font: notoFont });
       if (workOrder.clients?.pib) {
-        y -= 13;
-        page.drawText(`PIB: ${workOrder.clients.pib}`, { x: CONFIG.margin, y, size: 9, font: notoFont });
+        rightY -= 12;
+        page.drawText(`PIB: ${workOrder.clients.pib}`, { x: rightX, y: rightY, size: 9, font: notoFont });
       }
-      y -= 16;
-      return y;
+      
+      return Math.min(leftY, rightY) - 16;
+    };
+
+    // Helper: draw items label before table
+    const drawItemsLabel = (page: any, startY: number): number => {
+      page.drawText('Stavke:', { x: CONFIG.margin, y: startY, size: 10, font: notoBold });
+      return startY - 12;
     };
 
     // Helper: draw table header
@@ -170,11 +199,12 @@ export async function generateDeliveryNotePDF(
     const drawTableRow = (page: any, y: number, rbr: number, entry: any): number => {
       const { rbr: rbrW, filename: fnW, details: detW, quantity: qtyW } = CONFIG.table.cols;
       let x = CONFIG.margin + 4;
+      const orderKind = workOrder.kind || 'CTP';
       const texts = [
         String(rbr),
-        (entry.filename || 'N/A').substring(0, 35),
-        (entry.plate_formats?.format_name || 'N/A').substring(0, 25),
-        String(entry.quantity || 0),
+        (entry.filename || 'N/A').substring(0, 40),
+        getDetailsText(entry, orderKind).substring(0, 20),
+        String(entry.quantity || entry.qty || 1),
       ];
       const widths = [rbrW, fnW, detW, qtyW];
       texts.forEach((t, i) => {
@@ -229,12 +259,9 @@ export async function generateDeliveryNotePDF(
     // Build pages
     let currentPage = pdfDoc.addPage([CONFIG.pageWidth, CONFIG.pageHeight]);
     
-    // First page: header + meta + table
+    // First page: header + items label + table
     let y = drawFirstPageHeader(currentPage);
-    y = drawMeta(currentPage, y);
-    y -= 6;
-    currentPage.drawText('Stavke:', { x: CONFIG.margin, y, size: 10, font: notoBold });
-    y -= 16;
+    y = drawItemsLabel(currentPage, y);
     y = drawTableHeader(currentPage, y);
 
     let pageNum = 1;
