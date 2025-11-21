@@ -2,7 +2,8 @@ import { PDFDocument, rgb } from "https://esm.sh/pdf-lib@1.17.1";
 import fontkit from "https://esm.sh/@pdf-lib/fontkit@1.1.1";
 
 const CONFIG = {
-  pageSize: [595, 420] as [number, number], // A5 landscape
+  pageWidth: 595.28, // A5 landscape width in points
+  pageHeight: 419.53, // A5 landscape height in points
   margin: 24,
   logo: { width: 180, gap: 16 },
   table: {
@@ -71,7 +72,7 @@ export async function generateDeliveryNotePDF(
     }
 
     const companyX = CONFIG.margin + CONFIG.logo.width + CONFIG.logo.gap;
-    const tableStartY = CONFIG.pageSize[1] - CONFIG.margin - 160;
+    const tableStartY = CONFIG.pageHeight - CONFIG.margin - 160;
     const signatureY = CONFIG.signature.yOffset;
 
     // Helper: draw header on page
@@ -202,7 +203,7 @@ export async function generateDeliveryNotePDF(
       const text = `Strana ${pageNum}/${totalPages}`;
       const width = notoFont.widthOfTextAtSize(text, 9);
       page.drawText(text, {
-        x: CONFIG.pageSize[0] - CONFIG.margin - width,
+        x: CONFIG.pageWidth - CONFIG.margin - width,
         y: 16,
         size: 9,
         font: notoFont,
@@ -210,7 +211,7 @@ export async function generateDeliveryNotePDF(
     };
 
     // Build pages
-    let currentPage = pdfDoc.addPage(CONFIG.pageSize);
+    let currentPage = pdfDoc.addPage([CONFIG.pageWidth, CONFIG.pageHeight]);
     drawHeader(currentPage);
     let y = drawMeta(currentPage, tableStartY);
     y -= 8;
@@ -224,11 +225,11 @@ export async function generateDeliveryNotePDF(
     fileEntries.forEach((entry, idx) => {
       const needsNewPage = y < signatureY + 40;
       if (needsNewPage) {
-        currentPage = pdfDoc.addPage(CONFIG.pageSize);
+        currentPage = pdfDoc.addPage([CONFIG.pageWidth, CONFIG.pageHeight]);
         pages.push(currentPage);
         pageNum++;
         drawHeader(currentPage);
-        y = CONFIG.pageSize[1] - CONFIG.margin - 80;
+        y = CONFIG.pageHeight - CONFIG.margin - 80;
         y = drawTableHeader(currentPage, y);
       }
       y = drawTableRow(currentPage, y, idx + 1, entry);
