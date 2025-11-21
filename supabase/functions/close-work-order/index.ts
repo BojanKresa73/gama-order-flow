@@ -593,7 +593,7 @@ const handler = async (req: Request): Promise<Response> => {
     if (fetchError || !workOrder) throw new AppError('ORDER_NOT_FOUND', 'Radni nalog nije pronađen');
     if (workOrder.status === 'closed') throw new AppError('ALREADY_CLOSED', 'Nalog je već zatvoren');
     
-    // Validate client exists
+    // Validate that order can be closed
     if (!workOrder.client_id) {
       throw new AppError('CLIENT_REQUIRED', 'Nalog nema klijenta');
     }

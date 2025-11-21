@@ -483,6 +483,18 @@ const WorkOrders = () => {
                             <FileText className="h-4 w-4 mr-2" />
                             Otpremnica
                           </Button>
+                          {order.status === 'open' && (
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                navigate(`/work-orders/${order.id}/edit`);
+                              }}
+                            >
+                              Izmeni
+                            </Button>
+                          )}
                         </div>
                       </TableCell>
                       <TableCell className="text-center">
