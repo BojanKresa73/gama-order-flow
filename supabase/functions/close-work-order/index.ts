@@ -8,6 +8,7 @@ import { PDFDocument, rgb } from "https://esm.sh/pdf-lib@1.17.1";
 import fontkit from "https://esm.sh/@pdf-lib/fontkit@1.1.1";
 import { ensureDir } from "https://deno.land/std@0.190.0/fs/mod.ts";
 import { sendMail, retryWithBackoff } from "../_shared/email-provider.ts";
+import { generateDeliveryNotePDF } from "../_shared/delivery-note-pdf.ts";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -518,108 +519,6 @@ async function generateWorkOrderPDF(
   }
 }
 
-// Generate Delivery Note PDF (Otpremnica)
-async function generateDeliveryNotePDF(
-  workOrder: any,
-  fileEntries: any[],
-  deliveryNumber: string
-): Promise<Uint8Array> {
-  try {
-    const pdfDoc = await PDFDocument.create();
-    
-    // Register fontkit for custom font support
-    pdfDoc.registerFontkit(fontkit);
-    
-    // Fetch fonts from Supabase Storage using secrets
-    const regularFontUrl = Deno.env.get('FONT_REGULAR_URL');
-    const boldFontUrl = Deno.env.get('FONT_BOLD_URL');
-    
-    if (!regularFontUrl || !boldFontUrl) {
-      throw new Error('Delivery Note font URLs not configured. Please set FONT_REGULAR_URL and FONT_BOLD_URL secrets.');
-    }
-    
-    const regularFontResponse = await fetch(regularFontUrl);
-    const boldFontResponse = await fetch(boldFontUrl);
-    
-    const regularFontBytes = await regularFontResponse.arrayBuffer();
-    const boldFontBytes = await boldFontResponse.arrayBuffer();
-    
-    if (!isSupportedFont(regularFontBytes)) {
-      throw new Error('Delivery Note regular font is not TTF/OTF – got wrong format (likely WOFF/HTML).');
-    }
-    if (!isSupportedFont(boldFontBytes)) {
-      throw new Error('Delivery Note bold font is not TTF/OTF – got wrong format (likely WOFF/HTML).');
-    }
-    
-    const font = await pdfDoc.embedFont(regularFontBytes, { subset: true });
-    const boldFont = await pdfDoc.embedFont(boldFontBytes, { subset: true });
-  
-    const page = pdfDoc.addPage([595.28, 841.89]);
-    const { height } = page.getSize();
-    let yPosition = height - 50;
-
-    page.drawText("GAMA UNITED d.o.o.", { x: 50, y: yPosition, size: 16, font: boldFont, color: rgb(0, 0, 0) });
-    yPosition -= 25;
-    page.drawText("Šumadijska 29, 11000 Beograd", { x: 50, y: yPosition, size: 10, font: font });
-    yPosition -= 15;
-    page.drawText("PIB: 112345678 | MB: 21234567", { x: 50, y: yPosition, size: 10, font: font });
-    yPosition -= 40;
-    page.drawText("OTPREMNICA", { x: 50, y: yPosition, size: 18, font: boldFont });
-    yPosition -= 30;
-    page.drawText(`Broj: ${deliveryNumber}`, { x: 50, y: yPosition, size: 12, font: font });
-    yPosition -= 20;
-    page.drawText(`Datum otvaranja: ${formatDate(workOrder.created_at)}`, { x: 50, y: yPosition, size: 10, font: font });
-    yPosition -= 15;
-    page.drawText(`Datum zatvaranja: ${formatDate(workOrder.closed_at || new Date().toISOString())}`, { x: 50, y: yPosition, size: 10, font: font });
-    yPosition -= 30;
-    page.drawText("Klijent:", { x: 50, y: yPosition, size: 12, font: boldFont });
-    yPosition -= 20;
-    page.drawText(workOrder.clients?.name || "N/A", { x: 50, y: yPosition, size: 11, font: font });
-
-    if (workOrder.clients?.pib) {
-      yPosition -= 15;
-      page.drawText(`PIB: ${workOrder.clients.pib}`, { x: 50, y: yPosition, size: 10, font: font });
-    }
-
-    yPosition -= 40;
-    page.drawText("Stavke:", { x: 50, y: yPosition, size: 12, font: boldFont });
-    yPosition -= 25;
-    
-    const colWidths = [250, 150, 100];
-    let xPos = 50;
-    ["Naziv", "Detalji", "Količina"].forEach((header, i) => {
-      page.drawText(header, { x: xPos, y: yPosition, size: 10, font: boldFont });
-      xPos += colWidths[i];
-    });
-
-    yPosition -= 20;
-    fileEntries.forEach((entry: any) => {
-      if (yPosition < 100) return;
-      xPos = 50;
-      
-      const filename = entry.filename || "N/A";
-      let details = "";
-      if (entry.plate_formats?.format_name) {
-        details = entry.plate_formats.format_name;
-      } else if (entry.format_name) {
-        details = entry.format_name;
-      }
-      const quantity = String(entry.quantity || 0);
-      
-      [filename, details, quantity].forEach((text, i) => {
-        page.drawText(text.substring(0, 30), { x: xPos, y: yPosition, size: 9, font: font });
-        xPos += colWidths[i];
-      });
-      yPosition -= 18;
-    });
-
-    return pdfDoc.save();
-  } catch (err: any) {
-    console.error('PDF generation error (Delivery Note):', err?.message, err?.stack);
-    throw new Error(`PDF font error: ${err?.message}`);
-  }
-}
-
 // Email logging helper
 async function logEmail(
   supabase: any,
@@ -838,7 +737,13 @@ const handler = async (req: Request): Promise<Response> => {
       deliveryNotePdfBytes = await Deno.readFile(deliveryNotePath);
     } catch {
       console.log("Generating delivery note PDF...");
-      deliveryNotePdfBytes = await generateDeliveryNotePDF(workOrder, pdfItems, deliveryNumber);
+      // Transform pdfItems to format expected by shared generateDeliveryNotePDF
+      const fileEntriesForPdf = pdfItems.map(item => ({
+        filename: item.filename,
+        quantity: item.quantity,
+        plate_formats: item.format_name ? { format_name: item.format_name } : null
+      }));
+      deliveryNotePdfBytes = await generateDeliveryNotePDF(workOrder, fileEntriesForPdf);
       await Deno.writeFile(deliveryNotePath, deliveryNotePdfBytes);
     }
 
