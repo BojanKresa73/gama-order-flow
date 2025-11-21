@@ -147,7 +147,7 @@ const NewWorkOrder = () => {
           .eq("work_order_id", orderId)
           .order("created_at");
         
-        if (items) {
+        if (items && items.length > 0) {
           setCtpItems(items.map(item => ({
             file_name: item.filename,
             plate_format_id: item.plate_format_id || "",
@@ -161,7 +161,7 @@ const NewWorkOrder = () => {
           .eq("work_order_id", orderId)
           .order("created_at");
         
-        if (items) {
+        if (items && items.length > 0) {
           setFilmJobs(items.map(item => ({
             id: item.id,
             file_name: item.file_name,
@@ -180,7 +180,7 @@ const NewWorkOrder = () => {
           .eq("work_order_id", orderId)
           .order("order_index");
         
-        if (items) {
+        if (items && items.length > 0) {
           setDigitalJobs(items.map(item => ({
             file_name: item.file_name,
             finished_w_mm: item.finished_w_mm,
