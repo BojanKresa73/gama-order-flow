@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { useNavigate, useSearchParams } from "react-router-dom";
+import { useNavigate, useSearchParams, useParams } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -17,10 +17,13 @@ import { LocalDigitalJobsTable, LocalDigitalJob } from "@/components/digital/Loc
 import { useFilmSettings } from "@/hooks/useFilmSettings";
 
 const NewWorkOrder = () => {
+  const { id } = useParams<{ id: string }>();
+  const isEditMode = !!id;
   const [searchParams] = useSearchParams();
   const [clients, setClients] = useState<any[]>([]);
   const [plateFormats, setPlateFormats] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
+  const [loadingOrder, setLoadingOrder] = useState(isEditMode);
   const [orderType, setOrderType] = useState<"ctp" | "digital" | "other" | "film">("ctp");
   const navigate = useNavigate();
   const { toast } = useToast();
@@ -59,7 +62,10 @@ const NewWorkOrder = () => {
     checkAuth();
     fetchClients();
     fetchPlateFormats();
-  }, []);
+    if (isEditMode && id) {
+      loadExistingOrder(id);
+    }
+  }, [id, isEditMode]);
 
   const checkAuth = async () => {
     const { data: { user } } = await supabase.auth.getUser();
@@ -76,6 +82,135 @@ const NewWorkOrder = () => {
   const fetchPlateFormats = async () => {
     const { data } = await supabase.from("plate_formats").select("*").order("format_name");
     setPlateFormats(data || []);
+  };
+
+  const loadExistingOrder = async (orderId: string) => {
+    try {
+      setLoadingOrder(true);
+      
+      // Fetch work order
+      const { data: order, error: orderError } = await supabase
+        .from("work_orders")
+        .select("*, clients(notification_email)")
+        .eq("id", orderId)
+        .single();
+
+      if (orderError) throw orderError;
+      if (!order) throw new Error("Nalog nije pronađen");
+      
+      // Check if order is open
+      if (order.status !== "open") {
+        toast({
+          title: "Greška",
+          description: "Možete izmeniti samo otvorene naloge",
+          variant: "destructive",
+        });
+        navigate(`/work-orders/${orderId}`);
+        return;
+      }
+
+      // Set form data
+      setFormData({
+        client_id: order.client_id,
+        notification_email: order.clients?.notification_email || "",
+        notes: order.notes || "",
+        trial_print: order.trial_print || false,
+        trial_sheets: order.trial_sheets || 0,
+        job_name: order.job_name || "",
+        run_quantity: order.run_quantity || 0,
+        pages: order.pages || 0,
+        print_format: order.print_format || "",
+        binding: order.binding || "",
+        print_spec: order.print_spec || "",
+        paper_gsm_text: order.paper_gsm_text || 0,
+        paper_gsm_cover: order.paper_gsm_cover || 0,
+        lamination: order.lamination || "",
+        sheets_used: order.sheets_used || 0,
+        clicks_count: order.clicks_count || 0,
+        test_clicks: order.test_clicks || 0,
+      });
+
+      // Set order type
+      const typeMap: Record<string, "ctp" | "digital" | "other" | "film"> = {
+        ctp: "ctp",
+        digital: "digital",
+        film: "film",
+        other: "other",
+      };
+      setOrderType(typeMap[order.order_type] || "ctp");
+
+      // Load items based on order type
+      if (order.order_type === "ctp") {
+        const { data: items } = await supabase
+          .from("file_entries")
+          .select("*")
+          .eq("work_order_id", orderId)
+          .order("created_at");
+        
+        if (items) {
+          setCtpItems(items.map(item => ({
+            file_name: item.filename,
+            plate_format_id: item.plate_format_id || "",
+            quantity: item.quantity || 0,
+          })));
+        }
+      } else if (order.order_type === "film") {
+        const { data: items } = await supabase
+          .from("film_jobs")
+          .select("*")
+          .eq("work_order_id", orderId)
+          .order("created_at");
+        
+        if (items) {
+          setFilmJobs(items.map(item => ({
+            id: item.id,
+            file_name: item.file_name,
+            width_mm: item.width_mm,
+            height_mm: item.height_mm,
+            quantity: item.qty,
+            allow_rotate_90: item.allow_rotate_90,
+            margin_mm: item.margin_mm,
+            note: item.note || "",
+          })));
+        }
+      } else if (order.order_type === "digital") {
+        const { data: items } = await supabase
+          .from("digital_jobs")
+          .select("*")
+          .eq("work_order_id", orderId)
+          .order("order_index");
+        
+        if (items) {
+          setDigitalJobs(items.map(item => ({
+            file_name: item.file_name,
+            finished_w_mm: item.finished_w_mm,
+            finished_h_mm: item.finished_h_mm,
+            qty: item.qty,
+            pages: item.pages,
+            print_sides: item.print_sides,
+            is_test_print: item.is_test_print,
+            computed_nup: item.computed_nup || undefined,
+            computed_sheets_per_copy: item.computed_sheets_per_copy || undefined,
+            computed_total_sheets: item.computed_total_sheets || undefined,
+            computed_color_clicks: item.computed_color_clicks || undefined,
+            computed_mono_clicks: item.computed_mono_clicks || undefined,
+            computed_price_per_sheet: item.computed_price_per_sheet || undefined,
+            computed_line_total: item.computed_line_total || undefined,
+            cover_sheets: item.cover_sheets || undefined,
+            lamination_sheets: item.lamination_sheets || undefined,
+          })));
+        }
+      }
+    } catch (error: any) {
+      toast({
+        title: "Greška",
+        description: error.message,
+        variant: "destructive",
+      });
+      navigate("/work-orders");
+    } finally {
+      setLoadingOrder(false);
+    }
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -97,7 +232,112 @@ const NewWorkOrder = () => {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error("Niste prijavljeni");
 
-      // Map order type to type enum
+      // If in edit mode, update existing order
+      if (isEditMode && id) {
+        // Update work order basic data
+        const { error: updateError } = await supabase
+          .from("work_orders")
+          .update({
+            client_id: formData.client_id,
+            notes: formData.notes,
+            job_name: formData.job_name,
+            print_format: formData.print_format,
+            binding: formData.binding,
+            print_spec: formData.print_spec,
+            lamination: formData.lamination,
+            trial_print: formData.trial_print,
+            trial_sheets: formData.trial_sheets,
+            updated_at: new Date().toISOString(),
+          })
+          .eq("id", id)
+          .eq("status", "open");
+
+        if (updateError) throw updateError;
+
+        // Update items based on order type
+        if (orderType === "ctp" && ctpItems.length > 0) {
+          // Delete old items
+          await supabase.from("file_entries").delete().eq("work_order_id", id);
+          
+          // Insert new items
+          const fileEntries = ctpItems.map(item => ({
+            work_order_id: id,
+            filename: item.file_name,
+            file_type: "CTP",
+            plate_format_id: item.plate_format_id || null,
+            quantity: item.quantity || null,
+          }));
+
+          const { error: filesError } = await supabase
+            .from("file_entries")
+            .insert(fileEntries);
+
+          if (filesError) throw filesError;
+        } else if (orderType === "film" && filmJobs.length > 0) {
+          // Delete old items
+          await supabase.from("film_jobs").delete().eq("work_order_id", id);
+          
+          // Insert new items
+          const filmItems = filmJobs.map(job => ({
+            work_order_id: id,
+            file_name: job.file_name,
+            width_mm: job.width_mm,
+            height_mm: job.height_mm,
+            qty: job.quantity,
+            allow_rotate_90: job.allow_rotate_90,
+            margin_mm: job.margin_mm,
+            note: job.note,
+          }));
+
+          const { error: filmError } = await supabase
+            .from("film_jobs")
+            .insert(filmItems);
+
+          if (filmError) throw filmError;
+        } else if (orderType === "digital" && digitalJobs.length > 0) {
+          // Delete old items
+          await supabase.from("digital_jobs").delete().eq("work_order_id", id);
+          
+          // Insert new items
+          const digitalItems = digitalJobs.map((job, index) => ({
+            work_order_id: id,
+            file_name: job.file_name,
+            finished_w_mm: job.finished_w_mm,
+            finished_h_mm: job.finished_h_mm,
+            qty: job.qty,
+            pages: job.pages,
+            print_sides: job.print_sides,
+            is_test_print: job.is_test_print,
+            order_index: index,
+            computed_nup: job.computed_nup || null,
+            computed_sheets_per_copy: job.computed_sheets_per_copy || null,
+            computed_total_sheets: job.computed_total_sheets || null,
+            computed_color_clicks: job.computed_color_clicks || null,
+            computed_mono_clicks: job.computed_mono_clicks || null,
+            computed_price_per_sheet: job.computed_price_per_sheet || null,
+            computed_line_total: job.computed_line_total || null,
+            cover_sheets: job.cover_sheets || null,
+            lamination_sheets: job.lamination_sheets || null,
+          }));
+
+          const { error: digitalError } = await supabase
+            .from("digital_jobs")
+            .insert(digitalItems);
+
+          if (digitalError) throw digitalError;
+        }
+
+        toast({
+          title: "Uspeh",
+          description: "Radni nalog je ažuriran",
+        });
+
+        navigate(`/work-orders/${id}`);
+        setLoading(false);
+        return;
+      }
+
+      // Map order type to type enum (for create mode)
       const typeMap: Record<string, 'CTP' | 'DIGITAL' | 'FILM' | 'OSTALO'> = {
         'ctp': 'CTP',
         'digital': 'DIGITAL',
@@ -306,7 +546,7 @@ const NewWorkOrder = () => {
             <Button variant="ghost" size="icon" onClick={() => navigate("/work-orders")}>
               <ArrowLeft className="h-5 w-5" />
             </Button>
-            <h1 className="text-2xl font-bold">Novi radni nalog</h1>
+            <h1 className="text-2xl font-bold">{isEditMode ? "Izmeni radni nalog" : "Novi radni nalog"}</h1>
           </div>
           <div className="flex gap-2">
             <Button variant="outline" onClick={() => navigate("/dashboard")}>
@@ -323,6 +563,13 @@ const NewWorkOrder = () => {
       </header>
 
       <main className="container mx-auto px-4 py-8">
+        {loadingOrder ? (
+          <Card>
+            <CardContent className="py-12 text-center">
+              <p className="text-muted-foreground">Učitavanje naloga...</p>
+            </CardContent>
+          </Card>
+        ) : (
         <form onSubmit={handleSubmit}>
           <Card>
             <CardHeader>
@@ -759,12 +1006,13 @@ const NewWorkOrder = () => {
                   Otkaži
                 </Button>
                 <Button type="submit" disabled={loading}>
-                  {loading ? "Kreiranje..." : "Kreiraj nalog"}
+                  {loading ? (isEditMode ? "Snimanje..." : "Kreiranje...") : (isEditMode ? "Snimi izmene" : "Kreiraj nalog")}
                 </Button>
               </div>
             </CardContent>
           </Card>
         </form>
+        )}
       </main>
     </div>
   );
