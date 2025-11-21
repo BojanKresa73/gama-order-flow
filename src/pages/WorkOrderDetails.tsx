@@ -19,6 +19,7 @@ const WorkOrderDetails = () => {
   const [loading, setLoading] = useState(true);
   const [emailStatus, setEmailStatus] = useState<any>(null);
   const [resending, setResending] = useState(false);
+  const [editMode, setEditMode] = useState(false);
 
   useEffect(() => {
     checkAuth();
@@ -166,6 +167,15 @@ const WorkOrderDetails = () => {
           <div className="flex items-center gap-2">
             {getStatusBadge(workOrder.status)}
             <Badge variant="outline">{getOrderTypeLabel(workOrder.order_type)}</Badge>
+            {workOrder.status === "open" && (
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => navigate(`/new-work-order?edit=${id}`)}
+              >
+                Izmeni
+              </Button>
+            )}
             {workOrder.status === "closed" && (
               <Button
                 variant="outline"

@@ -601,7 +601,33 @@ const handler = async (req: Request): Promise<Response> => {
     // Get items using unified helper
     const items = await getOrderItems(supabase, work_order_id);
     
+    console.log(`[closeWorkOrder] Order type: ${workOrder.order_type}, Items found: ${items.length}`);
+    
     if (items.length === 0) {
+      // Log more details for debugging
+      console.error(`[closeWorkOrder] NO_ITEMS error for order ${work_order_id}, type: ${workOrder.order_type}`);
+      
+      // Check which table should have items
+      if (workOrder.order_type === 'film') {
+        const { data: filmJobs, error } = await supabase
+          .from('film_jobs')
+          .select('id')
+          .eq('work_order_id', work_order_id);
+        console.error(`[closeWorkOrder] film_jobs check: ${filmJobs?.length || 0} rows, error:`, error);
+      } else if (workOrder.order_type === 'digital') {
+        const { data: digitalJobs, error } = await supabase
+          .from('digital_jobs')
+          .select('id')
+          .eq('work_order_id', work_order_id);
+        console.error(`[closeWorkOrder] digital_jobs check: ${digitalJobs?.length || 0} rows, error:`, error);
+      } else if (workOrder.order_type === 'ctp') {
+        const { data: fileEntries, error } = await supabase
+          .from('file_entries')
+          .select('id')
+          .eq('work_order_id', work_order_id);
+        console.error(`[closeWorkOrder] file_entries check: ${fileEntries?.length || 0} rows, error:`, error);
+      }
+      
       throw new AppError('NO_ITEMS', 'Nalog mora da ima bar jednu stavku');
     }
 
