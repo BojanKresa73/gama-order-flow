@@ -71,8 +71,7 @@ export async function generateDeliveryNotePDF(
       }
     }
 
-    const companyX = CONFIG.margin + CONFIG.logo.width + CONFIG.logo.gap;
-    const tableStartY = CONFIG.pageHeight - CONFIG.margin - 160;
+    const tableStartY = CONFIG.pageHeight - CONFIG.margin - 140;
     const signatureY = CONFIG.signature.yOffset;
 
     // Helper: draw header on page
@@ -88,14 +87,15 @@ export async function generateDeliveryNotePDF(
           width: CONFIG.logo.width,
           height: logoHeight,
         });
+        y = height - CONFIG.margin - logoHeight - 12; // Position below logo
       }
 
-      // Company info
-      page.drawText('GAMA UNITED d.o.o.', { x: companyX, y, size: 11, font: notoBold });
-      y -= 14;
-      page.drawText('Šumadijska 29, 11000 Beograd', { x: companyX, y, size: 10, font: notoFont });
-      y -= 14;
-      page.drawText('PIB: 112345678 | MB: 21234567', { x: companyX, y, size: 10, font: notoFont });
+      // Company info (below logo)
+      page.drawText('GAMA UNITED d.o.o.', { x: CONFIG.margin, y, size: 10, font: notoBold });
+      y -= 13;
+      page.drawText('Veljka Milićevića 2/10, Beograd', { x: CONFIG.margin, y, size: 9, font: notoFont });
+      y -= 13;
+      page.drawText('PIB: 1114876455', { x: CONFIG.margin, y, size: 9, font: notoFont });
     };
 
     // Helper: draw meta section
@@ -223,13 +223,13 @@ export async function generateDeliveryNotePDF(
     const pages = [currentPage];
 
     fileEntries.forEach((entry, idx) => {
-      const needsNewPage = y < signatureY + 40;
+      const needsNewPage = y < signatureY + 50;
       if (needsNewPage) {
         currentPage = pdfDoc.addPage([CONFIG.pageWidth, CONFIG.pageHeight]);
         pages.push(currentPage);
         pageNum++;
         drawHeader(currentPage);
-        y = CONFIG.pageHeight - CONFIG.margin - 80;
+        y = CONFIG.pageHeight - CONFIG.margin - 100;
         y = drawTableHeader(currentPage, y);
       }
       y = drawTableRow(currentPage, y, idx + 1, entry);
