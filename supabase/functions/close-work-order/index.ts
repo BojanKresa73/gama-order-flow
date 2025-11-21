@@ -631,7 +631,7 @@ const handler = async (req: Request): Promise<Response> => {
       throw new AppError('NO_ITEMS', 'Nalog mora da ima bar jednu stavku');
     }
 
-    // For film orders, validate dimensions and ensure all jobs are computed
+    // Validate order-type specific requirements
     if (workOrder.order_type === 'film') {
       const { data: filmJobs, error: filmErr } = await supabase
         .from('film_jobs')
@@ -675,6 +675,55 @@ const handler = async (req: Request): Promise<Response> => {
       const missingComputed = verifyJobs?.filter(j => !j.computed_total_m || j.computed_total_m <= 0) || [];
       if (missingComputed.length > 0) {
         throw new AppError('FILM_COMPUTE_MISSING', `Nedostaju izračunati metri za: ${missingComputed.map(j => j.file_name).join(', ')}`);
+      }
+    }
+    
+    // Validate digital orders
+    if (workOrder.order_type === 'digital') {
+      const { data: digitalJobs, error: digitalErr } = await supabase
+        .from('digital_jobs')
+        .select('id, file_name, computed_total_sheets, qty')
+        .eq('work_order_id', work_order_id);
+      
+      if (digitalErr) {
+        throw new AppError('DIGITAL_FETCH_FAILED', `Greška pri učitavanju digitalnih stavki: ${digitalErr.message}`);
+      }
+      
+      if (!digitalJobs || digitalJobs.length === 0) {
+        throw new AppError('NO_ITEMS', 'Digitalni nalog mora da ima bar jednu stavku');
+      }
+      
+      // Validate computed sheets
+      for (const job of digitalJobs) {
+        if (!job.computed_total_sheets || job.computed_total_sheets <= 0) {
+          throw new AppError('DIGITAL_NOT_COMPUTED', `Stavka "${job.file_name}" nema izračunat broj tabaka. Popuni sve podatke (format, strane, količina).`);
+        }
+        if (!job.qty || job.qty < 1) {
+          throw new AppError('INVALID_QUANTITY', `Stavka "${job.file_name}" ima količinu manju od 1`);
+        }
+      }
+    }
+    
+    // Validate CTP orders
+    if (workOrder.order_type === 'ctp') {
+      const { data: fileEntries, error: ctpErr } = await supabase
+        .from('file_entries')
+        .select('id, filename, quantity')
+        .eq('work_order_id', work_order_id);
+      
+      if (ctpErr) {
+        throw new AppError('CTP_FETCH_FAILED', `Greška pri učitavanju CTP stavki: ${ctpErr.message}`);
+      }
+      
+      if (!fileEntries || fileEntries.length === 0) {
+        throw new AppError('NO_ITEMS', 'CTP nalog mora da ima bar jednu stavku');
+      }
+      
+      // Validate quantity for each file entry
+      for (const entry of fileEntries) {
+        if (!entry.quantity || entry.quantity < 1) {
+          throw new AppError('INVALID_QUANTITY', `Stavka "${entry.filename}" mora da ima količinu veću od 0`);
+        }
       }
     }
     

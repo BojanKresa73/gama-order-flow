@@ -171,7 +171,7 @@ const WorkOrderDetails = () => {
               <Button
                 variant="outline"
                 size="sm"
-                onClick={() => navigate(`/new-work-order?edit=${id}`)}
+                onClick={() => navigate(`/work-orders/${id}/edit`)}
               >
                 Izmeni
               </Button>
