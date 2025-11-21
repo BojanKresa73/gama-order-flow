@@ -50,9 +50,26 @@ const NewWorkOrder = () => {
     test_clicks: 0,
   });
 
-  const [ctpItems, setCtpItems] = useState<Array<{ file_name: string; plate_format_id: string; quantity: number }>>([]);
-  const [filmJobs, setFilmJobs] = useState<LocalFilmJob[]>([]);
-  const [digitalJobs, setDigitalJobs] = useState<LocalDigitalJob[]>([]);
+  // Use stable IDs for items
+  const [ctpItems, setCtpItems] = useState<Array<{ 
+    id?: string; 
+    tempId?: string; 
+    file_name: string; 
+    plate_format_id: string; 
+    quantity: number;
+    __status?: 'unchanged' | 'created' | 'updated' | 'deleted';
+  }>>([]);
+  
+  const [filmJobs, setFilmJobs] = useState<Array<LocalFilmJob & { 
+    tempId?: string;
+    __status?: 'unchanged' | 'created' | 'updated' | 'deleted';
+  }>>([]);
+  
+  const [digitalJobs, setDigitalJobs] = useState<Array<LocalDigitalJob & {
+    id?: string;
+    tempId?: string;
+    __status?: 'unchanged' | 'created' | 'updated' | 'deleted';
+  }>>([]);
   
   const { data: filmSettings } = useFilmSettings();
   const [bulkFormat, setBulkFormat] = useState("");
@@ -149,9 +166,11 @@ const NewWorkOrder = () => {
         
         if (items && items.length > 0) {
           setCtpItems(items.map(item => ({
+            id: item.id,
             file_name: item.filename,
             plate_format_id: item.plate_format_id || "",
             quantity: item.quantity || 0,
+            __status: 'unchanged' as const,
           })));
         }
       } else if (order.order_type === "film") {
@@ -171,6 +190,7 @@ const NewWorkOrder = () => {
             allow_rotate_90: item.allow_rotate_90,
             margin_mm: item.margin_mm,
             note: item.note || "",
+            __status: 'unchanged' as const,
           })));
         }
       } else if (order.order_type === "digital") {
@@ -182,6 +202,7 @@ const NewWorkOrder = () => {
         
         if (items && items.length > 0) {
           setDigitalJobs(items.map(item => ({
+            id: item.id,
             file_name: item.file_name,
             finished_w_mm: item.finished_w_mm,
             finished_h_mm: item.finished_h_mm,
@@ -198,6 +219,7 @@ const NewWorkOrder = () => {
             computed_line_total: item.computed_line_total || undefined,
             cover_sheets: item.cover_sheets || undefined,
             lamination_sheets: item.lamination_sheets || undefined,
+            __status: 'unchanged' as const,
           })));
         }
       }
@@ -232,100 +254,49 @@ const NewWorkOrder = () => {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error("Niste prijavljeni");
 
-      // If in edit mode, update existing order
+      // If in edit mode, call update edge function
       if (isEditMode && id) {
-        // Update work order basic data
-        const { error: updateError } = await supabase
-          .from("work_orders")
-          .update({
-            client_id: formData.client_id,
-            notes: formData.notes,
-            job_name: formData.job_name,
-            print_format: formData.print_format,
-            binding: formData.binding,
-            print_spec: formData.print_spec,
-            lamination: formData.lamination,
-            trial_print: formData.trial_print,
-            trial_sheets: formData.trial_sheets,
-            updated_at: new Date().toISOString(),
-          })
-          .eq("id", id)
-          .eq("status", "open");
-
-        if (updateError) throw updateError;
-
-        // Update items based on order type
-        if (orderType === "ctp" && ctpItems.length > 0) {
-          // Delete old items
-          await supabase.from("file_entries").delete().eq("work_order_id", id);
-          
-          // Insert new items
-          const fileEntries = ctpItems.map(item => ({
-            work_order_id: id,
-            filename: item.file_name,
-            file_type: "CTP",
-            plate_format_id: item.plate_format_id || null,
-            quantity: item.quantity || null,
-          }));
-
-          const { error: filesError } = await supabase
-            .from("file_entries")
-            .insert(fileEntries);
-
-          if (filesError) throw filesError;
-        } else if (orderType === "film" && filmJobs.length > 0) {
-          // Delete old items
-          await supabase.from("film_jobs").delete().eq("work_order_id", id);
-          
-          // Insert new items
-          const filmItems = filmJobs.map(job => ({
-            work_order_id: id,
-            file_name: job.file_name,
-            width_mm: job.width_mm,
-            height_mm: job.height_mm,
-            qty: job.quantity,
-            allow_rotate_90: job.allow_rotate_90,
-            margin_mm: job.margin_mm,
-            note: job.note,
-          }));
-
-          const { error: filmError } = await supabase
-            .from("film_jobs")
-            .insert(filmItems);
-
-          if (filmError) throw filmError;
-        } else if (orderType === "digital" && digitalJobs.length > 0) {
-          // Delete old items
-          await supabase.from("digital_jobs").delete().eq("work_order_id", id);
-          
-          // Insert new items
-          const digitalItems = digitalJobs.map((job, index) => ({
-            work_order_id: id,
-            file_name: job.file_name,
-            finished_w_mm: job.finished_w_mm,
-            finished_h_mm: job.finished_h_mm,
-            qty: job.qty,
-            pages: job.pages,
-            print_sides: job.print_sides,
-            is_test_print: job.is_test_print,
-            order_index: index,
-            computed_nup: job.computed_nup || null,
-            computed_sheets_per_copy: job.computed_sheets_per_copy || null,
-            computed_total_sheets: job.computed_total_sheets || null,
-            computed_color_clicks: job.computed_color_clicks || null,
-            computed_mono_clicks: job.computed_mono_clicks || null,
-            computed_price_per_sheet: job.computed_price_per_sheet || null,
-            computed_line_total: job.computed_line_total || null,
-            cover_sheets: job.cover_sheets || null,
-            lamination_sheets: job.lamination_sheets || null,
-          }));
-
-          const { error: digitalError } = await supabase
-            .from("digital_jobs")
-            .insert(digitalItems);
-
-          if (digitalError) throw digitalError;
+        // Prepare diff payload for update
+        const itemsDiff: any = {};
+        
+        if (orderType === "ctp") {
+          itemsDiff.created = ctpItems.filter(it => !it.id && it.__status !== 'deleted');
+          itemsDiff.updated = ctpItems.filter(it => it.id && it.__status === 'updated');
+          itemsDiff.deleted = ctpItems.filter(it => it.id && it.__status === 'deleted').map(it => it.id);
+        } else if (orderType === "film") {
+          itemsDiff.created = filmJobs.filter(it => !it.id && it.__status !== 'deleted');
+          itemsDiff.updated = filmJobs.filter(it => it.id && it.__status === 'updated');
+          itemsDiff.deleted = filmJobs.filter(it => it.id && it.__status === 'deleted').map(it => it.id);
+        } else if (orderType === "digital") {
+          itemsDiff.created = digitalJobs.filter(it => !it.id && it.__status !== 'deleted');
+          itemsDiff.updated = digitalJobs.filter(it => it.id && it.__status === 'updated');
+          itemsDiff.deleted = digitalJobs.filter(it => it.id && it.__status === 'deleted').map(it => it.id);
         }
+
+        const { data: updateResponse, error: updateError } = await supabase.functions.invoke(
+          'update-work-order',
+          {
+            body: {
+              workOrderId: id,
+              kind: orderType.toUpperCase(),
+              header: {
+                client_id: formData.client_id,
+                notes: formData.notes,
+                job_name: formData.job_name,
+                print_format: formData.print_format,
+                binding: formData.binding,
+                print_spec: formData.print_spec,
+                lamination: formData.lamination,
+                trial_print: formData.trial_print,
+                trial_sheets: formData.trial_sheets,
+              },
+              items: itemsDiff,
+            },
+          }
+        );
+
+        if (updateError) throw new Error(updateError.message);
+        if (!updateResponse?.ok) throw new Error(updateResponse?.error || 'Greška pri ažuriranju naloga');
 
         toast({
           title: "Uspeh",

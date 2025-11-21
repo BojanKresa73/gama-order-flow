@@ -2,16 +2,16 @@ import { PDFDocument, rgb } from "https://esm.sh/pdf-lib@1.17.1";
 import fontkit from "https://esm.sh/@pdf-lib/fontkit@1.1.1";
 
 const CONFIG = {
-  pageWidth: 595.28, // A5 landscape width in points
-  pageHeight: 419.53, // A5 landscape height in points
-  margin: 20,
-  logo: { width: 140 },
+  pageWidth: 595.28, // A4 width in points (A5 landscape = A4 portrait rotated)
+  pageHeight: 419.53, // A4 height / sqrt(2) ≈ A5 landscape height
+  margin: 30,
+  logo: { width: 120 },
   table: {
-    cols: { rbr: 40, filename: 280, details: 120, quantity: 70 },
-    rowHeight: 20,
-    headerBg: rgb(0.95, 0.95, 0.95),
+    cols: { rbr: 35, filename: 260, details: 140, quantity: 65 },
+    rowHeight: 22,
+    headerBg: rgb(0.93, 0.93, 0.93),
   },
-  signature: { lineWidth: 180, yOffset: 50 },
+  signature: { lineWidth: 160, yOffset: 60 },
 };
 
 // Module-level cache for assets
@@ -34,27 +34,30 @@ function getDetailsText(entry: any, orderKind: string): string {
     if (entry.plate_formats?.format_name) {
       return entry.plate_formats.format_name;
     }
-    if (entry.width_mm && entry.height_mm) {
-      return `${entry.width_mm}×${entry.height_mm} mm`;
-    }
-    return 'Format ploče – N/A';
+    return 'Format ploče';
   }
   
-  // For FILMOVANJE, show dimensions if available
+  // For FILMOVANJE, show WxH mm + orientation if available
   if (orderKind === 'FILMOVANJE') {
+    let text = '';
     if (entry.width_mm && entry.height_mm) {
-      return `${entry.width_mm}×${entry.height_mm} mm`;
+      text = `${entry.width_mm}×${entry.height_mm} mm`;
     }
-    if (entry.computed_total_m) {
-      return `${entry.computed_total_m.toFixed(2)} m`;
+    if (entry.computed_rotation_deg !== undefined) {
+      text += ` (${entry.computed_rotation_deg}°)`;
     }
+    if (entry.computed_m_per_piece) {
+      text += `, ${entry.computed_m_per_piece.toFixed(3)} m/kom`;
+    }
+    return text || 'N/A';
   }
   
-  // For DIGITALA, show format if available
+  // For DIGITALA, show format or N/A
   if (orderKind === 'DIGITALA') {
     if (entry.finished_w_mm && entry.finished_h_mm) {
       return `${entry.finished_w_mm}×${entry.finished_h_mm} mm`;
     }
+    return 'N/A';
   }
   
   return 'N/A';
@@ -118,54 +121,60 @@ export async function generateDeliveryNotePDF(
 
     const { notoFont, notoBold, logoImg, logoHeight } = await loadAssets(pdfDoc);
 
-    const tableStartY = CONFIG.pageHeight - CONFIG.margin - 130;
-    const signatureY = CONFIG.signature.yOffset;
+    const signatureY = CONFIG.signature.yOffset + 10;
 
-    // Helper: draw first page header (logo + company info LEFT, client info RIGHT)
+    // Helper: draw first page header (logo + company LEFT, client info TOP RIGHT)
     const drawFirstPageHeader = (page: any): number => {
       const { height } = page.getSize();
-      let y = height - CONFIG.margin;
-      const rightX = CONFIG.pageWidth - CONFIG.margin - 200; // Right column starts here
+      const rightX = CONFIG.pageWidth - CONFIG.margin - 220;
 
-      // LEFT: Logo and company info
+      // LEFT: Logo
+      let leftY = height - CONFIG.margin;
       if (logoImg) {
         page.drawImage(logoImg, {
           x: CONFIG.margin,
-          y: height - CONFIG.margin - logoHeight,
+          y: leftY - logoHeight,
           width: CONFIG.logo.width,
           height: logoHeight,
         });
+        leftY = leftY - logoHeight - 8;
       }
-      
-      let leftY = height - CONFIG.margin - logoHeight - 10;
-      page.drawText('GAMA UNITED d.o.o.', { x: CONFIG.margin, y: leftY, size: 9, font: notoBold });
-      leftY -= 12;
-      page.drawText('Veljka Milićevića 2/10, Beograd', { x: CONFIG.margin, y: leftY, size: 9, font: notoFont });
-      leftY -= 12;
-      page.drawText('PIB: 1114876455', { x: CONFIG.margin, y: leftY, size: 9, font: notoFont });
 
-      // RIGHT: Title and client info
-      let rightY = y;
-      page.drawText('OTPREMNICA', { x: rightX, y: rightY, size: 14, font: notoBold });
-      rightY -= 18;
-      
+      // Company info below logo
+      page.drawText('GAMA UNITED d.o.o.', { x: CONFIG.margin, y: leftY, size: 8, font: notoBold });
+      leftY -= 11;
+      page.drawText('Veljka Milićevića 2/10, Beograd', { x: CONFIG.margin, y: leftY, size: 8, font: notoFont });
+      leftY -= 11;
+      page.drawText('PIB: 1114876455', { x: CONFIG.margin, y: leftY, size: 8, font: notoFont });
+
+      // TOP RIGHT: Client block
+      let rightY = height - CONFIG.margin;
+      page.drawText('OTPREMNICA', { x: rightX, y: rightY, size: 16, font: notoBold });
+      rightY -= 22;
+
       const deliveryNumber = workOrder.display_order_number || workOrder.order_number;
-      page.drawText(`Broj: ${deliveryNumber}`, { x: rightX, y: rightY, size: 9, font: notoFont });
-      rightY -= 12;
-      page.drawText(`Datum otvaranja: ${formatDate(workOrder.created_at)}`, { x: rightX, y: rightY, size: 9, font: notoFont });
-      rightY -= 12;
+      page.drawText(`Broj naloga: ${deliveryNumber}`, { x: rightX, y: rightY, size: 9, font: notoFont });
+      rightY -= 13;
       page.drawText(`Datum zatvaranja: ${formatDate(workOrder.closed_at || new Date().toISOString())}`, { x: rightX, y: rightY, size: 9, font: notoFont });
-      rightY -= 14;
-      
+      rightY -= 16;
+
       page.drawText('Klijent:', { x: rightX, y: rightY, size: 9, font: notoBold });
-      rightY -= 12;
-      page.drawText(workOrder.clients?.name || 'N/A', { x: rightX, y: rightY, size: 9, font: notoFont });
-      if (workOrder.clients?.pib) {
-        rightY -= 12;
-        page.drawText(`PIB: ${workOrder.clients.pib}`, { x: rightX, y: rightY, size: 9, font: notoFont });
-      }
+      rightY -= 13;
+      const clientName = (workOrder.clients?.name || 'N/A').substring(0, 30);
+      page.drawText(clientName, { x: rightX, y: rightY, size: 9, font: notoFont });
       
-      return Math.min(leftY, rightY) - 16;
+      if (workOrder.clients?.email) {
+        rightY -= 13;
+        const email = workOrder.clients.email.substring(0, 30);
+        page.drawText(email, { x: rightX, y: rightY, size: 8, font: notoFont });
+      }
+
+      if (workOrder.clients?.pib) {
+        rightY -= 13;
+        page.drawText(`PIB: ${workOrder.clients.pib}`, { x: rightX, y: rightY, size: 8, font: notoFont });
+      }
+
+      return Math.min(leftY, rightY) - 18;
     };
 
     // Helper: draw items label before table
@@ -268,13 +277,16 @@ export async function generateDeliveryNotePDF(
     const pages = [currentPage];
 
     fileEntries.forEach((entry, idx) => {
-      const needsNewPage = y < signatureY + 45;
+      const needsNewPage = y < signatureY + 55;
       if (needsNewPage) {
-        // Subsequent pages: no header, just table continuation
+        // Subsequent pages: no full header, just minimal continuation
         currentPage = pdfDoc.addPage([CONFIG.pageWidth, CONFIG.pageHeight]);
         pages.push(currentPage);
         pageNum++;
-        y = CONFIG.pageHeight - CONFIG.margin - 10;
+        y = CONFIG.pageHeight - CONFIG.margin - 20;
+        // Draw small continuation indicator
+        currentPage.drawText('(nastavak)', { x: CONFIG.margin, y, size: 9, font: notoFont, color: rgb(0.5, 0.5, 0.5) });
+        y -= 15;
         y = drawTableHeader(currentPage, y);
       }
       y = drawTableRow(currentPage, y, idx + 1, entry);
