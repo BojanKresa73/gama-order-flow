@@ -4,15 +4,21 @@ import fontkit from "https://esm.sh/@pdf-lib/fontkit@1.1.1";
 const CONFIG = {
   pageWidth: 595.28, // A5 landscape width in points
   pageHeight: 419.53, // A5 landscape height in points
-  margin: 24,
-  logo: { width: 180, gap: 16 },
+  margin: 20,
+  logo: { width: 150 },
   table: {
     cols: { rbr: 40, filename: 250, details: 160, quantity: 60 },
-    rowHeight: 22,
+    rowHeight: 20,
     headerBg: rgb(0.95, 0.95, 0.95),
   },
-  signature: { lineWidth: 180, yOffset: 60 },
+  signature: { lineWidth: 180, yOffset: 50 },
 };
+
+// Module-level cache for assets
+let cachedRegularFont: ArrayBuffer | null = null;
+let cachedBoldFont: ArrayBuffer | null = null;
+let cachedLogo: any | null = null;
+let cachedLogoHeight: number = 0;
 
 function formatDate(dateString: string): string {
   const date = new Date(dateString);
@@ -27,15 +33,9 @@ function isSupportedFont(bytes: ArrayBuffer) {
   return sig === '\x00\x01\x00\x00' || sig === 'OTTO';
 }
 
-export async function generateDeliveryNotePDF(
-  workOrder: any,
-  fileEntries: any[]
-): Promise<Uint8Array> {
-  try {
-    const pdfDoc = await PDFDocument.create();
-    pdfDoc.registerFontkit(fontkit);
-
-    // Load fonts
+async function loadAssets(pdfDoc: any) {
+  // Load fonts (with caching)
+  if (!cachedRegularFont || !cachedBoldFont) {
     const regularFontUrl = Deno.env.get('FONT_REGULAR_URL');
     const boldFontUrl = Deno.env.get('FONT_BOLD_URL');
     if (!regularFontUrl || !boldFontUrl) {
@@ -45,37 +45,52 @@ export async function generateDeliveryNotePDF(
       fetch(regularFontUrl),
       fetch(boldFontUrl),
     ]);
-    const regularBytes = await regularResp.arrayBuffer();
-    const boldBytes = await boldResp.arrayBuffer();
-    if (!isSupportedFont(regularBytes) || !isSupportedFont(boldBytes)) {
+    cachedRegularFont = await regularResp.arrayBuffer();
+    cachedBoldFont = await boldResp.arrayBuffer();
+    if (!isSupportedFont(cachedRegularFont) || !isSupportedFont(cachedBoldFont)) {
       throw new Error('Invalid font format');
     }
-    const notoFont = await pdfDoc.embedFont(regularBytes, { subset: true });
-    const notoBold = await pdfDoc.embedFont(boldBytes, { subset: true });
+  }
+  
+  const notoFont = await pdfDoc.embedFont(cachedRegularFont, { subset: true });
+  const notoBold = await pdfDoc.embedFont(cachedBoldFont, { subset: true });
 
-    // Load logo
-    let logoImg: any = null;
-    let logoHeight = 0;
+  // Load logo (with caching)
+  if (!cachedLogo) {
     const logoUrl = Deno.env.get('LOGO_URL');
     if (logoUrl) {
       try {
-        const logoResp = await fetch(logoUrl, { cache: 'no-store' });
+        const logoResp = await fetch(logoUrl);
         if (logoResp.ok) {
           const logoBytes = await logoResp.arrayBuffer();
-          logoImg = await pdfDoc.embedPng(logoBytes);
-          const aspectRatio = logoImg.height / logoImg.width;
-          logoHeight = CONFIG.logo.width * aspectRatio;
+          cachedLogo = await pdfDoc.embedPng(logoBytes);
+          const aspectRatio = cachedLogo.height / cachedLogo.width;
+          cachedLogoHeight = CONFIG.logo.width * aspectRatio;
         }
       } catch (err) {
         console.warn('Failed to load logo:', err);
       }
     }
+  }
 
-    const tableStartY = CONFIG.pageHeight - CONFIG.margin - 140;
+  return { notoFont, notoBold, logoImg: cachedLogo, logoHeight: cachedLogoHeight };
+}
+
+export async function generateDeliveryNotePDF(
+  workOrder: any,
+  fileEntries: any[]
+): Promise<Uint8Array> {
+  try {
+    const pdfDoc = await PDFDocument.create();
+    pdfDoc.registerFontkit(fontkit);
+
+    const { notoFont, notoBold, logoImg, logoHeight } = await loadAssets(pdfDoc);
+
+    const tableStartY = CONFIG.pageHeight - CONFIG.margin - 120;
     const signatureY = CONFIG.signature.yOffset;
 
-    // Helper: draw header on page
-    const drawHeader = (page: any) => {
+    // Helper: draw first page header (logo + company info)
+    const drawFirstPageHeader = (page: any): number => {
       const { height } = page.getSize();
       let y = height - CONFIG.margin;
 
@@ -87,45 +102,46 @@ export async function generateDeliveryNotePDF(
           width: CONFIG.logo.width,
           height: logoHeight,
         });
-        y = height - CONFIG.margin - logoHeight - 12; // Position below logo
+        y = height - CONFIG.margin - logoHeight - 10;
       }
 
       // Company info (below logo)
       page.drawText('GAMA UNITED d.o.o.', { x: CONFIG.margin, y, size: 10, font: notoBold });
-      y -= 13;
+      y -= 12;
       page.drawText('Veljka Milićevića 2/10, Beograd', { x: CONFIG.margin, y, size: 9, font: notoFont });
-      y -= 13;
+      y -= 12;
       page.drawText('PIB: 1114876455', { x: CONFIG.margin, y, size: 9, font: notoFont });
+      
+      return y - 16; // Return Y position after header
     };
 
-    // Helper: draw meta section
+    // Helper: draw meta section (only on first page)
     const drawMeta = (page: any, startY: number): number => {
       let y = startY;
-      page.drawText('OTPREMNICA', { x: CONFIG.margin, y, size: 18, font: notoBold });
-      y -= 24;
+      page.drawText('OTPREMNICA', { x: CONFIG.margin, y, size: 16, font: notoBold });
+      y -= 20;
       
-      // Use work order number as delivery number
       const deliveryNumber = workOrder.display_order_number || workOrder.order_number;
-      page.drawText(`Broj: ${deliveryNumber}`, { x: CONFIG.margin, y, size: 11, font: notoFont });
-      y -= 16;
+      page.drawText(`Broj: ${deliveryNumber}`, { x: CONFIG.margin, y, size: 10, font: notoFont });
+      y -= 14;
       page.drawText(
         `Datum otvaranja: ${formatDate(workOrder.created_at)}`,
-        { x: CONFIG.margin, y, size: 10, font: notoFont }
+        { x: CONFIG.margin, y, size: 9, font: notoFont }
       );
-      y -= 14;
+      y -= 13;
       page.drawText(
         `Datum zatvaranja: ${formatDate(workOrder.closed_at || new Date().toISOString())}`,
-        { x: CONFIG.margin, y, size: 10, font: notoFont }
+        { x: CONFIG.margin, y, size: 9, font: notoFont }
       );
-      y -= 16;
-      page.drawText('Klijent:', { x: CONFIG.margin, y, size: 11, font: notoBold });
       y -= 14;
-      page.drawText(workOrder.clients?.name || 'N/A', { x: CONFIG.margin, y, size: 10, font: notoFont });
+      page.drawText('Klijent:', { x: CONFIG.margin, y, size: 10, font: notoBold });
+      y -= 13;
+      page.drawText(workOrder.clients?.name || 'N/A', { x: CONFIG.margin, y, size: 9, font: notoFont });
       if (workOrder.clients?.pib) {
-        y -= 14;
-        page.drawText(`PIB: ${workOrder.clients.pib}`, { x: CONFIG.margin, y, size: 10, font: notoFont });
+        y -= 13;
+        page.drawText(`PIB: ${workOrder.clients.pib}`, { x: CONFIG.margin, y, size: 9, font: notoFont });
       }
-      y -= 20;
+      y -= 16;
       return y;
     };
 
@@ -212,24 +228,26 @@ export async function generateDeliveryNotePDF(
 
     // Build pages
     let currentPage = pdfDoc.addPage([CONFIG.pageWidth, CONFIG.pageHeight]);
-    drawHeader(currentPage);
-    let y = drawMeta(currentPage, tableStartY);
-    y -= 8;
-    currentPage.drawText('Stavke:', { x: CONFIG.margin, y, size: 11, font: notoBold });
-    y -= 20;
+    
+    // First page: header + meta + table
+    let y = drawFirstPageHeader(currentPage);
+    y = drawMeta(currentPage, y);
+    y -= 6;
+    currentPage.drawText('Stavke:', { x: CONFIG.margin, y, size: 10, font: notoBold });
+    y -= 16;
     y = drawTableHeader(currentPage, y);
 
     let pageNum = 1;
     const pages = [currentPage];
 
     fileEntries.forEach((entry, idx) => {
-      const needsNewPage = y < signatureY + 50;
+      const needsNewPage = y < signatureY + 45;
       if (needsNewPage) {
+        // Subsequent pages: no header, just table continuation
         currentPage = pdfDoc.addPage([CONFIG.pageWidth, CONFIG.pageHeight]);
         pages.push(currentPage);
         pageNum++;
-        drawHeader(currentPage);
-        y = CONFIG.pageHeight - CONFIG.margin - 100;
+        y = CONFIG.pageHeight - CONFIG.margin - 10;
         y = drawTableHeader(currentPage, y);
       }
       y = drawTableRow(currentPage, y, idx + 1, entry);
