@@ -1469,27 +1469,27 @@ export type Database = {
       }
       work_order_events: {
         Row: {
-          created_at: string | null
+          created_at: string
           created_by: string | null
           event_type: string
-          id: string
-          metadata: Json | null
+          id: number
+          payload: Json | null
           work_order_id: string
         }
         Insert: {
-          created_at?: string | null
+          created_at?: string
           created_by?: string | null
           event_type: string
-          id?: string
-          metadata?: Json | null
+          id?: number
+          payload?: Json | null
           work_order_id: string
         }
         Update: {
-          created_at?: string | null
+          created_at?: string
           created_by?: string | null
           event_type?: string
-          id?: string
-          metadata?: Json | null
+          id?: number
+          payload?: Json | null
           work_order_id?: string
         }
         Relationships: [
