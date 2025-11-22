@@ -37,9 +37,11 @@ function getDetailsText(entry: any, orderKind: string): string {
     return 'Format ploče';
   }
   
-  // For FILMOVANJE, show consumed length
+  // For FILMOVANJE, show consumed length per item
   if (orderKind === 'FILMOVANJE') {
-    const totalM = entry.computed_total_m ?? entry.total_m ?? 0;
+    const perPieceM = Number(entry.computed_total_m ?? entry.total_m ?? 0);
+    const qty = Number(entry.qty ?? 1);
+    const totalM = perPieceM * qty;
     return `Potrošeno: ${totalM.toFixed(2)} m`;
   }
   
