@@ -37,9 +37,22 @@ function getDetailsText(entry: any, orderKind: string): string {
     return 'Format ploče';
   }
   
-  // For FILMOVANJE, show consumed length per item
+// For FILMOVANJE, show consumed length per item
   if (orderKind === 'FILMOVANJE') {
-    const totalM = Number(entry.computed_total_m ?? entry.total_m ?? 0);
+    // Calculate film usage on the fly
+    const ROLL_WIDTH_MM = 500;
+    const widthMm = Number(entry.width_mm ?? entry.width ?? 0);
+    const heightMm = Number(entry.height_mm ?? entry.height ?? 0);
+    const qty = Number(entry.qty ?? entry.quantity ?? 1);
+    
+    const fit0 = Math.floor(ROLL_WIDTH_MM / widthMm);
+    const fit90 = Math.floor(ROLL_WIDTH_MM / heightMm);
+    const use90 = fit90 > fit0;
+    const across = Math.max(fit0, fit90, 1);
+    const pieceM = (use90 ? widthMm : heightMm) / 1000;
+    const rows = Math.ceil(qty / across);
+    const totalM = rows * pieceM;
+    
     return `Potrošeno: ${totalM.toFixed(2)} m`;
   }
   
