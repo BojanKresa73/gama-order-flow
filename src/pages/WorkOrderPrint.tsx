@@ -13,6 +13,8 @@ interface WorkOrderData {
   status: string;
   created_at: string;
   closed_at: string | null;
+  invalidated_at: string | null;
+  invalid_reason: string | null;
   notes: string | null;
   client_name: string;
   client_email: string | null;
@@ -144,6 +146,9 @@ export default function WorkOrderPrint() {
 
         <div className="container mx-auto px-4 py-8">
           <div className="bg-white shadow-lg max-w-[210mm] mx-auto print-page">
+            {data.invalidated_at && (
+              <div className="invalid-stamp">NEVAŽEĆE</div>
+            )}
             <div className="p-8">
               {/* Header */}
               <div className="page-header">
@@ -240,6 +245,20 @@ const PRINT_CSS = `
 body { 
   margin: 0; 
   color: #111; 
+}
+
+.invalid-stamp {
+  position: fixed;
+  top: 10mm;
+  right: 10mm;
+  padding: 6px 10px;
+  border: 2px solid #ef4444;
+  color: #ef4444;
+  font-weight: 700;
+  letter-spacing: 1px;
+  font-size: 14px;
+  background: white;
+  z-index: 1000;
 }
 
 .page-header {
