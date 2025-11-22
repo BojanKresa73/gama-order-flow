@@ -3,13 +3,12 @@ import { useParams, useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Printer, ArrowLeft } from "lucide-react";
-import { useToast } from "@/hooks/use-toast";
+import { computeFilmUsage } from "@/lib/filmUsage";
 
 interface WorkOrderData {
   id: string;
   order_number: string;
   display_order_number: string;
-  kind: string;
   order_type: string;
   status: string;
   created_at: string;
@@ -21,82 +20,36 @@ interface WorkOrderData {
   items: any[];
 }
 
+interface PreparedRow {
+  rbr: number;
+  name: string;
+  details: string;
+  qty: number;
+}
+
 export default function WorkOrderPrint() {
   const { id } = useParams();
   const navigate = useNavigate();
-  const { toast } = useToast();
   const [data, setData] = useState<WorkOrderData | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    fetchWorkOrder();
+    if (id) {
+      fetchWorkOrder();
+    }
   }, [id]);
 
   const fetchWorkOrder = async () => {
     try {
-      // First fetch work order
-      const { data: workOrder, error: woError } = await supabase
-        .from('work_orders')
-        .select('id, order_number, display_order_number, kind, order_type, status, created_at, closed_at, notes, client_id')
-        .eq('id', id)
-        .maybeSingle();
+      const { data: result, error } = await supabase
+        .rpc('get_work_order_full', { p_identifier: id });
 
-      if (woError) throw woError;
-      if (!workOrder) throw new Error('Work order not found');
+      if (error) throw error;
+      if (!result) throw new Error('Work order not found');
 
-      // Then fetch client
-      const { data: client, error: clientError } = await supabase
-        .from('clients')
-        .select('name, email, pib')
-        .eq('id', workOrder.client_id)
-        .maybeSingle();
-
-      if (clientError) throw clientError;
-
-      let items: any[] = [];
-      const orderKind = workOrder.kind || 'CTP';
-
-      if (orderKind === 'CTP') {
-        const { data: entries } = await supabase
-          .from('file_entries')
-          .select('*, plate_formats(format_name)')
-          .eq('work_order_id', id)
-          .order('created_at', { ascending: true });
-        items = entries || [];
-      } else if (orderKind === 'FILMOVANJE') {
-        const { data: filmJobs } = await supabase
-          .from('film_jobs')
-          .select('*')
-          .eq('work_order_id', id)
-          .order('created_at', { ascending: true });
-        items = filmJobs || [];
-      } else if (orderKind === 'DIGITALA') {
-        const { data: digitalJobs } = await supabase
-          .from('digital_jobs')
-          .select('*')
-          .eq('work_order_id', id)
-          .order('order_index', { ascending: true });
-        items = digitalJobs || [];
-      }
-
-      setData({
-        id: workOrder.id,
-        order_number: workOrder.order_number,
-        display_order_number: workOrder.display_order_number,
-        kind: workOrder.kind,
-        order_type: workOrder.order_type,
-        status: workOrder.status,
-        created_at: workOrder.created_at,
-        closed_at: workOrder.closed_at,
-        notes: workOrder.notes,
-        client_name: client?.name || '',
-        client_email: client?.email || null,
-        client_pib: client?.pib || null,
-        items,
-      });
+      setData(result as unknown as WorkOrderData);
     } catch (error: any) {
       console.error('Error loading work order:', error);
-      // Don't show toast - we'll show a clean "not found" message instead
     } finally {
       setLoading(false);
     }
@@ -108,21 +61,44 @@ export default function WorkOrderPrint() {
     return date.toLocaleDateString('sr-RS');
   };
 
-  const getDetailsText = (item: any, kind: string) => {
-    if (kind === 'CTP') {
-      return item.plate_formats?.format_name || 'Format ploče';
+  const prepareRows = (): PreparedRow[] => {
+    if (!data) return [];
+
+    if (data.order_type === 'film') {
+      return data.items.map((item: any, i: number) => {
+        const fit = computeFilmUsage({
+          widthMm: Number(item.width_mm ?? item.width ?? 0),
+          heightMm: Number(item.height_mm ?? item.height ?? 0),
+          qty: Number(item.qty ?? item.quantity ?? 1),
+        });
+        return {
+          rbr: i + 1,
+          name: item.file_name ?? item.name ?? 'N/A',
+          details: `Potrošeno: ${fit.totalM.toFixed(2)} m`,
+          qty: Number(item.qty ?? item.quantity ?? 1),
+        };
+      });
     }
-    if (kind === 'FILMOVANJE') {
-      const totalM = Number(item.computed_total_m ?? 0);
-      return `Potrošeno: ${totalM.toFixed(2)} m`;
+
+    if (data.order_type === 'ctp') {
+      return data.items.map((item: any, i: number) => ({
+        rbr: i + 1,
+        name: item.filename ?? item.file_name ?? item.name ?? 'N/A',
+        details: item.plate_formats?.format_name ?? item.format_name ?? 'Format ploče',
+        qty: Number(item.quantity ?? item.qty ?? 1),
+      }));
     }
-    if (kind === 'DIGITALA') {
-      if (item.finished_w_mm && item.finished_h_mm) {
-        return `${item.finished_w_mm}×${item.finished_h_mm} mm`;
-      }
-      return 'N/A';
+
+    if (data.order_type === 'digital') {
+      return data.items.map((item: any, i: number) => ({
+        rbr: i + 1,
+        name: item.file_name ?? item.name ?? 'N/A',
+        details: `Format: ${item.finished_w_mm}×${item.finished_h_mm}mm; Štampa: ${item.print_sides ?? 'N/A'}`,
+        qty: Number(item.qty ?? item.quantity ?? 1),
+      }));
     }
-    return 'N/A';
+
+    return [];
   };
 
   if (loading) {
@@ -141,22 +117,11 @@ export default function WorkOrderPrint() {
     );
   }
 
+  const rows = prepareRows();
+
   return (
     <>
-      <style>{`
-        @page { 
-          size: A4 portrait; 
-          margin: 14mm; 
-        }
-        @media print {
-          .no-print { 
-            display: none !important; 
-          }
-          body {
-            background: white;
-          }
-        }
-      `}</style>
+      <style>{PRINT_CSS}</style>
       
       <div className="min-h-screen bg-background">
         <div className="no-print border-b bg-card sticky top-0 z-10">
@@ -167,7 +132,7 @@ export default function WorkOrderPrint() {
             </Button>
             <Button onClick={() => window.print()}>
               <Printer className="h-4 w-4 mr-2" />
-              Sačuvaj kao PDF
+              Štampa / Sačuvaj kao PDF
             </Button>
           </div>
         </div>
@@ -178,55 +143,55 @@ export default function WorkOrderPrint() {
         </div>
 
         <div className="container mx-auto px-4 py-8">
-          <div className="bg-white shadow-lg max-w-[210mm] mx-auto" style={{ minHeight: '297mm' }}>
+          <div className="bg-white shadow-lg max-w-[210mm] mx-auto print-page">
             <div className="p-8">
               {/* Header */}
-              <div className="flex justify-between items-start mb-8">
-                <div>
-                  <div className="w-32 h-16 bg-primary/10 flex items-center justify-center mb-4">
-                    <span className="text-primary font-bold text-xl">LOGO</span>
+              <div className="page-header">
+                <div className="brand-section">
+                  <div className="logo-placeholder">
+                    <span className="text-primary font-bold text-xl">GAMA UNITED</span>
                   </div>
-                  <h1 className="text-3xl font-bold mb-2">RADNI NALOG</h1>
+                  <div className="company-info">
+                    <strong>GAMA UNITED d.o.o.</strong><br />
+                    Veljka Milićevića 2/10, Beograd<br />
+                    PIB: 1114876455
+                  </div>
                 </div>
-                <div className="text-right">
-                  <div className="mb-2">
-                    <p className="font-semibold text-lg">{data.client_name}</p>
-                    {data.client_email && (
-                      <p className="text-sm text-muted-foreground">{data.client_email}</p>
-                    )}
-                    {data.client_pib && (
-                      <p className="text-sm text-muted-foreground">PIB: {data.client_pib}</p>
+                <div className="meta-section">
+                  <h1 className="document-title">RADNI NALOG</h1>
+                  <div className="document-meta">
+                    <div><strong>Broj naloga:</strong> {data.display_order_number || data.order_number}</div>
+                    <div><strong>Datum otvaranja:</strong> {formatDate(data.created_at)}</div>
+                    {data.closed_at && (
+                      <div><strong>Datum zatvaranja:</strong> {formatDate(data.closed_at)}</div>
                     )}
                   </div>
-                  <div className="mt-4 space-y-1 text-sm">
-                    <p><span className="font-semibold">Broj naloga:</span> {data.display_order_number || data.order_number}</p>
-                    <p><span className="font-semibold">Datum otvaranja:</span> {formatDate(data.created_at)}</p>
-                    {data.closed_at && (
-                      <p><span className="font-semibold">Datum zatvaranja:</span> {formatDate(data.closed_at)}</p>
-                    )}
+                  <div className="client-info">
+                    <strong>Klijent:</strong> {data.client_name}
+                    {data.client_email && <><br />{data.client_email}</>}
+                    {data.client_pib && <><br />PIB: {data.client_pib}</>}
                   </div>
                 </div>
               </div>
 
               {/* Items Table */}
               <div className="mb-8">
-                <h2 className="text-lg font-semibold mb-4">Stavke naloga</h2>
-                <table className="w-full border-collapse">
+                <table className="items-table">
                   <thead>
-                    <tr className="bg-muted">
-                      <th className="border border-border p-2 text-left w-12">R.br</th>
-                      <th className="border border-border p-2 text-left">Naziv fajla</th>
-                      <th className="border border-border p-2 text-left">Detalji</th>
-                      <th className="border border-border p-2 text-right w-24">Količina</th>
+                    <tr>
+                      <th style={{ width: '8%' }}>R.br</th>
+                      <th>Naziv fajla</th>
+                      <th style={{ width: '28%' }}>Detalji</th>
+                      <th style={{ width: '10%' }}>Količina</th>
                     </tr>
                   </thead>
                   <tbody>
-                    {data.items.map((item, idx) => (
-                      <tr key={idx}>
-                        <td className="border border-border p-2 text-center">{idx + 1}</td>
-                        <td className="border border-border p-2">{item.file_name || item.filename || '—'}</td>
-                        <td className="border border-border p-2">{getDetailsText(item, data.kind)}</td>
-                        <td className="border border-border p-2 text-right">{item.qty || item.quantity || 1}</td>
+                    {rows.map((row) => (
+                      <tr key={row.rbr}>
+                        <td>{row.rbr}</td>
+                        <td>{row.name}</td>
+                        <td>{row.details}</td>
+                        <td>{row.qty}</td>
                       </tr>
                     ))}
                   </tbody>
@@ -240,6 +205,19 @@ export default function WorkOrderPrint() {
                   <p className="text-sm whitespace-pre-wrap">{data.notes}</p>
                 </div>
               )}
+
+              {/* Signature Section */}
+              <div className="signature-section">
+                <div className="signature-field">
+                  <span className="signature-label">Robu preuzeo</span>
+                </div>
+                <div className="signature-field">
+                  <span className="signature-label">Broj lične karte</span>
+                </div>
+                <div className="signature-field">
+                  <span className="signature-label">Datum</span>
+                </div>
+              </div>
             </div>
           </div>
         </div>
@@ -247,3 +225,132 @@ export default function WorkOrderPrint() {
     </>
   );
 }
+
+const PRINT_CSS = `
+@page { 
+  size: A4 portrait; 
+  margin: 12mm; 
+}
+
+* { 
+  box-sizing: border-box; 
+  font-family: Inter, system-ui, -apple-system, 'Segoe UI', Roboto, Arial, sans-serif; 
+}
+
+body { 
+  margin: 0; 
+  color: #111; 
+}
+
+.page-header {
+  display: flex;
+  justify-content: space-between;
+  gap: 16px;
+  border-bottom: 2px solid #e5e7eb;
+  padding-bottom: 12px;
+  margin-bottom: 16px;
+}
+
+.brand-section {
+  display: flex;
+  gap: 12px;
+  align-items: flex-start;
+}
+
+.logo-placeholder {
+  min-width: 80px;
+  height: 40px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #f3f4f6;
+  border-radius: 4px;
+  font-size: 11px;
+  padding: 4px 8px;
+}
+
+.company-info {
+  font-size: 11px;
+  line-height: 1.4;
+}
+
+.meta-section {
+  text-align: right;
+  font-size: 11px;
+}
+
+.document-title {
+  margin: 0 0 8px 0;
+  font-size: 20px;
+  font-weight: 700;
+  letter-spacing: 0.5px;
+}
+
+.document-meta {
+  margin-bottom: 12px;
+  line-height: 1.6;
+}
+
+.client-info {
+  margin-top: 12px;
+  padding-top: 8px;
+  border-top: 1px solid #e5e7eb;
+  line-height: 1.5;
+}
+
+.items-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 11px;
+  margin-bottom: 24px;
+}
+
+.items-table thead th {
+  text-align: left;
+  background: #f3f4f6;
+  border: 1px solid #e5e7eb;
+  padding: 8px 10px;
+  font-weight: 600;
+}
+
+.items-table tbody td {
+  border: 1px solid #e5e7eb;
+  padding: 8px 10px;
+  vertical-align: top;
+}
+
+.signature-section {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr;
+  gap: 24px;
+  margin-top: 32px;
+  font-size: 11px;
+}
+
+.signature-field {
+  border-top: 1px solid #111;
+  padding-top: 4px;
+  text-align: left;
+}
+
+.signature-label {
+  font-size: 10px;
+  color: #666;
+}
+
+@media print {
+  .no-print {
+    display: none !important;
+  }
+  
+  body {
+    background: white;
+  }
+  
+  .print-page {
+    box-shadow: none !important;
+    margin: 0 !important;
+    padding: 0 !important;
+  }
+}
+`;
