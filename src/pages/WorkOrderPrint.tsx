@@ -34,12 +34,15 @@ export default function WorkOrderPrint() {
 
   const fetchWorkOrder = async () => {
     try {
+      console.log('Fetching work order:', id);
       // First fetch work order
       const { data: workOrder, error: woError } = await supabase
         .from('work_orders')
         .select('id, order_number, display_order_number, kind, order_type, status, created_at, closed_at, notes, client_id')
         .eq('id', id)
         .maybeSingle();
+
+      console.log('Work order result:', { workOrder, woError });
 
       if (woError) throw woError;
       if (!workOrder) throw new Error('Work order not found');
