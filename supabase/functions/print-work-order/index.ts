@@ -49,7 +49,7 @@ async function handler(req: Request) {
         clients (name, email, pib)
       `)
       .eq('id', workOrderId)
-      .single();
+      .maybeSingle();
 
     if (woError || !workOrder) {
       console.error('Work order fetch error:', woError);

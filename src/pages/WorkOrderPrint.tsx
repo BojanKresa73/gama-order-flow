@@ -34,15 +34,12 @@ export default function WorkOrderPrint() {
 
   const fetchWorkOrder = async () => {
     try {
-      console.log('Fetching work order:', id);
       // First fetch work order
       const { data: workOrder, error: woError } = await supabase
         .from('work_orders')
         .select('id, order_number, display_order_number, kind, order_type, status, created_at, closed_at, notes, client_id')
         .eq('id', id)
         .maybeSingle();
-
-      console.log('Work order result:', { workOrder, woError });
 
       if (woError) throw woError;
       if (!workOrder) throw new Error('Work order not found');
@@ -98,11 +95,8 @@ export default function WorkOrderPrint() {
         items,
       });
     } catch (error: any) {
-      toast({
-        title: "Greška",
-        description: error.message,
-        variant: "destructive",
-      });
+      console.error('Error loading work order:', error);
+      // Don't show toast - we'll show a clean "not found" message instead
     } finally {
       setLoading(false);
     }
@@ -119,9 +113,7 @@ export default function WorkOrderPrint() {
       return item.plate_formats?.format_name || 'Format ploče';
     }
     if (kind === 'FILMOVANJE') {
-      const perPieceM = Number(item.computed_total_m ?? item.total_m ?? 0);
-      const qty = Number(item.qty ?? 1);
-      const totalM = perPieceM * qty;
+      const totalM = Number(item.computed_total_m ?? 0);
       return `Potrošeno: ${totalM.toFixed(2)} m`;
     }
     if (kind === 'DIGITALA') {
@@ -179,20 +171,11 @@ export default function WorkOrderPrint() {
             </Button>
           </div>
         </div>
-        {data.status === 'closed' && (
-          <div className="no-print container mx-auto px-4 py-3 bg-muted/50">
-            <p className="text-sm text-muted-foreground">
-              Ovo je pregled radnog naloga. Izmene nisu moguće jer je nalog zatvoren.
-            </p>
-          </div>
-        )}
-        {data.status === 'closed' && (
-          <div className="no-print container mx-auto px-4 py-3 bg-muted/50">
-            <p className="text-sm text-muted-foreground">
-              Ovo je pregled radnog naloga. Izmene nisu moguće jer je nalog zatvoren.
-            </p>
-          </div>
-        )}
+        <div className="no-print container mx-auto px-4 py-3 bg-muted/50">
+          <p className="text-sm text-muted-foreground">
+            Ovo je pregled radnog naloga za štampu. Izmene nisu moguće.
+          </p>
+        </div>
 
         <div className="container mx-auto px-4 py-8">
           <div className="bg-white shadow-lg max-w-[210mm] mx-auto" style={{ minHeight: '297mm' }}>
