@@ -38,9 +38,7 @@ function getDetailsText(entry: any, orderKind: string): string {
   
   // For FILMOVANJE, show consumed length per item
   if (orderKind === 'FILMOVANJE') {
-    const perPieceM = Number(entry.computed_total_m ?? entry.total_m ?? 0);
-    const qty = Number(entry.qty ?? entry.quantity ?? 1);
-    const totalM = perPieceM * qty;
+    const totalM = Number(entry.computed_total_m ?? entry.total_m ?? 0);
     return `Potrošeno: ${totalM.toFixed(2)} m`;
   }
   
