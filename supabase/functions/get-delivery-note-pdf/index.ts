@@ -41,12 +41,35 @@ const handler = async (req: Request): Promise<Response> => {
       throw new Error('Radni nalog nije pronađen');
     }
 
-    const { data: fileEntries } = await supabase
-      .from('file_entries')
-      .select('*, plate_formats(format_name)')
-      .eq('work_order_id', workOrderId);
+    // Fetch items based on work order kind
+    let fileEntries: any[] = [];
+    
+    const orderKind = workOrder.kind || 'CTP';
+    
+    if (orderKind === 'CTP') {
+      const { data } = await supabase
+        .from('file_entries')
+        .select('*, plate_formats(format_name)')
+        .eq('work_order_id', workOrderId)
+        .order('created_at', { ascending: true });
+      fileEntries = data || [];
+    } else if (orderKind === 'FILMOVANJE') {
+      const { data } = await supabase
+        .from('film_jobs')
+        .select('*')
+        .eq('work_order_id', workOrderId)
+        .order('created_at', { ascending: true });
+      fileEntries = data || [];
+    } else if (orderKind === 'DIGITALA') {
+      const { data } = await supabase
+        .from('digital_jobs')
+        .select('*')
+        .eq('work_order_id', workOrderId)
+        .order('order_index', { ascending: true });
+      fileEntries = data || [];
+    }
 
-    const pdfBuffer = await generateDeliveryNotePDF(workOrder, fileEntries || []);
+    const pdfBuffer = await generateDeliveryNotePDF(workOrder, fileEntries);
 
     // Generate filename matching work order number format
     const fileName = `Otpremnica-${workOrder.display_order_number || workOrder.order_number}.pdf`;
