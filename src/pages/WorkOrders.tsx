@@ -47,7 +47,7 @@ const WorkOrders = () => {
 
   const fetchWorkOrders = async () => {
     try {
-      const { data, error } = await supabase
+      const { data, error} = await supabase
         .from("work_orders")
         .select(`
           *,
@@ -58,6 +58,7 @@ const WorkOrders = () => {
             error_msg
           )
         `)
+        .is("deleted_at", null)
         .order("created_at", { ascending: false });
 
       if (error) throw error;

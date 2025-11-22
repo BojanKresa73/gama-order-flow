@@ -39,6 +39,7 @@ const DeliveryNotePreview = ({ workOrderId }: DeliveryNotePreviewProps) => {
         .from("work_orders")
         .select("order_number")
         .eq("id", workOrderId)
+        .is("deleted_at", null)
         .single();
 
       if (workOrder) {

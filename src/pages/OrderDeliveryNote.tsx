@@ -52,6 +52,7 @@ const OrderDeliveryNote = () => {
           )
         `)
         .eq("id", orderId)
+        .is("deleted_at", null)
         .single();
 
       if (orderError) throw orderError;

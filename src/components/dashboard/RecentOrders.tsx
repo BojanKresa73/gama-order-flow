@@ -25,6 +25,7 @@ export const RecentOrders = () => {
       const { data } = await supabase
         .from("work_orders")
         .select("id, order_number, order_code, order_type, type, status, created_at, clients(name)")
+        .is("deleted_at", null)
         .order("created_at", { ascending: false })
         .limit(5);
 

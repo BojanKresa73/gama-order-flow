@@ -45,6 +45,7 @@ const WorkOrderDetails = () => {
           profiles (full_name)
         `)
         .eq("id", id)
+        .is("deleted_at", null)
         .single();
 
       if (error) throw error;

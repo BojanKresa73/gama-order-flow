@@ -45,6 +45,7 @@ const DevPreview = () => {
       const { data: ordersData } = await supabase
         .from("work_orders")
         .select("*, clients(name)")
+        .is("deleted_at", null)
         .order("created_at", { ascending: false })
         .limit(5);
       setWorkOrders(ordersData || []);
