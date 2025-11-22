@@ -2334,6 +2334,7 @@ export type Database = {
         Returns: undefined
       }
       generate_order_number: { Args: never; Returns: string }
+      get_work_order_full: { Args: { p_identifier: string }; Returns: Json }
       has_any_role: {
         Args: { p_roles: Database["public"]["Enums"]["app_role"][] }
         Returns: boolean
