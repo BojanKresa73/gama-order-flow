@@ -2385,6 +2385,7 @@ export type Database = {
         Args: { p_type: string; p_year: number }
         Returns: number
       }
+      is_superuser: { Args: { p_uid: string }; Returns: boolean }
       refresh_plate_usage_stats: { Args: never; Returns: undefined }
     }
     Enums: {
