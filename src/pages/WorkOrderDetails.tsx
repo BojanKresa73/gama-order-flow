@@ -215,6 +215,14 @@ const WorkOrderDetails = () => {
           <div className="flex items-center gap-2">
             {getStatusBadge(workOrder.status)}
             <Badge variant="outline">{getOrderTypeLabel(workOrder.order_type)}</Badge>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => window.open(`/work-orders/${id}/print`, '_blank')}
+            >
+              <FileText className="h-4 w-4 mr-2" />
+              Radni nalog
+            </Button>
             {workOrder.status === "open" && (
               <Button
                 variant="outline"

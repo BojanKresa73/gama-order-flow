@@ -11,6 +11,7 @@ import Dashboard from "./pages/Dashboard";
 import WorkOrders from "./pages/WorkOrders";
 import NewWorkOrder from "./pages/NewWorkOrder";
 import WorkOrderDetails from "./pages/WorkOrderDetails";
+import WorkOrderPrint from "./pages/WorkOrderPrint";
 import Clients from "./pages/Clients";
 import Inventory from "./pages/Inventory";
 import Checklist from "./pages/Checklist";
@@ -41,6 +42,7 @@ const App = () => {
           <Route path="/work-orders" element={<WorkOrders />} />
           <Route path="/work-orders/new" element={<NewWorkOrder />} />
           <Route path="/work-orders/:id/edit" element={<NewWorkOrder />} />
+          <Route path="/work-orders/:id/print" element={<WorkOrderPrint />} />
           <Route path="/work-orders/:id" element={<WorkOrderDetails />} />
             <Route path="/work-orders/:orderId/delivery-note" element={<OrderDeliveryNote />} />
             <Route path="/clients" element={<Clients />} />

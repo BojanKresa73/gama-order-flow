@@ -470,6 +470,17 @@ const WorkOrders = () => {
                           <Button
                             variant="outline"
                             size="sm"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              window.open(`/work-orders/${order.id}/print`, '_blank');
+                            }}
+                          >
+                            <FileText className="h-4 w-4 mr-2" />
+                            Radni nalog
+                          </Button>
+                          <Button
+                            variant="outline"
+                            size="sm"
                             onClick={(e) => handleShowFiles(order.id, e)}
                           >
                             <Eye className="h-4 w-4 mr-2" />
