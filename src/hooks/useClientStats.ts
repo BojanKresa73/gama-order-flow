@@ -13,6 +13,7 @@ export const useClientStats = (clientId: string) => {
         .from("work_orders")
         .select("id, order_number, order_type, status, created_at, clicks_count")
         .eq("client_id", clientId)
+        .is("deleted_at", null)
         .order("created_at", { ascending: false });
 
       if (ordersError) throw ordersError;

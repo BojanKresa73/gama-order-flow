@@ -61,6 +61,7 @@ const DeliveryNotePreview = () => {
           )
         `)
         .eq("status", "closed")
+        .is("deleted_at", null)
         .order("created_at", { ascending: false });
 
       if (error) throw error;
@@ -95,6 +96,7 @@ const DeliveryNotePreview = () => {
           )
         `)
         .eq("id", selectedOrderId)
+        .is("deleted_at", null)
         .single();
 
       if (orderError) throw orderError;

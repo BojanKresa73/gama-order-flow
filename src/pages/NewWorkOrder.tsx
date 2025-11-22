@@ -110,6 +110,7 @@ const NewWorkOrder = () => {
         .from("work_orders")
         .select("*, clients(notification_email)")
         .eq("id", orderId)
+        .is("deleted_at", null)
         .single();
 
       if (orderError) throw orderError;

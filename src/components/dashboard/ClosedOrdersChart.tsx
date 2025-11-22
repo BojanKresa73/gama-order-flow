@@ -31,6 +31,7 @@ export const ClosedOrdersChart = () => {
         .from("work_orders")
         .select("closed_at")
         .eq("status", "closed")
+        .is("deleted_at", null)
         .gte("closed_at", sevenDaysAgo.toISOString());
 
       return data || [];

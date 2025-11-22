@@ -1623,10 +1623,14 @@ export type Database = {
           closed_by: string | null
           created_at: string
           created_by: string
+          deleted_at: string | null
           display_order_number: string | null
           film_note: string | null
           film_price_override_eur_per_m: number | null
           id: string
+          invalid_reason: string | null
+          invalidated_at: string | null
+          invalidated_by: string | null
           job_name: string | null
           kind: Database["public"]["Enums"]["work_order_kind"]
           lamination: string | null
@@ -1658,10 +1662,14 @@ export type Database = {
           closed_by?: string | null
           created_at?: string
           created_by: string
+          deleted_at?: string | null
           display_order_number?: string | null
           film_note?: string | null
           film_price_override_eur_per_m?: number | null
           id?: string
+          invalid_reason?: string | null
+          invalidated_at?: string | null
+          invalidated_by?: string | null
           job_name?: string | null
           kind?: Database["public"]["Enums"]["work_order_kind"]
           lamination?: string | null
@@ -1693,10 +1701,14 @@ export type Database = {
           closed_by?: string | null
           created_at?: string
           created_by?: string
+          deleted_at?: string | null
           display_order_number?: string | null
           film_note?: string | null
           film_price_override_eur_per_m?: number | null
           id?: string
+          invalid_reason?: string | null
+          invalidated_at?: string | null
+          invalidated_by?: string | null
           job_name?: string | null
           kind?: Database["public"]["Enums"]["work_order_kind"]
           lamination?: string | null

@@ -17,6 +17,7 @@ export async function getOrderItems(orderId: string): Promise<UiItem[]> {
     .from('work_orders')
     .select('id, order_type')
     .eq('id', orderId)
+    .is('deleted_at', null)
     .single();
 
   if (orderError || !order) {

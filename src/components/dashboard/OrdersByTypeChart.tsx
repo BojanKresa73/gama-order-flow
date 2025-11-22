@@ -43,7 +43,7 @@ export const OrdersByTypeChart = () => {
     queryKey: ["orders-by-type"],
     staleTime: 60_000,
     queryFn: async () => {
-      const { data } = await supabase.from("work_orders").select("order_type");
+      const { data } = await supabase.from("work_orders").select("order_type").is("deleted_at", null);
       return data || [];
     },
   });

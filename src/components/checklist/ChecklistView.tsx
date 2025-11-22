@@ -69,6 +69,7 @@ const ChecklistView = ({ orderType }: ChecklistViewProps) => {
           clients!inner(name)
         `)
         .eq("order_type", orderType)
+        .is("deleted_at", null)
         .order("created_at", { ascending: false });
 
       if (error) throw error;
