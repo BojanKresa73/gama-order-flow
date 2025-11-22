@@ -34,24 +34,24 @@ export default function WorkOrderPrint() {
 
   const fetchWorkOrder = async () => {
     try {
+      // First fetch work order
       const { data: workOrder, error: woError } = await supabase
         .from('work_orders')
-        .select(`
-          id,
-          order_number,
-          display_order_number,
-          kind,
-          order_type,
-          status,
-          created_at,
-          closed_at,
-          notes,
-          clients!inner(name, email, pib)
-        `)
+        .select('id, order_number, display_order_number, kind, order_type, status, created_at, closed_at, notes, client_id')
         .eq('id', id)
-        .single();
+        .maybeSingle();
 
       if (woError) throw woError;
+      if (!workOrder) throw new Error('Work order not found');
+
+      // Then fetch client
+      const { data: client, error: clientError } = await supabase
+        .from('clients')
+        .select('name, email, pib')
+        .eq('id', workOrder.client_id)
+        .maybeSingle();
+
+      if (clientError) throw clientError;
 
       let items: any[] = [];
       const orderKind = workOrder.kind || 'CTP';
@@ -89,9 +89,9 @@ export default function WorkOrderPrint() {
         created_at: workOrder.created_at,
         closed_at: workOrder.closed_at,
         notes: workOrder.notes,
-        client_name: workOrder.clients?.name || '',
-        client_email: workOrder.clients?.email || null,
-        client_pib: workOrder.clients?.pib || null,
+        client_name: client?.name || '',
+        client_email: client?.email || null,
+        client_pib: client?.pib || null,
         items,
       });
     } catch (error: any) {
