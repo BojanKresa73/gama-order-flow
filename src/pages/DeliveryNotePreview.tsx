@@ -199,6 +199,20 @@ const DeliveryNotePreview = () => {
                 }
               }
               
+              .invalid-stamp {
+                position: fixed;
+                top: 10mm;
+                right: 10mm;
+                padding: 6px 10px;
+                border: 2px solid #ef4444;
+                color: #ef4444;
+                font-weight: 700;
+                letter-spacing: 1px;
+                font-size: 14px;
+                background: white;
+                z-index: 1000;
+              }
+              
               .delivery-note-container {
                 font-family: system-ui, -apple-system, 'Segoe UI', Roboto, Arial, sans-serif;
                 font-size: 11px;
@@ -352,6 +366,10 @@ const DeliveryNotePreview = () => {
                 color: #666;
               }
             `}</style>
+
+            {selectedOrder.invalidated_at && (
+              <div className="invalid-stamp">NEVAŽEĆE</div>
+            )}
 
             <div className="doc-header">
               <div className="company-info">

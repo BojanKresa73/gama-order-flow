@@ -221,6 +221,14 @@ const WorkOrders = () => {
   const handleCloseOrder = async (order: any, e: React.MouseEvent) => {
     e.stopPropagation();
     if (order.status === 'closed') return;
+    if (order.invalidated_at) {
+      toast({
+        title: "Zabranjena akcija",
+        description: "Ne može se zatvoriti nalog koji je proglašen nevažećim.",
+        variant: "destructive",
+      });
+      return;
+    }
     
     // Validate order before opening dialog
     const validation = await validateOrderBeforeClose(order);
@@ -559,17 +567,18 @@ const WorkOrders = () => {
                                 <Button
                                   variant="default"
                                   size="sm"
-                                  disabled={order.status === 'closed'}
+                                  disabled={order.status === 'closed' || order.invalidated_at}
                                   onClick={(e) => handleCloseOrder(order, e)}
                                 >
                                   {order.status === 'closed' && <Lock className="h-4 w-4 mr-2" />}
+                                  {order.invalidated_at && <AlertTriangle className="h-4 w-4 mr-2" />}
                                   Zatvori
                                 </Button>
                               </div>
                             </TooltipTrigger>
-                            {order.status === 'closed' && (
+                            {(order.status === 'closed' || order.invalidated_at) && (
                               <TooltipContent>
-                                <p>Nalog je već zatvoren</p>
+                                <p>{order.status === 'closed' ? 'Nalog je već zatvoren' : 'Nalog je nevažeći'}</p>
                               </TooltipContent>
                             )}
                           </Tooltip>
