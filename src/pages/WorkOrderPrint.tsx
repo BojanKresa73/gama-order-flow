@@ -36,7 +36,18 @@ export default function WorkOrderPrint() {
     try {
       const { data: workOrder, error: woError } = await supabase
         .from('work_orders')
-        .select('*, clients(name, email, pib)')
+        .select(`
+          id,
+          order_number,
+          display_order_number,
+          kind,
+          order_type,
+          status,
+          created_at,
+          closed_at,
+          notes,
+          clients!inner(name, email, pib)
+        `)
         .eq('id', id)
         .single();
 
