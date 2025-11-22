@@ -5,9 +5,11 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
-import { ArrowLeft, Plus, FileText, Eye, Lock, CheckCircle2 } from "lucide-react";
+import { ArrowLeft, Plus, FileText, Eye, Lock, CheckCircle2, AlertTriangle, Trash2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { OrderFilesDialog } from "@/components/work-orders/OrderFilesDialog";
+import { InvalidateOrderDialog } from "@/components/work-orders/InvalidateOrderDialog";
+import { DeleteOrderDialog } from "@/components/work-orders/DeleteOrderDialog";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { Textarea } from "@/components/ui/textarea";
@@ -15,6 +17,7 @@ import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Progress } from "@/components/ui/progress";
 import { prefixFor, displayOrderNumber } from "@/lib/orderLabel";
+import { useAuthz } from "@/hooks/useAuthz";
 
 const WorkOrders = () => {
   const [workOrders, setWorkOrders] = useState<any[]>([]);
@@ -30,8 +33,13 @@ const WorkOrders = () => {
   const [bulkClosingProgress, setBulkClosingProgress] = useState(0);
   const [bulkClosingTotal, setBulkClosingTotal] = useState(0);
   const [bulkResults, setBulkResults] = useState<{ closed: number; alreadyClosed: number; errors: number } | null>(null);
+  const [invalidateDialogOpen, setInvalidateDialogOpen] = useState(false);
+  const [orderToInvalidate, setOrderToInvalidate] = useState<any>(null);
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [orderToDelete, setOrderToDelete] = useState<any>(null);
   const navigate = useNavigate();
   const { toast } = useToast();
+  const { isSuper, isAdmin } = useAuthz();
 
   useEffect(() => {
     checkAuth();
@@ -83,7 +91,13 @@ const WorkOrders = () => {
     }
   };
 
-  const getStatusBadge = (status: string) => {
+  const getStatusBadge = (status: string, invalidatedAt?: string, deletedAt?: string) => {
+    if (deletedAt) {
+      return <Badge variant="destructive">Obrisan</Badge>;
+    }
+    if (invalidatedAt) {
+      return <Badge variant="outline" className="border-orange-500 text-orange-600">Nevažeći</Badge>;
+    }
     return status === "open" ? (
       <Badge variant="default">Otvoren</Badge>
     ) : (
@@ -456,11 +470,18 @@ const WorkOrders = () => {
                         />
                       </TableCell>
                       <TableCell className="font-medium">
-                        {displayOrderNumber(order)}
+                        <div className="flex flex-col gap-1">
+                          <span>{displayOrderNumber(order)}</span>
+                          {order.invalid_reason && (
+                            <span className="text-xs text-orange-600">
+                              Razlog: {order.invalid_reason}
+                            </span>
+                          )}
+                        </div>
                       </TableCell>
                       <TableCell>{order.clients?.name}</TableCell>
                       <TableCell>{getOrderTypeLabel(order.order_type)}</TableCell>
-                      <TableCell>{getStatusBadge(order.status)}</TableCell>
+                      <TableCell>{getStatusBadge(order.status, order.invalidated_at, order.deleted_at)}</TableCell>
                       <TableCell>
                         {getEmailStatusBadge(order.email_job_latest_status?.[0])}
                       </TableCell>
@@ -487,7 +508,7 @@ const WorkOrders = () => {
                             <FileText className="h-4 w-4 mr-2" />
                             Otpremnica
                           </Button>
-                          {order.status === 'open' && (
+                          {order.status === 'open' && !order.invalidated_at && (
                             <Button
                               variant="outline"
                               size="sm"
@@ -497,6 +518,35 @@ const WorkOrders = () => {
                               }}
                             >
                               Izmeni
+                            </Button>
+                          )}
+                          {(isAdmin || isSuper) && !order.invalidated_at && !order.deleted_at && (
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setOrderToInvalidate(order);
+                                setInvalidateDialogOpen(true);
+                              }}
+                            >
+                              <AlertTriangle className="h-4 w-4 mr-2" />
+                              Nevažeći
+                            </Button>
+                          )}
+                          {isSuper && !order.deleted_at && (
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setOrderToDelete(order);
+                                setDeleteDialogOpen(true);
+                              }}
+                              className="text-destructive hover:text-destructive"
+                            >
+                              <Trash2 className="h-4 w-4 mr-2" />
+                              Obriši
                             </Button>
                           )}
                         </div>
@@ -538,6 +588,20 @@ const WorkOrders = () => {
         orderId={selectedOrderId}
         open={filesDialogOpen}
         onOpenChange={setFilesDialogOpen}
+      />
+
+      <InvalidateOrderDialog
+        open={invalidateDialogOpen}
+        onOpenChange={setInvalidateDialogOpen}
+        order={orderToInvalidate}
+        onSuccess={fetchWorkOrders}
+      />
+
+      <DeleteOrderDialog
+        open={deleteDialogOpen}
+        onOpenChange={setDeleteDialogOpen}
+        order={orderToDelete}
+        onSuccess={fetchWorkOrders}
       />
 
       <AlertDialog open={closeDialogOpen} onOpenChange={setCloseDialogOpen}>
