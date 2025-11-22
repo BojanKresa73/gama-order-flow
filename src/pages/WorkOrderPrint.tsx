@@ -105,7 +105,9 @@ export default function WorkOrderPrint() {
       return item.plate_formats?.format_name || 'Format ploče';
     }
     if (kind === 'FILMOVANJE') {
-      const totalM = item.computed_total_m ?? item.total_m ?? 0;
+      const perPieceM = Number(item.computed_total_m ?? item.total_m ?? 0);
+      const qty = Number(item.qty ?? 1);
+      const totalM = perPieceM * qty;
       return `Potrošeno: ${totalM.toFixed(2)} m`;
     }
     if (kind === 'DIGITALA') {
@@ -153,8 +155,9 @@ export default function WorkOrderPrint() {
       <div className="min-h-screen bg-background">
         <div className="no-print border-b bg-card sticky top-0 z-10">
           <div className="container mx-auto px-4 py-4 flex justify-between items-center">
-            <Button variant="ghost" size="icon" onClick={() => navigate(-1)}>
-              <ArrowLeft className="h-5 w-5" />
+            <Button variant="outline" onClick={() => navigate(-1)}>
+              <ArrowLeft className="h-4 w-4 mr-2" />
+              Nazad
             </Button>
             <Button onClick={() => window.print()}>
               <Printer className="h-4 w-4 mr-2" />
@@ -162,6 +165,20 @@ export default function WorkOrderPrint() {
             </Button>
           </div>
         </div>
+        {data.status === 'closed' && (
+          <div className="no-print container mx-auto px-4 py-3 bg-muted/50">
+            <p className="text-sm text-muted-foreground">
+              Ovo je pregled radnog naloga. Izmene nisu moguće jer je nalog zatvoren.
+            </p>
+          </div>
+        )}
+        {data.status === 'closed' && (
+          <div className="no-print container mx-auto px-4 py-3 bg-muted/50">
+            <p className="text-sm text-muted-foreground">
+              Ovo je pregled radnog naloga. Izmene nisu moguće jer je nalog zatvoren.
+            </p>
+          </div>
+        )}
 
         <div className="container mx-auto px-4 py-8">
           <div className="bg-white shadow-lg max-w-[210mm] mx-auto" style={{ minHeight: '297mm' }}>
