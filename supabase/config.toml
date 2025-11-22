@@ -6,6 +6,9 @@ verify_jwt = true
 [functions.invalidate-work-order]
 verify_jwt = true
 
+[functions.delete-work-order]
+verify_jwt = true
+
 [functions.admin-reset-password]
 verify_jwt = true
 
