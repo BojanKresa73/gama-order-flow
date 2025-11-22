@@ -4,7 +4,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { ArrowLeft, FileText, Mail } from "lucide-react";
+import { ArrowLeft, FileText, Mail, Download } from "lucide-react";
 import { toast } from "sonner";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -19,7 +19,7 @@ const WorkOrderDetails = () => {
   const [loading, setLoading] = useState(true);
   const [emailStatus, setEmailStatus] = useState<any>(null);
   const [resending, setResending] = useState(false);
-  const [editMode, setEditMode] = useState(false);
+  const [downloading, setDownloading] = useState(false);
 
   useEffect(() => {
     checkAuth();
@@ -117,6 +117,54 @@ const WorkOrderDetails = () => {
     }
   };
 
+  const handleDownloadPDF = async () => {
+    if (!workOrder) {
+      toast.error("Nalog nije pronađen");
+      return;
+    }
+
+    setDownloading(true);
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) {
+        toast.error("Niste prijavljeni");
+        return;
+      }
+
+      const response = await fetch(
+        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/print-work-order/${id}`,
+        {
+          method: 'GET',
+          headers: {
+            'Authorization': `Bearer ${session.access_token}`,
+          },
+        }
+      );
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Greška pri generisanju PDF-a');
+      }
+
+      const blob = await response.blob();
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `RadniNalog_${workOrder.display_order_number || workOrder.order_number}.pdf`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+      
+      toast.success("PDF preuzet");
+    } catch (error: any) {
+      console.error('PDF download error:', error);
+      toast.error("Greška: " + error.message);
+    } finally {
+      setDownloading(false);
+    }
+  };
+
   if (loading) {
     return (
       <div className="min-h-screen bg-background">
@@ -177,15 +225,26 @@ const WorkOrderDetails = () => {
               </Button>
             )}
             {workOrder.status === "closed" && (
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={handleResendEmail}
-                disabled={resending}
-              >
-                <Mail className="h-4 w-4 mr-2" />
-                {resending ? "Šalje se..." : "Ponovo pošalji"}
-              </Button>
+              <>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={handleDownloadPDF}
+                  disabled={downloading}
+                >
+                  <Download className="h-4 w-4 mr-2" />
+                  {downloading ? "Preuzima se..." : "Preuzmi PDF"}
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={handleResendEmail}
+                  disabled={resending}
+                >
+                  <Mail className="h-4 w-4 mr-2" />
+                  {resending ? "Šalje se..." : "Ponovo pošalji"}
+                </Button>
+              </>
             )}
           </div>
         </div>

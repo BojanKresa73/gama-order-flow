@@ -2,16 +2,15 @@ import { PDFDocument, rgb } from "https://esm.sh/pdf-lib@1.17.1";
 import fontkit from "https://esm.sh/@pdf-lib/fontkit@1.1.1";
 
 const CONFIG = {
-  pageWidth: 595.28, // A4 width in points (A5 landscape = A4 portrait rotated)
-  pageHeight: 419.53, // A4 height / sqrt(2) ≈ A5 landscape height
-  margin: 30,
+  pageWidth: 595.28,  // A4 width
+  pageHeight: 841.89, // A4 height
+  margin: 40,
   logo: { width: 120 },
   table: {
-    cols: { rbr: 35, filename: 260, details: 140, quantity: 65 },
-    rowHeight: 22,
+    cols: { rbr: 40, filename: 280, details: 160, quantity: 75 },
+    rowHeight: 24,
     headerBg: rgb(0.93, 0.93, 0.93),
   },
-  signature: { lineWidth: 160, yOffset: 60 },
 };
 
 // Module-level cache for assets
@@ -108,7 +107,7 @@ async function loadAssets(pdfDoc: any) {
   return { notoFont, notoBold, logoImg: cachedLogo, logoHeight: cachedLogoHeight };
 }
 
-export async function generateDeliveryNotePDF(
+export async function generateWorkOrderPDF(
   workOrder: any,
   fileEntries: any[]
 ): Promise<Uint8Array> {
@@ -118,10 +117,8 @@ export async function generateDeliveryNotePDF(
 
     const { notoFont, notoBold, logoImg, logoHeight } = await loadAssets(pdfDoc);
 
-    const signatureY = CONFIG.signature.yOffset + 10;
-
-    // Helper: draw first page header (logo + company LEFT, client info TOP RIGHT)
-    const drawFirstPageHeader = (page: any): number => {
+    // Helper: draw header
+    const drawHeader = (page: any): number => {
       const { height } = page.getSize();
       const rightX = CONFIG.pageWidth - CONFIG.margin - 220;
 
@@ -146,14 +143,24 @@ export async function generateDeliveryNotePDF(
 
       // TOP RIGHT: Client block
       let rightY = height - CONFIG.margin;
-      page.drawText('OTPREMNICA', { x: rightX, y: rightY, size: 16, font: notoBold });
+      page.drawText('RADNI NALOG', { x: rightX, y: rightY, size: 16, font: notoBold });
       rightY -= 22;
 
-      const deliveryNumber = workOrder.display_order_number || workOrder.order_number;
-      page.drawText(`Broj naloga: ${deliveryNumber}`, { x: rightX, y: rightY, size: 9, font: notoFont });
+      const orderNumber = workOrder.display_order_number || workOrder.order_number;
+      page.drawText(`Broj naloga: ${orderNumber}`, { x: rightX, y: rightY, size: 9, font: notoFont });
       rightY -= 13;
-      page.drawText(`Datum zatvaranja: ${formatDate(workOrder.closed_at || new Date().toISOString())}`, { x: rightX, y: rightY, size: 9, font: notoFont });
-      rightY -= 16;
+      
+      if (workOrder.created_at) {
+        page.drawText(`Datum otvaranja: ${formatDate(workOrder.created_at)}`, { x: rightX, y: rightY, size: 9, font: notoFont });
+        rightY -= 13;
+      }
+      
+      if (workOrder.closed_at) {
+        page.drawText(`Datum zatvaranja: ${formatDate(workOrder.closed_at)}`, { x: rightX, y: rightY, size: 9, font: notoFont });
+        rightY -= 16;
+      } else {
+        rightY -= 3;
+      }
 
       page.drawText('Klijent:', { x: rightX, y: rightY, size: 9, font: notoBold });
       rightY -= 13;
@@ -166,15 +173,10 @@ export async function generateDeliveryNotePDF(
         page.drawText(email, { x: rightX, y: rightY, size: 8, font: notoFont });
       }
 
-      if (workOrder.clients?.pib) {
-        rightY -= 13;
-        page.drawText(`PIB: ${workOrder.clients.pib}`, { x: rightX, y: rightY, size: 8, font: notoFont });
-      }
-
       return Math.min(leftY, rightY) - 18;
     };
 
-    // Helper: draw items label before table
+    // Helper: draw items label
     const drawItemsLabel = (page: any, startY: number): number => {
       page.drawText('Stavke:', { x: CONFIG.margin, y: startY, size: 10, font: notoBold });
       return startY - 12;
@@ -208,8 +210,8 @@ export async function generateDeliveryNotePDF(
       const orderKind = workOrder.kind || 'CTP';
       const texts = [
         String(rbr),
-        (entry.filename || 'N/A').substring(0, 40),
-        getDetailsText(entry, orderKind).substring(0, 20),
+        (entry.filename || entry.file_name || 'N/A').substring(0, 40),
+        getDetailsText(entry, orderKind).substring(0, 25),
         String(entry.quantity || entry.qty || 1),
       ];
       const widths = [rbrW, fnW, detW, qtyW];
@@ -220,43 +222,13 @@ export async function generateDeliveryNotePDF(
       return y - CONFIG.table.rowHeight;
     };
 
-    // Helper: draw signature block
-    const drawSignature = (page: any) => {
-      const y = signatureY;
-      // Signature line
-      page.drawLine({
-        start: { x: CONFIG.margin, y },
-        end: { x: CONFIG.margin + CONFIG.signature.lineWidth, y },
-        thickness: 0.5,
-      });
-      page.drawText('Robu preuzeo', { x: CONFIG.margin, y: y - 12, size: 9, font: notoFont });
-
-      // ID line
-      const idX = CONFIG.margin + CONFIG.signature.lineWidth + 20;
-      page.drawLine({
-        start: { x: idX, y },
-        end: { x: idX + 100, y },
-        thickness: 0.5,
-      });
-      page.drawText('Broj lične karte', { x: idX, y: y - 12, size: 9, font: notoFont });
-
-      // Date line
-      const dateX = idX + 120;
-      page.drawLine({
-        start: { x: dateX, y },
-        end: { x: dateX + 80, y },
-        thickness: 0.5,
-      });
-      page.drawText('Datum', { x: dateX, y: y - 12, size: 9, font: notoFont });
-    };
-
     // Helper: draw pagination
     const drawPagination = (page: any, pageNum: number, totalPages: number) => {
       const text = `Strana ${pageNum}/${totalPages}`;
       const width = notoFont.widthOfTextAtSize(text, 9);
       page.drawText(text, {
         x: CONFIG.pageWidth - CONFIG.margin - width,
-        y: 16,
+        y: 20,
         size: 9,
         font: notoFont,
       });
@@ -266,7 +238,7 @@ export async function generateDeliveryNotePDF(
     let currentPage = pdfDoc.addPage([CONFIG.pageWidth, CONFIG.pageHeight]);
     
     // First page: header + items label + table
-    let y = drawFirstPageHeader(currentPage);
+    let y = drawHeader(currentPage);
     y = drawItemsLabel(currentPage, y);
     y = drawTableHeader(currentPage, y);
 
@@ -274,14 +246,12 @@ export async function generateDeliveryNotePDF(
     const pages = [currentPage];
 
     fileEntries.forEach((entry, idx) => {
-      const needsNewPage = y < signatureY + 55;
+      const needsNewPage = y < 100;
       if (needsNewPage) {
-        // Subsequent pages: no full header, just minimal continuation
         currentPage = pdfDoc.addPage([CONFIG.pageWidth, CONFIG.pageHeight]);
         pages.push(currentPage);
         pageNum++;
         y = CONFIG.pageHeight - CONFIG.margin - 20;
-        // Draw small continuation indicator
         currentPage.drawText('(nastavak)', { x: CONFIG.margin, y, size: 9, font: notoFont, color: rgb(0.5, 0.5, 0.5) });
         y -= 15;
         y = drawTableHeader(currentPage, y);
@@ -289,13 +259,12 @@ export async function generateDeliveryNotePDF(
       y = drawTableRow(currentPage, y, idx + 1, entry);
     });
 
-    // Draw signature and pagination on all pages
-    pages.forEach((p, i) => {
-      drawSignature(p);
-      if (pages.length > 1) {
+    // Draw pagination on all pages if more than 1
+    if (pages.length > 1) {
+      pages.forEach((p, i) => {
         drawPagination(p, i + 1, pages.length);
-      }
-    });
+      });
+    }
 
     return pdfDoc.save();
   } catch (err: any) {
