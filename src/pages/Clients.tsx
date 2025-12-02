@@ -182,7 +182,7 @@ const Clients = () => {
 
       if (error) {
         // Check for unique constraint violation
-        if (error.code === '23505' && error.message.includes('idx_clients_pib_unique')) {
+        if (error.code === '23505' && error.message.includes('idx_clients_pib')) {
           toast({
             title: "Greška",
             description: "PIB već postoji kod drugog klijenta",
@@ -274,7 +274,7 @@ const Clients = () => {
 
       if (error) {
         // Check for unique constraint violation
-        if (error.code === '23505' && error.message.includes('idx_clients_pib_unique')) {
+        if (error.code === '23505' && error.message.includes('idx_clients_pib')) {
           toast({
             title: "Greška",
             description: "PIB već postoji kod drugog klijenta",
