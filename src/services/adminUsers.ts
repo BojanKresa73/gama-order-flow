@@ -41,7 +41,7 @@ export async function inviteUser(
   email: string,
   fullName: string,
   role: AppRole
-): Promise<{ success: boolean; user_id: string }> {
+): Promise<{ success: boolean; user_id?: string; warning?: string }> {
   const { data, error } = await supabase.functions.invoke("invite-user", {
     body: {
       email,
@@ -49,7 +49,19 @@ export async function inviteUser(
       app_role: role,
     },
   });
-  if (error) throw error;
+  
+  // If we got data with error field, throw that specific error
+  if (data?.error) {
+    throw new Error(data.error);
+  }
+  
+  // If there's a functions invoke error, try to extract the message
+  if (error) {
+    // Try to parse the error context for more details
+    const errorMessage = error.message || "Došlo je do greške pri pozivanju korisnika.";
+    throw new Error(errorMessage);
+  }
+  
   return data;
 }
 
@@ -59,6 +71,11 @@ export async function resetUserPassword(
   const { data, error } = await supabase.functions.invoke("admin-reset-password", {
     body: { email },
   });
+  
+  if (data?.error) {
+    throw new Error(data.error);
+  }
+  
   if (error) throw error;
   return data;
 }
