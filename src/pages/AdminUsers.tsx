@@ -100,11 +100,18 @@ export default function AdminUsers() {
   const inviteMutation = useMutation({
     mutationFn: (data: { email: string; full_name: string; app_role: AppRole }) =>
       adminUsersService.inviteUser(data.email, data.full_name, data.app_role),
-    onSuccess: () => {
-      toast({
-        title: "Korisnik pozvan",
-        description: "Pozivnica je poslata na email adresu korisnika.",
-      });
+    onSuccess: (data) => {
+      if (data?.warning) {
+        toast({
+          title: "Korisnik kreiran",
+          description: data.warning,
+        });
+      } else {
+        toast({
+          title: "Poziv uspešno poslat",
+          description: "Korisnik je dobio email sa linkom za postavljanje lozinke.",
+        });
+      }
       setInviteOpen(false);
       setInviteEmail("");
       setInviteFullName("");
@@ -114,7 +121,7 @@ export default function AdminUsers() {
     onError: (error: Error) => {
       toast({
         title: "Greška pri pozivu",
-        description: error.message,
+        description: error.message || "Došlo je do greške. Pokušajte ponovo.",
         variant: "destructive",
       });
     },
@@ -159,20 +166,20 @@ export default function AdminUsers() {
     resetPasswordMutation.mutate(email);
   };
 
-  // Mutation za ponovno slanje poziva
+  // Mutation za ponovno slanje poziva - koristi reset password umesto invite
   const resendInviteMutation = useMutation({
     mutationFn: (user: User) => 
-      adminUsersService.inviteUser(user.email, user.full_name || user.email, user.role as AppRole),
+      adminUsersService.resetUserPassword(user.email),
     onSuccess: (data, user) => {
       toast({
         title: "Poziv poslat",
-        description: `Pozivnica je ponovo poslata na ${user.email}`,
+        description: `Link za postavljanje lozinke je ponovo poslat na ${user.email}`,
       });
     },
     onError: (error: Error) => {
       toast({
         title: "Greška pri slanju",
-        description: error.message,
+        description: error.message || "Došlo je do greške. Pokušajte ponovo.",
         variant: "destructive",
       });
     },
