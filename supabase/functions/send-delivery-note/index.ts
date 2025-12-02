@@ -116,7 +116,8 @@ const handler = async (req: Request): Promise<Response> => {
           id,
           name,
           pib,
-          notification_email
+          notification_email,
+          notification_email_2
         )
       `)
       .eq("id", workOrderId)
@@ -236,8 +237,17 @@ const handler = async (req: Request): Promise<Response> => {
       .update({ pdf_path: pdfPath })
       .eq("id", deliveryNote.id);
 
-    // Send email if notification email exists
+    // Collect notification emails
+    const notificationEmails: string[] = [];
     if (workOrder.client.notification_email) {
+      notificationEmails.push(workOrder.client.notification_email);
+    }
+    if (workOrder.client.notification_email_2) {
+      notificationEmails.push(workOrder.client.notification_email_2);
+    }
+
+    // Send email if notification email(s) exist
+    if (notificationEmails.length > 0) {
       const emailContent = `
         <!DOCTYPE html>
         <html>
@@ -502,7 +512,7 @@ const handler = async (req: Request): Promise<Response> => {
       `;
 
       // Send email using Gmail SMTP helper
-      console.log('[send-delivery-note] Sending email to:', workOrder.client.notification_email);
+      console.log('[send-delivery-note] Sending email to:', notificationEmails);
 
       const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
       const serviceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
@@ -510,7 +520,7 @@ const handler = async (req: Request): Promise<Response> => {
       await retryWithBackoff(async () => {
         await sendDeliveryNoteEmail({
           subject: `Završen posao – ${workOrder.client.name} – ${deliveryNumber}`,
-          to: [workOrder.client.notification_email],
+          to: notificationEmails,
           pdfBucket: 'delivery-notes',
           pdfPath: deliveryNote.pdf_path!,
           html: emailContent,
@@ -526,25 +536,28 @@ const handler = async (req: Request): Promise<Response> => {
         .from("delivery_notes")
         .update({ 
           sent_at: new Date().toISOString(),
-          sent_to_email: workOrder.client.notification_email
+          sent_to_email: notificationEmails.join(', ')
         })
         .eq("id", deliveryNote.id);
 
-      // Log email
-      await supabaseClient.from("email_log").insert({
-        work_order_id: workOrderId,
-        recipient_email: workOrder.client.notification_email,
-        subject: `Završen posao – ${workOrder.client.name} – ${deliveryNumber}`,
-        status: "sent",
-        type: "delivery_note",
-      });
+      // Log email for each recipient
+      for (const recipientEmail of notificationEmails) {
+        await supabaseClient.from("email_log").insert({
+          work_order_id: workOrderId,
+          recipient_email: recipientEmail,
+          subject: `Završen posao – ${workOrder.client.name} – ${deliveryNumber}`,
+          status: "sent",
+          type: "delivery_note",
+        });
+      }
     }
 
     return new Response(
       JSON.stringify({
         success: true,
         deliveryNote,
-        emailSent: !!workOrder.client.notification_email,
+        emailSent: notificationEmails.length > 0,
+        emailRecipients: notificationEmails,
       }),
       {
         status: 200,

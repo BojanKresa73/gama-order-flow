@@ -44,6 +44,7 @@ const Clients = () => {
     telefon: string;
     email: string;
     notification_email: string;
+    notification_email_2: string;
     rok_placanja_dana: number;
     rabat_procenat: number;
     napomena: string;
@@ -62,6 +63,7 @@ const Clients = () => {
     telefon: "",
     email: "",
     notification_email: "",
+    notification_email_2: "",
     rok_placanja_dana: 0,
     rabat_procenat: 0,
     napomena: "",
@@ -124,6 +126,11 @@ const Clients = () => {
       errors.notification_email = "Neispravan email format";
     }
 
+    // Notification email 2 validation (if provided)
+    if (client.notification_email_2 && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(client.notification_email_2.trim())) {
+      errors.notification_email_2 = "Neispravan email format";
+    }
+
     // Rabat validation: 0-100
     if (client.rabat_procenat < 0 || client.rabat_procenat > 100) {
       errors.rabat_procenat = "Rabat mora biti između 0 i 100%";
@@ -165,6 +172,7 @@ const Clients = () => {
         telefon: newClient.telefon.trim() || null,
         email: newClient.email.trim() || null,
         notification_email: newClient.notification_email.trim() || null,
+        notification_email_2: newClient.notification_email_2.trim() || null,
         napomena: newClient.napomena.trim() || null,
       };
 
@@ -203,6 +211,7 @@ const Clients = () => {
         telefon: "",
         email: "",
         notification_email: "",
+        notification_email_2: "",
         rok_placanja_dana: 0,
         rabat_procenat: 0,
         napomena: "",
@@ -252,6 +261,7 @@ const Clients = () => {
         telefon: editingClient.telefon?.trim() || null,
         email: editingClient.email?.trim() || null,
         notification_email: editingClient.notification_email?.trim() || null,
+        notification_email_2: editingClient.notification_email_2?.trim() || null,
         rok_placanja_dana: editingClient.rok_placanja_dana || 0,
         rabat_procenat: editingClient.rabat_procenat || 0,
         napomena: editingClient.napomena?.trim() || null,
@@ -440,7 +450,7 @@ const Clients = () => {
                   )}
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="notification_email">Email za obaveštenja</Label>
+                  <Label htmlFor="notification_email">Email za obaveštenja 1</Label>
                   <Input
                     id="notification_email"
                     type="email"
@@ -451,6 +461,20 @@ const Clients = () => {
                   />
                   {validationErrors.notification_email && (
                     <p className="text-sm text-destructive">{validationErrors.notification_email}</p>
+                  )}
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="notification_email_2">Email za obaveštenja 2</Label>
+                  <Input
+                    id="notification_email_2"
+                    type="email"
+                    value={newClient.notification_email_2}
+                    onChange={(e) => setNewClient({ ...newClient, notification_email_2: e.target.value })}
+                    placeholder="drugi.mail@primer.rs"
+                    className={validationErrors.notification_email_2 ? "border-destructive" : ""}
+                  />
+                  {validationErrors.notification_email_2 && (
+                    <p className="text-sm text-destructive">{validationErrors.notification_email_2}</p>
                   )}
                 </div>
                 <div className="grid grid-cols-2 gap-4">
@@ -695,7 +719,7 @@ const Clients = () => {
               )}
             </div>
             <div className="space-y-2">
-              <Label htmlFor="edit-notification-email">Email za obaveštenja</Label>
+              <Label htmlFor="edit-notification-email">Email za obaveštenja 1</Label>
               <Input
                 id="edit-notification-email"
                 type="email"
@@ -706,6 +730,20 @@ const Clients = () => {
               />
               {validationErrors.notification_email && (
                 <p className="text-sm text-destructive">{validationErrors.notification_email}</p>
+              )}
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="edit-notification-email-2">Email za obaveštenja 2</Label>
+              <Input
+                id="edit-notification-email-2"
+                type="email"
+                value={editingClient?.notification_email_2 || ""}
+                onChange={(e) => setEditingClient({ ...editingClient, notification_email_2: e.target.value })}
+                placeholder="drugi.mail@primer.rs"
+                className={validationErrors.notification_email_2 ? "border-destructive" : ""}
+              />
+              {validationErrors.notification_email_2 && (
+                <p className="text-sm text-destructive">{validationErrors.notification_email_2}</p>
               )}
             </div>
             <div className="grid grid-cols-2 gap-4">
