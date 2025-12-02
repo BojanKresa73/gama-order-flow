@@ -132,6 +132,18 @@ export default function AdminUsers() {
       toast({ title: "Email je obavezan", variant: "destructive" });
       return;
     }
+    
+    // Validate email format
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(inviteEmail)) {
+      toast({ 
+        title: "Neispravan format email adrese", 
+        description: "Proverite da li ste uneli validnu email adresu u polje 'Email'.",
+        variant: "destructive" 
+      });
+      return;
+    }
+    
     inviteMutation.mutate({
       email: inviteEmail,
       full_name: inviteFullName || inviteEmail,
