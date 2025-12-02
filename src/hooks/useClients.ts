@@ -15,6 +15,7 @@ export interface Client {
   telefon: string | null;
   email: string | null;
   notification_email: string | null;
+  notification_email_2: string | null;
   rok_placanja_dana: number;
   rabat_procenat: number;
   napomena: string | null;
