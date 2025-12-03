@@ -291,14 +291,16 @@ const handler = async (req: Request): Promise<Response> => {
               }
               
               .company-info h1 {
-                font-size: 14px;
+                font-size: 16px;
                 font-weight: bold;
                 margin-bottom: 4px;
+                color: #1e40af;
               }
               
               .company-info p {
                 font-size: 10px;
-                line-height: 1.3;
+                line-height: 1.4;
+                color: #374151;
               }
               
               .delivery-info {
@@ -307,22 +309,26 @@ const handler = async (req: Request): Promise<Response> => {
               }
               
               .delivery-info h2 {
-                font-size: 16px;
+                font-size: 18px;
                 font-weight: bold;
-                margin-bottom: 6px;
+                margin-bottom: 8px;
+                color: #1e40af;
+                letter-spacing: 1px;
               }
               
               .delivery-info p {
                 font-size: 11px;
-                margin-bottom: 2px;
+                margin-bottom: 3px;
+                color: #374151;
               }
               
               /* Client box */
               .client-box {
-                border: 1px solid #000;
-                padding: 8px;
-                margin-bottom: 12px;
-                background: #f9f9f9;
+                border: 2px solid #1e40af;
+                border-radius: 6px;
+                padding: 10px 12px;
+                margin-bottom: 14px;
+                background: linear-gradient(135deg, #eff6ff 0%, #f8fafc 100%);
               }
               
               .client-box p {
@@ -347,7 +353,8 @@ const handler = async (req: Request): Promise<Response> => {
               }
               
               th {
-                background: #e8e8e8;
+                background: linear-gradient(135deg, #1e40af 0%, #3b82f6 100%);
+                color: white;
                 font-weight: 600;
                 font-size: 10px;
                 text-transform: uppercase;
@@ -441,14 +448,13 @@ const handler = async (req: Request): Promise<Response> => {
               <div class="doc-header">
                 <div class="company-info">
                   <h1>Gama United</h1>
-                  <p>Adresa vaše firme</p>
-                  <p>Grad, Poštanski broj</p>
-                  <p>PIB: 123456789</p>
+                  <p>Veljka Milićevića 2/10, 11000 Beograd</p>
+                  <p>PIB: 114876455</p>
                 </div>
                 <div class="delivery-info">
                   <h2>OTPREMNICA</h2>
-                  <p><strong>Broj naloga:</strong> ${workOrder.order_number}</p>
-                  <p><strong>Datum zatvaranja:</strong> ${formatDate(deliveryNote.closed_at)}</p>
+                  <p><strong>Br. naloga:</strong> ${workOrder.order_number}</p>
+                  <p><strong>Datum:</strong> ${formatDate(deliveryNote.closed_at)}</p>
                 </div>
               </div>
               
