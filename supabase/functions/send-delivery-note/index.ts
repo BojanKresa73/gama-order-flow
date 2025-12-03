@@ -128,25 +128,92 @@ const handler = async (req: Request): Promise<Response> => {
       throw new Error("Work order not found");
     }
 
-    // Fetch file entries with plate format info
-    const { data: fileEntries, error: feError } = await supabaseClient
-      .from("file_entries")
-      .select(`
-        *,
-        plate_format:plate_formats (
-          format_name
-        )
-      `)
-      .eq("work_order_id", workOrderId)
-      .eq("status", "closed");
+    // Determine order type and fetch appropriate items
+    const orderType = workOrder.order_type?.toLowerCase();
+    let items: any[] = [];
 
-    if (feError) {
-      console.error("Error fetching file entries:", feError);
-      throw new Error("Error fetching file entries");
-    }
+    if (orderType === 'film') {
+      // Fetch film jobs for film orders
+      const { data: filmJobs, error: filmError } = await supabaseClient
+        .from("film_jobs")
+        .select("*")
+        .eq("work_order_id", workOrderId);
 
-    if (!fileEntries || fileEntries.length === 0) {
-      throw new Error("No closed file entries found for this work order");
+      if (filmError) {
+        console.error("Error fetching film jobs:", filmError);
+        throw new Error("Error fetching film jobs");
+      }
+
+      if (!filmJobs || filmJobs.length === 0) {
+        throw new Error("No film jobs found for this work order");
+      }
+
+      // Map film jobs to a common format for delivery note
+      items = filmJobs.map(job => ({
+        id: job.id,
+        filename: job.file_name,
+        quantity: job.qty,
+        file_type: 'film',
+        width_mm: job.width_mm,
+        height_mm: job.height_mm,
+        computed_total_m: job.computed_total_m,
+        note: job.note
+      }));
+      console.log(`Fetched ${items.length} film jobs for work order`);
+    } else if (orderType === 'digital') {
+      // Fetch digital jobs
+      const { data: digitalJobs, error: digitalError } = await supabaseClient
+        .from("digital_jobs")
+        .select("*")
+        .eq("work_order_id", workOrderId);
+
+      if (digitalError) {
+        console.error("Error fetching digital jobs:", digitalError);
+        throw new Error("Error fetching digital jobs");
+      }
+
+      if (!digitalJobs || digitalJobs.length === 0) {
+        throw new Error("No digital jobs found for this work order");
+      }
+
+      items = digitalJobs.map(job => ({
+        id: job.id,
+        filename: job.file_name,
+        quantity: job.qty,
+        file_type: 'digital',
+        finished_w_mm: job.finished_w_mm,
+        finished_h_mm: job.finished_h_mm,
+        computed_total_sheets: job.computed_total_sheets
+      }));
+      console.log(`Fetched ${items.length} digital jobs for work order`);
+    } else {
+      // Default: Fetch file entries for CTP/other orders
+      const { data: fileEntries, error: feError } = await supabaseClient
+        .from("file_entries")
+        .select(`
+          *,
+          plate_format:plate_formats (
+            format_name
+          )
+        `)
+        .eq("work_order_id", workOrderId)
+        .eq("status", "closed");
+
+      if (feError) {
+        console.error("Error fetching file entries:", feError);
+        throw new Error("Error fetching file entries");
+      }
+
+      if (!fileEntries || fileEntries.length === 0) {
+        throw new Error("No closed file entries found for this work order");
+      }
+
+      items = fileEntries.map(fe => ({
+        ...fe,
+        filename: fe.filename,
+        quantity: fe.quantity
+      }));
+      console.log(`Fetched ${items.length} file entries for work order`);
     }
 
     // Check if delivery note already exists (idempotency)
@@ -185,10 +252,11 @@ const handler = async (req: Request): Promise<Response> => {
         client_pib: workOrder.client.pib,
         opened_at: workOrder.created_at,
         closed_at: workOrder.closed_at || new Date().toISOString(),
-        items: fileEntries.map((fe) => ({
-          filename: fe.filename,
-          quantity: fe.quantity,
-          file_type: fe.file_type,
+        items: items.map((item: any) => ({
+          filename: item.filename,
+          quantity: item.quantity,
+          file_type: item.file_type,
+          computed_total_m: item.computed_total_m,
         })),
         sent_to_email: workOrder.client.notification_email,
       })
@@ -204,7 +272,7 @@ const handler = async (req: Request): Promise<Response> => {
     console.log("Generating PDF...");
     const pdfBytes = await generateDeliveryNotePDF(
       workOrder,
-      fileEntries
+      items
     );
 
     // Upload PDF to storage
@@ -467,7 +535,7 @@ const handler = async (req: Request): Promise<Response> => {
               </div>
               
               ${
-                fileEntries && fileEntries.length > 0
+                items && items.length > 0
                   ? `
               <!-- Items table -->
               <table>
@@ -475,19 +543,21 @@ const handler = async (req: Request): Promise<Response> => {
                   <tr>
                     <th class="number">#</th>
                     <th>Naziv fajla</th>
-                    <th class="format">Format ploče</th>
+                    <th class="format">${orderType === 'film' ? 'Potrošeno' : 'Format ploče'}</th>
                     <th class="quantity">Količina</th>
                   </tr>
                 </thead>
                 <tbody>
-                  ${fileEntries
+                  ${items
                     .map(
-                      (fe, index) => `
+                      (item: any, index: number) => `
                     <tr>
                       <td class="number">${index + 1}</td>
-                      <td>${fe.filename}</td>
-                      <td class="format">${fe.plate_format?.format_name || "-"}</td>
-                      <td class="quantity">${fe.quantity || "-"}</td>
+                      <td>${item.filename}</td>
+                      <td class="format">${orderType === 'film' 
+                        ? (item.computed_total_m ? item.computed_total_m.toFixed(2) + ' m' : '-') 
+                        : (item.plate_format?.format_name || "-")}</td>
+                      <td class="quantity">${item.quantity || "-"}</td>
                     </tr>
                   `
                     )
