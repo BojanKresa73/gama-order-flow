@@ -56,11 +56,12 @@ const Checklist = () => {
           </CardHeader>
           <CardContent>
             <Tabs defaultValue="ctp" className="w-full">
-              <TabsList className="grid w-full grid-cols-4">
-                <TabsTrigger value="search">Pretraga i Statistika</TabsTrigger>
-                <TabsTrigger value="ctp">CTP Usluge</TabsTrigger>
-                <TabsTrigger value="digital">Digitalna Štampa</TabsTrigger>
-                <TabsTrigger value="other">Ostale Usluge</TabsTrigger>
+              <TabsList className="grid w-full grid-cols-5">
+                <TabsTrigger value="search">Pretraga</TabsTrigger>
+                <TabsTrigger value="ctp">CTP</TabsTrigger>
+                <TabsTrigger value="film">Filmovanje</TabsTrigger>
+                <TabsTrigger value="digital">Digitala</TabsTrigger>
+                <TabsTrigger value="other">Ostalo</TabsTrigger>
               </TabsList>
               
               <TabsContent value="search">
@@ -69,6 +70,10 @@ const Checklist = () => {
               
               <TabsContent value="ctp">
                 <ChecklistView orderType="ctp" />
+              </TabsContent>
+              
+              <TabsContent value="film">
+                <ChecklistView orderType="film" />
               </TabsContent>
               
               <TabsContent value="digital">
