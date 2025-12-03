@@ -522,7 +522,7 @@ const handler = async (req: Request): Promise<Response> => {
           subject: `Završen posao – ${workOrder.client.name} – ${deliveryNumber}`,
           to: notificationEmails,
           pdfBucket: 'delivery-notes',
-          pdfPath: deliveryNote.pdf_path!,
+          pdfPath: pdfPath, // Use the local variable, not deliveryNote.pdf_path which is still null
           html: emailContent,
           sbUrl: supabaseUrl,
           serviceKey: serviceKey,
