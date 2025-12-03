@@ -4,7 +4,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { ArrowLeft, Package, AlertTriangle, Plus } from "lucide-react";
+import { ArrowLeft, Package, AlertTriangle, Plus, Trash2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
@@ -73,6 +73,45 @@ const Inventory = () => {
       toast({
         title: "Uspeh",
         description: "Stanje je ažurirano",
+      });
+
+      fetchPlateFormats();
+    } catch (error: any) {
+      toast({
+        title: "Greška",
+        description: error.message,
+        variant: "destructive",
+      });
+    }
+  };
+
+  const deleteFormat = async (id: string, formatName: string) => {
+    if (!confirm(`Da li ste sigurni da želite da obrišete format "${formatName}"?`)) {
+      return;
+    }
+
+    try {
+      const { error } = await supabase
+        .from("plate_formats")
+        .delete()
+        .eq("id", id);
+
+      if (error) {
+        if (error.code === '23503') {
+          toast({
+            title: "Nije moguće obrisati",
+            description: "Ovaj format je korišćen u radnim nalozima i ne može se obrisati",
+            variant: "destructive",
+          });
+        } else {
+          throw error;
+        }
+        return;
+      }
+
+      toast({
+        title: "Uspeh",
+        description: "Format je obrisan",
       });
 
       fetchPlateFormats();
@@ -261,6 +300,13 @@ const Inventory = () => {
                           onClick={() => updateStock(format.id, Math.max(0, format.current_stock - 10))}
                         >
                           -10
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant="destructive"
+                          onClick={() => deleteFormat(format.id, format.format_name)}
+                        >
+                          <Trash2 className="h-4 w-4" />
                         </Button>
                       </div>
                     </TableCell>
