@@ -7,7 +7,7 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2.75.0";
 import { PDFDocument, rgb } from "https://esm.sh/pdf-lib@1.17.1";
 import fontkit from "https://esm.sh/@pdf-lib/fontkit@1.1.1";
 import { ensureDir } from "https://deno.land/std@0.190.0/fs/mod.ts";
-import { sendMail, retryWithBackoff } from "../_shared/email-provider.ts";
+import { sendEmailWithSMTP, retryWithBackoff } from "../_shared/smtp-helpers.ts";
 import { generateDeliveryNotePDF } from "../_shared/delivery-note-pdf.ts";
 
 const corsHeaders = {
@@ -912,11 +912,12 @@ const handler = async (req: Request): Promise<Response> => {
       const archiveSubject = `[RNGU] ${orderNo} – ${clientName} – ${orderType} CLOSED`;
       try {
         await retryWithBackoff(async () => {
-          return await sendMail({
+          return await sendEmailWithSMTP({
             to: ARCHIVE_EMAIL,
             subject: archiveSubject,
             html: archiveEmailBodyWithLinks,
             replyTo: ARCHIVE_EMAIL,
+            includeArchive: false,
           });
         });
         await logEmail(supabase, work_order_id, ARCHIVE_EMAIL, archiveSubject, 'archive', 'sent', null);
@@ -945,11 +946,12 @@ const handler = async (req: Request): Promise<Response> => {
         
         try {
           await retryWithBackoff(async () => {
-            return await sendMail({
+            return await sendEmailWithSMTP({
               to: clientEmail,
               subject: clientSubject,
               html: clientEmailBodyWithLink,
               replyTo: ARCHIVE_EMAIL,
+              includeArchive: true,
             });
           });
           await logEmail(supabase, work_order_id, clientEmail, clientSubject, 'client', 'sent', null);
@@ -986,20 +988,25 @@ const handler = async (req: Request): Promise<Response> => {
           const woBytes = new Uint8Array(await woData.arrayBuffer());
           const dnBytes = new Uint8Array(await dnData.arrayBuffer());
           
-          return await sendMail({
+          // Convert to base64 for SMTP helper
+          const woBase64 = Buffer.from(woBytes).toString('base64');
+          const dnBase64 = Buffer.from(dnBytes).toString('base64');
+          
+          return await sendEmailWithSMTP({
             to: ARCHIVE_EMAIL,
             subject: archiveSubject,
             html: archiveEmailBody,
             replyTo: ARCHIVE_EMAIL,
+            includeArchive: false,
             attachments: [
               {
                 filename: `${baseName}_RN.pdf`,
-                content: woBytes,
+                content: woBase64,
                 contentType: 'application/pdf',
               },
               {
                 filename: `${baseName}_Otpremnica.pdf`,
-                content: dnBytes,
+                content: dnBase64,
                 contentType: 'application/pdf',
               },
             ],
@@ -1040,15 +1047,19 @@ const handler = async (req: Request): Promise<Response> => {
             
             const pdfBytes = new Uint8Array(await pdfData.arrayBuffer());
             
-            return await sendMail({
+            // Convert to base64 for SMTP helper
+            const pdfBase64 = Buffer.from(pdfBytes).toString('base64');
+            
+            return await sendEmailWithSMTP({
               to: clientEmail,
               subject: clientSubject,
               html: clientEmailHtml,
               replyTo: ARCHIVE_EMAIL,
+              includeArchive: true,
               attachments: [
                 {
                   filename: `Otpremnica_${baseName}.pdf`,
-                  content: pdfBytes,
+                  content: pdfBase64,
                   contentType: 'application/pdf',
                 },
               ],
