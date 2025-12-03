@@ -211,7 +211,7 @@ const handler = async (req: Request): Promise<Response> => {
     const orderLabel = displayOrderNumber({
       order_code: workOrder.order_code,
       created_at: workOrder.created_at,
-      client_name: workOrder.clients?.name || 'klijent',
+      client_name: workOrder.client?.name || 'klijent',
       type: workOrder.order_type
     });
     const pdfFileName = toPdfFileName(orderLabel);
