@@ -1,18 +1,15 @@
 import { Buffer } from "node:buffer";
-// Polyfill za Deno/Edge runtime - ako Buffer ne postoji, postavi ga
 // @ts-ignore
 (globalThis as any).Buffer = (globalThis as any).Buffer ?? Buffer;
 
-import nodemailer from "https://esm.sh/nodemailer@6.9.7";
+import { Resend } from "https://esm.sh/resend@2.0.0";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
-const FROM_EMAIL = Deno.env.get('FROM_EMAIL')!;
+const FROM_EMAIL = Deno.env.get('FROM_EMAIL') || 'notifications@resend.dev';
 const ARCHIVE_EMAIL = Deno.env.get('ARCHIVE_EMAIL')!;
-const SMTP_HOST = Deno.env.get('SMTP_HOST')!;
-const SMTP_PORT = parseInt(Deno.env.get('SMTP_PORT') || '587');
-const SMTP_USER = Deno.env.get('SMTP_USER')!;
-// Remove all spaces from App Password (Gmail App Passwords have no spaces)
-const SMTP_PASS = (Deno.env.get('SMTP_PASS') || '').replace(/\s+/g, '');
+const RESEND_API_KEY = Deno.env.get('RESEND_API_KEY')!;
+
+const resend = new Resend(RESEND_API_KEY);
 
 interface EmailAttachment {
   filename: string;
@@ -31,7 +28,7 @@ interface SendEmailOptions {
 }
 
 /**
- * Send email using Gmail SMTP with nodemailer
+ * Send email using Resend API
  */
 export async function sendEmailWithSMTP(options: SendEmailOptions): Promise<void> {
   const {
@@ -47,9 +44,9 @@ export async function sendEmailWithSMTP(options: SendEmailOptions): Promise<void
   const recipients = Array.isArray(to) ? to : [to];
   
   // Add archive email to BCC if requested and not already in recipients
-  const bcc = includeArchive && !recipients.includes(ARCHIVE_EMAIL) ? [ARCHIVE_EMAIL] : [];
+  const bcc = includeArchive && ARCHIVE_EMAIL && !recipients.includes(ARCHIVE_EMAIL) ? [ARCHIVE_EMAIL] : undefined;
 
-  console.log('[SMTP] Sending email:', {
+  console.log('[Resend] Sending email:', {
     from: FROM_EMAIL,
     to: recipients,
     bcc,
@@ -58,41 +55,42 @@ export async function sendEmailWithSMTP(options: SendEmailOptions): Promise<void
     attachmentCount: attachments.length,
   });
 
-  const transporter = nodemailer.createTransport({
-    host: SMTP_HOST,
-    port: SMTP_PORT,
-    secure: false, // false for port 587
-    requireTLS: true, // force TLS
-    auth: {
-      user: SMTP_USER,
-      pass: SMTP_PASS,
-    },
-  });
-
   try {
-    const mailOptions: any = {
+    const emailOptions: any = {
       from: FROM_EMAIL,
-      to: recipients.join(', '),
-      bcc: bcc.length > 0 ? bcc.join(', ') : undefined,
-      replyTo: replyTo,
+      to: recipients,
       subject,
-      text: text || '',
       html,
-      attachments: attachments.map(att => ({
-        filename: att.filename,
-        content: Buffer.from(att.content, 'base64'),
-        contentType: att.contentType || 'application/pdf',
-      })),
+      text: text || undefined,
+      reply_to: replyTo,
     };
 
-    const info = await transporter.sendMail(mailOptions);
-    console.log('[SMTP] Email sent successfully:', info.messageId);
-    console.log('[SMTP] Recipients:', recipients);
-    if (bcc.length > 0) {
-      console.log('[SMTP] BCC:', bcc);
+    if (bcc && bcc.length > 0) {
+      emailOptions.bcc = bcc;
+    }
+
+    if (attachments.length > 0) {
+      emailOptions.attachments = attachments.map(att => ({
+        filename: att.filename,
+        content: Buffer.from(att.content, 'base64'),
+        content_type: att.contentType || 'application/pdf',
+      }));
+    }
+
+    const result = await resend.emails.send(emailOptions);
+    
+    if (result.error) {
+      console.error('[Resend] API returned error:', result.error);
+      throw new Error(`Resend error: ${JSON.stringify(result.error)}`);
+    }
+
+    console.log('[Resend] Email sent successfully:', result.data?.id);
+    console.log('[Resend] Recipients:', recipients);
+    if (bcc && bcc.length > 0) {
+      console.log('[Resend] BCC:', bcc);
     }
   } catch (error) {
-    console.error('[SMTP] Failed to send email:', error);
+    console.error('[Resend] Failed to send email:', error);
     throw error;
   }
 }
