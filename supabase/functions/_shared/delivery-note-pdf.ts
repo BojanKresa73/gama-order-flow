@@ -164,18 +164,18 @@ export async function generateDeliveryNotePDF(
 
       page.drawText('Klijent:', { x: rightX, y: rightY, size: 9, font: notoBold });
       rightY -= 13;
-      const clientName = (workOrder.clients?.name || 'N/A').substring(0, 30);
+      const clientName = (workOrder.client?.name || workOrder.clients?.name || 'N/A').substring(0, 30);
       page.drawText(clientName, { x: rightX, y: rightY, size: 9, font: notoFont });
       
-      if (workOrder.clients?.email) {
+      if (workOrder.client?.email || workOrder.clients?.email) {
         rightY -= 13;
-        const email = workOrder.clients.email.substring(0, 30);
+        const email = (workOrder.client?.email || workOrder.clients?.email || '').substring(0, 30);
         page.drawText(email, { x: rightX, y: rightY, size: 8, font: notoFont });
       }
 
-      if (workOrder.clients?.pib) {
+      if (workOrder.client?.pib || workOrder.clients?.pib) {
         rightY -= 13;
-        page.drawText(`PIB: ${workOrder.clients.pib}`, { x: rightX, y: rightY, size: 8, font: notoFont });
+        page.drawText(`PIB: ${workOrder.client?.pib || workOrder.clients?.pib}`, { x: rightX, y: rightY, size: 8, font: notoFont });
       }
 
       return Math.min(leftY, rightY) - 18;
