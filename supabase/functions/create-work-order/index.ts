@@ -130,7 +130,7 @@ Deno.serve(async (req) => {
       work_order_id: workOrder.id,
       event_type: 'created',
       created_by: user.id,
-      metadata: {
+      payload: {
         order_code: orderCode,
         type: input.type,
       },
