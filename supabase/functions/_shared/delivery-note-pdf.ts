@@ -1,15 +1,27 @@
 import { PDFDocument, rgb } from "https://esm.sh/pdf-lib@1.17.1";
 import fontkit from "https://esm.sh/@pdf-lib/fontkit@1.1.1";
 
+// Brand colors
+const COLORS = {
+  primary: rgb(0.118, 0.251, 0.686), // #1e40af - deep blue
+  primaryLight: rgb(0.231, 0.510, 0.965), // #3b82f6 - bright blue
+  textDark: rgb(0.216, 0.255, 0.318), // #374151 - dark gray
+  textMuted: rgb(0.420, 0.447, 0.502), // #6b7280 - muted gray
+  border: rgb(0.878, 0.886, 0.902), // #e0e2e7 - light border
+  headerBg: rgb(0.118, 0.251, 0.686), // blue header
+  rowAlt: rgb(0.969, 0.976, 0.996), // #f7f9fe - very light blue
+  white: rgb(1, 1, 1),
+};
+
 const CONFIG = {
   pageWidth: 595.28, // A4 width in points (A5 landscape = A4 portrait rotated)
   pageHeight: 419.53, // A4 height / sqrt(2) ≈ A5 landscape height
   margin: 30,
   logo: { width: 120 },
   table: {
-    cols: { rbr: 35, filename: 260, details: 140, quantity: 65 },
-    rowHeight: 22,
-    headerBg: rgb(0.93, 0.93, 0.93),
+    cols: { rbr: 40, filename: 250, details: 145, quantity: 65 },
+    rowHeight: 24,
+    headerBg: COLORS.headerBg,
   },
   signature: { lineWidth: 160, yOffset: 60 },
 };
@@ -145,37 +157,37 @@ export async function generateDeliveryNotePDF(
       }
 
       // Company info below logo
-      page.drawText('GAMA UNITED d.o.o.', { x: CONFIG.margin, y: leftY, size: 8, font: notoBold });
+      page.drawText('GAMA UNITED d.o.o.', { x: CONFIG.margin, y: leftY, size: 9, font: notoBold, color: COLORS.primary });
+      leftY -= 12;
+      page.drawText('Veljka Milićevića 2/10, 11000 Beograd', { x: CONFIG.margin, y: leftY, size: 8, font: notoFont, color: COLORS.textDark });
       leftY -= 11;
-      page.drawText('Veljka Milićevića 2/10, Beograd', { x: CONFIG.margin, y: leftY, size: 8, font: notoFont });
-      leftY -= 11;
-      page.drawText('PIB: 1114876455', { x: CONFIG.margin, y: leftY, size: 8, font: notoFont });
+      page.drawText('PIB: 114876455', { x: CONFIG.margin, y: leftY, size: 8, font: notoFont, color: COLORS.textDark });
 
       // TOP RIGHT: Client block
       let rightY = height - CONFIG.margin;
-      page.drawText('OTPREMNICA', { x: rightX, y: rightY, size: 16, font: notoBold });
-      rightY -= 22;
+      page.drawText('OTPREMNICA', { x: rightX, y: rightY, size: 18, font: notoBold, color: COLORS.primary });
+      rightY -= 24;
 
       const deliveryNumber = workOrder.display_order_number || workOrder.order_number;
-      page.drawText(`Broj naloga: ${deliveryNumber}`, { x: rightX, y: rightY, size: 9, font: notoFont });
+      page.drawText(`Br. naloga: ${deliveryNumber}`, { x: rightX, y: rightY, size: 9, font: notoFont, color: COLORS.textDark });
       rightY -= 13;
-      page.drawText(`Datum zatvaranja: ${formatDate(workOrder.closed_at || new Date().toISOString())}`, { x: rightX, y: rightY, size: 9, font: notoFont });
+      page.drawText(`Datum: ${formatDate(workOrder.closed_at || new Date().toISOString())}`, { x: rightX, y: rightY, size: 9, font: notoFont, color: COLORS.textDark });
       rightY -= 16;
 
-      page.drawText('Klijent:', { x: rightX, y: rightY, size: 9, font: notoBold });
+      page.drawText('Klijent:', { x: rightX, y: rightY, size: 9, font: notoBold, color: COLORS.textMuted });
       rightY -= 13;
       const clientName = (workOrder.client?.name || workOrder.clients?.name || 'N/A').substring(0, 30);
-      page.drawText(clientName, { x: rightX, y: rightY, size: 9, font: notoFont });
+      page.drawText(clientName, { x: rightX, y: rightY, size: 10, font: notoBold, color: COLORS.textDark });
       
       if (workOrder.client?.email || workOrder.clients?.email) {
         rightY -= 13;
         const email = (workOrder.client?.email || workOrder.clients?.email || '').substring(0, 30);
-        page.drawText(email, { x: rightX, y: rightY, size: 8, font: notoFont });
+        page.drawText(email, { x: rightX, y: rightY, size: 8, font: notoFont, color: COLORS.textMuted });
       }
 
       if (workOrder.client?.pib || workOrder.clients?.pib) {
         rightY -= 13;
-        page.drawText(`PIB: ${workOrder.client?.pib || workOrder.clients?.pib}`, { x: rightX, y: rightY, size: 8, font: notoFont });
+        page.drawText(`PIB: ${workOrder.client?.pib || workOrder.clients?.pib}`, { x: rightX, y: rightY, size: 8, font: notoFont, color: COLORS.textMuted });
       }
 
       return Math.min(leftY, rightY) - 18;
@@ -183,47 +195,73 @@ export async function generateDeliveryNotePDF(
 
     // Helper: draw items label before table
     const drawItemsLabel = (page: any, startY: number): number => {
-      page.drawText('Stavke:', { x: CONFIG.margin, y: startY, size: 10, font: notoBold });
-      return startY - 12;
+      page.drawText('Stavke:', { x: CONFIG.margin, y: startY, size: 11, font: notoBold, color: COLORS.primary });
+      return startY - 14;
     };
 
     // Helper: draw table header
     const drawTableHeader = (page: any, y: number): number => {
       const { rbr, filename, details, quantity } = CONFIG.table.cols;
-      // Gray background
+      const tableWidth = rbr + filename + details + quantity;
+      
+      // Blue header background with rounded corners effect
       page.drawRectangle({
         x: CONFIG.margin,
         y: y - CONFIG.table.rowHeight,
-        width: rbr + filename + details + quantity,
+        width: tableWidth,
         height: CONFIG.table.rowHeight,
-        color: CONFIG.table.headerBg,
+        color: COLORS.headerBg,
       });
-      let x = CONFIG.margin + 4;
-      const headers = ['R.br', 'Naziv fajla', 'Detalji', 'Količina'];
+      
+      let x = CONFIG.margin + 8;
+      const headers = ['#', 'Naziv fajla', 'Detalji', 'Količina'];
       const widths = [rbr, filename, details, quantity];
       headers.forEach((h, i) => {
-        page.drawText(h, { x, y: y - 14, size: 10, font: notoBold });
+        page.drawText(h, { x, y: y - 16, size: 10, font: notoBold, color: COLORS.white });
         x += widths[i];
       });
-      return y - CONFIG.table.rowHeight - 4;
+      return y - CONFIG.table.rowHeight - 2;
     };
 
     // Helper: draw table row
+    let rowIndex = 0;
     const drawTableRow = (page: any, y: number, rbr: number, entry: any): number => {
       const { rbr: rbrW, filename: fnW, details: detW, quantity: qtyW } = CONFIG.table.cols;
-      let x = CONFIG.margin + 4;
+      const tableWidth = rbrW + fnW + detW + qtyW;
+      
+      // Alternating row background
+      if (rowIndex % 2 === 1) {
+        page.drawRectangle({
+          x: CONFIG.margin,
+          y: y - CONFIG.table.rowHeight,
+          width: tableWidth,
+          height: CONFIG.table.rowHeight,
+          color: COLORS.rowAlt,
+        });
+      }
+      
+      // Bottom border for row
+      page.drawLine({
+        start: { x: CONFIG.margin, y: y - CONFIG.table.rowHeight },
+        end: { x: CONFIG.margin + tableWidth, y: y - CONFIG.table.rowHeight },
+        thickness: 0.5,
+        color: COLORS.border,
+      });
+      
+      let x = CONFIG.margin + 8;
       const orderKind = workOrder.kind || 'CTP';
       const texts = [
         String(rbr),
-        (entry.filename || 'N/A').substring(0, 40),
-        getDetailsText(entry, orderKind).substring(0, 20),
+        (entry.filename || entry.file_name || 'N/A').substring(0, 40),
+        getDetailsText(entry, orderKind).substring(0, 22),
         String(entry.quantity || entry.qty || 1),
       ];
       const widths = [rbrW, fnW, detW, qtyW];
       texts.forEach((t, i) => {
-        page.drawText(t, { x, y: y - 14, size: 9, font: notoFont });
+        page.drawText(t, { x, y: y - 16, size: 9, font: notoFont, color: COLORS.textDark });
         x += widths[i];
       });
+      rowIndex++;
       return y - CONFIG.table.rowHeight;
     };
 
@@ -234,27 +272,30 @@ export async function generateDeliveryNotePDF(
       page.drawLine({
         start: { x: CONFIG.margin, y },
         end: { x: CONFIG.margin + CONFIG.signature.lineWidth, y },
-        thickness: 0.5,
+        thickness: 0.75,
+        color: COLORS.textMuted,
       });
-      page.drawText('Robu preuzeo', { x: CONFIG.margin, y: y - 12, size: 9, font: notoFont });
+      page.drawText('Robu preuzeo', { x: CONFIG.margin, y: y - 12, size: 9, font: notoFont, color: COLORS.textMuted });
 
       // ID line
-      const idX = CONFIG.margin + CONFIG.signature.lineWidth + 20;
+      const idX = CONFIG.margin + CONFIG.signature.lineWidth + 25;
       page.drawLine({
         start: { x: idX, y },
-        end: { x: idX + 100, y },
-        thickness: 0.5,
+        end: { x: idX + 110, y },
+        thickness: 0.75,
+        color: COLORS.textMuted,
       });
-      page.drawText('Broj lične karte', { x: idX, y: y - 12, size: 9, font: notoFont });
+      page.drawText('Broj lične karte', { x: idX, y: y - 12, size: 9, font: notoFont, color: COLORS.textMuted });
 
       // Date line
-      const dateX = idX + 120;
+      const dateX = idX + 130;
       page.drawLine({
         start: { x: dateX, y },
-        end: { x: dateX + 80, y },
-        thickness: 0.5,
+        end: { x: dateX + 90, y },
+        thickness: 0.75,
+        color: COLORS.textMuted,
       });
-      page.drawText('Datum', { x: dateX, y: y - 12, size: 9, font: notoFont });
+      page.drawText('Datum', { x: dateX, y: y - 12, size: 9, font: notoFont, color: COLORS.textMuted });
     };
 
     // Helper: draw pagination
@@ -266,6 +307,7 @@ export async function generateDeliveryNotePDF(
         y: 16,
         size: 9,
         font: notoFont,
+        color: COLORS.textMuted,
       });
     };
 
