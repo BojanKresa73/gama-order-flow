@@ -1,5 +1,6 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
+import { useFilmSettings } from "@/hooks/useFilmSettings";
 
 interface FilmJobsSummaryProps {
   totalMeters: number;
@@ -10,8 +11,10 @@ export const FilmJobsSummary = ({
   totalMeters,
   clientDiscount,
 }: FilmJobsSummaryProps) => {
-  const COST_EUR_PER_M = 12.5;
-  const PRICE_EUR_PER_M = 17;
+  const { data: filmSettings } = useFilmSettings();
+  
+  const COST_EUR_PER_M = filmSettings?.cost_eur_per_m ?? 15;
+  const PRICE_EUR_PER_M = filmSettings?.price_eur_per_m ?? 22;
 
   const costTotal = totalMeters * COST_EUR_PER_M;
   const sellingTotal = totalMeters * PRICE_EUR_PER_M;
