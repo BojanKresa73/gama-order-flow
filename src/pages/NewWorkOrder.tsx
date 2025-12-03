@@ -3,7 +3,7 @@ import { useNavigate, useSearchParams, useParams } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { ArrowLeft } from "lucide-react";
+import { ArrowLeft, FileUp } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Label } from "@/components/ui/label";
@@ -15,6 +15,7 @@ import { LocalFilmJobsTable, LocalFilmJob } from "@/components/film/LocalFilmJob
 import { FilmJobsSummary } from "@/components/film/FilmJobsSummary";
 import { LocalDigitalJobsTable, LocalDigitalJob } from "@/components/digital/LocalDigitalJobsTable";
 import { useFilmSettings } from "@/hooks/useFilmSettings";
+import { AddCtpFilesModal } from "@/components/work-orders/AddCtpFilesModal";
 
 const NewWorkOrder = () => {
   const { id } = useParams<{ id: string }>();
@@ -74,6 +75,8 @@ const NewWorkOrder = () => {
   const { data: filmSettings } = useFilmSettings();
   const [bulkFormat, setBulkFormat] = useState("");
   const [bulkQuantity, setBulkQuantity] = useState(4);
+  const [showCtpFilesModal, setShowCtpFilesModal] = useState(false);
+  const [showOtherFilesModal, setShowOtherFilesModal] = useState(false);
 
   useEffect(() => {
     checkAuth();
@@ -624,27 +627,13 @@ const NewWorkOrder = () => {
                   <div className="space-y-4">
                     <div className="flex items-center justify-between">
                       <Label>Fajlovi</Label>
-                      <Input
-                        type="file"
-                        multiple
-                        onChange={(e) => {
-                          const files = Array.from(e.target.files || []);
-                          const newItems = files.map(file => ({
-                            file_name: file.name,
-                            plate_format_id: "",
-                            quantity: 4
-                          }));
-                          setCtpItems([...ctpItems, ...newItems]);
-                        }}
-                        className="hidden"
-                        id="file-upload-ctp"
-                      />
                       <Button 
                         type="button" 
                         variant="outline" 
                         size="sm" 
-                        onClick={() => document.getElementById('file-upload-ctp')?.click()}
+                        onClick={() => setShowCtpFilesModal(true)}
                       >
+                        <FileUp className="h-4 w-4 mr-2" />
                         Dodaj fajlove
                       </Button>
                     </div>
@@ -893,27 +882,13 @@ const NewWorkOrder = () => {
                   <div className="space-y-4">
                     <div className="flex items-center justify-between">
                       <Label>Fajlovi</Label>
-                      <Input
-                        type="file"
-                        multiple
-                        onChange={(e) => {
-                          const files = Array.from(e.target.files || []);
-                          const newItems = files.map(file => ({
-                            file_name: file.name,
-                            plate_format_id: "",
-                            quantity: 1
-                          }));
-                          setCtpItems([...ctpItems, ...newItems]);
-                        }}
-                        className="hidden"
-                        id="file-upload-other"
-                      />
                       <Button 
                         type="button" 
                         variant="outline" 
                         size="sm" 
-                        onClick={() => document.getElementById('file-upload-other')?.click()}
+                        onClick={() => setShowOtherFilesModal(true)}
                       >
+                        <FileUp className="h-4 w-4 mr-2" />
                         Dodaj fajlove
                       </Button>
                     </div>
@@ -986,6 +961,20 @@ const NewWorkOrder = () => {
         </form>
         )}
       </main>
+      
+      <AddCtpFilesModal
+        open={showCtpFilesModal}
+        onOpenChange={setShowCtpFilesModal}
+        onAddFiles={(items) => setCtpItems([...ctpItems, ...items])}
+        defaultQuantity={4}
+      />
+      
+      <AddCtpFilesModal
+        open={showOtherFilesModal}
+        onOpenChange={setShowOtherFilesModal}
+        onAddFiles={(items) => setCtpItems([...ctpItems, ...items.map(i => ({ ...i, quantity: 1 }))])}
+        defaultQuantity={1}
+      />
     </div>
   );
 };
