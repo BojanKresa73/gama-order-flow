@@ -198,20 +198,25 @@ Deno.serve(async (req) => {
         }).eq('id', item.id);
       }
     } else if (normalizedKind === 'DIGITALA') {
-      // Handle digital items - call compute function for proper calculations
-      const { data: settings } = await supabase.from('digital_settings').select('*').single();
-      
+      // Handle digital items with all new fields
       for (const item of payload.items.created) {
-        // For digital jobs, we need to compute values
-        // Insert with basic data, frontend should have computed values
         await supabase.from('digital_jobs').insert({
           work_order_id: payload.workOrderId,
-          file_name: item.file_name,
+          name: item.name || null,
+          file_name: item.file_name || '',
           finished_w_mm: item.finished_w_mm,
           finished_h_mm: item.finished_h_mm,
           qty: item.qty,
-          pages: item.pages,
+          pages: item.pages || 1,
           print_sides: item.print_sides,
+          paper_type: item.paper_type || null,
+          machine_sheet_format: item.machine_sheet_format || '330x488',
+          pieces_per_sheet: item.pieces_per_sheet || null,
+          pieces_per_sheet_override: item.pieces_per_sheet_override || null,
+          test_sheets: item.test_sheets || 0,
+          include_test_in_clicks: item.include_test_in_clicks || false,
+          finishing: item.finishing || null,
+          item_status: item.item_status || 'planned',
           is_test_print: item.is_test_print || false,
           computed_nup: item.computed_nup || null,
           computed_sheets_per_copy: item.computed_sheets_per_copy || null,
@@ -225,12 +230,21 @@ Deno.serve(async (req) => {
 
       for (const item of payload.items.updated) {
         await supabase.from('digital_jobs').update({
-          file_name: item.file_name,
+          name: item.name || null,
+          file_name: item.file_name || '',
           finished_w_mm: item.finished_w_mm,
           finished_h_mm: item.finished_h_mm,
           qty: item.qty,
-          pages: item.pages,
+          pages: item.pages || 1,
           print_sides: item.print_sides,
+          paper_type: item.paper_type || null,
+          machine_sheet_format: item.machine_sheet_format || '330x488',
+          pieces_per_sheet: item.pieces_per_sheet || null,
+          pieces_per_sheet_override: item.pieces_per_sheet_override || null,
+          test_sheets: item.test_sheets || 0,
+          include_test_in_clicks: item.include_test_in_clicks || false,
+          finishing: item.finishing || null,
+          item_status: item.item_status || 'planned',
           is_test_print: item.is_test_print || false,
           computed_nup: item.computed_nup || null,
           computed_sheets_per_copy: item.computed_sheets_per_copy || null,
