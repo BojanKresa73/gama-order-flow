@@ -393,17 +393,26 @@ export type Database = {
           file_name: string
           finished_h_mm: number
           finished_w_mm: number
+          finishing: string | null
           folds: number | null
           id: string
+          include_test_in_clicks: boolean
           is_test_print: boolean
+          item_status: string
           lamination: string | null
           lamination_sheets: number | null
           lamination_type: string | null
+          machine_sheet_format: string
+          name: string | null
           order_index: number | null
           pages: number
           paper_gsm: number | null
+          paper_type: string | null
+          pieces_per_sheet: number | null
+          pieces_per_sheet_override: number | null
           print_sides: string
           qty: number
+          test_sheets: number
           updated_at: string
           work_order_id: string
         }
@@ -422,17 +431,26 @@ export type Database = {
           file_name: string
           finished_h_mm: number
           finished_w_mm: number
+          finishing?: string | null
           folds?: number | null
           id?: string
+          include_test_in_clicks?: boolean
           is_test_print?: boolean
+          item_status?: string
           lamination?: string | null
           lamination_sheets?: number | null
           lamination_type?: string | null
+          machine_sheet_format?: string
+          name?: string | null
           order_index?: number | null
           pages?: number
           paper_gsm?: number | null
+          paper_type?: string | null
+          pieces_per_sheet?: number | null
+          pieces_per_sheet_override?: number | null
           print_sides: string
           qty: number
+          test_sheets?: number
           updated_at?: string
           work_order_id: string
         }
@@ -451,17 +469,26 @@ export type Database = {
           file_name?: string
           finished_h_mm?: number
           finished_w_mm?: number
+          finishing?: string | null
           folds?: number | null
           id?: string
+          include_test_in_clicks?: boolean
           is_test_print?: boolean
+          item_status?: string
           lamination?: string | null
           lamination_sheets?: number | null
           lamination_type?: string | null
+          machine_sheet_format?: string
+          name?: string | null
           order_index?: number | null
           pages?: number
           paper_gsm?: number | null
+          paper_type?: string | null
+          pieces_per_sheet?: number | null
+          pieces_per_sheet_override?: number | null
           print_sides?: string
           qty?: number
+          test_sheets?: number
           updated_at?: string
           work_order_id?: string
         }
@@ -510,8 +537,33 @@ export type Database = {
           },
         ]
       }
+      digital_paper_types: {
+        Row: {
+          created_at: string
+          display_order: number
+          id: string
+          is_active: boolean
+          name: string
+        }
+        Insert: {
+          created_at?: string
+          display_order?: number
+          id?: string
+          is_active?: boolean
+          name: string
+        }
+        Update: {
+          created_at?: string
+          display_order?: number
+          id?: string
+          is_active?: boolean
+          name?: string
+        }
+        Relationships: []
+      }
       digital_settings: {
         Row: {
+          available_sheet_formats: Json
           created_at: string
           id: string
           sheet_height_mm: number
@@ -520,6 +572,7 @@ export type Database = {
           waste_percent: number
         }
         Insert: {
+          available_sheet_formats?: Json
           created_at?: string
           id?: string
           sheet_height_mm?: number
@@ -528,6 +581,7 @@ export type Database = {
           waste_percent?: number
         }
         Update: {
+          available_sheet_formats?: Json
           created_at?: string
           id?: string
           sheet_height_mm?: number
