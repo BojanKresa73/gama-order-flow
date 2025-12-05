@@ -65,6 +65,27 @@ export const PRICE_TABLE = [
   { minQty: 1001, maxQty: Infinity, prices: { "4/0": 0.39, "4/4": 0.68, "4/1": 0.47, "1/0": 0.18, "1/1": 0.26 } },
 ];
 
+// Paper price table per sheet 488×330 (from Bojan's Excel column F)
+export const PAPER_PRICE_TABLE: Record<string, number> = {
+  "Ofsetni 80g": 0.01,
+  "Ofsetni 100g": 0.02,
+  "Kunzdruk 115g": 0.03,
+  "Kunzdruk 135g": 0.03,
+  "Kunzdruk 150g": 0.04,
+  "Kunzdruk 170g": 0.04,
+  "Kunzdruk 200g": 0.05,
+  "Kunzdruk 220g": 0.05,
+  "Kunzdruk 250g": 0.06,
+  "Kunzdruk 300g": 0.07,
+  "Kunzdruk 350g": 0.09,
+  "Kunzdruk 400g": 0.10,
+  "Specijalni": 0, // Special paper - cost 0 for now
+};
+
+// Click cost per A3 equivalent
+export const COLOR_CLICK_COST_BASE = 0.06; // €/click
+export const MONO_CLICK_COST_BASE = 0.016; // €/click
+
 // Get sheet multiplier for click calculation (A3 equivalents)
 // 488×330 = 1.0 (base A3)
 // 760×330 = 1.5 (50% more)
@@ -222,18 +243,58 @@ export function aggregateByPaperType(jobs: (DigitalJob & Partial<ComputedDigital
   return result;
 }
 
-// Calculate work order totals with new logic
+// Get paper price per sheet for a given paper type and format
+export function getPaperPricePerSheet(paperType: string, format: string): number {
+  const basePrice = PAPER_PRICE_TABLE[paperType] ?? 0;
+  const paperMultiplier = format === "760x330" ? 1.5 : 1.0;
+  return basePrice * paperMultiplier;
+}
+
+// Calculate paper cost for a single item
+export function calculateItemPaperCost(
+  obim: number,
+  qty: number,
+  format: string,
+  paperType: string
+): number {
+  const totalSheets = calculateTotalSheets(obim, qty);
+  const pricePerSheet = getPaperPricePerSheet(paperType, format);
+  return totalSheets * pricePerSheet;
+}
+
+// Calculate click cost for a single item
+export function calculateItemClickCost(
+  obim: number,
+  qty: number,
+  format: string,
+  printSides: string
+): { colorClickCost: number; monoClickCost: number; totalClickCost: number } {
+  const { colorClicks, monoClicks } = calculateItemClicks(obim, qty, format, printSides);
+  const colorClickCost = colorClicks * COLOR_CLICK_COST_BASE;
+  const monoClickCost = monoClicks * MONO_CLICK_COST_BASE;
+  return {
+    colorClickCost,
+    monoClickCost,
+    totalClickCost: colorClickCost + monoClickCost,
+  };
+}
+
+// Calculate work order totals with new logic including paper cost, click cost, and RUC
 export function calculateWorkOrderTotals(jobs: (DigitalJob & Partial<ComputedDigitalJob>)[]) {
   let totalSheets = 0;
   let totalColorClicks = 0;
   let totalMonoClicks = 0;
   let totalAmount = 0;
+  let totalPaperCost = 0;
+  let totalColorClickCost = 0;
+  let totalMonoClickCost = 0;
 
   for (const job of jobs) {
     const obim = job.obim || 1;
     const qty = job.qty || 0;
     const format = job.machine_sheet_format || '488x330';
     const printSides = job.print_sides || '4/4';
+    const paperType = job.paper_type || '';
     
     const { colorClicks, monoClicks, totalSheets: itemSheets } = calculateItemClicks(obim, qty, format, printSides);
     
@@ -241,10 +302,23 @@ export function calculateWorkOrderTotals(jobs: (DigitalJob & Partial<ComputedDig
     totalColorClicks += colorClicks;
     totalMonoClicks += monoClicks;
     
+    // Paper cost
+    totalPaperCost += calculateItemPaperCost(obim, qty, format, paperType);
+    
+    // Click cost
+    const { colorClickCost, monoClickCost } = calculateItemClickCost(obim, qty, format, printSides);
+    totalColorClickCost += colorClickCost;
+    totalMonoClickCost += monoClickCost;
+    
     if (!job.is_test_print) {
       totalAmount += calculateItemPrice(obim, qty, format, printSides);
     }
   }
+
+  const totalClickCost = totalColorClickCost + totalMonoClickCost;
+  const totalCost = totalPaperCost + totalClickCost;
+  const ruc = totalAmount - totalCost;
+  const rucPercent = totalAmount > 0 ? (ruc / totalAmount) * 100 : 0;
 
   return {
     totalSheets,
@@ -252,6 +326,13 @@ export function calculateWorkOrderTotals(jobs: (DigitalJob & Partial<ComputedDig
     totalMonoClicks,
     totalClicks: totalColorClicks + totalMonoClicks,
     totalAmount,
+    totalPaperCost,
+    totalColorClickCost,
+    totalMonoClickCost,
+    totalClickCost,
+    totalCost,
+    ruc,
+    rucPercent,
     sheetsByPaper: aggregateByPaperType(jobs),
   };
 }
