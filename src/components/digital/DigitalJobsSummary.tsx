@@ -2,6 +2,7 @@ import { FileSpreadsheet } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { LocalDigitalJob } from "./LocalDigitalJobsTable";
+import { calculateWorkOrderTotals } from "@/lib/digitalCalculations";
 import * as XLSX from "xlsx";
 
 interface DigitalJobsSummaryProps {
@@ -10,38 +11,29 @@ interface DigitalJobsSummaryProps {
 }
 
 export const DigitalJobsSummary = ({ jobs, clientRabatProcenat = 0 }: DigitalJobsSummaryProps) => {
-  const totalSheets = jobs.reduce((sum, job) => sum + (job.computed_total_sheets || 0), 0);
-  const totalColorClicks = jobs.reduce((sum, job) => sum + (job.computed_color_clicks || 0), 0);
-  const totalMonoClicks = jobs.reduce((sum, job) => sum + (job.computed_mono_clicks || 0), 0);
-  const totalAmount = jobs.reduce((sum, job) => sum + (job.computed_line_total || 0), 0);
+  // Calculate totals using new simplified logic
+  const totals = calculateWorkOrderTotals(jobs);
+  const { totalSheets, totalColorClicks, totalMonoClicks, totalAmount } = totals;
   const amountWithDiscount = totalAmount * (1 - clientRabatProcenat / 100);
 
   const handleExportXLSX = () => {
     const worksheetData = [
       ["DIGITALNA ŠTAMPA - SAŽETAK"],
       [],
-      ["Naziv fajla", "Širina (mm)", "Visina (mm)", "Strane", "Količina", "Probna štampa", "NUP", "Tabaka/kom", "Ukupno tabaka", "Color", "Mono", "€/tabak", "Iznos (€)"],
+      ["Naziv", "Štampa", "Tiraž", "Papir", "Format tabaka"],
       ...jobs.map(job => [
-        job.file_name,
-        job.finished_w_mm,
-        job.finished_h_mm,
-        job.pages,
-        job.qty,
-        job.is_test_print ? "Da" : "Ne",
-        job.computed_nup || "-",
-        job.computed_sheets_per_copy || "-",
-        job.computed_total_sheets || "-",
-        job.computed_color_clicks || "-",
-        job.computed_mono_clicks || "-",
-        job.computed_price_per_sheet ? job.computed_price_per_sheet.toFixed(2) : "-",
-        job.computed_line_total !== undefined ? job.computed_line_total.toFixed(2) : "-",
+        job.name || job.file_name || "-",
+        job.print_sides || "-",
+        job.qty || 0,
+        job.paper_type || "-",
+        job.machine_sheet_format || "-",
       ]),
       [],
       ["UKUPNO"],
       ["Ukupno tabaka:", totalSheets],
       ["Color klikovi:", totalColorClicks],
       ["Mono klikovi:", totalMonoClicks],
-      ["Ukupan iznos (€):", totalAmount.toFixed(2)],
+      ["Ukupna cena (€):", totalAmount.toFixed(2)],
     ];
 
     if (clientRabatProcenat > 0) {
@@ -78,7 +70,7 @@ export const DigitalJobsSummary = ({ jobs, clientRabatProcenat = 0 }: DigitalJob
               </div>
             </div>
             <div>
-              <div className="text-sm text-muted-foreground">Ukupan iznos</div>
+              <div className="text-sm text-muted-foreground">Cena</div>
               <div className="text-2xl font-bold text-primary">€{totalAmount.toFixed(2)}</div>
             </div>
             {clientRabatProcenat > 0 && (
