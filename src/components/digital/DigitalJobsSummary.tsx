@@ -3,6 +3,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { LocalDigitalJob } from "./LocalDigitalJobsTable";
 import { calculateWorkOrderTotals } from "@/lib/digitalCalculations";
+import { useAuthz } from "@/hooks/useAuthz";
 import * as XLSX from "xlsx";
 
 interface DigitalJobsSummaryProps {
@@ -11,9 +12,20 @@ interface DigitalJobsSummaryProps {
 }
 
 export const DigitalJobsSummary = ({ jobs, clientRabatProcenat = 0 }: DigitalJobsSummaryProps) => {
+  const { isSuper, isAdmin } = useAuthz();
+  const canSeePrices = isSuper || isAdmin;
+
   // Calculate totals using new simplified logic
   const totals = calculateWorkOrderTotals(jobs);
-  const { totalSheets, totalColorClicks, totalMonoClicks, totalAmount } = totals;
+  const { 
+    totalSheets, 
+    totalColorClicks, 
+    totalMonoClicks, 
+    totalAmount,
+    totalPaperCost,
+    ruc,
+    rucPercent 
+  } = totals;
   const amountWithDiscount = totalAmount * (1 - clientRabatProcenat / 100);
 
   const handleExportXLSX = () => {
@@ -34,14 +46,23 @@ export const DigitalJobsSummary = ({ jobs, clientRabatProcenat = 0 }: DigitalJob
       ["Ukupno tabaka:", totalSheets],
       ["Color klikovi:", totalColorClicks],
       ["Mono klikovi:", totalMonoClicks],
-      ["Ukupna cena (€):", totalAmount.toFixed(2)],
     ];
 
-    if (clientRabatProcenat > 0) {
+    // Only include prices for admins/superusers
+    if (canSeePrices) {
       worksheetData.push(
-        [`Rabat (${clientRabatProcenat}%):`, (totalAmount - amountWithDiscount).toFixed(2)],
-        ["Sa rabatom (€):", amountWithDiscount.toFixed(2)]
+        ["Ukupna cena (€):", totalAmount.toFixed(2)],
+        ["Papir (€):", totalPaperCost.toFixed(2)],
+        ["RUC (€):", ruc.toFixed(2)],
+        ["RUC (%):", rucPercent.toFixed(1) + "%"]
       );
+
+      if (clientRabatProcenat > 0) {
+        worksheetData.push(
+          [`Rabat (${clientRabatProcenat}%):`, (totalAmount - amountWithDiscount).toFixed(2)],
+          ["Sa rabatom (€):", amountWithDiscount.toFixed(2)]
+        );
+      }
     }
 
     const worksheet = XLSX.utils.aoa_to_sheet(worksheetData);
@@ -57,7 +78,7 @@ export const DigitalJobsSummary = ({ jobs, clientRabatProcenat = 0 }: DigitalJob
     <Card>
       <CardContent className="pt-6">
         <div className="flex items-center justify-between">
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4 flex-1">
+          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4 flex-1">
             <div>
               <div className="text-sm text-muted-foreground">Ukupno tabaka</div>
               <div className="text-2xl font-bold">{totalSheets}</div>
@@ -70,15 +91,29 @@ export const DigitalJobsSummary = ({ jobs, clientRabatProcenat = 0 }: DigitalJob
                 <span className="text-muted-foreground">Mono: {totalMonoClicks}</span>
               </div>
             </div>
-            <div>
-              <div className="text-sm text-muted-foreground">Cena</div>
-              <div className="text-2xl font-bold text-primary">€{totalAmount.toFixed(2)}</div>
-            </div>
-            {clientRabatProcenat > 0 && (
-              <div>
-                <div className="text-sm text-muted-foreground">Sa rabatom ({clientRabatProcenat}%)</div>
-                <div className="text-2xl font-bold text-green-600">€{amountWithDiscount.toFixed(2)}</div>
-              </div>
+            {canSeePrices && (
+              <>
+                <div>
+                  <div className="text-sm text-muted-foreground">Cena</div>
+                  <div className="text-2xl font-bold text-primary">€{totalAmount.toFixed(2)}</div>
+                </div>
+                <div>
+                  <div className="text-sm text-muted-foreground">Papir</div>
+                  <div className="text-xl font-semibold text-muted-foreground">€{totalPaperCost.toFixed(2)}</div>
+                </div>
+                <div>
+                  <div className="text-sm text-muted-foreground">RUC</div>
+                  <div className="text-xl font-semibold text-green-600">
+                    €{ruc.toFixed(2)} ({rucPercent.toFixed(1)}%)
+                  </div>
+                </div>
+                {clientRabatProcenat > 0 && (
+                  <div>
+                    <div className="text-sm text-muted-foreground">Sa rabatom ({clientRabatProcenat}%)</div>
+                    <div className="text-2xl font-bold text-green-600">€{amountWithDiscount.toFixed(2)}</div>
+                  </div>
+                )}
+              </>
             )}
           </div>
           <Button
