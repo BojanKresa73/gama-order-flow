@@ -487,6 +487,46 @@ const NewWorkOrder = () => {
         }
       }
 
+      // Insert digital jobs for digital work orders
+      if (orderType === "digital" && digitalJobs.length > 0) {
+        const digitalItems = digitalJobs
+          .filter(job => job.file_name || job.name)
+          .map((job, index) => ({
+            work_order_id: workOrder.id,
+            name: job.name || null,
+            file_name: job.file_name || job.name || '',
+            finished_w_mm: job.finished_w_mm || 0,
+            finished_h_mm: job.finished_h_mm || 0,
+            pages: job.pages || 1,
+            obim: job.obim || 1,
+            qty: job.qty || 1,
+            is_test_print: job.is_test_print || false,
+            print_sides: job.print_sides || '4/4',
+            paper_type: job.paper_type || null,
+            machine_sheet_format: job.machine_sheet_format || '488x330',
+            test_sheets: job.test_sheets || 0,
+            include_test_in_clicks: job.include_test_in_clicks || false,
+            finishing: job.finishing || null,
+            order_index: index,
+            // Include computed values
+            computed_nup: job.computed_nup || null,
+            computed_sheets_per_copy: job.computed_sheets_per_copy || null,
+            computed_total_sheets: job.computed_total_sheets || null,
+            computed_color_clicks: job.computed_color_clicks || null,
+            computed_mono_clicks: job.computed_mono_clicks || null,
+            computed_price_per_sheet: job.computed_price_per_sheet || null,
+            computed_line_total: job.computed_line_total || null,
+          }));
+
+        if (digitalItems.length > 0) {
+          const { error: digitalError } = await supabase
+            .from("digital_jobs")
+            .insert(digitalItems);
+
+          if (digitalError) throw digitalError;
+        }
+      }
+
       toast({
         title: "Uspeh",
         description: `Radni nalog ${workOrder.order_number} je kreiran`,
