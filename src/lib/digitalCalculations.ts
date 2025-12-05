@@ -67,6 +67,7 @@ export const PRICE_TABLE = [
 
 // Paper price table per sheet 488×330 (from Bojan's Excel column F)
 export const PAPER_PRICE_TABLE: Record<string, number> = {
+  "Ofsetni": 0.01, // Default Ofsetni
   "Ofsetni 80g": 0.01,
   "Ofsetni 100g": 0.02,
   "Kunzdruk 115g": 0.03,
