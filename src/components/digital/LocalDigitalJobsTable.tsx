@@ -22,7 +22,8 @@ export interface LocalDigitalJob {
   finished_w_mm: number;
   finished_h_mm: number;
   pages: number;
-  qty: number; // Number of sheets to print
+  obim: number; // Number of imposed sheets per one finished copy
+  qty: number; // Number of finished copies (Tiraž)
   is_test_print: boolean;
   print_sides: string; // "4/4", "4/0", "4/1", "1/0", "1/1"
   paper_type?: string;
@@ -63,6 +64,7 @@ export const LocalDigitalJobsTable = ({ jobs, onChange, printSides, clientRabatP
       finished_w_mm: 0,
       finished_h_mm: 0,
       pages: 1,
+      obim: 1,
       qty: 1,
       is_test_print: false,
       print_sides: printSides || "4/4",
@@ -90,6 +92,7 @@ export const LocalDigitalJobsTable = ({ jobs, onChange, printSides, clientRabatP
   const handleAddJobs = (newJobs: LocalDigitalJob[]) => {
     const jobsWithDefaults = newJobs.map(job => ({
       ...job,
+      obim: job.obim || 1,
       paper_type: paperTypes?.[0]?.name || "",
       machine_sheet_format: "488x330",
       test_sheets: 0,
@@ -132,9 +135,10 @@ export const LocalDigitalJobsTable = ({ jobs, onChange, printSides, clientRabatP
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead className="w-[200px]">Naziv</TableHead>
+                <TableHead className="w-[180px]">Naziv</TableHead>
+                <TableHead className="w-[80px]">Obim</TableHead>
                 <TableHead className="w-[90px]">Štampa</TableHead>
-                <TableHead className="w-[100px]">Tiraž</TableHead>
+                <TableHead className="w-[90px]">Tiraž</TableHead>
                 <TableHead className="w-[140px]">Papir</TableHead>
                 <TableHead className="w-[120px]">Format tabaka</TableHead>
                 <TableHead className="w-[50px]"></TableHead>
@@ -149,6 +153,16 @@ export const LocalDigitalJobsTable = ({ jobs, onChange, printSides, clientRabatP
                       onChange={(e) => handleFieldChange(index, 'name', e.target.value)}
                       placeholder="Naziv stavke"
                       className="h-8"
+                    />
+                  </TableCell>
+                  <TableCell className="py-2">
+                    <Input
+                      type="number"
+                      value={job.obim || 1}
+                      onChange={(e) => handleFieldChange(index, 'obim', Math.max(1, parseInt(e.target.value) || 1))}
+                      min={1}
+                      placeholder="Obim"
+                      className="w-16 h-8"
                     />
                   </TableCell>
                   <TableCell className="py-2">
@@ -172,7 +186,7 @@ export const LocalDigitalJobsTable = ({ jobs, onChange, printSides, clientRabatP
                       value={job.qty || ''}
                       onChange={(e) => handleFieldChange(index, 'qty', parseInt(e.target.value) || 1)}
                       min={1}
-                      placeholder="Broj tabaka"
+                      placeholder="Kopije"
                       className="w-20 h-8"
                     />
                   </TableCell>

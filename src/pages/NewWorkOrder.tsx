@@ -210,6 +210,7 @@ const NewWorkOrder = () => {
             file_name: item.file_name,
             finished_w_mm: item.finished_w_mm,
             finished_h_mm: item.finished_h_mm,
+            obim: item.obim || 1,
             qty: item.qty,
             pages: item.pages,
             print_sides: item.print_sides,
