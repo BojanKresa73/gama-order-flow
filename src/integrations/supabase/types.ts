@@ -404,6 +404,7 @@ export type Database = {
           lamination_type: string | null
           machine_sheet_format: string
           name: string | null
+          obim: number
           order_index: number | null
           pages: number
           paper_gsm: number | null
@@ -442,6 +443,7 @@ export type Database = {
           lamination_type?: string | null
           machine_sheet_format?: string
           name?: string | null
+          obim?: number
           order_index?: number | null
           pages?: number
           paper_gsm?: number | null
@@ -480,6 +482,7 @@ export type Database = {
           lamination_type?: string | null
           machine_sheet_format?: string
           name?: string | null
+          obim?: number
           order_index?: number | null
           pages?: number
           paper_gsm?: number | null

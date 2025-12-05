@@ -19,7 +19,8 @@ export interface DigitalJob {
   finished_w_mm: number;
   finished_h_mm: number;
   pages: number;
-  qty: number; // Number of sheets to print
+  obim: number; // Number of imposed sheets per one finished copy
+  qty: number; // Number of finished copies (Tiraž)
   is_test_print: boolean;
   print_sides: string; // "4/4", "4/0", "4/1", "1/0", "1/1"
   paper_type?: string;
@@ -54,7 +55,6 @@ export const SHEET_FORMATS = ["488x330", "760x330"] as const;
 export const PRINT_MODES = ["4/4", "4/0", "4/1", "1/0", "1/1"] as const;
 
 // Pricing table per A4 equivalent by tirage range and coverage
-// Format: { range: [min, max], prices: { coverage: pricePerA4 } }
 export const PRICE_TABLE = [
   { minQty: 1, maxQty: 10, prices: { "4/0": 1.00, "4/4": 1.90, "4/1": 1.35, "1/0": 0.45, "1/1": 0.80 } },
   { minQty: 11, maxQty: 20, prices: { "4/0": 0.85, "4/4": 1.60, "4/1": 1.13, "1/0": 0.38, "1/1": 0.66 } },
@@ -99,37 +99,48 @@ export function getCoverageSides(printSides: string): { colorSides: number; mono
   }
 }
 
-// Get price per A4 from pricing table based on tirage and coverage
-export function getPricePerA4(tirage: number, coverage: string): number {
-  const tier = PRICE_TABLE.find(t => tirage >= t.minQty && tirage <= t.maxQty);
+// Get price per A4 from pricing table based on a4_units and coverage
+export function getPricePerA4(a4Units: number, coverage: string): number {
+  const tier = PRICE_TABLE.find(t => a4Units >= t.minQty && a4Units <= t.maxQty);
   if (!tier) return 0;
   return tier.prices[coverage as keyof typeof tier.prices] || 0;
 }
 
+// Calculate total sheets for an item
+export function calculateTotalSheets(obim: number, qty: number): number {
+  return (obim || 1) * (qty || 0);
+}
+
 // Calculate clicks for a single item
 export function calculateItemClicks(
+  obim: number,
   qty: number,
   format: string,
   printSides: string
-): { colorClicks: number; monoClicks: number } {
+): { colorClicks: number; monoClicks: number; totalSheets: number } {
+  const totalSheets = calculateTotalSheets(obim, qty);
   const sheetMultiplier = getSheetMultiplier(format);
   const { colorSides, monoSides } = getCoverageSides(printSides);
   
   return {
-    colorClicks: qty * colorSides * sheetMultiplier,
-    monoClicks: qty * monoSides * sheetMultiplier,
+    totalSheets,
+    colorClicks: totalSheets * colorSides * sheetMultiplier,
+    monoClicks: totalSheets * monoSides * sheetMultiplier,
   };
 }
 
-// Calculate price for a single item
+// Calculate price for a single item using a4_units for pricing bracket
 export function calculateItemPrice(
+  obim: number,
   qty: number,
   format: string,
   printSides: string
 ): number {
+  const totalSheets = calculateTotalSheets(obim, qty);
   const a4Factor = getA4Factor(format);
-  const pricePerA4 = getPricePerA4(qty, printSides);
-  return qty * pricePerA4 * a4Factor;
+  const a4Units = totalSheets * a4Factor;
+  const pricePerA4 = getPricePerA4(a4Units, printSides);
+  return a4Units * pricePerA4;
 }
 
 // Legacy function for backward compatibility
@@ -171,20 +182,21 @@ export function computeDigitalJob(
   settings: DigitalSettings,
   priceList: PriceListEntry[]
 ): ComputedDigitalJob | { error: string } {
+  const obim = job.obim || 1;
   const qty = job.qty || 0;
   const format = job.machine_sheet_format || '488x330';
   const printSides = job.print_sides || '4/4';
   
   // Calculate clicks
-  const { colorClicks, monoClicks } = calculateItemClicks(qty, format, printSides);
+  const { colorClicks, monoClicks, totalSheets } = calculateItemClicks(obim, qty, format, printSides);
   
   // Calculate price
-  const lineTotal = job.is_test_print ? 0 : calculateItemPrice(qty, format, printSides);
+  const lineTotal = job.is_test_print ? 0 : calculateItemPrice(obim, qty, format, printSides);
 
   return {
     computed_nup: 1, // Not used in simplified logic
-    computed_sheets_per_copy: 1, // Not used in simplified logic
-    computed_total_sheets: qty,
+    computed_sheets_per_copy: obim, // Now represents obim
+    computed_total_sheets: totalSheets,
     computed_color_clicks: colorClicks,
     computed_mono_clicks: monoClicks,
     computed_price_per_sheet: 0, // Not used in simplified logic
@@ -192,7 +204,7 @@ export function computeDigitalJob(
     cover_sheets: 0,
     lamination_sheets: 0,
     pieces_per_sheet: 1,
-    sheets_for_production: qty,
+    sheets_for_production: totalSheets,
     sheets_for_test: 0,
   };
 }
@@ -203,8 +215,8 @@ export function aggregateByPaperType(jobs: (DigitalJob & Partial<ComputedDigital
   
   for (const job of jobs) {
     const paperType = job.paper_type || 'Neodređeno';
-    const sheets = job.qty || 0;
-    result.set(paperType, (result.get(paperType) || 0) + sheets);
+    const totalSheets = calculateTotalSheets(job.obim || 1, job.qty || 0);
+    result.set(paperType, (result.get(paperType) || 0) + totalSheets);
   }
   
   return result;
@@ -218,18 +230,19 @@ export function calculateWorkOrderTotals(jobs: (DigitalJob & Partial<ComputedDig
   let totalAmount = 0;
 
   for (const job of jobs) {
+    const obim = job.obim || 1;
     const qty = job.qty || 0;
     const format = job.machine_sheet_format || '488x330';
     const printSides = job.print_sides || '4/4';
     
-    totalSheets += qty;
+    const { colorClicks, monoClicks, totalSheets: itemSheets } = calculateItemClicks(obim, qty, format, printSides);
     
-    const { colorClicks, monoClicks } = calculateItemClicks(qty, format, printSides);
+    totalSheets += itemSheets;
     totalColorClicks += colorClicks;
     totalMonoClicks += monoClicks;
     
     if (!job.is_test_print) {
-      totalAmount += calculateItemPrice(qty, format, printSides);
+      totalAmount += calculateItemPrice(obim, qty, format, printSides);
     }
   }
 

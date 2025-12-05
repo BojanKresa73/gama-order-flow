@@ -20,9 +20,10 @@ export const DigitalJobsSummary = ({ jobs, clientRabatProcenat = 0 }: DigitalJob
     const worksheetData = [
       ["DIGITALNA ŠTAMPA - SAŽETAK"],
       [],
-      ["Naziv", "Štampa", "Tiraž", "Papir", "Format tabaka"],
+      ["Naziv", "Obim", "Štampa", "Tiraž", "Papir", "Format tabaka"],
       ...jobs.map(job => [
         job.name || job.file_name || "-",
+        job.obim || 1,
         job.print_sides || "-",
         job.qty || 0,
         job.paper_type || "-",

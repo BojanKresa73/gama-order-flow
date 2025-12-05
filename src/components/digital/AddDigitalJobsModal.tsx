@@ -55,6 +55,7 @@ export const AddDigitalJobsModal = ({ open, onOpenChange, onAddJobs }: AddDigita
         finished_w_mm: dimensions.width || 0,
         finished_h_mm: dimensions.height || 0,
         pages: 1,
+        obim: 1,
         qty: 1,
         is_test_print: false,
         print_sides: "4/4", // Default
@@ -82,6 +83,7 @@ export const AddDigitalJobsModal = ({ open, onOpenChange, onAddJobs }: AddDigita
         finished_w_mm: dimensions.width || 0,
         finished_h_mm: dimensions.height || 0,
         pages: 1,
+        obim: 1,
         qty: 1,
         is_test_print: false,
         print_sides: "4/4", // Default
