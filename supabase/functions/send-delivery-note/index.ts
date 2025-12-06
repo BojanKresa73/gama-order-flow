@@ -236,36 +236,15 @@ const handler = async (req: Request): Promise<Response> => {
       }));
       console.log(`Fetched ${items.length} file entries for CTP work order`);
     } else {
-      // OSTALO/RAZNO orders: use file entries but quantity from work order level run_quantity
-      const { data: fileEntries, error: feError } = await supabaseClient
-        .from("file_entries")
-        .select(`
-          *,
-          plate_format:plate_formats (
-            format_name
-          )
-        `)
-        .eq("work_order_id", workOrderId);
-
-      // For OSTALO, file entries are optional
-      if (fileEntries && fileEntries.length > 0) {
-        items = fileEntries.map(fe => ({
-          ...fe,
-          filename: fe.filename,
-          // Use work order level run_quantity for OSTALO orders
-          quantity: workOrder.run_quantity || fe.quantity || 1
-        }));
-        console.log(`Fetched ${items.length} file entries for OSTALO work order`);
-      } else {
-        // No file entries - create a single item from notes if available
-        items = [{
-          id: workOrder.id,
-          filename: workOrder.job_name || workOrder.notes?.substring(0, 50) || 'Usluga',
-          quantity: workOrder.run_quantity || 1,
-          file_type: 'ostalo'
-        }];
-        console.log(`No file entries for OSTALO - using work order info as single item`);
-      }
+      // OSTALO/RAZNO orders: use job_name and run_quantity from work order
+      // Job name is required for OSTALO orders
+      items = [{
+        id: workOrder.id,
+        filename: workOrder.job_name || 'Usluga',
+        quantity: workOrder.run_quantity || 1,
+        file_type: 'ostalo'
+      }];
+      console.log(`OSTALO order - using job_name: "${workOrder.job_name}", quantity: ${workOrder.run_quantity}`);
     }
 
     // Check if delivery note already exists (idempotency)
