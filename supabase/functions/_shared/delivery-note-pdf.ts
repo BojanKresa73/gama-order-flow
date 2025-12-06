@@ -19,7 +19,7 @@ const CONFIG = {
   margin: 30,
   logo: { width: 120 },
   table: {
-    cols: { rbr: 40, filename: 250, details: 145, quantity: 65 },
+    cols: { rbr: 35, filename: 230, details: 130, quantity: 105 },
     rowHeight: 24,
     headerBg: COLORS.headerBg,
   },
@@ -68,15 +68,28 @@ function getDetailsText(entry: any, orderKind: string): string {
     return `Potrošeno: ${totalM.toFixed(2)} m`;
   }
   
-  // For DIGITALA, show format or N/A
+  // For DIGITALA, show format (sheet format)
   if (orderKind === 'DIGITALA') {
-    if (entry.finished_w_mm && entry.finished_h_mm) {
-      return `${entry.finished_w_mm}×${entry.finished_h_mm} mm`;
-    }
-    return 'N/A';
+    const sheetFormat = entry.machine_sheet_format || '488x330';
+    return `Format: ${sheetFormat}`;
   }
   
   return 'N/A';
+}
+
+// Get quantity text for digital jobs - if no job_name, show sheets with print type
+function getQuantityText(entry: any, orderKind: string, workOrder: any): string {
+  if (orderKind === 'DIGITALA') {
+    // If work order has job_name (product name), use run_quantity
+    if (workOrder.job_name && workOrder.run_quantity) {
+      return String(workOrder.run_quantity);
+    }
+    // Otherwise show sheets with print type
+    const totalSheets = entry.computed_total_sheets || entry.qty || 1;
+    const printSides = entry.print_sides || '4/0';
+    return `${totalSheets} tab. ${printSides}`;
+  }
+  return String(entry.quantity || entry.qty || 1);
 }
 
 function isSupportedFont(bytes: ArrayBuffer) {
@@ -254,7 +267,7 @@ export async function generateDeliveryNotePDF(
         String(rbr),
         (entry.filename || entry.file_name || 'N/A').substring(0, 40),
         getDetailsText(entry, orderKind).substring(0, 22),
-        String(entry.quantity || entry.qty || 1),
+        getQuantityText(entry, orderKind, workOrder).substring(0, 18),
       ];
       const widths = [rbrW, fnW, detW, qtyW];
       texts.forEach((t, i) => {
