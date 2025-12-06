@@ -43,12 +43,13 @@ const NewWorkOrder = () => {
     print_format: "",
     binding: "",
     print_spec: "",
-    paper_gsm_text: 0,
-    paper_gsm_cover: 0,
+    paper_text: "",
+    paper_cover: "",
     lamination: "",
     sheets_used: 0,
     clicks_count: 0,
     test_clicks: 0,
+    finishing: [] as string[],
   });
 
   // Use stable IDs for items
@@ -131,6 +132,18 @@ const NewWorkOrder = () => {
       }
 
       // Set form data
+      // Parse finishing options from print_format if it contains JSON array
+      let finishingOptions: string[] = [];
+      let printFormatValue = order.print_format || "";
+      try {
+        if (order.print_format?.startsWith('[')) {
+          finishingOptions = JSON.parse(order.print_format);
+          printFormatValue = "";
+        }
+      } catch {
+        // print_format is plain text, not JSON
+      }
+      
       setFormData({
         client_id: order.client_id,
         notification_email: order.clients?.notification_email || "",
@@ -140,15 +153,16 @@ const NewWorkOrder = () => {
         job_name: order.job_name || "",
         run_quantity: order.run_quantity || 0,
         pages: order.pages || 0,
-        print_format: order.print_format || "",
+        print_format: printFormatValue,
         binding: order.binding || "",
         print_spec: order.print_spec || "",
-        paper_gsm_text: order.paper_gsm_text || 0,
-        paper_gsm_cover: order.paper_gsm_cover || 0,
+        paper_text: order.paper_gsm_text?.toString() || "",
+        paper_cover: order.paper_gsm_cover?.toString() || "",
         lamination: order.lamination || "",
         sheets_used: order.sheets_used || 0,
         clicks_count: order.clicks_count || 0,
         test_clicks: order.test_clicks || 0,
+        finishing: finishingOptions,
       });
 
       // Set order type
@@ -288,7 +302,8 @@ const NewWorkOrder = () => {
                 client_id: formData.client_id,
                 notes: formData.notes,
                 job_name: formData.job_name,
-                print_format: formData.print_format,
+                run_quantity: formData.run_quantity,
+                print_format: formData.finishing.length > 0 ? JSON.stringify(formData.finishing) : formData.print_format,
                 binding: formData.binding,
                 print_spec: formData.print_spec,
                 lamination: formData.lamination,
@@ -369,7 +384,8 @@ const NewWorkOrder = () => {
         kind: typeMap[orderType] || 'CTP',
         notes: formData.notes,
         job_name: formData.job_name,
-        print_format: formData.print_format,
+        run_quantity: formData.run_quantity,
+        print_format: formData.finishing.length > 0 ? JSON.stringify(formData.finishing) : formData.print_format,
         binding: formData.binding,
         print_spec: formData.print_spec,
         lamination: formData.lamination,
@@ -815,7 +831,7 @@ const NewWorkOrder = () => {
                             <SelectItem value="binder">Binder</SelectItem>
                             <SelectItem value="klamovanje">Klamovanje</SelectItem>
                             <SelectItem value="spirala">Spirala</SelectItem>
-                            <SelectItem value="perfect">Perfect</SelectItem>
+                            <SelectItem value="sivenje">Šivenje</SelectItem>
                           </SelectContent>
                         </Select>
                       </div>
@@ -840,57 +856,83 @@ const NewWorkOrder = () => {
                       </div>
 
                       <div className="space-y-2">
-                        <Label htmlFor="paper_gsm_text">Papir (gsm)</Label>
+                        <Label htmlFor="run_quantity">Tiraž proizvoda</Label>
                         <Input
-                          id="paper_gsm_text"
+                          id="run_quantity"
                           type="number"
-                          value={formData.paper_gsm_text || ''}
-                          onChange={(e) => setFormData({ ...formData, paper_gsm_text: parseInt(e.target.value) || 0 })}
-                          placeholder="80"
+                          value={formData.run_quantity || ''}
+                          onChange={(e) => setFormData({ ...formData, run_quantity: parseInt(e.target.value) || 0 })}
+                          placeholder="Broj komada"
                         />
                       </div>
 
                       <div className="space-y-2">
-                        <Label htmlFor="paper_gsm_cover">Korice (gsm)</Label>
+                        <Label htmlFor="paper_text">Papir</Label>
                         <Input
-                          id="paper_gsm_cover"
-                          type="number"
-                          value={formData.paper_gsm_cover || ''}
-                          onChange={(e) => setFormData({ ...formData, paper_gsm_cover: parseInt(e.target.value) || 0 })}
-                          placeholder="350"
+                          id="paper_text"
+                          value={formData.paper_text}
+                          onChange={(e) => setFormData({ ...formData, paper_text: e.target.value })}
+                          placeholder="npr. Kunzdruk 135g"
+                        />
+                      </div>
+
+                      <div className="space-y-2">
+                        <Label htmlFor="paper_cover">Korice</Label>
+                        <Input
+                          id="paper_cover"
+                          value={formData.paper_cover}
+                          onChange={(e) => setFormData({ ...formData, paper_cover: e.target.value })}
+                          placeholder="npr. Kunzdruk 350g"
                         />
                       </div>
 
                       <div className="space-y-2">
                         <Label htmlFor="lamination">Plastifikacija</Label>
-                        <div className="flex gap-2">
-                          <Select
-                            value={formData.lamination}
-                            onValueChange={(value) => setFormData({ ...formData, lamination: value })}
-                          >
-                            <SelectTrigger className="flex-1">
-                              <SelectValue placeholder="Tip" />
-                            </SelectTrigger>
-                            <SelectContent>
-                              <SelectItem value="none">Bez</SelectItem>
-                              <SelectItem value="1/0">1/0</SelectItem>
-                              <SelectItem value="1/1">1/1</SelectItem>
-                            </SelectContent>
-                          </Select>
-                          {formData.lamination !== 'none' && formData.lamination && (
-                            <Select
-                              value={formData.print_format || ''}
-                              onValueChange={(value) => setFormData({ ...formData, print_format: value })}
-                            >
-                              <SelectTrigger className="w-24">
-                                <SelectValue placeholder="Finish" />
-                              </SelectTrigger>
-                              <SelectContent>
-                                <SelectItem value="mat">Mat</SelectItem>
-                                <SelectItem value="sjaj">Sjaj</SelectItem>
-                              </SelectContent>
-                            </Select>
-                          )}
+                        <Select
+                          value={formData.lamination}
+                          onValueChange={(value) => setFormData({ ...formData, lamination: value })}
+                        >
+                          <SelectTrigger>
+                            <SelectValue placeholder="Odaberi tip" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="none">Bez plastifikacije</SelectItem>
+                            <SelectItem value="1/0_mat">1/0 Mat</SelectItem>
+                            <SelectItem value="1/1_mat">1/1 Mat</SelectItem>
+                            <SelectItem value="1/0_sjaj">1/0 Sjaj</SelectItem>
+                            <SelectItem value="1/1_sjaj">1/1 Sjaj</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+
+                      {/* Finishing Options */}
+                      <div className="space-y-2 md:col-span-2">
+                        <Label>Dorada</Label>
+                        <div className="flex flex-wrap gap-3 p-3 border rounded-lg bg-background">
+                          {[
+                            { id: 'zlatotisak', label: 'Zlatotisak' },
+                            { id: 'stancovanje', label: 'Štancovanje' },
+                            { id: 'numeracija', label: 'Numeracija' },
+                            { id: 'bigovanje', label: 'Bigovanje' },
+                            { id: 'savijanje', label: 'Savijanje' },
+                            { id: 'perforacija', label: 'Perforacija' },
+                            { id: 'suvi_zig', label: 'Suvi žig' },
+                            { id: 'uv_lak', label: 'UV Lak' },
+                          ].map(option => (
+                            <label key={option.id} className="flex items-center gap-2 cursor-pointer">
+                              <Checkbox
+                                checked={formData.finishing.includes(option.id)}
+                                onCheckedChange={(checked) => {
+                                  if (checked) {
+                                    setFormData({ ...formData, finishing: [...formData.finishing, option.id] });
+                                  } else {
+                                    setFormData({ ...formData, finishing: formData.finishing.filter(f => f !== option.id) });
+                                  }
+                                }}
+                              />
+                              <span className="text-sm">{option.label}</span>
+                            </label>
+                          ))}
                         </div>
                       </div>
 
