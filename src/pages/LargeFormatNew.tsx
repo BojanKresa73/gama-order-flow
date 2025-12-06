@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
@@ -9,9 +9,10 @@ import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
 import { useToast } from "@/hooks/use-toast";
-import { ArrowLeft, Plus, Trash2, Maximize2, Square } from "lucide-react";
+import { ArrowLeft, Plus, Trash2, Maximize2, Square, FileUp } from "lucide-react";
 import { useClients } from "@/hooks/useClients";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { AddLargeFormatJobsModal } from "@/components/large-format/AddLargeFormatJobsModal";
 
 interface LargeFormatJob {
   id: string;
@@ -81,9 +82,8 @@ const LargeFormatNew = () => {
   
   // Common
   const [laminationType, setLaminationType] = useState("none");
-  const [jobs, setJobs] = useState<LargeFormatJob[]>([
-    { id: crypto.randomUUID(), file_name: "", width_mm: 1000, height_mm: 1000, qty: 1, note: "" }
-  ]);
+  const [jobs, setJobs] = useState<LargeFormatJob[]>([]);
+  const [showAddModal, setShowAddModal] = useState(false);
   
   const [saving, setSaving] = useState(false);
 
@@ -96,6 +96,14 @@ const LargeFormatNew = () => {
       qty: 1, 
       note: "" 
     }]);
+  };
+
+  const handleAddJobsFromModal = (newJobs: Omit<LargeFormatJob, "id">[]) => {
+    const jobsWithIds = newJobs.map(j => ({
+      ...j,
+      id: crypto.randomUUID()
+    }));
+    setJobs([...jobs, ...jobsWithIds]);
   };
 
   const removeJob = (id: string) => {
@@ -428,9 +436,14 @@ const LargeFormatNew = () => {
           <Card>
             <CardHeader className="flex flex-row items-center justify-between">
               <CardTitle>Stavke za štampu</CardTitle>
-              <Button variant="outline" size="sm" onClick={addJob}>
-                <Plus className="h-4 w-4 mr-1" /> Dodaj stavku
-              </Button>
+              <div className="flex gap-2">
+                <Button variant="outline" size="sm" onClick={() => setShowAddModal(true)}>
+                  <FileUp className="h-4 w-4 mr-1" /> Dodaj fajlove
+                </Button>
+                <Button variant="outline" size="sm" onClick={addJob}>
+                  <Plus className="h-4 w-4 mr-1" /> Dodaj stavku
+                </Button>
+              </div>
             </CardHeader>
             <CardContent>
               <div className="space-y-4">
@@ -517,6 +530,12 @@ const LargeFormatNew = () => {
             </Button>
           </div>
         </div>
+
+        <AddLargeFormatJobsModal
+          open={showAddModal}
+          onOpenChange={setShowAddModal}
+          onAddJobs={handleAddJobsFromModal}
+        />
       </main>
     </div>
   );
