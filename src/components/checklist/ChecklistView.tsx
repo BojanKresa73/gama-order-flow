@@ -24,6 +24,7 @@ interface WorkOrder {
   closed_at: string | null;
   status: string;
   type: string | null;
+  kind: string | null;
   total_plates: number;
   file_entries?: FileEntry[];
 }
@@ -37,7 +38,7 @@ interface FileEntry {
 }
 
 interface ChecklistViewProps {
-  orderType: "ctp" | "digital" | "other" | "film";
+  orderType: "ctp" | "digital" | "other" | "film" | "large_format";
 }
 
 const ChecklistView = ({ orderType }: ChecklistViewProps) => {
@@ -65,6 +66,7 @@ const ChecklistView = ({ orderType }: ChecklistViewProps) => {
           closed_at,
           status,
           type,
+          kind,
           order_type,
           clients!inner(name)
         `)
@@ -100,6 +102,7 @@ const ChecklistView = ({ orderType }: ChecklistViewProps) => {
               closed_at: order.closed_at,
               status: order.status,
               type: order.type,
+              kind: order.kind,
               total_plates: 0,
               file_entries: [],
             };
@@ -125,6 +128,7 @@ const ChecklistView = ({ orderType }: ChecklistViewProps) => {
             closed_at: order.closed_at,
             status: order.status,
             type: order.type,
+            kind: order.kind,
             total_plates: totalPlates,
             file_entries: fileEntries,
           };
@@ -291,7 +295,12 @@ const ChecklistView = ({ orderType }: ChecklistViewProps) => {
     );
   };
 
-  const getTypeBadge = (type: string | null) => {
+  const getTypeBadge = (type: string | null, kind?: string | null) => {
+    // For large format, show ROLNA or PLOCA based on kind
+    if (orderType === "large_format") {
+      return <Badge variant="outline">{kind === "PLOCA" ? "Ploča" : "Rolna"}</Badge>;
+    }
+    
     const label = { 
       ctp: 'CTP', 
       digital: 'Digital', 
@@ -362,7 +371,7 @@ const ChecklistView = ({ orderType }: ChecklistViewProps) => {
                   })()}
                 </TableCell>
                 <TableCell>{order.client_name}</TableCell>
-                <TableCell>{getTypeBadge(order.type)}</TableCell>
+                <TableCell>{getTypeBadge(order.type, order.kind)}</TableCell>
                 <TableCell>
                   {format(new Date(order.created_at), "dd.MM.yyyy HH:mm")}
                 </TableCell>

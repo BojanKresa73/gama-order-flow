@@ -56,11 +56,12 @@ const Checklist = () => {
           </CardHeader>
           <CardContent>
             <Tabs defaultValue="ctp" className="w-full">
-              <TabsList className="grid w-full grid-cols-5">
+              <TabsList className="grid w-full grid-cols-6">
                 <TabsTrigger value="search">Pretraga</TabsTrigger>
                 <TabsTrigger value="ctp">CTP</TabsTrigger>
                 <TabsTrigger value="film">Filmovanje</TabsTrigger>
                 <TabsTrigger value="digital">Digitala</TabsTrigger>
+                <TabsTrigger value="large_format">Veliki Formati</TabsTrigger>
                 <TabsTrigger value="other">Ostalo</TabsTrigger>
               </TabsList>
               
@@ -78,6 +79,10 @@ const Checklist = () => {
               
               <TabsContent value="digital">
                 <ChecklistView orderType="digital" />
+              </TabsContent>
+              
+              <TabsContent value="large_format">
+                <ChecklistView orderType="large_format" />
               </TabsContent>
               
               <TabsContent value="other">
