@@ -70,7 +70,7 @@ function getDetailsText(entry: any, orderKind: string): string {
   
   // For DIGITALA, show format (sheet format)
   if (orderKind === 'DIGITALA') {
-    const sheetFormat = entry.machine_sheet_format || '488x330';
+    const sheetFormat = entry.machine_sheet_format || entry.machineSheetFormat || '488x330';
     return `Format: ${sheetFormat}`;
   }
   
@@ -85,8 +85,10 @@ function getQuantityText(entry: any, orderKind: string, workOrder: any): string 
       return String(workOrder.run_quantity);
     }
     // Otherwise show sheets with print type
-    const totalSheets = entry.computed_total_sheets || entry.qty || 1;
-    const printSides = entry.print_sides || '4/0';
+    const obim = Number(entry.obim || 1);
+    const qty = Number(entry.qty || entry.quantity || 1);
+    const totalSheets = entry.computed_total_sheets || (obim * qty);
+    const printSides = entry.print_sides || entry.printSides || '4/0';
     return `${totalSheets} tab. ${printSides}`;
   }
   return String(entry.quantity || entry.qty || 1);
