@@ -6,6 +6,7 @@ import { useToast } from "@/hooks/use-toast";
 import { useAuthz } from "@/hooks/useAuthz";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { LayoutDashboard, FileText, Users, Package, ClipboardList } from "lucide-react";
+import gamaLogo from "@/assets/gama-united-logo.svg";
 import { StatsCards } from "@/components/dashboard/StatsCards";
 import { OrdersByTypeChart } from "@/components/dashboard/OrdersByTypeChart";
 import { ClosedOrdersChart } from "@/components/dashboard/ClosedOrdersChart";
@@ -65,7 +66,10 @@ const Dashboard = () => {
     <div className="min-h-screen bg-background">
       <header className="border-b bg-card">
         <div className="container mx-auto px-4 py-4 flex justify-between items-center">
-          <h1 className="text-2xl font-bold">Radni nalozi - Gama United</h1>
+          <div className="flex items-center gap-3">
+            <img src={gamaLogo} alt="Gama United" className="h-10" />
+            <h1 className="text-2xl font-bold">Radni nalozi - Gama United</h1>
+          </div>
           <div className="flex items-center gap-4">
             <span className="text-sm text-muted-foreground">{profile?.full_name}</span>
             <Button variant="outline" onClick={handleLogout}>
