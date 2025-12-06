@@ -1199,6 +1199,174 @@ export type Database = {
           },
         ]
       }
+      large_format_jobs: {
+        Row: {
+          area_m2: number | null
+          created_at: string
+          file_name: string
+          height_mm: number
+          id: string
+          large_format_order_id: string
+          note: string | null
+          order_index: number | null
+          qty: number
+          rotated: boolean | null
+          updated_at: string
+          width_mm: number
+        }
+        Insert: {
+          area_m2?: number | null
+          created_at?: string
+          file_name: string
+          height_mm: number
+          id?: string
+          large_format_order_id: string
+          note?: string | null
+          order_index?: number | null
+          qty?: number
+          rotated?: boolean | null
+          updated_at?: string
+          width_mm: number
+        }
+        Update: {
+          area_m2?: number | null
+          created_at?: string
+          file_name?: string
+          height_mm?: number
+          id?: string
+          large_format_order_id?: string
+          note?: string | null
+          order_index?: number | null
+          qty?: number
+          rotated?: boolean | null
+          updated_at?: string
+          width_mm?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "large_format_jobs_large_format_order_id_fkey"
+            columns: ["large_format_order_id"]
+            isOneToOne: false
+            referencedRelation: "large_format_orders"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      large_format_orders: {
+        Row: {
+          add_grommets: boolean | null
+          cnc_cut: boolean | null
+          created_at: string
+          format_type: Database["public"]["Enums"]["large_format_type"]
+          grommet_spacing_cm: number | null
+          id: string
+          lamination_type: string | null
+          marker_margin_cm: number | null
+          rigid_material:
+            | Database["public"]["Enums"]["rigid_material_type"]
+            | null
+          roll_material:
+            | Database["public"]["Enums"]["roll_material_type"]
+            | null
+          roll_width_mm: number | null
+          sheet_height_mm: number | null
+          sheet_width_mm: number | null
+          total_area_m2: number | null
+          updated_at: string
+          weld_edges: boolean | null
+          work_order_id: string
+        }
+        Insert: {
+          add_grommets?: boolean | null
+          cnc_cut?: boolean | null
+          created_at?: string
+          format_type: Database["public"]["Enums"]["large_format_type"]
+          grommet_spacing_cm?: number | null
+          id?: string
+          lamination_type?: string | null
+          marker_margin_cm?: number | null
+          rigid_material?:
+            | Database["public"]["Enums"]["rigid_material_type"]
+            | null
+          roll_material?:
+            | Database["public"]["Enums"]["roll_material_type"]
+            | null
+          roll_width_mm?: number | null
+          sheet_height_mm?: number | null
+          sheet_width_mm?: number | null
+          total_area_m2?: number | null
+          updated_at?: string
+          weld_edges?: boolean | null
+          work_order_id: string
+        }
+        Update: {
+          add_grommets?: boolean | null
+          cnc_cut?: boolean | null
+          created_at?: string
+          format_type?: Database["public"]["Enums"]["large_format_type"]
+          grommet_spacing_cm?: number | null
+          id?: string
+          lamination_type?: string | null
+          marker_margin_cm?: number | null
+          rigid_material?:
+            | Database["public"]["Enums"]["rigid_material_type"]
+            | null
+          roll_material?:
+            | Database["public"]["Enums"]["roll_material_type"]
+            | null
+          roll_width_mm?: number | null
+          sheet_height_mm?: number | null
+          sheet_width_mm?: number | null
+          total_area_m2?: number | null
+          updated_at?: string
+          weld_edges?: boolean | null
+          work_order_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "large_format_orders_work_order_id_fkey"
+            columns: ["work_order_id"]
+            isOneToOne: false
+            referencedRelation: "v_ctp_items"
+            referencedColumns: ["work_order_id"]
+          },
+          {
+            foreignKeyName: "large_format_orders_work_order_id_fkey"
+            columns: ["work_order_id"]
+            isOneToOne: false
+            referencedRelation: "work_orders"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "large_format_orders_work_order_id_fkey"
+            columns: ["work_order_id"]
+            isOneToOne: false
+            referencedRelation: "work_orders_ctp"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "large_format_orders_work_order_id_fkey"
+            columns: ["work_order_id"]
+            isOneToOne: false
+            referencedRelation: "work_orders_digitala"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "large_format_orders_work_order_id_fkey"
+            columns: ["work_order_id"]
+            isOneToOne: false
+            referencedRelation: "work_orders_filmovanje"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "large_format_orders_work_order_id_fkey"
+            columns: ["work_order_id"]
+            isOneToOne: false
+            referencedRelation: "work_orders_razno"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       plate_formats: {
         Row: {
           created_at: string
@@ -2461,10 +2629,31 @@ export type Database = {
         | "Blocked"
         | "Done"
         | "NA"
+      large_format_type: "roll" | "rigid"
+      rigid_material_type:
+        | "forex"
+        | "dibond"
+        | "plexiglass"
+        | "cardboard"
+        | "wood"
+        | "other"
+      roll_material_type:
+        | "self_adhesive_matte"
+        | "self_adhesive_glossy"
+        | "cut_vinyl"
+        | "tarpaulin"
+        | "mesh_banner"
+        | "other"
       wo_type: "CTP" | "DIGITAL" | "FILM" | "OSTALO"
-      work_order_kind: "CTP" | "DIGITALA" | "FILMOVANJE" | "RAZNO"
+      work_order_kind:
+        | "CTP"
+        | "DIGITALA"
+        | "FILMOVANJE"
+        | "RAZNO"
+        | "ROLNA"
+        | "PLOCA"
       work_order_status: "open" | "closed"
-      work_order_type: "ctp" | "digital" | "other" | "film"
+      work_order_type: "ctp" | "digital" | "other" | "film" | "large_format"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -2600,10 +2789,34 @@ export const Constants = {
         "operator_ctp",
       ],
       checklist_item_status: ["Pending", "InProgress", "Blocked", "Done", "NA"],
+      large_format_type: ["roll", "rigid"],
+      rigid_material_type: [
+        "forex",
+        "dibond",
+        "plexiglass",
+        "cardboard",
+        "wood",
+        "other",
+      ],
+      roll_material_type: [
+        "self_adhesive_matte",
+        "self_adhesive_glossy",
+        "cut_vinyl",
+        "tarpaulin",
+        "mesh_banner",
+        "other",
+      ],
       wo_type: ["CTP", "DIGITAL", "FILM", "OSTALO"],
-      work_order_kind: ["CTP", "DIGITALA", "FILMOVANJE", "RAZNO"],
+      work_order_kind: [
+        "CTP",
+        "DIGITALA",
+        "FILMOVANJE",
+        "RAZNO",
+        "ROLNA",
+        "PLOCA",
+      ],
       work_order_status: ["open", "closed"],
-      work_order_type: ["ctp", "digital", "other", "film"],
+      work_order_type: ["ctp", "digital", "other", "film", "large_format"],
     },
   },
 } as const

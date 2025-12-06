@@ -23,6 +23,7 @@ import DeliveryNotePreview from "./pages/DeliveryNotePreview";
 import OrderDeliveryNote from "./pages/OrderDeliveryNote";
 import CtpStats from "./pages/CtpStats";
 import DigitalStats from "./pages/DigitalStats";
+import LargeFormatNew from "./pages/LargeFormatNew";
 import NotFound from "./pages/NotFound";
 import AdminGuard from "./components/guards/AdminGuard";
 
@@ -54,6 +55,7 @@ const App = () => {
             <Route path="/admin/inventory" element={<AdminGuard><AdminInventory /></AdminGuard>} />
             <Route path="/stats/ctp" element={<CtpStats />} />
             <Route path="/stats/digital" element={<DigitalStats />} />
+            <Route path="/large-format/new" element={<LargeFormatNew />} />
             {import.meta.env.VITE_SHOW_DEV_PREVIEW === "true" && (
               <>
                 <Route path="/dev/preview" element={<DevPreview />} />
