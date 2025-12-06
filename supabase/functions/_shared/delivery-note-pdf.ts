@@ -78,6 +78,11 @@ function getDetailsText(entry: any, orderKind: string): string {
     return `Format: ${sheetFormat}`;
   }
   
+  // For RAZNO, no specific details needed
+  if (orderKind === 'RAZNO') {
+    return '-';
+  }
+  
   return 'N/A';
 }
 
@@ -102,6 +107,12 @@ function getQuantityText(entry: any, orderKind: string, workOrder: any): string 
     const printSides = entry.print_sides || entry.printSides || '4/0';
     return `${totalSheets} tab. ${printSides}`;
   }
+  
+  // For RAZNO (OSTALO) orders, use work order level run_quantity
+  if (orderKind === 'RAZNO') {
+    return String(workOrder.run_quantity || entry.quantity || entry.qty || 1);
+  }
+  
   return String(entry.quantity || entry.qty || 1);
 }
 

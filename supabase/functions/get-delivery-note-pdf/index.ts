@@ -67,6 +67,14 @@ const handler = async (req: Request): Promise<Response> => {
         .eq('work_order_id', workOrderId)
         .order('order_index', { ascending: true });
       fileEntries = data || [];
+    } else if (orderKind === 'RAZNO') {
+      // For RAZNO orders, fetch file_entries but quantity comes from work order level
+      const { data } = await supabase
+        .from('file_entries')
+        .select('*, plate_formats(format_name)')
+        .eq('work_order_id', workOrderId)
+        .order('created_at', { ascending: true });
+      fileEntries = data || [];
     }
 
     const pdfBuffer = await generateDeliveryNotePDF(workOrder, fileEntries);

@@ -207,8 +207,8 @@ const handler = async (req: Request): Promise<Response> => {
         }));
       }
       console.log(`Fetched ${items.length} digital items for work order (mode: ${hasJobName ? 'product' : 'sheet'})`);
-    } else {
-      // Default: Fetch file entries for CTP/other orders
+    } else if (orderType === 'ctp') {
+      // CTP orders: use file entries with their quantities
       const { data: fileEntries, error: feError } = await supabaseClient
         .from("file_entries")
         .select(`
@@ -234,7 +234,38 @@ const handler = async (req: Request): Promise<Response> => {
         filename: fe.filename,
         quantity: fe.quantity
       }));
-      console.log(`Fetched ${items.length} file entries for work order`);
+      console.log(`Fetched ${items.length} file entries for CTP work order`);
+    } else {
+      // OSTALO/RAZNO orders: use file entries but quantity from work order level run_quantity
+      const { data: fileEntries, error: feError } = await supabaseClient
+        .from("file_entries")
+        .select(`
+          *,
+          plate_format:plate_formats (
+            format_name
+          )
+        `)
+        .eq("work_order_id", workOrderId);
+
+      // For OSTALO, file entries are optional
+      if (fileEntries && fileEntries.length > 0) {
+        items = fileEntries.map(fe => ({
+          ...fe,
+          filename: fe.filename,
+          // Use work order level run_quantity for OSTALO orders
+          quantity: workOrder.run_quantity || fe.quantity || 1
+        }));
+        console.log(`Fetched ${items.length} file entries for OSTALO work order`);
+      } else {
+        // No file entries - create a single item from notes if available
+        items = [{
+          id: workOrder.id,
+          filename: workOrder.job_name || workOrder.notes?.substring(0, 50) || 'Usluga',
+          quantity: workOrder.run_quantity || 1,
+          file_type: 'ostalo'
+        }];
+        console.log(`No file entries for OSTALO - using work order info as single item`);
+      }
     }
 
     // Check if delivery note already exists (idempotency)
