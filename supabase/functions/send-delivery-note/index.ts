@@ -176,13 +176,20 @@ const handler = async (req: Request): Promise<Response> => {
         throw new Error("No digital jobs found for this work order");
       }
 
+      // Check if work order has run_quantity (product quantity) set
+      const hasRunQuantity = workOrder.run_quantity && workOrder.run_quantity > 0 && workOrder.job_name;
+
       items = digitalJobs.map(job => ({
         id: job.id,
-        filename: job.file_name,
-        quantity: job.qty,
+        filename: job.file_name || job.name,
+        quantity: hasRunQuantity 
+          ? workOrder.run_quantity 
+          : `${job.obim * job.qty} tab. ${job.print_sides}`,
         file_type: 'digital',
-        finished_w_mm: job.finished_w_mm,
-        finished_h_mm: job.finished_h_mm,
+        machine_sheet_format: job.machine_sheet_format,
+        print_sides: job.print_sides,
+        obim: job.obim,
+        qty: job.qty,
         computed_total_sheets: job.computed_total_sheets
       }));
       console.log(`Fetched ${items.length} digital jobs for work order`);
@@ -543,7 +550,7 @@ const handler = async (req: Request): Promise<Response> => {
                   <tr>
                     <th class="number">#</th>
                     <th>Naziv fajla</th>
-                    <th class="format">${orderType === 'film' ? 'Potrošeno' : 'Format ploče'}</th>
+                    <th class="format">${orderType === 'film' ? 'Potrošeno' : orderType === 'digital' ? 'Format' : 'Format ploče'}</th>
                     <th class="quantity">Količina</th>
                   </tr>
                 </thead>
@@ -556,6 +563,8 @@ const handler = async (req: Request): Promise<Response> => {
                       <td>${item.filename}</td>
                       <td class="format">${orderType === 'film' 
                         ? (item.computed_total_m ? item.computed_total_m.toFixed(2) + ' m' : '-') 
+                        : orderType === 'digital'
+                        ? (item.machine_sheet_format || '-')
                         : (item.plate_format?.format_name || "-")}</td>
                       <td class="quantity">${item.quantity || "-"}</td>
                     </tr>
