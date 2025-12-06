@@ -67,7 +67,7 @@ const Dashboard = () => {
       <header className="border-b bg-card">
         <div className="container mx-auto px-4 py-4 flex justify-between items-center">
           <div className="flex items-center gap-3">
-            <img src={gamaLogo} alt="Gama United" className="h-10" />
+            <img src={gamaLogo} alt="Gama United" className="h-14" />
             <h1 className="text-2xl font-bold">Radni nalozi - Gama United</h1>
           </div>
           <div className="flex items-center gap-4">
