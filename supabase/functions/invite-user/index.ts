@@ -14,6 +14,103 @@ serve(async (req) => {
 
   try {
     console.log("[invite-user] Function called at:", new Date().toISOString());
+
+    const SUPABASE_URL = Deno.env.get("SUPABASE_URL");
+    const SERVICE_ROLE = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
+    
+    if (!SUPABASE_URL || !SERVICE_ROLE) {
+      console.error("[invite-user] Missing env variables");
+      return new Response(
+        JSON.stringify({ 
+          success: false, 
+          error: "Server konfiguracija nije ispravna. Kontaktirajte administratora." 
+        }), 
+        { 
+          status: 500, 
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
+        }
+      );
+    }
+
+    const admin = createClient(SUPABASE_URL, SERVICE_ROLE);
+
+    // =====================================================
+    // SECURITY: Validate caller has superuser or admin role
+    // =====================================================
+    const authHeader = req.headers.get('Authorization');
+    if (!authHeader) {
+      console.error("[invite-user] Missing authorization header");
+      return new Response(
+        JSON.stringify({ 
+          success: false, 
+          error: "Niste autorizovani za ovu akciju." 
+        }), 
+        { 
+          status: 401, 
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
+        }
+      );
+    }
+
+    const token = authHeader.replace('Bearer ', '');
+    const { data: { user: caller }, error: authError } = await admin.auth.getUser(token);
+    
+    if (authError || !caller) {
+      console.error("[invite-user] Invalid auth token:", authError?.message);
+      return new Response(
+        JSON.stringify({ 
+          success: false, 
+          error: "Niste autorizovani za ovu akciju." 
+        }), 
+        { 
+          status: 401, 
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
+        }
+      );
+    }
+
+    console.log("[invite-user] Caller verified:", caller.id);
+
+    // Check caller's role - only superuser and admin can invite users
+    const { data: callerRoleData, error: roleError } = await admin
+      .from('user_roles')
+      .select('role')
+      .eq('user_id', caller.id)
+      .single();
+
+    if (roleError || !callerRoleData) {
+      console.error("[invite-user] Error fetching caller role:", roleError?.message);
+      return new Response(
+        JSON.stringify({ 
+          success: false, 
+          error: "Nemate dozvolu za ovu akciju." 
+        }), 
+        { 
+          status: 403, 
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
+        }
+      );
+    }
+
+    const callerRole = callerRoleData.role;
+    if (!['superuser', 'admin'].includes(callerRole)) {
+      console.error("[invite-user] Unauthorized role:", callerRole, "for user:", caller.id);
+      return new Response(
+        JSON.stringify({ 
+          success: false, 
+          error: "Nemate dozvolu za pozivanje korisnika. Samo administratori mogu dodavati nove korisnike." 
+        }), 
+        { 
+          status: 403, 
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
+        }
+      );
+    }
+
+    console.log("[invite-user] Caller authorized with role:", callerRole);
+    // =====================================================
+    // END SECURITY CHECK
+    // =====================================================
     
     const { email, full_name, app_role } = await req.json();
     console.log("[invite-user] Request data:", { email, full_name, app_role });
@@ -35,24 +132,20 @@ serve(async (req) => {
       );
     }
 
-    const SUPABASE_URL = Deno.env.get("SUPABASE_URL");
-    const SERVICE_ROLE = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
-    
-    if (!SUPABASE_URL || !SERVICE_ROLE) {
-      console.error("[invite-user] Missing env variables");
+    // Additional security: non-superusers cannot create superuser accounts
+    if (role === 'superuser' && callerRole !== 'superuser') {
+      console.error("[invite-user] Admin attempted to create superuser");
       return new Response(
         JSON.stringify({ 
           success: false, 
-          error: "Server konfiguracija nije ispravna. Kontaktirajte administratora." 
+          error: "Samo superuser može kreirati druge superuser naloge." 
         }), 
         { 
-          status: 500, 
+          status: 403, 
           headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
         }
       );
     }
-
-    const admin = createClient(SUPABASE_URL, SERVICE_ROLE);
 
     // 1) Proveri da li korisnik već postoji
     console.log("[invite-user] Checking if user exists:", email);
