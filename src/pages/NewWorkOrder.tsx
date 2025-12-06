@@ -266,6 +266,16 @@ const NewWorkOrder = () => {
       });
       return;
     }
+
+    // Validate job_name for OSTALO orders
+    if (orderType === "other" && !formData.job_name?.trim()) {
+      toast({
+        title: "Greška",
+        description: "Molimo unesite naziv posla za nalog tipa Ostalo.",
+        variant: "destructive",
+      });
+      return;
+    }
     
     setLoading(true);
 
@@ -963,6 +973,18 @@ const NewWorkOrder = () => {
 
                 <TabsContent value="other" className="space-y-4 mt-4">
                   <div className="space-y-4">
+                    {/* Naziv posla field - REQUIRED */}
+                    <div className="space-y-2 max-w-md">
+                      <Label htmlFor="job_name_other">Naziv posla <span className="text-destructive">*</span></Label>
+                      <Input
+                        id="job_name_other"
+                        value={formData.job_name || ''}
+                        onChange={(e) => setFormData({ ...formData, job_name: e.target.value })}
+                        placeholder="Unesite naziv posla..."
+                        required
+                      />
+                    </div>
+
                     {/* Količina field */}
                     <div className="space-y-2 max-w-xs">
                       <Label htmlFor="run_quantity_other">Količina</Label>
