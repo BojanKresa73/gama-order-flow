@@ -15,6 +15,7 @@ import { RecentOrders } from "@/components/dashboard/RecentOrders";
 import { LowStockAlerts } from "@/components/dashboard/LowStockAlerts";
 import { TopClientsCard } from "@/components/dashboard/TopClientsCard";
 import AdminSection from "@/components/dashboard/AdminSection";
+import { DigitalStatsSection } from "@/components/dashboard/DigitalStatsSection";
 
 const Dashboard = () => {
   const [loading, setLoading] = useState(true);
@@ -135,6 +136,9 @@ const Dashboard = () => {
           <div className="col-span-12 xl:col-span-5">
             <LowStockAlerts />
           </div>
+
+          {/* Digital Stats Section - Full Width */}
+          <DigitalStatsSection />
         </div>
       </main>
     </div>
