@@ -140,6 +140,7 @@ const LargeFormatNew = () => {
       if (!user) throw new Error("Niste prijavljeni");
 
       const kind = formatType === "roll" ? "ROLNA" : "PLOCA";
+      const tempOrderNumber = `${kind}-${Date.now()}-${crypto.randomUUID().slice(0, 8)}`;
       
       // Create work order first
       const { data: workOrder, error: woError } = await supabase
@@ -148,7 +149,7 @@ const LargeFormatNew = () => {
           client_id: clientId,
           order_type: "large_format",
           kind: kind,
-          order_number: `${kind}-TEMP`,
+          order_number: tempOrderNumber,
           job_name: jobName,
           notes: notes,
           created_by: user.id,
