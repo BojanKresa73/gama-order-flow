@@ -10,6 +10,7 @@ interface CreateWorkOrderInput {
   type: 'CTP' | 'DIGITAL' | 'FILM' | 'OSTALO';
   order_type: string;
   job_name?: string;
+  run_quantity?: number;
   notes?: string;
   print_format?: string;
   binding?: string;
@@ -106,6 +107,7 @@ Deno.serve(async (req) => {
         order_code: orderCode,
         order_number: orderCode, // Keep for backwards compatibility
         job_name: input.job_name,
+        run_quantity: input.run_quantity,
         notes: input.notes,
         print_format: input.print_format,
         binding: input.binding,
