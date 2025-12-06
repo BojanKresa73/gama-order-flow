@@ -54,11 +54,12 @@ export const SHEET_FORMATS = ["488x330", "760x330"] as const;
 // Print modes / coverage options
 export const PRINT_MODES = ["4/4", "4/0", "4/1", "1/0", "1/1"] as const;
 
-// Pricing table per A4 equivalent by tirage range and coverage
+// Pricing table per SHEET (488x330) by tirage range and coverage
+// For 760x330 format, multiply by 1.5
 export const PRICE_TABLE = [
   { minQty: 1, maxQty: 10, prices: { "4/0": 1.00, "4/4": 1.90, "4/1": 1.35, "1/0": 0.45, "1/1": 0.80 } },
   { minQty: 11, maxQty: 20, prices: { "4/0": 0.85, "4/4": 1.60, "4/1": 1.13, "1/0": 0.38, "1/1": 0.66 } },
-  { minQty: 21, maxQty: 50, prices: { "4/0": 0.77, "4/4": 1.44, "4/1": 1.02, "1/0": 0.35, "1/1": 0.62 } },
+  { minQty: 21, maxQty: 50, prices: { "4/0": 0.77, "4/4": 1.44, "4/1": 1.02, "1/0": 0.35, "1/1": 0.60 } },
   { minQty: 51, maxQty: 100, prices: { "4/0": 0.68, "4/4": 1.26, "4/1": 0.89, "1/0": 0.31, "1/1": 0.52 } },
   { minQty: 101, maxQty: 500, prices: { "4/0": 0.47, "4/4": 0.84, "4/1": 0.58, "1/0": 0.21, "1/1": 0.32 } },
   { minQty: 501, maxQty: 1000, prices: { "4/0": 0.44, "4/4": 0.78, "4/1": 0.54, "1/0": 0.20, "1/1": 0.30 } },
@@ -121,9 +122,9 @@ export function getCoverageSides(printSides: string): { colorSides: number; mono
   }
 }
 
-// Get price per A4 from pricing table based on a4_units and coverage
-export function getPricePerA4(a4Units: number, coverage: string): number {
-  const tier = PRICE_TABLE.find(t => a4Units >= t.minQty && a4Units <= t.maxQty);
+// Get price per sheet from pricing table based on total sheets and coverage
+export function getPricePerSheet(totalSheets: number, coverage: string): number {
+  const tier = PRICE_TABLE.find(t => totalSheets >= t.minQty && totalSheets <= t.maxQty);
   if (!tier) return 0;
   return tier.prices[coverage as keyof typeof tier.prices] || 0;
 }
@@ -151,7 +152,8 @@ export function calculateItemClicks(
   };
 }
 
-// Calculate price for a single item using a4_units for pricing bracket
+// Calculate price for a single item using total sheets for pricing bracket
+// Price is per sheet, with 1.5x multiplier for 760x330 format
 export function calculateItemPrice(
   obim: number,
   qty: number,
@@ -159,10 +161,9 @@ export function calculateItemPrice(
   printSides: string
 ): number {
   const totalSheets = calculateTotalSheets(obim, qty);
-  const a4Factor = getA4Factor(format);
-  const a4Units = totalSheets * a4Factor;
-  const pricePerA4 = getPricePerA4(a4Units, printSides);
-  return a4Units * pricePerA4;
+  const formatMultiplier = format === "760x330" ? 1.5 : 1.0;
+  const pricePerSheet = getPricePerSheet(totalSheets, printSides);
+  return totalSheets * pricePerSheet * formatMultiplier;
 }
 
 // Legacy function for backward compatibility
