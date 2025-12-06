@@ -963,8 +963,21 @@ const NewWorkOrder = () => {
 
                 <TabsContent value="other" className="space-y-4 mt-4">
                   <div className="space-y-4">
+                    {/* Količina field */}
+                    <div className="space-y-2 max-w-xs">
+                      <Label htmlFor="run_quantity_other">Količina</Label>
+                      <Input
+                        id="run_quantity_other"
+                        type="number"
+                        min="1"
+                        value={formData.run_quantity || ''}
+                        onChange={(e) => setFormData({ ...formData, run_quantity: e.target.value ? parseInt(e.target.value) : undefined })}
+                        placeholder="Unesite količinu..."
+                      />
+                    </div>
+
                     <div className="flex items-center justify-between">
-                      <Label>Fajlovi</Label>
+                      <Label>Fajlovi (opciono)</Label>
                       <Button 
                         type="button" 
                         variant="outline" 
@@ -998,7 +1011,7 @@ const NewWorkOrder = () => {
                   </div>
                   
                   <p className="text-sm text-muted-foreground">
-                    Dodajte napomene za ostale usluge.
+                    Unesite količinu i detalje u napomeni ispod.
                   </p>
                 </TabsContent>
 
