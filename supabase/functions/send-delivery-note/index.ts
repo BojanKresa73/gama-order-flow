@@ -176,23 +176,37 @@ const handler = async (req: Request): Promise<Response> => {
         throw new Error("No digital jobs found for this work order");
       }
 
-      // Check if work order has run_quantity (product quantity) set
-      const hasRunQuantity = workOrder.run_quantity && workOrder.run_quantity > 0 && workOrder.job_name;
+      // Check if work order has job_name (product mode vs sheet mode)
+      const hasJobName = workOrder.job_name && workOrder.job_name.trim().length > 0;
 
-      items = digitalJobs.map(job => ({
-        id: job.id,
-        filename: job.file_name || job.name,
-        quantity: hasRunQuantity 
-          ? workOrder.run_quantity 
-          : `${job.obim * job.qty} tab. ${job.print_sides}`,
-        file_type: 'digital',
-        machine_sheet_format: job.machine_sheet_format,
-        print_sides: job.print_sides,
-        obim: job.obim,
-        qty: job.qty,
-        computed_total_sheets: job.computed_total_sheets
-      }));
-      console.log(`Fetched ${items.length} digital jobs for work order`);
+      if (hasJobName) {
+        // Product mode: show single item with job name and run_quantity
+        items = [{
+          id: workOrder.id,
+          filename: workOrder.job_name,
+          quantity: workOrder.run_quantity || 1,
+          file_type: 'digital_product',
+          machine_sheet_format: null,
+          print_sides: null,
+          obim: null,
+          qty: null,
+          computed_total_sheets: null
+        }];
+      } else {
+        // Sheet mode: show individual files with format and print type
+        items = digitalJobs.map(job => ({
+          id: job.id,
+          filename: job.file_name || job.name,
+          quantity: `${job.obim * job.qty} tab. ${job.print_sides}`,
+          file_type: 'digital_sheet',
+          machine_sheet_format: job.machine_sheet_format,
+          print_sides: job.print_sides,
+          obim: job.obim,
+          qty: job.qty,
+          computed_total_sheets: job.computed_total_sheets
+        }));
+      }
+      console.log(`Fetched ${items.length} digital items for work order (mode: ${hasJobName ? 'product' : 'sheet'})`);
     } else {
       // Default: Fetch file entries for CTP/other orders
       const { data: fileEntries, error: feError } = await supabaseClient
@@ -563,7 +577,9 @@ const handler = async (req: Request): Promise<Response> => {
                       <td>${item.filename}</td>
                       <td class="format">${orderType === 'film' 
                         ? (item.computed_total_m ? item.computed_total_m.toFixed(2) + ' m' : '-') 
-                        : orderType === 'digital'
+                        : item.file_type === 'digital_product'
+                        ? '-'
+                        : item.file_type === 'digital_sheet'
                         ? (item.machine_sheet_format || '-')
                         : (item.plate_format?.format_name || "-")}</td>
                       <td class="quantity">${item.quantity || "-"}</td>

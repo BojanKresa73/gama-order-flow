@@ -68,8 +68,12 @@ function getDetailsText(entry: any, orderKind: string): string {
     return `Potrošeno: ${totalM.toFixed(2)} m`;
   }
   
-  // For DIGITALA, show format (sheet format)
+  // For DIGITALA, show format only for sheet mode (not product mode)
   if (orderKind === 'DIGITALA') {
+    // If file_type is digital_product or no machine_sheet_format, it's product mode - no format needed
+    if (entry.file_type === 'digital_product' || (!entry.machine_sheet_format && !entry.machineSheetFormat)) {
+      return '-';
+    }
     const sheetFormat = entry.machine_sheet_format || entry.machineSheetFormat || '488x330';
     return `Format: ${sheetFormat}`;
   }
@@ -77,14 +81,21 @@ function getDetailsText(entry: any, orderKind: string): string {
   return 'N/A';
 }
 
-// Get quantity text for digital jobs - if no job_name, show sheets with print type
+// Get quantity text for digital jobs - product mode vs sheet mode
 function getQuantityText(entry: any, orderKind: string, workOrder: any): string {
   if (orderKind === 'DIGITALA') {
-    // If work order has job_name (product name), use run_quantity
+    // Product mode: just show the quantity (run_quantity)
+    if (entry.file_type === 'digital_product') {
+      return String(entry.quantity || workOrder.run_quantity || 1);
+    }
+    // Sheet mode: quantity already formatted as "X tab. Y/Z"
+    if (entry.file_type === 'digital_sheet') {
+      return String(entry.quantity || `${(entry.obim || 1) * (entry.qty || 1)} tab. ${entry.print_sides || '4/0'}`);
+    }
+    // Fallback for legacy data
     if (workOrder.job_name && workOrder.run_quantity) {
       return String(workOrder.run_quantity);
     }
-    // Otherwise show sheets with print type
     const obim = Number(entry.obim || 1);
     const qty = Number(entry.qty || entry.quantity || 1);
     const totalSheets = entry.computed_total_sheets || (obim * qty);
