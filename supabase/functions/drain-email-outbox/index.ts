@@ -6,10 +6,33 @@ import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { sendDeliveryNoteEmail, retryWithBackoff } from "../_shared/email-helpers.ts";
 
+const corsHeaders = {
+  'Access-Control-Allow-Origin': '*',
+  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type, x-cron-secret',
+};
+
 const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
 const serviceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
 
-serve(async (_req) => {
+// Shared secret for CRON job authentication
+const CRON_SECRET = Deno.env.get("CRON_SECRET");
+
+serve(async (req) => {
+  // Handle CORS preflight requests
+  if (req.method === 'OPTIONS') {
+    return new Response(null, { headers: corsHeaders });
+  }
+
+  // Validate CRON secret to prevent unauthorized calls
+  const cronSecret = req.headers.get("x-cron-secret");
+  if (!CRON_SECRET || cronSecret !== CRON_SECRET) {
+    console.error("[drain-email-outbox] Unauthorized: Invalid or missing CRON secret");
+    return new Response(JSON.stringify({ error: "Unauthorized" }), {
+      status: 401,
+      headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+    });
+  }
+
   try {
     console.log('[drain-email-outbox] Starting email outbox drain...');
     
@@ -26,12 +49,18 @@ serve(async (_req) => {
     
     if (fetchError) {
       console.error('[drain-email-outbox] Error fetching emails:', fetchError);
-      return new Response(JSON.stringify({ error: fetchError.message }), { status: 500 });
+      return new Response(JSON.stringify({ error: fetchError.message }), { 
+        status: 500,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+      });
     }
     
     if (!pendingEmails || pendingEmails.length === 0) {
       console.log('[drain-email-outbox] No pending emails to process');
-      return new Response(JSON.stringify({ message: 'No pending emails', processed: 0 }), { status: 200 });
+      return new Response(JSON.stringify({ message: 'No pending emails', processed: 0 }), { 
+        status: 200,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+      });
     }
     
     console.log(`[drain-email-outbox] Found ${pendingEmails.length} pending emails`);
@@ -125,14 +154,14 @@ serve(async (_req) => {
         success: successCount,
         failed: failCount
       }), 
-      { status: 200, headers: { 'Content-Type': 'application/json' } }
+      { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
     
   } catch (error: any) {
     console.error('[drain-email-outbox] Fatal error:', error);
     return new Response(
       JSON.stringify({ error: error.message }), 
-      { status: 500, headers: { 'Content-Type': 'application/json' } }
+      { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
   }
 });
