@@ -35,7 +35,7 @@ serve(async (req) => {
     const admin = createClient(SUPABASE_URL, SERVICE_ROLE);
 
     // =====================================================
-    // SECURITY: Validate caller has superuser or admin role
+    // SECURITY: Validate caller has superuser role
     // =====================================================
     const authHeader = req.headers.get('Authorization');
     if (!authHeader) {
@@ -71,7 +71,7 @@ serve(async (req) => {
 
     console.log("[invite-user] Caller verified:", caller.id);
 
-    // Check caller's role - only superuser and admin can invite users
+    // Check caller's role - only superuser can invite users
     const { data: callerRoleData, error: roleError } = await admin
       .from('user_roles')
       .select('role')
@@ -93,7 +93,6 @@ serve(async (req) => {
     }
 
     const callerRole = callerRoleData.role;
-    // Only superuser can invite users - admin no longer has this permission
     if (callerRole !== 'superuser') {
       console.error("[invite-user] Unauthorized role:", callerRole, "for user:", caller.id);
       return new Response(
@@ -113,8 +112,8 @@ serve(async (req) => {
     // END SECURITY CHECK
     // =====================================================
     
-    const { email, full_name, app_role } = await req.json();
-    console.log("[invite-user] Request data:", { email, full_name, app_role });
+    const { email, full_name, app_role, password } = await req.json();
+    console.log("[invite-user] Request data:", { email, full_name, app_role, hasPassword: !!password });
 
     const allowed = ["superuser", "admin", "operator", "operator_ctp"] as const;
     const role = String(app_role ?? "").toLowerCase();
@@ -125,6 +124,20 @@ serve(async (req) => {
         JSON.stringify({ 
           success: false, 
           error: "Email i rola su obavezni. Dozvoljena rola: superuser, admin, operator, operator_ctp" 
+        }), 
+        { 
+          status: 400, 
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
+        }
+      );
+    }
+
+    // Validate password
+    if (!password || password.length < 6) {
+      return new Response(
+        JSON.stringify({ 
+          success: false, 
+          error: "Lozinka je obavezna i mora imati najmanje 6 karaktera." 
         }), 
         { 
           status: 400, 
@@ -182,10 +195,11 @@ serve(async (req) => {
       );
     }
 
-    // 2) Kreiraj korisnika (potvrdi email odmah)
+    // 2) Kreiraj korisnika sa lozinkom
     console.log("[invite-user] Creating user:", email, "with role:", role);
     const { data: created, error: errCreate } = await admin.auth.admin.createUser({
       email,
+      password,
       email_confirm: true,
       user_metadata: { full_name: full_name || email },
     });
@@ -193,7 +207,6 @@ serve(async (req) => {
     if (errCreate) {
       console.error("[invite-user] Error creating user:", errCreate);
       
-      // Handle specific error cases
       if (errCreate.message?.includes("already registered") || errCreate.message?.includes("already exists")) {
         return new Response(
           JSON.stringify({ 
@@ -233,7 +246,6 @@ serve(async (req) => {
     
     if (e1 && e1.code !== "23505") {
       console.error("[invite-user] Error creating profile:", e1);
-      // Ne prekidaj - korisnik je kreiran, samo loguj grešku
     } else {
       console.log("[invite-user] Profile created for user:", user.id);
     }
@@ -248,46 +260,11 @@ serve(async (req) => {
     
     if (e2 && e2.code !== "23505") {
       console.error("[invite-user] Error assigning role:", e2);
-      // Ne prekidaj - korisnik je kreiran, samo loguj grešku
     } else {
       console.log("[invite-user] Role assigned for user:", user.id, "role:", role);
     }
 
-    // 5) Generiši recovery link i pošalji email
-    // Umesto inviteUserByEmail (koji ne radi za već kreirane korisnike),
-    // koristimo generateLink sa tipom 'recovery' da korisnik može da postavi lozinku
-    const origin = req.headers.get("origin") || "https://ytophmlfbrnhmqtwpijn.lovableproject.com";
-    const redirectTo = `${origin}/reset-password`;
-    
-    console.log("[invite-user] Generating recovery link with redirect:", redirectTo);
-    
-    const { data: linkData, error: linkErr } = await admin.auth.admin.generateLink({
-      type: 'recovery',
-      email: email,
-      options: {
-        redirectTo: redirectTo,
-      }
-    });
-    
-    if (linkErr) {
-      console.error("[invite-user] Error generating recovery link:", linkErr);
-      // Korisnik je kreiran, ali link nije poslat
-      // Vratimo success ali sa upozorenjem
-      return new Response(
-        JSON.stringify({ 
-          success: true, 
-          user_id: user.id,
-          warning: "Korisnik je kreiran ali email nije poslat. Koristite 'Reset lozinke' da pošaljete link."
-        }), 
-        {
-          status: 200,
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-        }
-      );
-    }
-
-    console.log("[invite-user] Recovery link generated successfully for:", email);
-    console.log("[invite-user] Link data:", linkData?.properties?.action_link ? "Link generated" : "No link in response");
+    console.log("[invite-user] User created successfully with password for:", email);
 
     return new Response(
       JSON.stringify({ 

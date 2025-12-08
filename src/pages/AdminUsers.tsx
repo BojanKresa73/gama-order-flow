@@ -43,6 +43,7 @@ export default function AdminUsers() {
   const [inviteEmail, setInviteEmail] = useState("");
   const [inviteFullName, setInviteFullName] = useState("");
   const [inviteRole, setInviteRole] = useState<AppRole>("operator");
+  const [invitePassword, setInvitePassword] = useState("");
   const [editOpen, setEditOpen] = useState(false);
   const [editUser, setEditUser] = useState<User | null>(null);
   const { toast } = useToast();
@@ -98,29 +99,23 @@ export default function AdminUsers() {
 
   // Mutation za pozivanje novog korisnika
   const inviteMutation = useMutation({
-    mutationFn: (data: { email: string; full_name: string; app_role: AppRole }) =>
-      adminUsersService.inviteUser(data.email, data.full_name, data.app_role),
-    onSuccess: (data) => {
-      if (data?.warning) {
-        toast({
-          title: "Korisnik kreiran",
-          description: data.warning,
-        });
-      } else {
-        toast({
-          title: "Poziv uspešno poslat",
-          description: "Korisnik je dobio email sa linkom za postavljanje lozinke.",
-        });
-      }
+    mutationFn: (data: { email: string; full_name: string; app_role: AppRole; password: string }) =>
+      adminUsersService.inviteUser(data.email, data.full_name, data.app_role, data.password),
+    onSuccess: () => {
+      toast({
+        title: "Korisnik kreiran",
+        description: "Korisnik je uspešno kreiran sa zadatom lozinkom.",
+      });
       setInviteOpen(false);
       setInviteEmail("");
       setInviteFullName("");
       setInviteRole("operator");
+      setInvitePassword("");
       queryClient.invalidateQueries({ queryKey: ["admin-users"] });
     },
     onError: (error: Error) => {
       toast({
-        title: "Greška pri pozivu",
+        title: "Greška pri kreiranju",
         description: error.message || "Došlo je do greške. Pokušajte ponovo.",
         variant: "destructive",
       });
@@ -143,11 +138,21 @@ export default function AdminUsers() {
       });
       return;
     }
+
+    if (!invitePassword || invitePassword.length < 6) {
+      toast({ 
+        title: "Lozinka je obavezna", 
+        description: "Lozinka mora imati najmanje 6 karaktera.",
+        variant: "destructive" 
+      });
+      return;
+    }
     
     inviteMutation.mutate({
       email: inviteEmail,
       full_name: inviteFullName || inviteEmail,
       app_role: inviteRole,
+      password: invitePassword,
     });
   };
 
@@ -229,14 +234,14 @@ export default function AdminUsers() {
                 <DialogTrigger asChild>
                   <Button size="sm">
                     <UserPlus className="h-4 w-4 mr-2" />
-                    Pozovi korisnika
+                    Dodaj korisnika
                   </Button>
                 </DialogTrigger>
                 <DialogContent>
                   <DialogHeader>
-                    <DialogTitle>Pozovi novog korisnika</DialogTitle>
+                    <DialogTitle>Dodaj novog korisnika</DialogTitle>
                     <DialogDescription>
-                      Korisnik će dobiti email sa linkom za postavljanje lozinke.
+                      Unesite podatke za novog korisnika. Vi određujete lozinku.
                     </DialogDescription>
                   </DialogHeader>
                   <div className="space-y-4 py-4">
@@ -260,6 +265,16 @@ export default function AdminUsers() {
                       />
                     </div>
                     <div className="space-y-2">
+                      <Label htmlFor="password">Lozinka *</Label>
+                      <Input
+                        id="password"
+                        type="password"
+                        placeholder="Najmanje 6 karaktera"
+                        value={invitePassword}
+                        onChange={(e) => setInvitePassword(e.target.value)}
+                      />
+                    </div>
+                    <div className="space-y-2">
                       <Label htmlFor="role">Rola *</Label>
                       <Select value={inviteRole} onValueChange={(v) => setInviteRole(v as AppRole)}>
                         <SelectTrigger id="role">
@@ -279,7 +294,7 @@ export default function AdminUsers() {
                       Otkaži
                     </Button>
                     <Button onClick={handleInviteUser} disabled={inviteMutation.isPending}>
-                      {inviteMutation.isPending ? "Šaljem..." : "Pozovi"}
+                      {inviteMutation.isPending ? "Kreiram..." : "Kreiraj korisnika"}
                     </Button>
                   </DialogFooter>
                 </DialogContent>

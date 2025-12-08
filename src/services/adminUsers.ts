@@ -40,13 +40,15 @@ export async function setUserActive(userId: string, active: boolean): Promise<vo
 export async function inviteUser(
   email: string,
   fullName: string,
-  role: AppRole
+  role: AppRole,
+  password: string
 ): Promise<{ success: boolean; user_id?: string; warning?: string }> {
   const { data, error } = await supabase.functions.invoke("invite-user", {
     body: {
       email,
       full_name: fullName,
       app_role: role,
+      password,
     },
   });
   
