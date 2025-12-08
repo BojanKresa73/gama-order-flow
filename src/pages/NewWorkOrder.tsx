@@ -576,7 +576,13 @@ const NewWorkOrder = () => {
 
   const updateCtpItem = (index: number, field: string, value: any) => {
     const updated = [...ctpItems];
-    updated[index] = { ...updated[index], [field]: value };
+    const item = updated[index];
+    updated[index] = { 
+      ...item, 
+      [field]: value,
+      // Mark as updated if it already has an id (existing item from DB)
+      __status: item.id ? 'updated' as const : item.__status,
+    };
     setCtpItems(updated);
   };
 
