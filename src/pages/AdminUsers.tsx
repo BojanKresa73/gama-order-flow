@@ -46,6 +46,9 @@ export default function AdminUsers() {
   const [invitePassword, setInvitePassword] = useState("");
   const [editOpen, setEditOpen] = useState(false);
   const [editUser, setEditUser] = useState<User | null>(null);
+  const [resetPasswordOpen, setResetPasswordOpen] = useState(false);
+  const [resetPasswordUser, setResetPasswordUser] = useState<User | null>(null);
+  const [newPassword, setNewPassword] = useState("");
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const { isSuper, isAdmin } = useAuthz();
@@ -158,52 +161,46 @@ export default function AdminUsers() {
 
   // Mutation za reset lozinke
   const resetPasswordMutation = useMutation({
-    mutationFn: (email: string) => adminUsersService.resetUserPassword(email),
-    onSuccess: (data, email) => {
+    mutationFn: ({ email, password }: { email: string; password: string }) => 
+      adminUsersService.resetUserPassword(email, password),
+    onSuccess: () => {
       toast({
-        title: "Recovery link generisan",
-        description: `Link za reset lozinke poslat za ${email}`,
+        title: "Lozinka promenjena",
+        description: "Nova lozinka je uspešno postavljena.",
       });
-
-      // Prikaži recovery link u console (za dev)
-      if (data?.recovery_link) {
-        console.log("Recovery link:", data.recovery_link);
-      }
+      setResetPasswordOpen(false);
+      setResetPasswordUser(null);
+      setNewPassword("");
     },
     onError: (error: Error) => {
       toast({
-        title: "Greška pri resetu",
+        title: "Greška pri promeni lozinke",
         description: error.message,
         variant: "destructive",
       });
     },
   });
 
-  const handleResetPassword = (email: string) => {
-    resetPasswordMutation.mutate(email);
-  };
-
-  // Mutation za ponovno slanje poziva - koristi reset password umesto invite
-  const resendInviteMutation = useMutation({
-    mutationFn: (user: User) => 
-      adminUsersService.resetUserPassword(user.email),
-    onSuccess: (data, user) => {
+  const handleResetPassword = () => {
+    if (!resetPasswordUser) return;
+    if (!newPassword || newPassword.length < 6) {
       toast({
-        title: "Poziv poslat",
-        description: `Link za postavljanje lozinke je ponovo poslat na ${user.email}`,
-      });
-    },
-    onError: (error: Error) => {
-      toast({
-        title: "Greška pri slanju",
-        description: error.message || "Došlo je do greške. Pokušajte ponovo.",
+        title: "Neispravan unos",
+        description: "Lozinka mora imati najmanje 6 karaktera.",
         variant: "destructive",
       });
-    },
-  });
+      return;
+    }
+    resetPasswordMutation.mutate({ 
+      email: resetPasswordUser.email, 
+      password: newPassword 
+    });
+  };
 
-  const handleResendInvite = (user: User) => {
-    resendInviteMutation.mutate(user);
+  const openResetPasswordDialog = (user: User) => {
+    setResetPasswordUser(user);
+    setNewPassword("");
+    setResetPasswordOpen(true);
   };
 
   const getRoleBadgeVariant = (role: AppRole | null) => {
@@ -377,6 +374,41 @@ export default function AdminUsers() {
                   </DialogFooter>
                 </DialogContent>
               </Dialog>
+
+              {/* Dialog za promenu lozinke */}
+              <Dialog open={resetPasswordOpen} onOpenChange={setResetPasswordOpen}>
+                <DialogContent>
+                  <DialogHeader>
+                    <DialogTitle>Promeni lozinku</DialogTitle>
+                    <DialogDescription>
+                      Unesite novu lozinku za korisnika {resetPasswordUser?.email}
+                    </DialogDescription>
+                  </DialogHeader>
+                  <div className="space-y-4 py-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="new_password">Nova lozinka *</Label>
+                      <Input
+                        id="new_password"
+                        type="password"
+                        placeholder="Najmanje 6 karaktera"
+                        value={newPassword}
+                        onChange={(e) => setNewPassword(e.target.value)}
+                      />
+                    </div>
+                  </div>
+                  <DialogFooter>
+                    <Button variant="outline" onClick={() => setResetPasswordOpen(false)}>
+                      Otkaži
+                    </Button>
+                    <Button 
+                      onClick={handleResetPassword} 
+                      disabled={resetPasswordMutation.isPending}
+                    >
+                      {resetPasswordMutation.isPending ? "Menjam..." : "Promeni lozinku"}
+                    </Button>
+                  </DialogFooter>
+                </DialogContent>
+              </Dialog>
               
               <Button variant="outline" size="sm" onClick={() => refetch()}>
                 <RefreshCw className="h-4 w-4 mr-2" />
@@ -464,20 +496,11 @@ export default function AdminUsers() {
                           <Button
                             variant="ghost"
                             size="sm"
-                            onClick={() => handleResendInvite(user)}
-                            disabled={resendInviteMutation.isPending}
-                          >
-                            <Mail className="h-4 w-4 mr-1" />
-                            Poziv ponovo
-                          </Button>
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => handleResetPassword(user.email)}
+                            onClick={() => openResetPasswordDialog(user)}
                             disabled={resetPasswordMutation.isPending}
                           >
                             <KeyRound className="h-4 w-4 mr-1" />
-                            Reset lozinke
+                            Promeni lozinku
                           </Button>
                         </div>
                       </TableCell>

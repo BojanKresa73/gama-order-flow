@@ -1,6 +1,5 @@
 import { serve } from "https://deno.land/std@0.224.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.75.0";
-import { Resend } from "https://esm.sh/resend@2.0.0";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -16,30 +15,65 @@ serve(async (req) => {
   try {
     console.log("Admin reset password function called");
     
-    const { email } = await req.json();
+    const { email, new_password } = await req.json();
     
-    if (!email) {
-      console.error("Missing email");
+    if (!email || !new_password) {
+      console.error("Missing email or password");
       return new Response(
-        JSON.stringify({ error: "Email je obavezan" }), 
+        JSON.stringify({ error: "Email i nova lozinka su obavezni" }), 
         { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
 
-    console.log("Generating recovery link for:", email);
+    if (new_password.length < 6) {
+      return new Response(
+        JSON.stringify({ error: "Lozinka mora imati najmanje 6 karaktera" }), 
+        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
 
     const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
     const SERVICE_ROLE = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
-    const RESEND_API_KEY = Deno.env.get("RESEND_API_KEY");
-    const FROM_EMAIL = Deno.env.get("FROM_EMAIL") || "noreply@resend.dev";
     
     const admin = createClient(SUPABASE_URL, SERVICE_ROLE);
 
-    // Proveri da li korisnik postoji
-    const { data: userData, error: userError } = await admin.auth.admin.listUsers();
-    const userExists = userData?.users.some(u => u.email === email);
+    // Verify caller is superuser
+    const authHeader = req.headers.get('Authorization');
+    if (!authHeader) {
+      return new Response(
+        JSON.stringify({ error: "Niste autorizovani" }), 
+        { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    const token = authHeader.replace('Bearer ', '');
+    const { data: { user: caller }, error: authError } = await admin.auth.getUser(token);
     
-    if (!userExists) {
+    if (authError || !caller) {
+      return new Response(
+        JSON.stringify({ error: "Niste autorizovani" }), 
+        { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    const { data: callerRoleData } = await admin
+      .from('user_roles')
+      .select('role')
+      .eq('user_id', caller.id)
+      .single();
+
+    if (callerRoleData?.role !== 'superuser') {
+      return new Response(
+        JSON.stringify({ error: "Samo superuser može menjati lozinke" }), 
+        { status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    // Find user by email
+    const { data: userData, error: userError } = await admin.auth.admin.listUsers();
+    const targetUser = userData?.users.find(u => u.email === email);
+    
+    if (!targetUser) {
       console.error("User not found:", email);
       return new Response(
         JSON.stringify({ error: "Korisnik sa ovim email-om ne postoji" }), 
@@ -47,97 +81,26 @@ serve(async (req) => {
       );
     }
 
-    // Generiši recovery link - koristi frontend URL
-    const FRONTEND_URL = Deno.env.get("SITE_URL") || "https://gama-order-flow.lovable.app";
-    const redirectTo = FRONTEND_URL;
-    
-    const { data, error } = await admin.auth.admin.generateLink({
-      type: "recovery",
-      email,
-      options: { redirectTo },
-    });
-    
-    if (error) {
-      console.error("Error generating recovery link:", error);
-      throw error;
+    // Update password
+    const { error: updateError } = await admin.auth.admin.updateUserById(
+      targetUser.id,
+      { password: new_password }
+    );
+
+    if (updateError) {
+      console.error("Error updating password:", updateError);
+      return new Response(
+        JSON.stringify({ error: "Greška pri promeni lozinke: " + updateError.message }), 
+        { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
     }
 
-    const recoveryLink = data?.properties?.action_link;
-    console.log("Recovery link generated successfully for:", email);
-
-    // Pošalji email putem Resend
-    if (RESEND_API_KEY && recoveryLink) {
-      const resend = new Resend(RESEND_API_KEY);
-      
-      const htmlContent = `
-        <!DOCTYPE html>
-        <html>
-        <head>
-          <meta charset="utf-8">
-          <style>
-            body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; }
-            .container { max-width: 600px; margin: 0 auto; padding: 20px; }
-            .header { background: linear-gradient(135deg, #1e40af 0%, #3b82f6 100%); color: white; padding: 30px; text-align: center; border-radius: 8px 8px 0 0; }
-            .content { background: #f8fafc; padding: 30px; border: 1px solid #e2e8f0; }
-            .button { display: inline-block; background: #2563eb; color: white; padding: 14px 28px; text-decoration: none; border-radius: 6px; font-weight: bold; margin: 20px 0; }
-            .footer { background: #1e293b; color: #94a3b8; padding: 20px; text-align: center; font-size: 12px; border-radius: 0 0 8px 8px; }
-          </style>
-        </head>
-        <body>
-          <div class="container">
-            <div class="header">
-              <h1 style="margin: 0;">Gama United</h1>
-            </div>
-            <div class="content">
-              <h2>Resetovanje lozinke</h2>
-              <p>Poštovani,</p>
-              <p>Primili smo zahtev za resetovanje vaše lozinke. Kliknite na dugme ispod da biste postavili novu lozinku:</p>
-              <p style="text-align: center;">
-                <a href="${recoveryLink}" class="button">Resetuj lozinku</a>
-              </p>
-              <p>Ako niste vi zatražili resetovanje lozinke, ignorišite ovaj email.</p>
-              <p style="color: #64748b; font-size: 12px;">Link ističe za 24 sata.</p>
-            </div>
-            <div class="footer">
-              <p>Gama United d.o.o.<br>Veljka Milićevića 2/10, 11000 Beograd<br>PIB: 114876455</p>
-            </div>
-          </div>
-        </body>
-        </html>
-      `;
-
-      const { error: emailError } = await resend.emails.send({
-        from: FROM_EMAIL,
-        to: [email],
-        subject: "Resetovanje lozinke - Gama United",
-        html: htmlContent,
-      });
-
-      if (emailError) {
-        console.error("Error sending email:", emailError);
-        return new Response(
-          JSON.stringify({ 
-            success: false, 
-            error: `Greška pri slanju emaila: ${emailError.message}`,
-            recovery_link: recoveryLink
-          }), 
-          {
-            status: 500,
-            headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-          }
-        );
-      }
-
-      console.log("Recovery email sent successfully to:", email);
-    } else {
-      console.warn("RESEND_API_KEY not configured, email not sent");
-    }
+    console.log("Password updated successfully for:", email);
 
     return new Response(
       JSON.stringify({ 
         success: true, 
-        recovery_link: recoveryLink,
-        message: "Email za resetovanje lozinke je poslat"
+        message: "Lozinka je uspešno promenjena"
       }), 
       {
         status: 200,

@@ -68,10 +68,11 @@ export async function inviteUser(
 }
 
 export async function resetUserPassword(
-  email: string
-): Promise<{ success: boolean; recovery_link: string }> {
+  email: string,
+  newPassword: string
+): Promise<{ success: boolean; message?: string }> {
   const { data, error } = await supabase.functions.invoke("admin-reset-password", {
-    body: { email },
+    body: { email, new_password: newPassword },
   });
   
   if (data?.error) {
