@@ -4,7 +4,7 @@ import { Resend } from "https://esm.sh/resend@3.5.0";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type, x-cron-secret',
 };
 
 const supabase = createClient(
@@ -15,10 +15,23 @@ const supabase = createClient(
 const resend = new Resend(Deno.env.get("RESEND_API_KEY")!);
 const FROM = "Gama United <noreply@gamaunited.rs>";
 
+// Shared secret for CRON job authentication
+const CRON_SECRET = Deno.env.get("CRON_SECRET");
+
 serve(async (req) => {
   // Handle CORS preflight requests
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
+  }
+
+  // Validate CRON secret to prevent unauthorized calls
+  const cronSecret = req.headers.get("x-cron-secret");
+  if (!CRON_SECRET || cronSecret !== CRON_SECRET) {
+    console.error("Unauthorized: Invalid or missing CRON secret");
+    return new Response(JSON.stringify({ error: "Unauthorized" }), {
+      status: 401,
+      headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+    });
   }
 
   console.log("Starting email job processing...");

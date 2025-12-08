@@ -19,7 +19,7 @@ verify_jwt = false
 verify_jwt = true
 
 [functions.compute-film-job]
-verify_jwt = false
+verify_jwt = true
 
 [functions.open-film-work-order]
 verify_jwt = true
