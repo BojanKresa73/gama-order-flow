@@ -93,12 +93,13 @@ serve(async (req) => {
     }
 
     const callerRole = callerRoleData.role;
-    if (!['superuser', 'admin'].includes(callerRole)) {
+    // Only superuser can invite users - admin no longer has this permission
+    if (callerRole !== 'superuser') {
       console.error("[invite-user] Unauthorized role:", callerRole, "for user:", caller.id);
       return new Response(
         JSON.stringify({ 
           success: false, 
-          error: "Nemate dozvolu za pozivanje korisnika. Samo administratori mogu dodavati nove korisnike." 
+          error: "Nemate dozvolu za pozivanje korisnika. Samo superuser može dodavati nove korisnike." 
         }), 
         { 
           status: 403, 
