@@ -88,6 +88,12 @@ const Dashboard = () => {
             <Button onClick={() => navigate("/work-orders/new")}>
               + Novi nalog
             </Button>
+            <Button variant="outline" onClick={() => navigate("/large-format/new?type=roll")} className="border-orange-300 text-orange-700 hover:bg-orange-50">
+              + Rolna
+            </Button>
+            <Button variant="outline" onClick={() => navigate("/large-format/new?type=rigid")} className="border-teal-300 text-teal-700 hover:bg-teal-50">
+              + Ploča
+            </Button>
             <Button variant="outline" onClick={() => navigate("/clients")}>
               Klijenti
             </Button>
@@ -102,12 +108,6 @@ const Dashboard = () => {
             </Button>
             <Button variant="outline" onClick={() => navigate("/stats/digital")} className="border-indigo-300 text-indigo-700 hover:bg-indigo-50">
               Digitala statistika
-            </Button>
-            <Button variant="outline" onClick={() => navigate("/large-format/new?type=roll")} className="border-orange-300 text-orange-700 hover:bg-orange-50">
-              + Rolna
-            </Button>
-            <Button variant="outline" onClick={() => navigate("/large-format/new?type=rigid")} className="border-teal-300 text-teal-700 hover:bg-teal-50">
-              + Ploča
             </Button>
             {(isSuper || isAdmin) && (
               <Button variant="outline" onClick={() => navigate("/admin/users")}>
