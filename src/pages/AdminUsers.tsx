@@ -50,8 +50,8 @@ export default function AdminUsers() {
   const { isSuper, isAdmin } = useAuthz();
   const navigate = useNavigate();
 
-  // Provera pristupa
-  if (!isSuper && !isAdmin) {
+  // Provera pristupa - samo Superuser može da upravlja korisnicima
+  if (!isSuper) {
     navigate("/dashboard");
     return null;
   }

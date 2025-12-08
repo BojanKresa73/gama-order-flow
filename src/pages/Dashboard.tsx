@@ -109,7 +109,7 @@ const Dashboard = () => {
             <Button variant="outline" onClick={() => navigate("/stats/digital")} className="border-indigo-300 text-indigo-700 hover:bg-indigo-50">
               Digitala statistika
             </Button>
-            {(isSuper || isAdmin) && (
+            {isSuper && (
               <Button variant="outline" onClick={() => navigate("/admin/users")}>
                 Administracija
               </Button>
