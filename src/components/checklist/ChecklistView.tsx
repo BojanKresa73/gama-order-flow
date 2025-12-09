@@ -213,6 +213,27 @@ const ChecklistView = ({ orderType, onNavigateToSearch }: ChecklistViewProps) =>
         return;
       }
 
+      // For digital orders, use dedicated function with validation
+      if (orderType === "digital") {
+        const { data, error } = await supabase.rpc("close_digital_work_order", {
+          p_work_order_id: workOrderId,
+          p_user_id: user.id,
+        });
+
+        if (error) throw error;
+        
+        const result = data as { success: boolean; error?: string };
+        if (!result?.success) throw new Error(result?.error || "Failed to close digital work order");
+
+        toast({
+          title: "Uspešno",
+          description: "Digitalni nalog je zatvoren",
+        });
+
+        fetchWorkOrders();
+        return;
+      }
+
       // For other order types, use standard atomic close function
       const { data, error } = await supabase.rpc("close_work_order_atomic", {
         p_work_order_id: workOrderId,
