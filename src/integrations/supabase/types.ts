@@ -1859,6 +1859,8 @@ export type Database = {
           invalid_reason: string | null
           invalidated_at: string | null
           invalidated_by: string | null
+          invoice_number: string | null
+          invoiced_at: string | null
           job_name: string | null
           kind: Database["public"]["Enums"]["work_order_kind"]
           lamination: string | null
@@ -1898,6 +1900,8 @@ export type Database = {
           invalid_reason?: string | null
           invalidated_at?: string | null
           invalidated_by?: string | null
+          invoice_number?: string | null
+          invoiced_at?: string | null
           job_name?: string | null
           kind?: Database["public"]["Enums"]["work_order_kind"]
           lamination?: string | null
@@ -1937,6 +1941,8 @@ export type Database = {
           invalid_reason?: string | null
           invalidated_at?: string | null
           invalidated_by?: string | null
+          invoice_number?: string | null
+          invoiced_at?: string | null
           job_name?: string | null
           kind?: Database["public"]["Enums"]["work_order_kind"]
           lamination?: string | null

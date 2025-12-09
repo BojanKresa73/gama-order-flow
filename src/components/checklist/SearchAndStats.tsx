@@ -5,7 +5,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Eye } from "lucide-react";
+import { Eye, Receipt } from "lucide-react";
 import { format } from "date-fns";
 import ChecklistStats from "./ChecklistStats";
 import ChecklistFilters from "./ChecklistFilters";
@@ -21,6 +21,8 @@ interface WorkOrder {
   type: string | null;
   total_plates: number;
   order_type: string;
+  invoiced_at: string | null;
+  invoice_number: string | null;
   file_entries?: FileEntry[];
 }
 
@@ -43,6 +45,7 @@ const SearchAndStats = () => {
   const [selectedClient, setSelectedClient] = useState("all");
   const [selectedFormat, setSelectedFormat] = useState("all");
   const [selectedStatus, setSelectedStatus] = useState("all");
+  const [selectedInvoiceStatus, setSelectedInvoiceStatus] = useState("all");
   const [dateFrom, setDateFrom] = useState("");
   const [dateTo, setDateTo] = useState("");
 
@@ -65,6 +68,8 @@ const SearchAndStats = () => {
           status,
           type,
           order_type,
+          invoiced_at,
+          invoice_number,
           clients!inner(name)
         `)
         .is("deleted_at", null)
@@ -98,6 +103,8 @@ const SearchAndStats = () => {
               status: order.status,
               type: order.type,
               order_type: order.order_type,
+              invoiced_at: order.invoiced_at,
+              invoice_number: order.invoice_number,
               total_plates: 0,
               file_entries: [],
             };
@@ -123,6 +130,8 @@ const SearchAndStats = () => {
             status: order.status,
             type: order.type,
             order_type: order.order_type,
+            invoiced_at: order.invoiced_at,
+            invoice_number: order.invoice_number,
             total_plates: totalPlates,
             file_entries: fileEntries,
           };
@@ -181,6 +190,14 @@ const SearchAndStats = () => {
         return false;
       }
 
+      // Invoice status filter
+      if (selectedInvoiceStatus === "invoiced" && !order.invoiced_at) {
+        return false;
+      }
+      if (selectedInvoiceStatus === "not_invoiced" && order.invoiced_at) {
+        return false;
+      }
+
       if (activeTab === "ctp" && selectedFormat !== "all") {
         const hasFormat = order.file_entries?.some(
           (file) => file.plate_format_name === selectedFormat
@@ -203,7 +220,7 @@ const SearchAndStats = () => {
 
       return true;
     });
-  }, [workOrders, activeTab, searchTerm, selectedClient, selectedFormat, selectedStatus, dateFrom, dateTo]);
+  }, [workOrders, activeTab, searchTerm, selectedClient, selectedFormat, selectedStatus, selectedInvoiceStatus, dateFrom, dateTo]);
 
   const stats = useMemo(() => {
     const openOrders = filteredOrders.filter((o) => o.status === "open").length;
@@ -223,6 +240,7 @@ const SearchAndStats = () => {
     setSelectedClient("all");
     setSelectedFormat("all");
     setSelectedStatus("all");
+    setSelectedInvoiceStatus("all");
     setDateFrom("");
     setDateTo("");
   };
@@ -258,6 +276,8 @@ const SearchAndStats = () => {
             onFormatChange={setSelectedFormat}
             selectedStatus={selectedStatus}
             onStatusChange={setSelectedStatus}
+            selectedInvoiceStatus={selectedInvoiceStatus}
+            onInvoiceStatusChange={setSelectedInvoiceStatus}
             dateFrom={dateFrom}
             onDateFromChange={setDateFrom}
             dateTo={dateTo}
@@ -292,6 +312,8 @@ const SearchAndStats = () => {
             onFormatChange={setSelectedFormat}
             selectedStatus={selectedStatus}
             onStatusChange={setSelectedStatus}
+            selectedInvoiceStatus={selectedInvoiceStatus}
+            onInvoiceStatusChange={setSelectedInvoiceStatus}
             dateFrom={dateFrom}
             onDateFromChange={setDateFrom}
             dateTo={dateTo}
@@ -326,6 +348,8 @@ const SearchAndStats = () => {
             onFormatChange={setSelectedFormat}
             selectedStatus={selectedStatus}
             onStatusChange={setSelectedStatus}
+            selectedInvoiceStatus={selectedInvoiceStatus}
+            onInvoiceStatusChange={setSelectedInvoiceStatus}
             dateFrom={dateFrom}
             onDateFromChange={setDateFrom}
             dateTo={dateTo}
@@ -394,6 +418,7 @@ const SearchResultsTable = ({ orders, onViewOrder }: SearchResultsTableProps) =>
               <TableHead>Tip</TableHead>
               <TableHead>Datum</TableHead>
               <TableHead>Status</TableHead>
+              <TableHead>Fakturisano</TableHead>
               <TableHead className="text-right">Ploča/Stavki</TableHead>
               <TableHead className="w-[80px]"></TableHead>
             </TableRow>
@@ -408,6 +433,18 @@ const SearchResultsTable = ({ orders, onViewOrder }: SearchResultsTableProps) =>
                 </TableCell>
                 <TableCell>{format(new Date(order.created_at), "dd.MM.yyyy")}</TableCell>
                 <TableCell>{getStatusBadge(order.status)}</TableCell>
+                <TableCell>
+                  {order.invoiced_at ? (
+                    <div className="flex items-center gap-1">
+                      <Receipt className="h-4 w-4 text-green-600" />
+                      <span className="text-sm text-green-600">
+                        {order.invoice_number || format(new Date(order.invoiced_at), "dd.MM.yyyy")}
+                      </span>
+                    </div>
+                  ) : (
+                    <span className="text-sm text-muted-foreground">-</span>
+                  )}
+                </TableCell>
                 <TableCell className="text-right">{order.total_plates}</TableCell>
                 <TableCell>
                   <Button 

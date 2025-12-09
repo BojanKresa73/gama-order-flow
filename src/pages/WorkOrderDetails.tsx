@@ -4,11 +4,12 @@ import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { ArrowLeft, FileText, Mail, Download } from "lucide-react";
+import { ArrowLeft, FileText, Mail, Download, Receipt, ReceiptText } from "lucide-react";
 import { toast } from "sonner";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { WorkOrderChecklistTab } from "@/components/work-orders/WorkOrderChecklistTab";
+import { InvoiceDialog } from "@/components/work-orders/InvoiceDialog";
 import { format } from "date-fns";
 import { getOrderItems } from "@/lib/orderItems";
 
@@ -20,6 +21,8 @@ const WorkOrderDetails = () => {
   const [emailStatus, setEmailStatus] = useState<any>(null);
   const [resending, setResending] = useState(false);
   const [downloading, setDownloading] = useState(false);
+  const [invoiceDialogOpen, setInvoiceDialogOpen] = useState(false);
+  const [markingInvoiced, setMarkingInvoiced] = useState(false);
 
   useEffect(() => {
     checkAuth();
@@ -166,6 +169,48 @@ const WorkOrderDetails = () => {
     }
   };
 
+  const handleMarkInvoiced = async (invoiceNumber: string) => {
+    setMarkingInvoiced(true);
+    try {
+      const { error } = await supabase
+        .from("work_orders")
+        .update({
+          invoiced_at: new Date().toISOString(),
+          invoice_number: invoiceNumber || null,
+        })
+        .eq("id", id);
+
+      if (error) throw error;
+
+      toast.success("Nalog označen kao fakturisan");
+      setInvoiceDialogOpen(false);
+      fetchWorkOrder();
+    } catch (error: any) {
+      toast.error("Greška: " + error.message);
+    } finally {
+      setMarkingInvoiced(false);
+    }
+  };
+
+  const handleRemoveInvoiced = async () => {
+    try {
+      const { error } = await supabase
+        .from("work_orders")
+        .update({
+          invoiced_at: null,
+          invoice_number: null,
+        })
+        .eq("id", id);
+
+      if (error) throw error;
+
+      toast.success("Status fakturisanja uklonjen");
+      fetchWorkOrder();
+    } catch (error: any) {
+      toast.error("Greška: " + error.message);
+    }
+  };
+
   if (loading) {
     return (
       <div className="min-h-screen bg-background">
@@ -227,6 +272,22 @@ const WorkOrderDetails = () => {
             )}
             {workOrder.status === "closed" && (
               <>
+                {!workOrder.invoiced_at ? (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setInvoiceDialogOpen(true)}
+                    className="border-green-500 text-green-600 hover:bg-green-50"
+                  >
+                    <Receipt className="h-4 w-4 mr-2" />
+                    Fakturiši
+                  </Button>
+                ) : (
+                  <Badge variant="outline" className="bg-green-100 text-green-800 border-green-300 gap-1">
+                    <ReceiptText className="h-3 w-3" />
+                    Fakturisano {workOrder.invoice_number ? `(${workOrder.invoice_number})` : ""}
+                  </Badge>
+                )}
                 <Button
                   variant="outline"
                   size="sm"
@@ -304,6 +365,25 @@ const WorkOrderDetails = () => {
                       </p>
                     </div>
                   )}
+                  {workOrder.invoiced_at && (
+                    <div>
+                      <p className="text-sm text-muted-foreground">Fakturisano</p>
+                      <div className="flex items-center gap-2">
+                        <p className="font-medium text-green-600">
+                          {format(new Date(workOrder.invoiced_at), "dd.MM.yyyy")}
+                          {workOrder.invoice_number && ` - ${workOrder.invoice_number}`}
+                        </p>
+                        <Button 
+                          variant="ghost" 
+                          size="sm" 
+                          className="h-6 px-2 text-xs text-muted-foreground hover:text-destructive"
+                          onClick={handleRemoveInvoiced}
+                        >
+                          Poništi
+                        </Button>
+                      </div>
+                    </div>
+                  )}
                 </div>
                 {workOrder.notes && (
                   <div>
@@ -369,6 +449,13 @@ const WorkOrderDetails = () => {
           </TabsContent>
         </Tabs>
       </main>
+
+      <InvoiceDialog
+        open={invoiceDialogOpen}
+        onOpenChange={setInvoiceDialogOpen}
+        onConfirm={handleMarkInvoiced}
+        isLoading={markingInvoiced}
+      />
     </div>
   );
 };

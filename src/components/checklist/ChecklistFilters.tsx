@@ -18,6 +18,8 @@ interface ChecklistFiltersProps {
   onFormatChange: (value: string) => void;
   selectedStatus: string;
   onStatusChange: (value: string) => void;
+  selectedInvoiceStatus: string;
+  onInvoiceStatusChange: (value: string) => void;
   dateFrom: string;
   onDateFromChange: (value: string) => void;
   dateTo: string;
@@ -37,6 +39,8 @@ const ChecklistFilters = ({
   onFormatChange,
   selectedStatus,
   onStatusChange,
+  selectedInvoiceStatus,
+  onInvoiceStatusChange,
   dateFrom,
   onDateFromChange,
   dateTo,
@@ -48,7 +52,7 @@ const ChecklistFilters = ({
 }: ChecklistFiltersProps) => {
   return (
     <div className="mb-6 space-y-4">
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
         <div>
           <label className="text-sm font-medium mb-2 block">
             Pretraga po broju naloga ili fajlu
@@ -90,9 +94,23 @@ const ChecklistFilters = ({
             </SelectContent>
           </Select>
         </div>
+
+        <div>
+          <label className="text-sm font-medium mb-2 block">Fakturisano</label>
+          <Select value={selectedInvoiceStatus} onValueChange={onInvoiceStatusChange}>
+            <SelectTrigger>
+              <SelectValue placeholder="Sve" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">Sve</SelectItem>
+              <SelectItem value="invoiced">Fakturisano</SelectItem>
+              <SelectItem value="not_invoiced">Nije fakturisano</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
         {orderType === "ctp" && (
           <div>
             <label className="text-sm font-medium mb-2 block">
