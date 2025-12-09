@@ -11,8 +11,15 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { ChevronDown, ChevronRight, CheckCircle, XCircle, Search, FileText } from "lucide-react";
-import { format } from "date-fns";
+import { format, subDays } from "date-fns";
 import { prefixFor } from "@/lib/orderLabel";
 
 interface WorkOrder {
@@ -43,22 +50,25 @@ interface ChecklistViewProps {
   onNavigateToSearch?: () => void;
 }
 
+type StatusFilter = "open" | "closed" | "all";
+
 const ChecklistView = ({ orderType, onNavigateToSearch }: ChecklistViewProps) => {
   const [workOrders, setWorkOrders] = useState<WorkOrder[]>([]);
   const [expandedOrders, setExpandedOrders] = useState<Set<string>>(new Set());
   const [loading, setLoading] = useState(true);
+  const [statusFilter, setStatusFilter] = useState<StatusFilter>("open");
   const { toast } = useToast();
 
   useEffect(() => {
     fetchWorkOrders();
-  }, [orderType]);
+  }, [orderType, statusFilter]);
 
   const fetchWorkOrders = async () => {
     try {
       setLoading(true);
       
-      // Fetch work orders based on type
-      const { data: orders, error } = await supabase
+      // Build query based on filters
+      let query = supabase
         .from("work_orders")
         .select(`
           id,
@@ -75,8 +85,20 @@ const ChecklistView = ({ orderType, onNavigateToSearch }: ChecklistViewProps) =>
           profiles!work_orders_created_by_fkey(full_name)
         `)
         .eq("order_type", orderType)
-        .is("deleted_at", null)
-        .order("created_at", { ascending: false });
+        .is("deleted_at", null);
+
+      // Apply status filter
+      if (statusFilter === "open") {
+        query = query.eq("status", "open");
+      } else if (statusFilter === "closed") {
+        query = query.eq("status", "closed");
+      } else {
+        // For "all", limit to last 10 days
+        const tenDaysAgo = subDays(new Date(), 10).toISOString();
+        query = query.gte("created_at", tenDaysAgo);
+      }
+
+      const { data: orders, error } = await query.order("created_at", { ascending: false });
 
       if (error) throw error;
 
@@ -329,7 +351,20 @@ const ChecklistView = ({ orderType, onNavigateToSearch }: ChecklistViewProps) =>
 
   return (
     <div className="mt-4">
-      <div className="mb-6 flex justify-end">
+      <div className="mb-6 flex items-center justify-between">
+        <div className="flex items-center gap-3">
+          <span className="text-sm font-medium">Status:</span>
+          <Select value={statusFilter} onValueChange={(v) => setStatusFilter(v as StatusFilter)}>
+            <SelectTrigger className="w-[160px]">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="open">Otvoreni</SelectItem>
+              <SelectItem value="closed">Zatvoreni</SelectItem>
+              <SelectItem value="all">Svi (10 dana)</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
         <Button onClick={openSearchTab} className="gap-2">
           <Search className="h-4 w-4" />
           Pretraga i Statistika
