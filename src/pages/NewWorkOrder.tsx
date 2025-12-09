@@ -79,6 +79,38 @@ const NewWorkOrder = () => {
   const [showCtpFilesModal, setShowCtpFilesModal] = useState(false);
   const [showOtherFilesModal, setShowOtherFilesModal] = useState(false);
 
+  // Handler for digital jobs changes in edit mode - preserves diff tracking
+  const handleDigitalJobsChange = (newJobs: LocalDigitalJob[]) => {
+    if (!isEditMode) {
+      // In create mode, just set directly
+      setDigitalJobs(newJobs as typeof digitalJobs);
+      return;
+    }
+
+    // In edit mode, track deletions properly
+    const existingIds = new Set(newJobs.filter(j => (j as any).id).map(j => (j as any).id));
+    
+    // Find items that were deleted (exist in old array but not in new)
+    const deletedItems = digitalJobs.filter(j => j.id && !existingIds.has(j.id))
+      .map(j => ({ ...j, __status: 'deleted' as const }));
+    
+    // Mark updated items
+    const updatedJobs = newJobs.map(job => {
+      const jobWithTracking = job as typeof digitalJobs[0];
+      if (jobWithTracking.id && jobWithTracking.__status !== 'deleted') {
+        // Existing item from DB - mark as updated
+        return { ...jobWithTracking, __status: 'updated' as const };
+      } else if (!jobWithTracking.id && !jobWithTracking.tempId) {
+        // New item - assign tempId
+        return { ...jobWithTracking, tempId: `temp-${Date.now()}-${Math.random()}`, __status: 'created' as const };
+      }
+      return jobWithTracking;
+    });
+
+    // Combine: keep deleted items (marked) + updated/new items
+    setDigitalJobs([...updatedJobs, ...deletedItems] as typeof digitalJobs);
+  };
+
   useEffect(() => {
     checkAuth();
     fetchClients();
@@ -221,6 +253,7 @@ const NewWorkOrder = () => {
         if (items && items.length > 0) {
           setDigitalJobs(items.map(item => ({
             id: item.id,
+            name: item.name || "",
             file_name: item.file_name,
             finished_w_mm: item.finished_w_mm,
             finished_h_mm: item.finished_h_mm,
@@ -228,6 +261,8 @@ const NewWorkOrder = () => {
             qty: item.qty,
             pages: item.pages,
             print_sides: item.print_sides,
+            paper_type: item.paper_type || "",
+            machine_sheet_format: item.machine_sheet_format || "488x330",
             is_test_print: item.is_test_print,
             computed_nup: item.computed_nup || undefined,
             computed_sheets_per_copy: item.computed_sheets_per_copy || undefined,
@@ -968,8 +1003,8 @@ const NewWorkOrder = () => {
                     <div>
                       <h3 className="text-lg font-semibold mb-4">Stavke digitale</h3>
                       <LocalDigitalJobsTable
-                        jobs={digitalJobs}
-                        onChange={setDigitalJobs}
+                        jobs={digitalJobs.filter(j => j.__status !== 'deleted')}
+                        onChange={handleDigitalJobsChange}
                         printSides={formData.print_spec || "4/4"}
                         clientRabatProcenat={clients.find(c => c.id === formData.client_id)?.rabat_procenat || 0}
                       />
