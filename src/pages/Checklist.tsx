@@ -10,6 +10,7 @@ import SearchAndStats from "@/components/checklist/SearchAndStats";
 
 const Checklist = () => {
   const [loading, setLoading] = useState(true);
+  const [activeTab, setActiveTab] = useState("ctp");
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -55,7 +56,7 @@ const Checklist = () => {
             <CardTitle>Pregled radnih naloga po tipu</CardTitle>
           </CardHeader>
           <CardContent>
-            <Tabs defaultValue="ctp" className="w-full">
+            <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
               <TabsList className="grid w-full grid-cols-6">
                 <TabsTrigger value="search">Pretraga</TabsTrigger>
                 <TabsTrigger value="ctp">CTP</TabsTrigger>
@@ -65,8 +66,8 @@ const Checklist = () => {
                 <TabsTrigger value="other">Ostalo</TabsTrigger>
               </TabsList>
               
-              <TabsContent value="search">
-                <SearchAndStats />
+              <TabsContent value="search" forceMount={activeTab === "search" ? true : undefined}>
+                {activeTab === "search" && <SearchAndStats />}
               </TabsContent>
               
               <TabsContent value="ctp">
