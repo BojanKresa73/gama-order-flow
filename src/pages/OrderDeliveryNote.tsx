@@ -418,7 +418,25 @@ const OrderDeliveryNote = () => {
             )}
           </div>
 
-          {fileEntries && fileEntries.length > 0 ? (
+          {/* For OSTALO orders, show job_name and run_quantity from work order */}
+          {workOrder.order_type === "other" && workOrder.job_name ? (
+            <table className="items-table">
+              <thead>
+                <tr>
+                  <th className="number">#</th>
+                  <th>Naziv posla</th>
+                  <th className="quantity">Količina</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td className="number">1</td>
+                  <td>{workOrder.job_name}</td>
+                  <td className="quantity">{workOrder.run_quantity || "-"}</td>
+                </tr>
+              </tbody>
+            </table>
+          ) : fileEntries && fileEntries.length > 0 ? (
             <table className="items-table">
               <thead>
                 <tr>
