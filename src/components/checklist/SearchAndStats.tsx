@@ -1,10 +1,14 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Eye } from "lucide-react";
+import { format } from "date-fns";
 import ChecklistStats from "./ChecklistStats";
 import ChecklistFilters from "./ChecklistFilters";
-import { useEffect } from "react";
 
 interface WorkOrder {
   id: string;
@@ -29,6 +33,7 @@ interface FileEntry {
 }
 
 const SearchAndStats = () => {
+  const navigate = useNavigate();
   const [workOrders, setWorkOrders] = useState<WorkOrder[]>([]);
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState("ctp");
@@ -262,6 +267,11 @@ const SearchAndStats = () => {
             onClearFilters={clearFilters}
             orderType="ctp"
           />
+          
+          <SearchResultsTable 
+            orders={filteredOrders} 
+            onViewOrder={(id) => navigate(`/work-orders/${id}`)}
+          />
         </TabsContent>
 
         <TabsContent value="digital">
@@ -290,6 +300,11 @@ const SearchAndStats = () => {
             formats={uniqueFormats}
             onClearFilters={clearFilters}
             orderType="digital"
+          />
+          
+          <SearchResultsTable 
+            orders={filteredOrders} 
+            onViewOrder={(id) => navigate(`/work-orders/${id}`)}
           />
         </TabsContent>
 
@@ -320,8 +335,102 @@ const SearchAndStats = () => {
             onClearFilters={clearFilters}
             orderType="other"
           />
+          
+          <SearchResultsTable 
+            orders={filteredOrders} 
+            onViewOrder={(id) => navigate(`/work-orders/${id}`)}
+          />
         </TabsContent>
       </Tabs>
+    </div>
+  );
+};
+
+// Component for displaying search results table
+interface SearchResultsTableProps {
+  orders: WorkOrder[];
+  onViewOrder: (id: string) => void;
+}
+
+const SearchResultsTable = ({ orders, onViewOrder }: SearchResultsTableProps) => {
+  const getStatusBadge = (status: string) => {
+    switch (status) {
+      case "open":
+        return <Badge variant="outline" className="bg-yellow-100 text-yellow-800 border-yellow-300">Otvoren</Badge>;
+      case "closed":
+        return <Badge variant="outline" className="bg-green-100 text-green-800 border-green-300">Zatvoren</Badge>;
+      default:
+        return <Badge variant="outline">{status}</Badge>;
+    }
+  };
+
+  const getOrderTypeLabel = (orderType: string) => {
+    switch (orderType) {
+      case "ctp": return "CTP";
+      case "digital": return "Digitala";
+      case "film": return "Filmovanje";
+      case "other": return "Ostalo";
+      case "large_format": return "Veliki Format";
+      default: return orderType;
+    }
+  };
+
+  if (orders.length === 0) {
+    return (
+      <div className="mt-6 p-8 text-center text-muted-foreground border rounded-lg bg-muted/20">
+        Nema naloga koji odgovaraju pretrazi
+      </div>
+    );
+  }
+
+  return (
+    <div className="mt-6">
+      <div className="rounded-md border">
+        <Table>
+          <TableHeader>
+            <TableRow>
+              <TableHead>Broj naloga</TableHead>
+              <TableHead>Klijent</TableHead>
+              <TableHead>Tip</TableHead>
+              <TableHead>Datum</TableHead>
+              <TableHead>Status</TableHead>
+              <TableHead className="text-right">Ploča/Stavki</TableHead>
+              <TableHead className="w-[80px]"></TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {orders.slice(0, 100).map((order) => (
+              <TableRow key={order.id} className="cursor-pointer hover:bg-muted/50" onClick={() => onViewOrder(order.id)}>
+                <TableCell className="font-medium">{order.order_number}</TableCell>
+                <TableCell>{order.client_name}</TableCell>
+                <TableCell>
+                  <Badge variant="secondary">{getOrderTypeLabel(order.order_type)}</Badge>
+                </TableCell>
+                <TableCell>{format(new Date(order.created_at), "dd.MM.yyyy")}</TableCell>
+                <TableCell>{getStatusBadge(order.status)}</TableCell>
+                <TableCell className="text-right">{order.total_plates}</TableCell>
+                <TableCell>
+                  <Button 
+                    variant="ghost" 
+                    size="sm"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      onViewOrder(order.id);
+                    }}
+                  >
+                    <Eye className="h-4 w-4" />
+                  </Button>
+                </TableCell>
+              </TableRow>
+            ))}
+          </TableBody>
+        </Table>
+      </div>
+      {orders.length > 100 && (
+        <p className="text-sm text-muted-foreground mt-2 text-center">
+          Prikazano prvih 100 od {orders.length} naloga
+        </p>
+      )}
     </div>
   );
 };
