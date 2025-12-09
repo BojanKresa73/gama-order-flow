@@ -84,7 +84,7 @@ const Dashboard = () => {
         {/* Quick Actions Bar */}
         <div className="flex items-center justify-between mb-6">
           <h2 className="text-2xl font-semibold">Dobrodošli, {profile?.full_name}!</h2>
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-3 flex-wrap">
             <Button onClick={() => navigate("/work-orders/new")}>
               + Novi nalog
             </Button>
@@ -93,6 +93,10 @@ const Dashboard = () => {
             </Button>
             <Button variant="outline" onClick={() => navigate("/large-format/new?type=rigid")} className="border-teal-300 text-teal-700 hover:bg-teal-50">
               + Ploča
+            </Button>
+            <Button variant="secondary" onClick={() => navigate("/work-orders")}>
+              <FileText className="h-4 w-4 mr-2" />
+              Svi nalozi
             </Button>
             <Button variant="outline" onClick={() => navigate("/clients")}>
               Klijenti
