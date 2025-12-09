@@ -14,6 +14,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import gamaLogo from "@/assets/gama-united-logo.svg";
 import { StatsCards } from "@/components/dashboard/StatsCards";
+import { OnlineUsersCard } from "@/components/dashboard/OnlineUsersCard";
 import { OrdersByTypeChart } from "@/components/dashboard/OrdersByTypeChart";
 import { ClosedOrdersChart } from "@/components/dashboard/ClosedOrdersChart";
 import { MonthlyPlateUsageChart } from "@/components/dashboard/MonthlyPlateUsageChart";
@@ -163,8 +164,12 @@ const Dashboard = () => {
             <RecentOrders />
           </div>
           
-          <div className="col-span-12 xl:col-span-5">
+          <div className="col-span-12 xl:col-span-3">
             <LowStockAlerts />
+          </div>
+
+          <div className="col-span-12 xl:col-span-2">
+            <OnlineUsersCard />
           </div>
 
           {/* Digital Stats Section - Full Width */}
