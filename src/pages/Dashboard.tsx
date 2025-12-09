@@ -19,7 +19,7 @@ import { OrdersByTypeChart } from "@/components/dashboard/OrdersByTypeChart";
 import { ClosedOrdersChart } from "@/components/dashboard/ClosedOrdersChart";
 import { MonthlyPlateUsageChart } from "@/components/dashboard/MonthlyPlateUsageChart";
 import { RecentOrders } from "@/components/dashboard/RecentOrders";
-import { LowStockAlerts } from "@/components/dashboard/LowStockAlerts";
+import { DailyPlateStats } from "@/components/dashboard/DailyPlateStats";
 import { TopClientsCard } from "@/components/dashboard/TopClientsCard";
 import AdminSection from "@/components/dashboard/AdminSection";
 import { DigitalStatsSection } from "@/components/dashboard/DigitalStatsSection";
@@ -165,7 +165,7 @@ const Dashboard = () => {
           </div>
           
           <div className="col-span-12 xl:col-span-3">
-            <LowStockAlerts />
+            <DailyPlateStats />
           </div>
 
           <div className="col-span-12 xl:col-span-2">
