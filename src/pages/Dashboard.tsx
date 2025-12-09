@@ -5,7 +5,13 @@ import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
 import { useAuthz } from "@/hooks/useAuthz";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { LayoutDashboard, FileText, Users, Package, ClipboardList } from "lucide-react";
+import { LayoutDashboard, FileText, Users, Package, ClipboardList, BarChart3, ChevronDown } from "lucide-react";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import gamaLogo from "@/assets/gama-united-logo.svg";
 import { StatsCards } from "@/components/dashboard/StatsCards";
 import { OrdersByTypeChart } from "@/components/dashboard/OrdersByTypeChart";
@@ -112,12 +118,23 @@ const Dashboard = () => {
             <Button variant="outline" onClick={() => navigate("/checklist")}>
               Checklist
             </Button>
-            <Button variant="outline" onClick={() => navigate("/stats/ctp")}>
-              CTP statistika
-            </Button>
-            <Button variant="outline" onClick={() => navigate("/stats/digital")} className="border-indigo-300 text-indigo-700 hover:bg-indigo-50">
-              Digitala statistika
-            </Button>
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="outline">
+                  <BarChart3 className="h-4 w-4 mr-2" />
+                  Statistika
+                  <ChevronDown className="h-4 w-4 ml-2" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="bg-background">
+                <DropdownMenuItem onClick={() => navigate("/stats/ctp")}>
+                  CTP statistika
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => navigate("/stats/digital")}>
+                  Digitala statistika
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
           </div>
         </div>
 
