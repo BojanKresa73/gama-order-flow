@@ -411,6 +411,9 @@ const WorkOrders = () => {
             <Button variant="outline" size="sm" onClick={() => navigate("/checklist")}>
               Checklist
             </Button>
+            <Button variant="outline" size="sm" onClick={() => navigate("/checklist?tab=pretraga")}>
+              Pretraga i statistika
+            </Button>
             <Button onClick={() => navigate("/work-orders/new")}>
               <Plus className="h-4 w-4 mr-2" />
               Novi nalog
