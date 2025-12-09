@@ -71,23 +71,23 @@ const Checklist = () => {
               </TabsContent>
               
               <TabsContent value="ctp">
-                <ChecklistView orderType="ctp" />
+                <ChecklistView orderType="ctp" onNavigateToSearch={() => setActiveTab("search")} />
               </TabsContent>
               
               <TabsContent value="film">
-                <ChecklistView orderType="film" />
+                <ChecklistView orderType="film" onNavigateToSearch={() => setActiveTab("search")} />
               </TabsContent>
               
               <TabsContent value="digital">
-                <ChecklistView orderType="digital" />
+                <ChecklistView orderType="digital" onNavigateToSearch={() => setActiveTab("search")} />
               </TabsContent>
               
               <TabsContent value="large_format">
-                <ChecklistView orderType="large_format" />
+                <ChecklistView orderType="large_format" onNavigateToSearch={() => setActiveTab("search")} />
               </TabsContent>
               
               <TabsContent value="other">
-                <ChecklistView orderType="other" />
+                <ChecklistView orderType="other" onNavigateToSearch={() => setActiveTab("search")} />
               </TabsContent>
             </Tabs>
           </CardContent>
