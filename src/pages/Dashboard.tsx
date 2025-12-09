@@ -73,6 +73,11 @@ const Dashboard = () => {
           </div>
           <div className="flex items-center gap-4">
             <span className="text-sm text-muted-foreground">{profile?.full_name}</span>
+            {isSuper && (
+              <Button variant="outline" onClick={() => navigate("/admin/users")}>
+                Administracija
+              </Button>
+            )}
             <Button variant="outline" onClick={handleLogout}>
               Odjavi se
             </Button>
@@ -113,11 +118,6 @@ const Dashboard = () => {
             <Button variant="outline" onClick={() => navigate("/stats/digital")} className="border-indigo-300 text-indigo-700 hover:bg-indigo-50">
               Digitala statistika
             </Button>
-            {isSuper && (
-              <Button variant="outline" onClick={() => navigate("/admin/users")}>
-                Administracija
-              </Button>
-            )}
           </div>
         </div>
 
