@@ -40,9 +40,10 @@ interface FileEntry {
 
 interface ChecklistViewProps {
   orderType: "ctp" | "digital" | "other" | "film" | "large_format";
+  onNavigateToSearch?: () => void;
 }
 
-const ChecklistView = ({ orderType }: ChecklistViewProps) => {
+const ChecklistView = ({ orderType, onNavigateToSearch }: ChecklistViewProps) => {
   const [workOrders, setWorkOrders] = useState<WorkOrder[]>([]);
   const [expandedOrders, setExpandedOrders] = useState<Set<string>>(new Set());
   const [loading, setLoading] = useState(true);
@@ -317,9 +318,8 @@ const ChecklistView = ({ orderType }: ChecklistViewProps) => {
   };
 
   const openSearchTab = () => {
-    const tabsTrigger = document.querySelector('[value="search"]') as HTMLElement;
-    if (tabsTrigger) {
-      tabsTrigger.click();
+    if (onNavigateToSearch) {
+      onNavigateToSearch();
     }
   };
 
