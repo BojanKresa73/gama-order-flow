@@ -26,6 +26,7 @@ interface WorkOrder {
   type: string | null;
   kind: string | null;
   total_plates: number;
+  created_by_name: string | null;
   file_entries?: FileEntry[];
 }
 
@@ -68,7 +69,9 @@ const ChecklistView = ({ orderType }: ChecklistViewProps) => {
           type,
           kind,
           order_type,
-          clients!inner(name)
+          created_by,
+          clients!inner(name),
+          profiles!work_orders_created_by_fkey(full_name)
         `)
         .eq("order_type", orderType)
         .is("deleted_at", null)
@@ -97,13 +100,14 @@ const ChecklistView = ({ orderType }: ChecklistViewProps) => {
               id: order.id,
               order_number: order.order_number,
               order_code: order.order_code,
-              client_name: order.clients.name,
+              client_name: (order.clients as any).name,
               created_at: order.created_at,
               closed_at: order.closed_at,
               status: order.status,
               type: order.type,
               kind: order.kind,
               total_plates: 0,
+              created_by_name: (order.profiles as any)?.full_name || null,
               file_entries: [],
             };
           }
@@ -123,13 +127,14 @@ const ChecklistView = ({ orderType }: ChecklistViewProps) => {
             id: order.id,
             order_number: order.order_number,
             order_code: order.order_code,
-            client_name: order.clients.name,
+            client_name: (order.clients as any).name,
             created_at: order.created_at,
             closed_at: order.closed_at,
             status: order.status,
             type: order.type,
             kind: order.kind,
             total_plates: totalPlates,
+            created_by_name: (order.profiles as any)?.full_name || null,
             file_entries: fileEntries,
           };
         })
@@ -342,6 +347,7 @@ const ChecklistView = ({ orderType }: ChecklistViewProps) => {
             <TableHead className="w-12"></TableHead>
             <TableHead>Broj Naloga</TableHead>
             <TableHead>Klijent</TableHead>
+            <TableHead>Kreirao</TableHead>
             <TableHead>Tip</TableHead>
             <TableHead>Datum Otvaranja</TableHead>
             <TableHead>Datum Zatvaranja</TableHead>
@@ -371,6 +377,7 @@ const ChecklistView = ({ orderType }: ChecklistViewProps) => {
                   })()}
                 </TableCell>
                 <TableCell>{order.client_name}</TableCell>
+                <TableCell className="text-muted-foreground">{order.created_by_name || "-"}</TableCell>
                 <TableCell>{getTypeBadge(order.type, order.kind)}</TableCell>
                 <TableCell>
                   {format(new Date(order.created_at), "dd.MM.yyyy HH:mm")}
