@@ -10,7 +10,10 @@ export const TopClientsCard = () => {
     staleTime: 300_000, // 5 minutes
     queryFn: async () => {
       const now = new Date();
-      const currentMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+      // Format as YYYY-MM-01 to avoid timezone issues with toISOString()
+      const year = now.getFullYear();
+      const month = String(now.getMonth() + 1).padStart(2, '0');
+      const currentMonthStr = `${year}-${month}-01`;
       
       const { data, error } = await supabase
         .from("v_plate_usage_monthly")
@@ -18,7 +21,7 @@ export const TopClientsCard = () => {
           client_id,
           plates_used
         `)
-        .gte("month", currentMonth.toISOString().split('T')[0])
+        .gte("month", currentMonthStr)
         .order("plates_used", { ascending: false });
 
       if (error) throw error;
