@@ -10,7 +10,6 @@ export const TopClientsCard = () => {
     staleTime: 300_000, // 5 minutes
     queryFn: async () => {
       const now = new Date();
-      // Format as YYYY-MM-01 to avoid timezone issues with toISOString()
       const year = now.getFullYear();
       const month = String(now.getMonth() + 1).padStart(2, '0');
       const currentMonthStr = `${year}-${month}-01`;
@@ -21,8 +20,7 @@ export const TopClientsCard = () => {
           client_id,
           plates_used
         `)
-        .gte("month", currentMonthStr)
-        .order("plates_used", { ascending: false });
+        .gte("month", currentMonthStr);
 
       if (error) throw error;
 
@@ -35,20 +33,19 @@ export const TopClientsCard = () => {
         }
       });
 
-      // Get client names
       const clientIds = Array.from(clientMap.keys());
       if (clientIds.length === 0) return [];
 
+      // Fetch all clients and match by string comparison
       const { data: clients } = await supabase
         .from("clients")
-        .select("id, name")
-        .in("id", clientIds);
+        .select("id, name");
 
-      // Combine and sort
-      const results = clientIds.map(id => ({
-        id,
-        name: clients?.find(c => c.id === id)?.name || "Nepoznat",
-        plates: clientMap.get(id) || 0
+      // Combine and sort - compare as strings
+      const results = clientIds.map(clientId => ({
+        id: clientId,
+        name: clients?.find(c => String(c.id) === clientId)?.name || "Nepoznat",
+        plates: clientMap.get(clientId) || 0
       }));
 
       return results
