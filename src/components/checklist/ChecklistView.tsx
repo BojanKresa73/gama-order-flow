@@ -282,6 +282,7 @@ const ChecklistView = ({ orderType, onNavigateToSearch }: ChecklistViewProps) =>
 
   const closeFileEntry = async (fileId: string, workOrderId: string) => {
     try {
+      // Close this file entry
       const { error } = await supabase
         .from("file_entries")
         .update({ status: "closed" })
@@ -289,12 +290,31 @@ const ChecklistView = ({ orderType, onNavigateToSearch }: ChecklistViewProps) =>
 
       if (error) throw error;
 
-      toast({
-        title: "Uspešno",
-        description: "Fajl je zatvoren",
-      });
+      // Check if all file entries for this work order are now closed
+      const { data: remainingOpenFiles, error: checkError } = await supabase
+        .from("file_entries")
+        .select("id")
+        .eq("work_order_id", workOrderId)
+        .eq("status", "open");
 
-      fetchWorkOrders();
+      if (checkError) throw checkError;
+
+      // If no more open files, close the entire work order
+      if (!remainingOpenFiles || remainingOpenFiles.length === 0) {
+        toast({
+          title: "Info",
+          description: "Sve stavke su zatvorene, zatvaranje naloga...",
+        });
+
+        // Close the work order (this will also send delivery note)
+        await closeWorkOrder(workOrderId);
+      } else {
+        toast({
+          title: "Uspešno",
+          description: `Fajl je zatvoren. Preostalo još ${remainingOpenFiles.length} otvorenih stavki.`,
+        });
+        fetchWorkOrders();
+      }
     } catch (error) {
       console.error("Error closing file:", error);
       toast({
