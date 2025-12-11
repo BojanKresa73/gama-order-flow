@@ -16,17 +16,15 @@ export const TopClientsCard = () => {
       
       const { data, error } = await supabase
         .from("v_plate_usage_monthly")
-        .select(`
-          client_id,
-          plates_used
-        `)
+        .select("client_id, plates_used")
         .gte("month", currentMonthStr);
 
       if (error) throw error;
+      if (!data || data.length === 0) return [];
 
       // Group by client and sum plates
       const clientMap = new Map<string, number>();
-      data?.forEach(row => {
+      data.forEach(row => {
         if (row.client_id) {
           const current = clientMap.get(row.client_id) || 0;
           clientMap.set(row.client_id, current + (row.plates_used || 0));
@@ -36,15 +34,24 @@ export const TopClientsCard = () => {
       const clientIds = Array.from(clientMap.keys());
       if (clientIds.length === 0) return [];
 
-      // Fetch all clients and match by string comparison
-      const { data: clients } = await supabase
+      // Fetch only the clients we need using .in() filter
+      const { data: clients, error: clientsError } = await supabase
         .from("clients")
-        .select("id, name");
+        .select("id, name")
+        .in("id", clientIds);
 
-      // Combine and sort - compare as strings
+      if (clientsError) throw clientsError;
+
+      // Create a lookup map for client names
+      const clientNameMap = new Map<string, string>();
+      clients?.forEach(c => {
+        clientNameMap.set(c.id, c.name);
+      });
+
+      // Combine and sort
       const results = clientIds.map(clientId => ({
         id: clientId,
-        name: clients?.find(c => String(c.id) === clientId)?.name || "Nepoznat",
+        name: clientNameMap.get(clientId) || "Nepoznat",
         plates: clientMap.get(clientId) || 0
       }));
 
