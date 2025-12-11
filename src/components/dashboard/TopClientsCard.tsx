@@ -6,53 +6,50 @@ import { Skeleton } from "@/components/ui/skeleton";
 
 export const TopClientsCard = () => {
   const { data: topClients, isLoading } = useQuery({
-    queryKey: ["top-clients-monthly"],
-    staleTime: 300_000, // 5 minutes
+    queryKey: ["top-clients-monthly-direct"],
+    staleTime: 60_000, // 1 minute
     queryFn: async () => {
       const now = new Date();
       const year = now.getFullYear();
       const month = String(now.getMonth() + 1).padStart(2, '0');
-      const currentMonthStr = `${year}-${month}-01`;
+      const startOfMonth = `${year}-${month}-01T00:00:00`;
       
-      const { data, error } = await supabase
-        .from("v_plate_usage_monthly")
-        .select("client_id, plates_used")
-        .gte("month", currentMonthStr);
+      // Query directly from work_orders + file_entries for accurate data
+      const { data: workOrders, error: woError } = await supabase
+        .from("work_orders")
+        .select(`
+          client_id,
+          clients!inner(id, name),
+          file_entries(quantity)
+        `)
+        .eq("kind", "CTP")
+        .gte("closed_at", startOfMonth)
+        .is("deleted_at", null)
+        .is("invalidated_at", null);
 
-      if (error) throw error;
-      if (!data || data.length === 0) return [];
+      if (woError) throw woError;
+      if (!workOrders || workOrders.length === 0) return [];
 
-      // Group by client and sum plates
-      const clientMap = new Map<string, number>();
-      data.forEach(row => {
-        if (row.client_id) {
-          const current = clientMap.get(row.client_id) || 0;
-          clientMap.set(row.client_id, current + (row.plates_used || 0));
+      // Aggregate plates by client
+      const clientMap = new Map<string, { name: string; plates: number }>();
+      
+      workOrders.forEach((wo: any) => {
+        const clientId = wo.client_id;
+        const clientName = wo.clients?.name || "Nepoznat";
+        const plates = wo.file_entries?.reduce((sum: number, fe: any) => sum + (fe.quantity || 0), 0) || 0;
+        
+        if (clientMap.has(clientId)) {
+          clientMap.get(clientId)!.plates += plates;
+        } else {
+          clientMap.set(clientId, { name: clientName, plates });
         }
       });
 
-      const clientIds = Array.from(clientMap.keys());
-      if (clientIds.length === 0) return [];
-
-      // Fetch only the clients we need using .in() filter
-      const { data: clients, error: clientsError } = await supabase
-        .from("clients")
-        .select("id, name")
-        .in("id", clientIds);
-
-      if (clientsError) throw clientsError;
-
-      // Create a lookup map for client names
-      const clientNameMap = new Map<string, string>();
-      clients?.forEach(c => {
-        clientNameMap.set(c.id, c.name);
-      });
-
-      // Combine and sort
-      const results = clientIds.map(clientId => ({
-        id: clientId,
-        name: clientNameMap.get(clientId) || "Nepoznat",
-        plates: clientMap.get(clientId) || 0
+      // Convert to array, sort and take top 5
+      const results = Array.from(clientMap.entries()).map(([id, data]) => ({
+        id,
+        name: data.name,
+        plates: data.plates
       }));
 
       return results
