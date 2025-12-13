@@ -4,8 +4,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
 import { useAuthz } from "@/hooks/useAuthz";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { LayoutDashboard, FileText, Users, Package, ClipboardList, BarChart3, ChevronDown } from "lucide-react";
+import { FileText, BarChart3, ChevronDown } from "lucide-react";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -30,6 +29,8 @@ const Dashboard = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
   const { isSuper, isAdmin } = useAuthz();
+
+  const canViewStats = isSuper || isAdmin;
 
   useEffect(() => {
     checkUser();
@@ -119,61 +120,72 @@ const Dashboard = () => {
             <Button variant="outline" onClick={() => navigate("/checklist")}>
               Checklist
             </Button>
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button variant="outline">
-                  <BarChart3 className="h-4 w-4 mr-2" />
-                  Statistika
-                  <ChevronDown className="h-4 w-4 ml-2" />
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end" className="bg-background">
-                <DropdownMenuItem onClick={() => navigate("/stats/ctp")}>
-                  CTP statistika
-                </DropdownMenuItem>
-                <DropdownMenuItem onClick={() => navigate("/stats/digital")}>
-                  Digitala statistika
-                </DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
+            {canViewStats && (
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="outline">
+                    <BarChart3 className="h-4 w-4 mr-2" />
+                    Statistika
+                    <ChevronDown className="h-4 w-4 ml-2" />
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end" className="bg-background">
+                  <DropdownMenuItem onClick={() => navigate("/stats/ctp")}>
+                    CTP statistika
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => navigate("/stats/digital")}>
+                    Digitala statistika
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+            )}
           </div>
         </div>
 
         <div className="grid grid-cols-12 gap-6 items-start">
-          <StatsCards />
+          {/* Stats Cards - only for admin/superuser */}
+          {canViewStats && <StatsCards />}
           
+          {/* Admin Section - already has its own visibility logic */}
           <AdminSection />
           
-          <div className="col-span-12 xl:col-span-4">
-            <OrdersByTypeChart />
-          </div>
-          
-          <div className="col-span-12 xl:col-span-4">
-            <TopClientsCard />
-          </div>
+          {/* Charts and Stats - only for admin/superuser */}
+          {canViewStats && (
+            <>
+              <div className="col-span-12 xl:col-span-4">
+                <OrdersByTypeChart />
+              </div>
+              
+              <div className="col-span-12 xl:col-span-4">
+                <TopClientsCard />
+              </div>
 
-          <div className="col-span-12 xl:col-span-4">
-            <MonthlyPlateUsageChart />
-          </div>
+              <div className="col-span-12 xl:col-span-4">
+                <MonthlyPlateUsageChart />
+              </div>
 
-          <div className="col-span-12 xl:col-span-4">
-            <ClosedOrdersChart />
-          </div>
-          
-          <div className="col-span-12 xl:col-span-4">
-            <DailyPlateStats />
-          </div>
+              <div className="col-span-12 xl:col-span-4">
+                <ClosedOrdersChart />
+              </div>
+              
+              <div className="col-span-12 xl:col-span-4">
+                <DailyPlateStats />
+              </div>
+            </>
+          )}
 
-          <div className="col-span-12 xl:col-span-8">
+          {/* Recent Orders - visible to all */}
+          <div className={`col-span-12 ${canViewStats ? 'xl:col-span-8' : ''}`}>
             <RecentOrders />
           </div>
 
+          {/* Online Users - visible to all */}
           <div className="col-span-12 xl:col-span-4">
             <OnlineUsersCard />
           </div>
 
-          {/* Digital Stats Section - Full Width */}
-          <DigitalStatsSection />
+          {/* Digital Stats Section - only for admin/superuser */}
+          {canViewStats && <DigitalStatsSection />}
         </div>
       </main>
     </div>
