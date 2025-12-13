@@ -422,7 +422,7 @@ const WorkOrders = () => {
         </div>
       </header>
 
-      <main className="container mx-auto px-4 py-8">
+      <main className="mx-auto px-4 py-8 max-w-[1600px]">
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center justify-between">
