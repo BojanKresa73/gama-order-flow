@@ -75,7 +75,7 @@ export const MonthlyPlateUsageChart = () => {
 
   const total = chartData?.reduce((sum, item) => sum + item.value, 0) || 0;
 
-  const currentMonthName = new Date().toLocaleDateString('sr-RS', { 
+  const currentMonthName = new Date().toLocaleDateString('sr-Latn-RS', { 
     month: 'long', 
     year: 'numeric' 
   });
