@@ -430,7 +430,7 @@ const WorkOrders = () => {
                 <FileText className="h-5 w-5" />
                 Svi radni nalozi
               </div>
-              {selectedOrders.size > 0 && (
+              {isSuper && selectedOrders.size > 0 && (
                 <Button onClick={handleBulkClose} variant="default">
                   <CheckCircle2 className="h-4 w-4 mr-2" />
                   Zatvori odabrane ({selectedOrders.size})
@@ -448,22 +448,23 @@ const WorkOrders = () => {
               <Table>
                 <TableHeader>
                   <TableRow>
-                    <TableHead className="w-12">
-                      <Checkbox
-                        checked={selectedOrders.size > 0 && selectedOrders.size === workOrders.filter(o => o.status === 'open').length}
-                        onCheckedChange={toggleAllOrders}
-                        disabled={workOrders.filter(o => o.status === 'open').length === 0}
-                      />
-                    </TableHead>
+                    {isSuper && (
+                      <TableHead className="w-12">
+                        <Checkbox
+                          checked={selectedOrders.size > 0 && selectedOrders.size === workOrders.filter(o => o.status === 'open').length}
+                          onCheckedChange={toggleAllOrders}
+                          disabled={workOrders.filter(o => o.status === 'open').length === 0}
+                        />
+                      </TableHead>
+                    )}
                     <TableHead>Broj naloga</TableHead>
                     <TableHead>Klijent</TableHead>
                     <TableHead>Tip</TableHead>
                     <TableHead>Status</TableHead>
-                    <TableHead>Email</TableHead>
                     <TableHead>Kreirao</TableHead>
                     <TableHead>Datum</TableHead>
                     <TableHead className="text-right">Akcije</TableHead>
-                    <TableHead className="text-center">Zatvori</TableHead>
+                    {isSuper && <TableHead className="text-center">Zatvori</TableHead>}
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -473,13 +474,15 @@ const WorkOrders = () => {
                       className="cursor-pointer hover:bg-muted/50"
                       onClick={() => navigate(`/work-orders/${order.id}`)}
                     >
-                      <TableCell onClick={(e) => e.stopPropagation()}>
-                        <Checkbox
-                          checked={selectedOrders.has(order.id)}
-                          onCheckedChange={() => toggleOrderSelection(order.id, order.status === 'open')}
-                          disabled={order.status === 'closed'}
-                        />
-                      </TableCell>
+                      {isSuper && (
+                        <TableCell onClick={(e) => e.stopPropagation()}>
+                          <Checkbox
+                            checked={selectedOrders.has(order.id)}
+                            onCheckedChange={() => toggleOrderSelection(order.id, order.status === 'open')}
+                            disabled={order.status === 'closed'}
+                          />
+                        </TableCell>
+                      )}
                       <TableCell className="font-medium">
                         <div className="flex flex-col gap-1">
                           <span>{displayOrderNumber(order)}</span>
@@ -493,9 +496,6 @@ const WorkOrders = () => {
                       <TableCell>{order.clients?.name}</TableCell>
                       <TableCell>{getOrderTypeLabel(order.order_type)}</TableCell>
                       <TableCell>{getStatusBadge(order.status, order.invalidated_at, order.deleted_at)}</TableCell>
-                      <TableCell>
-                        {getEmailStatusBadge(order.email_job_latest_status?.[0])}
-                      </TableCell>
                       <TableCell>{order.profiles?.full_name}</TableCell>
                       <TableCell>{new Date(order.created_at).toLocaleDateString('sr-RS')}</TableCell>
                       <TableCell>
@@ -562,31 +562,33 @@ const WorkOrders = () => {
                           )}
                         </div>
                       </TableCell>
-                      <TableCell className="text-center">
-                        <TooltipProvider>
-                          <Tooltip>
-                            <TooltipTrigger asChild>
-                              <div className="inline-block">
-                                <Button
-                                  variant="default"
-                                  size="sm"
-                                  disabled={order.status === 'closed' || order.invalidated_at}
-                                  onClick={(e) => handleCloseOrder(order, e)}
-                                >
-                                  {order.status === 'closed' && <Lock className="h-4 w-4 mr-2" />}
-                                  {order.invalidated_at && <AlertTriangle className="h-4 w-4 mr-2" />}
-                                  Zatvori
-                                </Button>
-                              </div>
-                            </TooltipTrigger>
-                            {(order.status === 'closed' || order.invalidated_at) && (
-                              <TooltipContent>
-                                <p>{order.status === 'closed' ? 'Nalog je već zatvoren' : 'Nalog je nevažeći'}</p>
-                              </TooltipContent>
-                            )}
-                          </Tooltip>
-                        </TooltipProvider>
-                      </TableCell>
+                      {isSuper && (
+                        <TableCell className="text-center">
+                          <TooltipProvider>
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <div className="inline-block">
+                                  <Button
+                                    variant="default"
+                                    size="sm"
+                                    disabled={order.status === 'closed' || order.invalidated_at}
+                                    onClick={(e) => handleCloseOrder(order, e)}
+                                  >
+                                    {order.status === 'closed' && <Lock className="h-4 w-4 mr-2" />}
+                                    {order.invalidated_at && <AlertTriangle className="h-4 w-4 mr-2" />}
+                                    Zatvori
+                                  </Button>
+                                </div>
+                              </TooltipTrigger>
+                              {(order.status === 'closed' || order.invalidated_at) && (
+                                <TooltipContent>
+                                  <p>{order.status === 'closed' ? 'Nalog je već zatvoren' : 'Nalog je nevažeći'}</p>
+                                </TooltipContent>
+                              )}
+                            </Tooltip>
+                          </TooltipProvider>
+                        </TableCell>
+                      )}
                     </TableRow>
                   ))}
                 </TableBody>
