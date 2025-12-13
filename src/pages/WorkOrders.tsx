@@ -430,7 +430,7 @@ const WorkOrders = () => {
                 <FileText className="h-5 w-5" />
                 Svi radni nalozi
               </div>
-              {isSuper && selectedOrders.size > 0 && (
+              {(isSuper || isAdmin) && selectedOrders.size > 0 && (
                 <Button onClick={handleBulkClose} variant="default">
                   <CheckCircle2 className="h-4 w-4 mr-2" />
                   Zatvori odabrane ({selectedOrders.size})
@@ -448,7 +448,7 @@ const WorkOrders = () => {
               <Table>
                 <TableHeader>
                   <TableRow>
-                    {isSuper && (
+                    {(isSuper || isAdmin) && (
                       <TableHead className="w-12">
                         <Checkbox
                           checked={selectedOrders.size > 0 && selectedOrders.size === workOrders.filter(o => o.status === 'open').length}
@@ -464,7 +464,7 @@ const WorkOrders = () => {
                     <TableHead>Kreirao</TableHead>
                     <TableHead>Datum</TableHead>
                     <TableHead className="text-right">Akcije</TableHead>
-                    {isSuper && <TableHead className="text-center">Zatvori</TableHead>}
+                    {(isSuper || isAdmin) && <TableHead className="text-center">Zatvori</TableHead>}
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -474,7 +474,7 @@ const WorkOrders = () => {
                       className="cursor-pointer hover:bg-muted/50"
                       onClick={() => navigate(`/work-orders/${order.id}`)}
                     >
-                      {isSuper && (
+                      {(isSuper || isAdmin) && (
                         <TableCell onClick={(e) => e.stopPropagation()}>
                           <Checkbox
                             checked={selectedOrders.has(order.id)}
@@ -562,7 +562,7 @@ const WorkOrders = () => {
                           )}
                         </div>
                       </TableCell>
-                      {isSuper && (
+                      {(isSuper || isAdmin) && (
                         <TableCell className="text-center">
                           <TooltipProvider>
                             <Tooltip>
