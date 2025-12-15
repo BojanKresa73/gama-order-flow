@@ -111,8 +111,9 @@ async function uploadToGoogleDrive(
     content +
     closeDelimiter;
 
+  // For Shared Drives, we need supportsAllDrives=true
   const response = await fetch(
-    'https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart',
+    `https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart&supportsAllDrives=true`,
     {
       method: 'POST',
       headers: {
