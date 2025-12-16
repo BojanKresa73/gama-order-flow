@@ -69,6 +69,9 @@ const SearchAndStats = () => {
     fetchWorkers();
   }, []);
 
+  // Users to exclude from productivity stats (management)
+  const excludedFromProductivity = ["Natalija Kresovic", "Bojan Kresović"];
+
   const fetchWorkers = async () => {
     try {
       const { data, error } = await supabase
@@ -351,7 +354,7 @@ const SearchAndStats = () => {
           workOrders={allFilteredOrdersForProductivity}
           dateFrom={dateFrom}
           dateTo={dateTo}
-          allWorkers={workers}
+          allWorkers={workers.filter(w => !excludedFromProductivity.includes(w.name))}
         />
       )}
 
