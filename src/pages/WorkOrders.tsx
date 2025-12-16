@@ -61,7 +61,6 @@ const WorkOrders = () => {
           *,
           clients (name),
           profiles!work_orders_created_by_fkey (full_name),
-          closed_by_profile:profiles!work_orders_closed_by_fkey (full_name),
           email_job_latest_status (
             status,
             error_msg
@@ -74,11 +73,27 @@ const WorkOrders = () => {
       
       // For each order, check if it was closed by multiple people (Mix)
       const ordersWithClosers = await Promise.all((data || []).map(async (order) => {
-        if (order.status !== 'closed' || order.order_type === 'film' || order.order_type === 'digital') {
+        if (order.status !== 'closed') {
           return order;
         }
         
-        // Check file_entries for different closers
+        // First, get the closed_by profile name if it exists
+        let closedByName = null;
+        if (order.closed_by) {
+          const { data: closerProfile } = await supabase
+            .from("profiles")
+            .select("full_name")
+            .eq("id", order.closed_by)
+            .maybeSingle();
+          closedByName = closerProfile?.full_name;
+        }
+        
+        // For film and digital orders, just use the work order closer
+        if (order.order_type === 'film' || order.order_type === 'digital') {
+          return { ...order, _closedByName: closedByName };
+        }
+        
+        // Check file_entries for different closers (CTP and other orders)
         const { data: files } = await supabase
           .from("file_entries")
           .select("closed_by, profiles:closed_by(full_name)")
@@ -89,16 +104,16 @@ const WorkOrders = () => {
           const uniqueClosers = new Set(files.map(f => f.closed_by).filter(Boolean));
           if (uniqueClosers.size > 1) {
             return { ...order, _closedByMix: true };
-          } else if (uniqueClosers.size === 1 && !order.closed_by) {
-            // If work order doesn't have closed_by but files do, use file closer
+          } else if (uniqueClosers.size === 1) {
+            // Use the file closer name
             const firstCloser = files.find(f => f.profiles);
             if (firstCloser?.profiles) {
-              return { ...order, _fileCloserName: (firstCloser.profiles as any).full_name };
+              return { ...order, _closedByName: (firstCloser.profiles as any).full_name };
             }
           }
         }
         
-        return order;
+        return { ...order, _closedByName: closedByName };
       }));
       
       setWorkOrders(ordersWithClosers);
@@ -139,8 +154,7 @@ const WorkOrders = () => {
   const getClosedByDisplay = (order: any) => {
     if (order.status !== 'closed') return '-';
     if (order._closedByMix) return 'Mix';
-    if (order._fileCloserName) return order._fileCloserName;
-    if (order.closed_by_profile?.full_name) return order.closed_by_profile.full_name;
+    if (order._closedByName) return order._closedByName;
     return '-';
   };
 
