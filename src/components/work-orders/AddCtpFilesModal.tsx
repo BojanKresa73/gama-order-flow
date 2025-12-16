@@ -1,4 +1,4 @@
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import {
   Dialog,
   DialogContent,
@@ -10,6 +10,15 @@ import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { FileUp, ClipboardList } from "lucide-react";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { Input } from "@/components/ui/input";
+import { supabase } from "@/integrations/supabase/client";
 
 interface CtpItem {
   file_name: string;
@@ -17,28 +26,54 @@ interface CtpItem {
   quantity: number;
 }
 
+interface PlateFormat {
+  id: string;
+  format_name: string;
+}
+
 interface AddCtpFilesModalProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   onAddFiles: (items: CtpItem[]) => void;
   defaultQuantity?: number;
+  defaultFormatId?: string;
 }
 
 export const AddCtpFilesModal = ({ 
   open, 
   onOpenChange, 
   onAddFiles,
-  defaultQuantity = 4 
+  defaultQuantity = 4,
+  defaultFormatId = ""
 }: AddCtpFilesModalProps) => {
   const [fileList, setFileList] = useState<string>("");
+  const [selectedFormat, setSelectedFormat] = useState<string>(defaultFormatId);
+  const [quantity, setQuantity] = useState<number>(defaultQuantity);
+  const [plateFormats, setPlateFormats] = useState<PlateFormat[]>([]);
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    if (open) {
+      fetchPlateFormats();
+      setSelectedFormat(defaultFormatId);
+      setQuantity(defaultQuantity);
+    }
+  }, [open, defaultFormatId, defaultQuantity]);
+
+  const fetchPlateFormats = async () => {
+    const { data } = await supabase
+      .from("plate_formats")
+      .select("id, format_name")
+      .order("format_name");
+    setPlateFormats(data || []);
+  };
 
   const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = Array.from(e.target.files || []);
     const newItems: CtpItem[] = files.map(file => ({
       file_name: file.name,
-      plate_format_id: "",
-      quantity: defaultQuantity
+      plate_format_id: selectedFormat,
+      quantity: quantity
     }));
 
     if (newItems.length > 0) {
@@ -54,8 +89,8 @@ export const AddCtpFilesModal = ({
     const lines = fileList.split("\n").filter(line => line.trim() !== "");
     const newItems: CtpItem[] = lines.map(line => ({
       file_name: line.trim(),
-      plate_format_id: "",
-      quantity: defaultQuantity
+      plate_format_id: selectedFormat,
+      quantity: quantity
     }));
 
     if (newItems.length > 0) {
@@ -71,6 +106,34 @@ export const AddCtpFilesModal = ({
         <DialogHeader>
           <DialogTitle>Dodaj fajlove</DialogTitle>
         </DialogHeader>
+
+        {/* Format and Quantity Selection */}
+        <div className="grid grid-cols-2 gap-4 p-4 border rounded-lg bg-muted/30">
+          <div className="space-y-2">
+            <Label>Format ploče</Label>
+            <Select value={selectedFormat} onValueChange={setSelectedFormat}>
+              <SelectTrigger>
+                <SelectValue placeholder="Odaberi format" />
+              </SelectTrigger>
+              <SelectContent>
+                {plateFormats.map((format) => (
+                  <SelectItem key={format.id} value={format.id}>
+                    {format.format_name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+          <div className="space-y-2">
+            <Label>Količina po fajlu</Label>
+            <Input
+              type="number"
+              value={quantity}
+              onChange={(e) => setQuantity(parseInt(e.target.value) || 4)}
+              min="1"
+            />
+          </div>
+        </div>
         
         <Tabs defaultValue="files" className="mt-4">
           <TabsList className="grid w-full grid-cols-2">
