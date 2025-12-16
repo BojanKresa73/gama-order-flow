@@ -746,12 +746,72 @@ const NewWorkOrder = () => {
                   )}
 
                   <div className="space-y-4">
+                    {/* Order-level (default) plate format + quantity */}
+                    <div className="p-4 border rounded-lg bg-muted/50">
+                      <Label className="text-sm font-semibold mb-3 block">Format ploče (na nivou naloga)</Label>
+                      <div className="grid grid-cols-12 gap-2">
+                        <div className="col-span-7">
+                          <Select value={bulkFormat} onValueChange={setBulkFormat}>
+                            <SelectTrigger>
+                              <SelectValue placeholder="Odaberi format" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              {plateFormats.map((format) => (
+                                <SelectItem key={format.id} value={format.id}>
+                                  {format.format_name}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                        </div>
+                        <div className="col-span-3">
+                          <Input
+                            type="number"
+                            placeholder="Količina"
+                            value={bulkQuantity}
+                            onChange={(e) => setBulkQuantity(parseInt(e.target.value) || 4)}
+                            min="1"
+                          />
+                        </div>
+                        <div className="col-span-2">
+                          <Button
+                            type="button"
+                            variant="secondary"
+                            className="w-full"
+                            disabled={!bulkFormat || ctpItems.length === 0}
+                            onClick={() => {
+                              if (!bulkFormat) return;
+                              setCtpItems(
+                                ctpItems.map((item) => ({
+                                  ...item,
+                                  plate_format_id: bulkFormat,
+                                  quantity: bulkQuantity,
+                                }))
+                              );
+                              toast({
+                                title: "Uspeh",
+                                description: "Format i količina dodeljeni svim fajlovima",
+                              });
+                            }}
+                          >
+                            Primeni
+                          </Button>
+                        </div>
+                      </div>
+                      {!bulkFormat && (
+                        <p className="mt-2 text-sm text-muted-foreground">
+                          Odaberite format ploče pre dodavanja fajlova.
+                        </p>
+                      )}
+                    </div>
+
                     <div className="flex items-center justify-between">
                       <Label>Fajlovi</Label>
-                      <Button 
-                        type="button" 
-                        variant="outline" 
-                        size="sm" 
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        disabled={!bulkFormat}
                         onClick={() => setShowCtpFilesModal(true)}
                       >
                         <FileUp className="h-4 w-4 mr-2" />
@@ -760,65 +820,10 @@ const NewWorkOrder = () => {
                     </div>
 
                     {ctpItems.length > 0 && (
-                      <div className="space-y-4">
-                        <div className="p-4 border rounded-lg bg-muted/50">
-                          <Label className="text-sm font-semibold mb-3 block">Masovno dodeljivanje</Label>
-                          <div className="grid grid-cols-12 gap-2">
-                            <div className="col-span-5">
-                              <Select
-                                value={bulkFormat}
-                                onValueChange={setBulkFormat}
-                              >
-                                <SelectTrigger>
-                                  <SelectValue placeholder="Odaberi format" />
-                                </SelectTrigger>
-                                <SelectContent>
-                                  {plateFormats.map((format) => (
-                                    <SelectItem key={format.id} value={format.id}>
-                                      {format.format_name}
-                                    </SelectItem>
-                                  ))}
-                                </SelectContent>
-                              </Select>
-                            </div>
-                            <div className="col-span-3">
-                              <Input
-                                type="number"
-                                placeholder="Količina"
-                                value={bulkQuantity}
-                                onChange={(e) => setBulkQuantity(parseInt(e.target.value) || 4)}
-                                min="1"
-                              />
-                            </div>
-                            <div className="col-span-4">
-                              <Button
-                                type="button"
-                                variant="secondary"
-                                className="w-full"
-                                onClick={() => {
-                                  if (bulkFormat) {
-                                    setCtpItems(ctpItems.map(item => ({
-                                      ...item,
-                                      plate_format_id: bulkFormat,
-                                      quantity: bulkQuantity
-                                    })));
-                                    toast({
-                                      title: "Uspeh",
-                                      description: "Format i količina dodeljeni svim fajlovima",
-                                    });
-                                  }
-                                }}
-                              >
-                                Primeni na sve
-                              </Button>
-                            </div>
-                          </div>
-                        </div>
-
-                        <div className="space-y-2">
-                          {ctpItems.map((item, index) => (
+                      <div className="space-y-2">
+                        {ctpItems.map((item, index) => (
                           <div key={index} className="grid grid-cols-12 gap-2 items-center p-2 border rounded">
-                            <div className="col-span-5">
+                            <div className="col-span-6">
                               <p className="text-sm truncate" title={item.file_name}>
                                 {item.file_name || "Naziv fajla"}
                               </p>
@@ -840,10 +845,10 @@ const NewWorkOrder = () => {
                                 </SelectContent>
                               </Select>
                             </div>
-                            <div className="col-span-2">
+                            <div className="col-span-1">
                               <Input
                                 type="number"
-                                placeholder="Količina"
+                                placeholder="Kol."
                                 value={item.quantity}
                                 onChange={(e) => updateCtpItem(index, "quantity", parseInt(e.target.value))}
                                 min="1"
@@ -860,8 +865,7 @@ const NewWorkOrder = () => {
                               </Button>
                             </div>
                           </div>
-                          ))}
-                        </div>
+                        ))}
                       </div>
                     )}
                   </div>
@@ -1137,7 +1141,24 @@ const NewWorkOrder = () => {
       <AddCtpFilesModal
         open={showCtpFilesModal}
         onOpenChange={setShowCtpFilesModal}
-        onAddFiles={(items) => setCtpItems([...ctpItems, ...items])}
+        onAddFiles={(items) => {
+          if (!bulkFormat) {
+            toast({
+              title: "Greška",
+              description: "Prvo odaberite format ploče.",
+              variant: "destructive",
+            });
+            return;
+          }
+
+          const normalized = items.map((i) => ({
+            ...i,
+            plate_format_id: i.plate_format_id || bulkFormat,
+            quantity: i.quantity || bulkQuantity,
+          }));
+
+          setCtpItems([...ctpItems, ...normalized]);
+        }}
         defaultQuantity={bulkQuantity}
         defaultFormatId={bulkFormat}
       />
