@@ -1,7 +1,7 @@
 import { useMemo } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Users, FileText, Layers, CheckCircle } from "lucide-react";
+import { Users, FileText, Layers, CheckCircle, Clock } from "lucide-react";
 
 interface WorkOrder {
   id: string;
@@ -26,8 +26,9 @@ interface WorkerStats {
   name: string;
   ordersOpened: number;
   ordersClosed: number;
-  platesOpened: number;
-  platesClosed: number;
+  platesTotal: number;      // Pripremljeno - all plates on orders they opened
+  platesClosed: number;     // Pušteno - plates on closed orders
+  platesRemaining: number;  // Ostalo - plates on open orders
 }
 
 const WorkerProductivityStats = ({ workOrders, dateFrom, dateTo, allWorkers }: WorkerProductivityStatsProps) => {
@@ -41,20 +42,26 @@ const WorkerProductivityStats = ({ workOrders, dateFrom, dateTo, allWorkers }: W
         name: worker.name,
         ordersOpened: 0,
         ordersClosed: 0,
-        platesOpened: 0,
+        platesTotal: 0,
         platesClosed: 0,
+        platesRemaining: 0,
       });
     });
 
     workOrders.forEach((order) => {
-      // Track orders opened (plates prepared)
+      // Track orders opened and plates prepared
       if (order.created_by && statsMap.has(order.created_by)) {
         const stats = statsMap.get(order.created_by)!;
         stats.ordersOpened += 1;
-        stats.platesOpened += order.total_plates;
+        stats.platesTotal += order.total_plates;
+        
+        // Track remaining plates (on open orders created by this worker)
+        if (order.status === "open") {
+          stats.platesRemaining += order.total_plates;
+        }
       }
 
-      // Track orders closed (plates consumed - from file_entries on closed orders)
+      // Track orders closed and plates released
       if (order.closed_by && order.status === "closed" && statsMap.has(order.closed_by)) {
         const stats = statsMap.get(order.closed_by)!;
         stats.ordersClosed += 1;
@@ -72,10 +79,11 @@ const WorkerProductivityStats = ({ workOrders, dateFrom, dateTo, allWorkers }: W
       (acc, worker) => ({
         ordersOpened: acc.ordersOpened + worker.ordersOpened,
         ordersClosed: acc.ordersClosed + worker.ordersClosed,
-        platesOpened: acc.platesOpened + worker.platesOpened,
+        platesTotal: acc.platesTotal + worker.platesTotal,
         platesClosed: acc.platesClosed + worker.platesClosed,
+        platesRemaining: acc.platesRemaining + worker.platesRemaining,
       }),
-      { ordersOpened: 0, ordersClosed: 0, platesOpened: 0, platesClosed: 0 }
+      { ordersOpened: 0, ordersClosed: 0, platesTotal: 0, platesClosed: 0, platesRemaining: 0 }
     );
   }, [workerStats]);
 
@@ -104,7 +112,7 @@ const WorkerProductivityStats = ({ workOrders, dateFrom, dateTo, allWorkers }: W
       </CardHeader>
       <CardContent>
         {/* Summary Cards */}
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+        <div className="grid grid-cols-2 md:grid-cols-5 gap-4 mb-6">
           <div className="bg-blue-50 dark:bg-blue-950/30 p-4 rounded-lg">
             <div className="flex items-center gap-2 text-blue-600 dark:text-blue-400 mb-1">
               <FileText className="h-4 w-4" />
@@ -124,28 +132,35 @@ const WorkerProductivityStats = ({ workOrders, dateFrom, dateTo, allWorkers }: W
               <Layers className="h-4 w-4" />
               <span className="text-sm font-medium">Pripremljeno Ploča</span>
             </div>
-            <p className="text-2xl font-bold">{totals.platesOpened}</p>
+            <p className="text-2xl font-bold">{totals.platesTotal}</p>
           </div>
-          <div className="bg-orange-50 dark:bg-orange-950/30 p-4 rounded-lg">
-            <div className="flex items-center gap-2 text-orange-600 dark:text-orange-400 mb-1">
-              <Layers className="h-4 w-4" />
+          <div className="bg-teal-50 dark:bg-teal-950/30 p-4 rounded-lg">
+            <div className="flex items-center gap-2 text-teal-600 dark:text-teal-400 mb-1">
+              <CheckCircle className="h-4 w-4" />
               <span className="text-sm font-medium">Pušteno Ploča</span>
             </div>
             <p className="text-2xl font-bold">{totals.platesClosed}</p>
           </div>
+          <div className="bg-orange-50 dark:bg-orange-950/30 p-4 rounded-lg">
+            <div className="flex items-center gap-2 text-orange-600 dark:text-orange-400 mb-1">
+              <Clock className="h-4 w-4" />
+              <span className="text-sm font-medium">Ostalo Ploča</span>
+            </div>
+            <p className="text-2xl font-bold">{totals.platesRemaining}</p>
+          </div>
         </div>
 
         {/* Detailed Table */}
-        <div className="rounded-md border">
+        <div className="rounded-md border overflow-x-auto">
           <Table>
             <TableHeader>
               <TableRow>
                 <TableHead>Radnik</TableHead>
-                <TableHead className="text-center">Otvorenih Naloga</TableHead>
-                <TableHead className="text-center">Zatvorenih Naloga</TableHead>
-                <TableHead className="text-center">Pripremljeno Ploča</TableHead>
-                <TableHead className="text-center">Pušteno Ploča</TableHead>
-                <TableHead className="text-center">Ukupno Aktivnosti</TableHead>
+                <TableHead className="text-center">Otvorenih</TableHead>
+                <TableHead className="text-center">Zatvorenih</TableHead>
+                <TableHead className="text-center">Pripremljeno</TableHead>
+                <TableHead className="text-center">Pušteno</TableHead>
+                <TableHead className="text-center">Ostalo</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -154,11 +169,9 @@ const WorkerProductivityStats = ({ workOrders, dateFrom, dateTo, allWorkers }: W
                   <TableCell className="font-medium">{worker.name}</TableCell>
                   <TableCell className="text-center">{worker.ordersOpened}</TableCell>
                   <TableCell className="text-center">{worker.ordersClosed}</TableCell>
-                  <TableCell className="text-center">{worker.platesOpened}</TableCell>
+                  <TableCell className="text-center">{worker.platesTotal}</TableCell>
                   <TableCell className="text-center">{worker.platesClosed}</TableCell>
-                  <TableCell className="text-center font-semibold">
-                    {worker.ordersOpened + worker.ordersClosed}
-                  </TableCell>
+                  <TableCell className="text-center">{worker.platesRemaining}</TableCell>
                 </TableRow>
               ))}
               {/* Totals Row */}
@@ -166,9 +179,9 @@ const WorkerProductivityStats = ({ workOrders, dateFrom, dateTo, allWorkers }: W
                 <TableCell>UKUPNO</TableCell>
                 <TableCell className="text-center">{totals.ordersOpened}</TableCell>
                 <TableCell className="text-center">{totals.ordersClosed}</TableCell>
-                <TableCell className="text-center">{totals.platesOpened}</TableCell>
+                <TableCell className="text-center">{totals.platesTotal}</TableCell>
                 <TableCell className="text-center">{totals.platesClosed}</TableCell>
-                <TableCell className="text-center">{totals.ordersOpened + totals.ordersClosed}</TableCell>
+                <TableCell className="text-center">{totals.platesRemaining}</TableCell>
               </TableRow>
             </TableBody>
           </Table>

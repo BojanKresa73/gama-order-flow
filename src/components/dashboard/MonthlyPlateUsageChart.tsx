@@ -3,11 +3,11 @@ import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip, Legend } from "recharts";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Package } from "lucide-react";
+import { Package, CheckCircle, Clock } from "lucide-react";
 
 export const MonthlyPlateUsageChart = () => {
-  const { data: chartData, isLoading } = useQuery({
-    queryKey: ["monthly-plate-usage-chart-v3"],
+  const { data, isLoading } = useQuery({
+    queryKey: ["monthly-plate-usage-chart-v4"],
     staleTime: 300_000, // 5 minutes
     queryFn: async () => {
       // Get current month start and end
@@ -15,36 +15,54 @@ export const MonthlyPlateUsageChart = () => {
       const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1).toISOString();
       const endOfMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59).toISOString();
       
-      // Fetch from file_entries joined with work_orders (closed CTP orders only)
-      const { data, error } = await supabase
+      // Fetch ALL file_entries from CTP orders created this month
+      const { data: allEntries, error } = await supabase
         .from("file_entries")
         .select(`
           quantity,
-          plate_formats!inner(format_name),
-          work_orders!inner(status, order_type, closed_at, deleted_at)
+          plate_formats(format_name),
+          work_orders!inner(status, order_type, created_at, deleted_at)
         `)
-        .eq("work_orders.status", "closed")
         .eq("work_orders.order_type", "ctp")
         .is("work_orders.deleted_at", null)
-        .gte("work_orders.closed_at", startOfMonth)
-        .lte("work_orders.closed_at", endOfMonth);
+        .gte("work_orders.created_at", startOfMonth)
+        .lte("work_orders.created_at", endOfMonth);
 
       if (error) throw error;
-      if (!data || data.length === 0) return [];
+      if (!allEntries || allEntries.length === 0) {
+        return { chartData: [], totals: { total: 0, closed: 0, open: 0 } };
+      }
 
-      // Aggregate by plate format
+      // Calculate totals and aggregate by format
       const formatMap = new Map<string, number>();
+      let totalPlates = 0;
+      let closedPlates = 0;
+      let openPlates = 0;
       
-      data.forEach(row => {
+      allEntries.forEach(row => {
         const format = (row.plate_formats as any)?.format_name || "Nepoznat";
         const qty = row.quantity || 0;
+        const status = (row.work_orders as any)?.status;
+        
         formatMap.set(format, (formatMap.get(format) || 0) + qty);
+        totalPlates += qty;
+        
+        if (status === "closed") {
+          closedPlates += qty;
+        } else {
+          openPlates += qty;
+        }
       });
 
       // Convert to pie chart format
-      return Array.from(formatMap.entries())
+      const chartData = Array.from(formatMap.entries())
         .map(([name, value]) => ({ name, value }))
         .sort((a, b) => b.value - a.value);
+
+      return { 
+        chartData, 
+        totals: { total: totalPlates, closed: closedPlates, open: openPlates } 
+      };
     },
   });
 
@@ -58,11 +76,14 @@ export const MonthlyPlateUsageChart = () => {
           </CardTitle>
         </CardHeader>
         <CardContent>
-          <Skeleton className="h-[350px] w-full" />
+          <Skeleton className="h-[400px] w-full" />
         </CardContent>
       </Card>
     );
   }
+
+  const chartData = data?.chartData || [];
+  const totals = data?.totals || { total: 0, closed: 0, open: 0 };
 
   // Colors for different formats
   const COLORS = [
@@ -78,8 +99,6 @@ export const MonthlyPlateUsageChart = () => {
     "hsl(0, 70%, 55%)",    // red
   ];
 
-  const total = chartData?.reduce((sum, item) => sum + item.value, 0) || 0;
-
   const currentMonthName = new Date().toLocaleDateString('sr-Latn-RS', { 
     month: 'long', 
     year: 'numeric' 
@@ -90,13 +109,38 @@ export const MonthlyPlateUsageChart = () => {
       <CardHeader>
         <CardTitle className="flex items-center gap-2">
           <Package className="h-5 w-5" />
-          Potrošnja Ploča - {currentMonthName}
+          Ploče - {currentMonthName}
         </CardTitle>
       </CardHeader>
       <CardContent>
+        {/* Summary Stats */}
+        <div className="grid grid-cols-3 gap-3 mb-6">
+          <div className="bg-purple-50 dark:bg-purple-950/30 p-3 rounded-lg text-center">
+            <div className="flex items-center justify-center gap-1 text-purple-600 dark:text-purple-400 mb-1">
+              <Package className="h-4 w-4" />
+              <span className="text-xs font-medium">Pripremljeno</span>
+            </div>
+            <p className="text-xl font-bold">{totals.total.toLocaleString('sr-RS')}</p>
+          </div>
+          <div className="bg-green-50 dark:bg-green-950/30 p-3 rounded-lg text-center">
+            <div className="flex items-center justify-center gap-1 text-green-600 dark:text-green-400 mb-1">
+              <CheckCircle className="h-4 w-4" />
+              <span className="text-xs font-medium">Pušteno</span>
+            </div>
+            <p className="text-xl font-bold">{totals.closed.toLocaleString('sr-RS')}</p>
+          </div>
+          <div className="bg-orange-50 dark:bg-orange-950/30 p-3 rounded-lg text-center">
+            <div className="flex items-center justify-center gap-1 text-orange-600 dark:text-orange-400 mb-1">
+              <Clock className="h-4 w-4" />
+              <span className="text-xs font-medium">Ostalo</span>
+            </div>
+            <p className="text-xl font-bold">{totals.open.toLocaleString('sr-RS')}</p>
+          </div>
+        </div>
+
         {chartData && chartData.length > 0 ? (
           <div className="flex flex-col items-center">
-            <ResponsiveContainer width="100%" height={300}>
+            <ResponsiveContainer width="100%" height={280}>
               <PieChart>
                 <Pie
                   data={chartData}
@@ -124,7 +168,7 @@ export const MonthlyPlateUsageChart = () => {
                     boxShadow: '0 4px 12px rgba(0,0,0,0.15)'
                   }}
                   formatter={(value: number, name: string) => [
-                    `${value} ploča (${((value / total) * 100).toFixed(1)}%)`, 
+                    `${value} ploča (${((value / totals.total) * 100).toFixed(1)}%)`, 
                     name
                   ]}
                 />
@@ -133,7 +177,7 @@ export const MonthlyPlateUsageChart = () => {
                   verticalAlign="bottom"
                   align="center"
                   wrapperStyle={{ paddingTop: '20px', fontSize: '11px' }}
-                  formatter={(value, entry) => {
+                  formatter={(value) => {
                     const item = chartData.find(d => d.name === value);
                     return (
                       <span className="text-foreground text-xs">
@@ -144,13 +188,9 @@ export const MonthlyPlateUsageChart = () => {
                 />
               </PieChart>
             </ResponsiveContainer>
-            <div className="text-center mt-4 p-3 bg-primary/10 rounded-lg">
-              <p className="text-3xl font-bold text-primary">{total.toLocaleString('sr-RS')}</p>
-              <p className="text-sm text-muted-foreground">Ukupno ploča ovog meseca</p>
-            </div>
           </div>
         ) : (
-          <div className="flex items-center justify-center h-[300px] text-muted-foreground">
+          <div className="flex items-center justify-center h-[280px] text-muted-foreground">
             Nema podataka za ovaj mesec
           </div>
         )}
