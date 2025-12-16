@@ -18,6 +18,7 @@ interface WorkerProductivityStatsProps {
   workOrders: WorkOrder[];
   dateFrom: string;
   dateTo: string;
+  allWorkers: { id: string; name: string }[];
 }
 
 interface WorkerStats {
@@ -29,40 +30,32 @@ interface WorkerStats {
   platesClosed: number;
 }
 
-const WorkerProductivityStats = ({ workOrders, dateFrom, dateTo }: WorkerProductivityStatsProps) => {
+const WorkerProductivityStats = ({ workOrders, dateFrom, dateTo, allWorkers }: WorkerProductivityStatsProps) => {
   const workerStats = useMemo(() => {
     const statsMap = new Map<string, WorkerStats>();
 
+    // Initialize all workers with zero stats
+    allWorkers.forEach((worker) => {
+      statsMap.set(worker.id, {
+        id: worker.id,
+        name: worker.name,
+        ordersOpened: 0,
+        ordersClosed: 0,
+        platesOpened: 0,
+        platesClosed: 0,
+      });
+    });
+
     workOrders.forEach((order) => {
       // Track orders opened
-      if (order.created_by && order.created_by_name) {
-        if (!statsMap.has(order.created_by)) {
-          statsMap.set(order.created_by, {
-            id: order.created_by,
-            name: order.created_by_name,
-            ordersOpened: 0,
-            ordersClosed: 0,
-            platesOpened: 0,
-            platesClosed: 0,
-          });
-        }
+      if (order.created_by && statsMap.has(order.created_by)) {
         const stats = statsMap.get(order.created_by)!;
         stats.ordersOpened += 1;
         stats.platesOpened += order.total_plates;
       }
 
       // Track orders closed
-      if (order.closed_by && order.closed_by_name && order.status === "closed") {
-        if (!statsMap.has(order.closed_by)) {
-          statsMap.set(order.closed_by, {
-            id: order.closed_by,
-            name: order.closed_by_name,
-            ordersOpened: 0,
-            ordersClosed: 0,
-            platesOpened: 0,
-            platesClosed: 0,
-          });
-        }
+      if (order.closed_by && order.status === "closed" && statsMap.has(order.closed_by)) {
         const stats = statsMap.get(order.closed_by)!;
         stats.ordersClosed += 1;
         stats.platesClosed += order.total_plates;
@@ -72,7 +65,7 @@ const WorkerProductivityStats = ({ workOrders, dateFrom, dateTo }: WorkerProduct
     return Array.from(statsMap.values()).sort((a, b) => 
       (b.ordersOpened + b.ordersClosed) - (a.ordersOpened + a.ordersClosed)
     );
-  }, [workOrders]);
+  }, [workOrders, allWorkers]);
 
   const totals = useMemo(() => {
     return workerStats.reduce(
@@ -94,7 +87,7 @@ const WorkerProductivityStats = ({ workOrders, dateFrom, dateTo }: WorkerProduct
     ? `Do ${dateTo}` 
     : "Svi podaci";
 
-  if (workerStats.length === 0) {
+  if (allWorkers.length === 0) {
     return null;
   }
 
