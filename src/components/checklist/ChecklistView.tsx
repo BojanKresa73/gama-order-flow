@@ -282,10 +282,18 @@ const ChecklistView = ({ orderType, onNavigateToSearch }: ChecklistViewProps) =>
 
   const closeFileEntry = async (fileId: string, workOrderId: string) => {
     try {
-      // Close this file entry
+      // Get current user
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error("User not authenticated");
+
+      // Close this file entry and record who closed it
       const { error } = await supabase
         .from("file_entries")
-        .update({ status: "closed" })
+        .update({ 
+          status: "closed",
+          closed_by: user.id,
+          closed_at: new Date().toISOString()
+        })
         .eq("id", fileId);
 
       if (error) throw error;

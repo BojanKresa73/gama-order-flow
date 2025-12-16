@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
-import { ArrowLeft, Plus, FileText, Eye, Lock, CheckCircle2, AlertTriangle, Trash2 } from "lucide-react";
+import { ArrowLeft, Plus, FileText, Eye, Lock, CheckCircle2, AlertTriangle, Trash2, Pencil, Send } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { OrderFilesDialog } from "@/components/work-orders/OrderFilesDialog";
 import { InvalidateOrderDialog } from "@/components/work-orders/InvalidateOrderDialog";
@@ -60,7 +60,8 @@ const WorkOrders = () => {
         .select(`
           *,
           clients (name),
-          profiles (full_name),
+          profiles!work_orders_created_by_fkey (full_name),
+          closed_by_profile:profiles!work_orders_closed_by_fkey (full_name),
           email_job_latest_status (
             status,
             error_msg
@@ -70,7 +71,37 @@ const WorkOrders = () => {
         .order("created_at", { ascending: false });
 
       if (error) throw error;
-      setWorkOrders(data || []);
+      
+      // For each order, check if it was closed by multiple people (Mix)
+      const ordersWithClosers = await Promise.all((data || []).map(async (order) => {
+        if (order.status !== 'closed' || order.order_type === 'film' || order.order_type === 'digital') {
+          return order;
+        }
+        
+        // Check file_entries for different closers
+        const { data: files } = await supabase
+          .from("file_entries")
+          .select("closed_by, profiles:closed_by(full_name)")
+          .eq("work_order_id", order.id)
+          .not("closed_by", "is", null);
+        
+        if (files && files.length > 0) {
+          const uniqueClosers = new Set(files.map(f => f.closed_by).filter(Boolean));
+          if (uniqueClosers.size > 1) {
+            return { ...order, _closedByMix: true };
+          } else if (uniqueClosers.size === 1 && !order.closed_by) {
+            // If work order doesn't have closed_by but files do, use file closer
+            const firstCloser = files.find(f => f.profiles);
+            if (firstCloser?.profiles) {
+              return { ...order, _fileCloserName: (firstCloser.profiles as any).full_name };
+            }
+          }
+        }
+        
+        return order;
+      }));
+      
+      setWorkOrders(ordersWithClosers);
     } catch (error: any) {
       toast({
         title: "Greška",
@@ -103,6 +134,14 @@ const WorkOrders = () => {
     ) : (
       <Badge variant="secondary">Zatvoren</Badge>
     );
+  };
+
+  const getClosedByDisplay = (order: any) => {
+    if (order.status !== 'closed') return '-';
+    if (order._closedByMix) return 'Mix';
+    if (order._fileCloserName) return order._fileCloserName;
+    if (order.closed_by_profile?.full_name) return order.closed_by_profile.full_name;
+    return '-';
   };
 
   const getEmailStatusBadge = (emailStatus: any) => {
@@ -462,6 +501,7 @@ const WorkOrders = () => {
                     <TableHead>Tip</TableHead>
                     <TableHead>Status</TableHead>
                     <TableHead>Kreirao</TableHead>
+                    <TableHead>Zatvorio</TableHead>
                     <TableHead>Datum</TableHead>
                     <TableHead className="text-right">Akcije</TableHead>
                     {(isSuper || isAdmin) && <TableHead className="text-center">Zatvori</TableHead>}
@@ -496,69 +536,105 @@ const WorkOrders = () => {
                       <TableCell>{order.clients?.name}</TableCell>
                       <TableCell>{getOrderTypeLabel(order.order_type)}</TableCell>
                       <TableCell>{getStatusBadge(order.status, order.invalidated_at, order.deleted_at)}</TableCell>
-                      <TableCell>{order.profiles?.full_name}</TableCell>
+                      <TableCell>{order.profiles?.full_name || '-'}</TableCell>
+                      <TableCell>{getClosedByDisplay(order)}</TableCell>
                       <TableCell>{new Date(order.created_at).toLocaleDateString('sr-RS')}</TableCell>
                       <TableCell>
-                        <div className="flex justify-end gap-2">
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              window.open(`/work-orders/${order.id}/print`, '_blank');
-                            }}
-                          >
-                            <Eye className="h-4 w-4 mr-2" />
-                            Prikaz
-                          </Button>
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={(e) => handleSendDeliveryNote(order.id, e)}
-                          >
-                            <FileText className="h-4 w-4 mr-2" />
-                            Otpremnica
-                          </Button>
+                        <div className="flex justify-end gap-1">
+                          <TooltipProvider>
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    window.open(`/work-orders/${order.id}/print`, '_blank');
+                                  }}
+                                >
+                                  <Eye className="h-4 w-4" />
+                                </Button>
+                              </TooltipTrigger>
+                              <TooltipContent>Prikaz</TooltipContent>
+                            </Tooltip>
+                          </TooltipProvider>
+                          
+                          <TooltipProvider>
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  onClick={(e) => handleSendDeliveryNote(order.id, e)}
+                                >
+                                  <Send className="h-4 w-4" />
+                                </Button>
+                              </TooltipTrigger>
+                              <TooltipContent>Otpremnica</TooltipContent>
+                            </Tooltip>
+                          </TooltipProvider>
+                          
                           {order.status === 'open' && !order.invalidated_at && (
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                navigate(`/work-orders/${order.id}/edit`);
-                              }}
-                            >
-                              Izmeni
-                            </Button>
+                            <TooltipProvider>
+                              <Tooltip>
+                                <TooltipTrigger asChild>
+                                  <Button
+                                    variant="ghost"
+                                    size="icon"
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      navigate(`/work-orders/${order.id}/edit`);
+                                    }}
+                                  >
+                                    <Pencil className="h-4 w-4" />
+                                  </Button>
+                                </TooltipTrigger>
+                                <TooltipContent>Izmeni</TooltipContent>
+                              </Tooltip>
+                            </TooltipProvider>
                           )}
+                          
                           {(isAdmin || isSuper) && !order.invalidated_at && !order.deleted_at && (
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                setOrderToInvalidate(order);
-                                setInvalidateDialogOpen(true);
-                              }}
-                            >
-                              <AlertTriangle className="h-4 w-4 mr-2" />
-                              Nevažeći
-                            </Button>
+                            <TooltipProvider>
+                              <Tooltip>
+                                <TooltipTrigger asChild>
+                                  <Button
+                                    variant="ghost"
+                                    size="icon"
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      setOrderToInvalidate(order);
+                                      setInvalidateDialogOpen(true);
+                                    }}
+                                  >
+                                    <AlertTriangle className="h-4 w-4" />
+                                  </Button>
+                                </TooltipTrigger>
+                                <TooltipContent>Nevažeći</TooltipContent>
+                              </Tooltip>
+                            </TooltipProvider>
                           )}
+                          
                           {isSuper && !order.deleted_at && (
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                setOrderToDelete(order);
-                                setDeleteDialogOpen(true);
-                              }}
-                              className="text-destructive hover:text-destructive"
-                            >
-                              <Trash2 className="h-4 w-4 mr-2" />
-                              Obriši
-                            </Button>
+                            <TooltipProvider>
+                              <Tooltip>
+                                <TooltipTrigger asChild>
+                                  <Button
+                                    variant="ghost"
+                                    size="icon"
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      setOrderToDelete(order);
+                                      setDeleteDialogOpen(true);
+                                    }}
+                                    className="text-destructive hover:text-destructive"
+                                  >
+                                    <Trash2 className="h-4 w-4" />
+                                  </Button>
+                                </TooltipTrigger>
+                                <TooltipContent>Obriši</TooltipContent>
+                              </Tooltip>
+                            </TooltipProvider>
                           )}
                         </div>
                       </TableCell>

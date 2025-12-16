@@ -2,8 +2,9 @@ import { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
-import { Printer, ArrowLeft } from "lucide-react";
+import { Printer } from "lucide-react";
 import { computeFilmUsage } from "@/lib/filmUsage";
+import { format, differenceInHours, differenceInMinutes } from "date-fns";
 
 interface WorkOrderData {
   id: string;
@@ -16,10 +17,27 @@ interface WorkOrderData {
   invalidated_at: string | null;
   invalid_reason: string | null;
   notes: string | null;
+  job_name: string | null;
+  run_quantity: number | null;
+  print_format: string | null;
+  binding: string | null;
+  lamination: string | null;
   client_name: string;
   client_email: string | null;
   client_pib: string | null;
+  created_by: string;
+  closed_by: string | null;
   items: any[];
+}
+
+interface CreatorInfo {
+  full_name: string | null;
+}
+
+interface CloserInfo {
+  user_id: string;
+  full_name: string;
+  items_count: number;
 }
 
 interface PreparedRow {
@@ -27,6 +45,7 @@ interface PreparedRow {
   name: string;
   details: string;
   qty: number;
+  closedBy?: string;
 }
 
 export default function WorkOrderPrint() {
@@ -34,6 +53,10 @@ export default function WorkOrderPrint() {
   const navigate = useNavigate();
   const [data, setData] = useState<WorkOrderData | null>(null);
   const [loading, setLoading] = useState(true);
+  const [creatorName, setCreatorName] = useState<string | null>(null);
+  const [closerName, setCloserName] = useState<string | null>(null);
+  const [closerDetails, setCloserDetails] = useState<CloserInfo[]>([]);
+  const [isMixCloser, setIsMixCloser] = useState(false);
 
   useEffect(() => {
     if (id) {
@@ -49,7 +72,67 @@ export default function WorkOrderPrint() {
       if (error) throw error;
       if (!result) throw new Error('Work order not found');
 
-      setData(result as unknown as WorkOrderData);
+      const orderData = result as unknown as WorkOrderData;
+      setData(orderData);
+
+      // Fetch creator name
+      if (orderData.created_by) {
+        const { data: creatorProfile } = await supabase
+          .from('profiles')
+          .select('full_name')
+          .eq('id', orderData.created_by)
+          .single();
+        setCreatorName(creatorProfile?.full_name || null);
+      }
+
+      // Fetch closer information
+      if (orderData.closed_by) {
+        const { data: closerProfile } = await supabase
+          .from('profiles')
+          .select('full_name')
+          .eq('id', orderData.closed_by)
+          .single();
+        setCloserName(closerProfile?.full_name || null);
+      }
+
+      // For CTP/Other orders, check file_entries for individual closers
+      if (orderData.order_type === 'ctp' || orderData.order_type === 'other') {
+        const { data: files } = await supabase
+          .from('file_entries')
+          .select('closed_by, profiles:closed_by(full_name)')
+          .eq('work_order_id', orderData.id)
+          .not('closed_by', 'is', null);
+
+        if (files && files.length > 0) {
+          // Group by closer
+          const closerMap = new Map<string, { name: string; count: number }>();
+          files.forEach(f => {
+            if (f.closed_by) {
+              const name = (f.profiles as any)?.full_name || 'Nepoznat';
+              const existing = closerMap.get(f.closed_by);
+              if (existing) {
+                existing.count++;
+              } else {
+                closerMap.set(f.closed_by, { name, count: 1 });
+              }
+            }
+          });
+
+          const details: CloserInfo[] = Array.from(closerMap.entries()).map(([userId, info]) => ({
+            user_id: userId,
+            full_name: info.name,
+            items_count: info.count
+          }));
+
+          setCloserDetails(details);
+          setIsMixCloser(details.length > 1);
+          
+          // If no main closer but we have file closers, use the first one
+          if (!orderData.closed_by && details.length === 1) {
+            setCloserName(details[0].full_name);
+          }
+        }
+      }
     } catch (error: any) {
       console.error('Error loading work order:', error);
     } finally {
@@ -59,8 +142,31 @@ export default function WorkOrderPrint() {
 
   const formatDate = (dateString: string | null) => {
     if (!dateString) return '';
-    const date = new Date(dateString);
-    return date.toLocaleDateString('sr-RS');
+    return format(new Date(dateString), 'dd.MM.yyyy HH:mm');
+  };
+
+  const calculateDuration = (start: string, end: string | null) => {
+    if (!end) return null;
+    const startDate = new Date(start);
+    const endDate = new Date(end);
+    const hours = differenceInHours(endDate, startDate);
+    const minutes = differenceInMinutes(endDate, startDate) % 60;
+    
+    if (hours === 0) {
+      return `${minutes} min`;
+    }
+    return `${hours}h ${minutes}min`;
+  };
+
+  const getOrderTypeLabel = (type: string) => {
+    switch (type) {
+      case 'ctp': return 'CTP';
+      case 'digital': return 'Digitala';
+      case 'film': return 'Filmovanje';
+      case 'other': return 'Ostalo';
+      case 'large_format': return 'Veliki Format';
+      default: return type.toUpperCase();
+    }
   };
 
   const prepareRows = (): PreparedRow[] => {
@@ -76,7 +182,7 @@ export default function WorkOrderPrint() {
         return {
           rbr: i + 1,
           name: item.file_name ?? item.name ?? 'N/A',
-          details: `Potrošeno: ${fit.totalM.toFixed(2)} m`,
+          details: `${item.width_mm}×${item.height_mm}mm | Potrošeno: ${fit.totalM.toFixed(2)} m`,
           qty: Number(item.qty ?? item.quantity ?? 1),
         };
       });
@@ -86,7 +192,7 @@ export default function WorkOrderPrint() {
       return data.items.map((item: any, i: number) => ({
         rbr: i + 1,
         name: item.filename ?? item.file_name ?? item.name ?? 'N/A',
-        details: item.plate_formats?.format_name ?? item.format_name ?? 'Format ploče',
+        details: item.format_name ?? item.plate_formats?.format_name ?? 'Format ploče',
         qty: Number(item.quantity ?? item.qty ?? 1),
       }));
     }
@@ -95,12 +201,18 @@ export default function WorkOrderPrint() {
       return data.items.map((item: any, i: number) => ({
         rbr: i + 1,
         name: item.file_name ?? item.name ?? 'N/A',
-        details: `Format: ${item.finished_w_mm}×${item.finished_h_mm}mm; Štampa: ${item.print_sides ?? 'N/A'}`,
+        details: `Format: ${item.machine_sheet_format || '488×330'} | Štampa: ${item.print_sides ?? 'N/A'} | Obim: ${item.obim || 1}`,
         qty: Number(item.qty ?? item.quantity ?? 1),
       }));
     }
 
-    return [];
+    // Other/Ostalo
+    return data.items.map((item: any, i: number) => ({
+      rbr: i + 1,
+      name: item.filename ?? item.file_name ?? item.name ?? 'N/A',
+      details: item.format_name ?? item.notes ?? '-',
+      qty: Number(item.quantity ?? item.qty ?? 1),
+    }));
   };
 
   if (loading) {
@@ -120,6 +232,20 @@ export default function WorkOrderPrint() {
   }
 
   const rows = prepareRows();
+  const duration = calculateDuration(data.created_at, data.closed_at);
+
+  // Calculate totals based on order type
+  const totalQty = rows.reduce((sum, row) => sum + row.qty, 0);
+  const totalFilmMeters = data.order_type === 'film' 
+    ? data.items.reduce((sum: number, item: any) => {
+        const fit = computeFilmUsage({
+          widthMm: Number(item.width_mm ?? 0),
+          heightMm: Number(item.height_mm ?? 0),
+          qty: Number(item.qty ?? 1),
+        });
+        return sum + fit.totalM;
+      }, 0)
+    : null;
 
   return (
     <>
@@ -162,27 +288,125 @@ export default function WorkOrderPrint() {
                   <h1 className="document-title">RADNI NALOG</h1>
                   <div className="document-meta">
                     <div><strong>Broj naloga:</strong> {data.display_order_number || data.order_number}</div>
-                    <div><strong>Datum otvaranja:</strong> {formatDate(data.created_at)}</div>
-                    {data.closed_at && (
-                      <div><strong>Datum zatvaranja:</strong> {formatDate(data.closed_at)}</div>
-                    )}
-                  </div>
-                  <div className="client-info">
-                    <strong>Klijent:</strong> {data.client_name}
-                    {data.client_email && <><br />{data.client_email}</>}
-                    {data.client_pib && <><br />PIB: {data.client_pib}</>}
+                    <div><strong>Tip naloga:</strong> {getOrderTypeLabel(data.order_type)}</div>
+                    <div><strong>Status:</strong> {data.status === 'closed' ? 'Zatvoren' : 'Otvoren'}</div>
                   </div>
                 </div>
               </div>
 
+              {/* Client Info */}
+              <div className="client-section">
+                <div className="section-title">Klijent</div>
+                <div className="client-details">
+                  <strong>{data.client_name}</strong>
+                  {data.client_email && <div>Email: {data.client_email}</div>}
+                  {data.client_pib && <div>PIB: {data.client_pib}</div>}
+                </div>
+              </div>
+
+              {/* Order Details */}
+              <div className="details-grid">
+                <div className="detail-box">
+                  <div className="detail-label">Datum otvaranja</div>
+                  <div className="detail-value">{formatDate(data.created_at)}</div>
+                </div>
+                <div className="detail-box">
+                  <div className="detail-label">Otvorio</div>
+                  <div className="detail-value">{creatorName || '-'}</div>
+                </div>
+                {data.closed_at && (
+                  <>
+                    <div className="detail-box">
+                      <div className="detail-label">Datum zatvaranja</div>
+                      <div className="detail-value">{formatDate(data.closed_at)}</div>
+                    </div>
+                    <div className="detail-box">
+                      <div className="detail-label">Zatvorio</div>
+                      <div className="detail-value">
+                        {isMixCloser ? 'Mix (više radnika)' : (closerName || '-')}
+                      </div>
+                    </div>
+                  </>
+                )}
+                {duration && (
+                  <div className="detail-box highlight">
+                    <div className="detail-label">Trajanje</div>
+                    <div className="detail-value">{duration}</div>
+                  </div>
+                )}
+              </div>
+
+              {/* Mix Closer Details */}
+              {isMixCloser && closerDetails.length > 0 && (
+                <div className="closer-details-section">
+                  <div className="section-title">Detalji zatvaranja po radniku</div>
+                  <table className="closer-table">
+                    <thead>
+                      <tr>
+                        <th>Radnik</th>
+                        <th>Broj zatvorenih stavki</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {closerDetails.map((closer, idx) => (
+                        <tr key={idx}>
+                          <td>{closer.full_name}</td>
+                          <td>{closer.items_count}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+
+              {/* Job Info for Digital/Other */}
+              {(data.job_name || data.run_quantity || data.binding || data.lamination || data.print_format) && (
+                <div className="job-info-section">
+                  <div className="section-title">Detalji posla</div>
+                  <div className="job-details-grid">
+                    {data.job_name && (
+                      <div className="job-detail">
+                        <span className="job-label">Naziv posla:</span>
+                        <span className="job-value">{data.job_name}</span>
+                      </div>
+                    )}
+                    {data.run_quantity && (
+                      <div className="job-detail">
+                        <span className="job-label">Tiraž:</span>
+                        <span className="job-value">{data.run_quantity}</span>
+                      </div>
+                    )}
+                    {data.binding && (
+                      <div className="job-detail">
+                        <span className="job-label">Povez:</span>
+                        <span className="job-value">{data.binding}</span>
+                      </div>
+                    )}
+                    {data.lamination && (
+                      <div className="job-detail">
+                        <span className="job-label">Plastifikacija:</span>
+                        <span className="job-value">{data.lamination}</span>
+                      </div>
+                    )}
+                    {data.print_format && (
+                      <div className="job-detail">
+                        <span className="job-label">Dorada:</span>
+                        <span className="job-value">{data.print_format}</span>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
+
               {/* Items Table */}
-              <div className="mb-8">
+              <div className="items-section">
+                <div className="section-title">Stavke ({rows.length})</div>
                 <table className="items-table">
                   <thead>
                     <tr>
-                      <th style={{ width: '8%' }}>R.br</th>
-                      <th>Naziv fajla</th>
-                      <th style={{ width: '28%' }}>Detalji</th>
+                      <th style={{ width: '6%' }}>R.br</th>
+                      <th>Naziv</th>
+                      <th style={{ width: '35%' }}>Detalji</th>
                       <th style={{ width: '10%' }}>Količina</th>
                     </tr>
                   </thead>
@@ -196,14 +420,26 @@ export default function WorkOrderPrint() {
                       </tr>
                     ))}
                   </tbody>
+                  <tfoot>
+                    <tr>
+                      <td colSpan={3} className="text-right"><strong>UKUPNO:</strong></td>
+                      <td><strong>{totalQty}</strong></td>
+                    </tr>
+                    {totalFilmMeters !== null && (
+                      <tr>
+                        <td colSpan={3} className="text-right"><strong>UKUPNO FILMA:</strong></td>
+                        <td><strong>{totalFilmMeters.toFixed(2)} m</strong></td>
+                      </tr>
+                    )}
+                  </tfoot>
                 </table>
               </div>
 
               {/* Notes */}
               {data.notes && (
-                <div className="mb-8">
-                  <h2 className="text-lg font-semibold mb-2">Napomene</h2>
-                  <p className="text-sm whitespace-pre-wrap">{data.notes}</p>
+                <div className="notes-section">
+                  <div className="section-title">Napomene</div>
+                  <p className="notes-text">{data.notes}</p>
                 </div>
               )}
 
@@ -261,7 +497,7 @@ body {
   display: flex;
   justify-content: space-between;
   gap: 16px;
-  border-bottom: 2px solid #e5e7eb;
+  border-bottom: 2px solid #1e40af;
   padding-bottom: 12px;
   margin-bottom: 16px;
 }
@@ -299,31 +535,127 @@ body {
   font-size: 20px;
   font-weight: 700;
   letter-spacing: 0.5px;
+  color: #1e40af;
 }
 
 .document-meta {
-  margin-bottom: 12px;
   line-height: 1.6;
 }
 
-.client-info {
-  margin-top: 12px;
-  padding-top: 8px;
-  border-top: 1px solid #e5e7eb;
+.section-title {
+  font-size: 12px;
+  font-weight: 600;
+  color: #1e40af;
+  margin-bottom: 8px;
+  padding-bottom: 4px;
+  border-bottom: 1px solid #e5e7eb;
+}
+
+.client-section {
+  margin-bottom: 16px;
+  padding: 12px;
+  background: #f8fafc;
+  border-radius: 6px;
+}
+
+.client-details {
+  font-size: 12px;
   line-height: 1.5;
+}
+
+.details-grid {
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  gap: 12px;
+  margin-bottom: 16px;
+}
+
+.detail-box {
+  padding: 10px;
+  background: #f8fafc;
+  border-radius: 6px;
+  border-left: 3px solid #e5e7eb;
+}
+
+.detail-box.highlight {
+  border-left-color: #1e40af;
+  background: #eff6ff;
+}
+
+.detail-label {
+  font-size: 10px;
+  color: #666;
+  margin-bottom: 4px;
+}
+
+.detail-value {
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.closer-details-section {
+  margin-bottom: 16px;
+}
+
+.closer-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 11px;
+}
+
+.closer-table th,
+.closer-table td {
+  padding: 6px 10px;
+  border: 1px solid #e5e7eb;
+  text-align: left;
+}
+
+.closer-table th {
+  background: #f3f4f6;
+  font-weight: 600;
+}
+
+.job-info-section {
+  margin-bottom: 16px;
+  padding: 12px;
+  background: #fefce8;
+  border-radius: 6px;
+}
+
+.job-details-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 8px;
+}
+
+.job-detail {
+  font-size: 11px;
+}
+
+.job-label {
+  color: #666;
+}
+
+.job-value {
+  font-weight: 600;
+  margin-left: 4px;
+}
+
+.items-section {
+  margin-bottom: 16px;
 }
 
 .items-table {
   width: 100%;
   border-collapse: collapse;
   font-size: 11px;
-  margin-bottom: 24px;
 }
 
 .items-table thead th {
   text-align: left;
-  background: #f3f4f6;
-  border: 1px solid #e5e7eb;
+  background: #1e40af;
+  color: white;
+  border: 1px solid #1e40af;
   padding: 8px 10px;
   font-weight: 600;
 }
@@ -332,6 +664,33 @@ body {
   border: 1px solid #e5e7eb;
   padding: 8px 10px;
   vertical-align: top;
+}
+
+.items-table tbody tr:nth-child(even) {
+  background: #f8fafc;
+}
+
+.items-table tfoot td {
+  border: 1px solid #e5e7eb;
+  padding: 8px 10px;
+  background: #f3f4f6;
+}
+
+.text-right {
+  text-align: right;
+}
+
+.notes-section {
+  margin-bottom: 16px;
+  padding: 12px;
+  background: #fef3c7;
+  border-radius: 6px;
+}
+
+.notes-text {
+  font-size: 11px;
+  white-space: pre-wrap;
+  margin: 0;
 }
 
 .signature-section {
