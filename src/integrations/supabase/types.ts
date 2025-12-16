@@ -845,6 +845,8 @@ export type Database = {
       }
       file_entries: {
         Row: {
+          closed_at: string | null
+          closed_by: string | null
           created_at: string
           file_type: string
           filename: string
@@ -857,6 +859,8 @@ export type Database = {
           work_order_id: string
         }
         Insert: {
+          closed_at?: string | null
+          closed_by?: string | null
           created_at?: string
           file_type: string
           filename: string
@@ -869,6 +873,8 @@ export type Database = {
           work_order_id: string
         }
         Update: {
+          closed_at?: string | null
+          closed_by?: string | null
           created_at?: string
           file_type?: string
           filename?: string
@@ -881,6 +887,13 @@ export type Database = {
           work_order_id?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "file_entries_closed_by_fkey"
+            columns: ["closed_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "file_entries_plate_format_id_fkey"
             columns: ["plate_format_id"]
