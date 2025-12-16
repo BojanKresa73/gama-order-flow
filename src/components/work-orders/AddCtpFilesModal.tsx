@@ -51,6 +51,7 @@ export const AddCtpFilesModal = ({
   const [quantity, setQuantity] = useState<number>(defaultQuantity);
   const [plateFormats, setPlateFormats] = useState<PlateFormat[]>([]);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const canAdd = Boolean(selectedFormat);
 
   useEffect(() => {
     if (open) {
@@ -69,11 +70,13 @@ export const AddCtpFilesModal = ({
   };
 
   const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (!selectedFormat) return;
+
     const files = Array.from(e.target.files || []);
-    const newItems: CtpItem[] = files.map(file => ({
+    const newItems: CtpItem[] = files.map((file) => ({
       file_name: file.name,
       plate_format_id: selectedFormat,
-      quantity: quantity
+      quantity: quantity,
     }));
 
     if (newItems.length > 0) {
@@ -86,11 +89,13 @@ export const AddCtpFilesModal = ({
   };
 
   const handlePasteList = () => {
-    const lines = fileList.split("\n").filter(line => line.trim() !== "");
-    const newItems: CtpItem[] = lines.map(line => ({
+    if (!selectedFormat) return;
+
+    const lines = fileList.split("\n").filter((line) => line.trim() !== "");
+    const newItems: CtpItem[] = lines.map((line) => ({
       file_name: line.trim(),
       plate_format_id: selectedFormat,
-      quantity: quantity
+      quantity: quantity,
     }));
 
     if (newItems.length > 0) {
@@ -164,11 +169,15 @@ export const AddCtpFilesModal = ({
                 type="button"
                 variant="outline"
                 className="w-full h-24 border-dashed"
-                onClick={() => document.getElementById('ctp-file-upload-modal')?.click()}
+                disabled={!canAdd}
+                onClick={() => {
+                  if (!canAdd) return;
+                  document.getElementById('ctp-file-upload-modal')?.click();
+                }}
               >
                 <div className="flex flex-col items-center gap-2">
                   <FileUp className="h-6 w-6" />
-                  <span>Kliknite za izbor fajlova</span>
+                  <span>{canAdd ? "Kliknite za izbor fajlova" : "Prvo odaberite format ploče"}</span>
                 </div>
               </Button>
             </div>
@@ -189,10 +198,10 @@ export const AddCtpFilesModal = ({
               <Button
                 type="button"
                 onClick={handlePasteList}
-                disabled={!fileList.trim()}
+                disabled={!fileList.trim() || !canAdd}
                 className="w-full"
               >
-                Dodaj {fileList.split("\n").filter(l => l.trim()).length || 0} fajlova
+                Dodaj {fileList.split("\n").filter((l) => l.trim()).length || 0} fajlova
               </Button>
             </div>
           </TabsContent>
