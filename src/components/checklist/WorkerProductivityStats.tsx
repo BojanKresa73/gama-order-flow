@@ -1,8 +1,7 @@
-import { useMemo, useEffect, useState } from "react";
+import { useMemo } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Users, FileText, Layers, CheckCircle } from "lucide-react";
-import { supabase } from "@/integrations/supabase/client";
 
 interface WorkOrder {
   id: string;
@@ -32,60 +31,6 @@ interface WorkerStats {
 }
 
 const WorkerProductivityStats = ({ workOrders, dateFrom, dateTo, allWorkers }: WorkerProductivityStatsProps) => {
-  const [inventoryData, setInventoryData] = useState<Map<string, number>>(new Map());
-  const [loadingInventory, setLoadingInventory] = useState(true);
-
-  // Fetch actual plate consumption from inventory_history (grouped by who closed the order)
-  useEffect(() => {
-    const fetchInventoryData = async () => {
-      try {
-        setLoadingInventory(true);
-        
-        // Build query for inventory_history with date filters
-        let query = supabase
-          .from("inventory_history")
-          .select(`
-            change_amount,
-            created_by,
-            work_order_id,
-            created_at
-          `)
-          .lt("change_amount", 0); // Only consumption (negative values)
-
-        if (dateFrom) {
-          query = query.gte("created_at", `${dateFrom}T00:00:00`);
-        }
-        if (dateTo) {
-          query = query.lte("created_at", `${dateTo}T23:59:59`);
-        }
-
-        const { data, error } = await query;
-
-        if (error) {
-          console.error("Error fetching inventory data:", error);
-          return;
-        }
-
-        // Group by created_by (the person who closed the order and consumed plates)
-        const consumptionByUser = new Map<string, number>();
-        (data || []).forEach((record) => {
-          if (record.created_by) {
-            const current = consumptionByUser.get(record.created_by) || 0;
-            consumptionByUser.set(record.created_by, current + Math.abs(record.change_amount));
-          }
-        });
-
-        setInventoryData(consumptionByUser);
-      } catch (error) {
-        console.error("Error in fetchInventoryData:", error);
-      } finally {
-        setLoadingInventory(false);
-      }
-    };
-
-    fetchInventoryData();
-  }, [dateFrom, dateTo]);
-
   const workerStats = useMemo(() => {
     const statsMap = new Map<string, WorkerStats>();
 
@@ -97,30 +42,30 @@ const WorkerProductivityStats = ({ workOrders, dateFrom, dateTo, allWorkers }: W
         ordersOpened: 0,
         ordersClosed: 0,
         platesOpened: 0,
-        platesClosed: inventoryData.get(worker.id) || 0, // Use inventory_history data
+        platesClosed: 0,
       });
     });
 
     workOrders.forEach((order) => {
-      // Track orders opened (plates prepared = from file_entries)
+      // Track orders opened (plates prepared)
       if (order.created_by && statsMap.has(order.created_by)) {
         const stats = statsMap.get(order.created_by)!;
         stats.ordersOpened += 1;
         stats.platesOpened += order.total_plates;
       }
 
-      // Track orders closed (count only, plates come from inventory_history)
+      // Track orders closed (plates consumed - from file_entries on closed orders)
       if (order.closed_by && order.status === "closed" && statsMap.has(order.closed_by)) {
         const stats = statsMap.get(order.closed_by)!;
         stats.ordersClosed += 1;
-        // platesClosed is already set from inventory_history
+        stats.platesClosed += order.total_plates;
       }
     });
 
     return Array.from(statsMap.values()).sort((a, b) => 
       (b.ordersOpened + b.ordersClosed) - (a.ordersOpened + a.ordersClosed)
     );
-  }, [workOrders, allWorkers, inventoryData]);
+  }, [workOrders, allWorkers]);
 
   const totals = useMemo(() => {
     return workerStats.reduce(
@@ -186,7 +131,7 @@ const WorkerProductivityStats = ({ workOrders, dateFrom, dateTo, allWorkers }: W
               <Layers className="h-4 w-4" />
               <span className="text-sm font-medium">Pušteno Ploča</span>
             </div>
-            <p className="text-2xl font-bold">{loadingInventory ? "..." : totals.platesClosed}</p>
+            <p className="text-2xl font-bold">{totals.platesClosed}</p>
           </div>
         </div>
 

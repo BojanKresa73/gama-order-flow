@@ -7,22 +7,27 @@ import { Package } from "lucide-react";
 
 export const MonthlyPlateUsageChart = () => {
   const { data: chartData, isLoading } = useQuery({
-    queryKey: ["monthly-plate-usage-chart-v2"],
+    queryKey: ["monthly-plate-usage-chart-v3"],
     staleTime: 300_000, // 5 minutes
     queryFn: async () => {
-      // Get current month start
+      // Get current month start and end
       const now = new Date();
       const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1).toISOString();
+      const endOfMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59).toISOString();
       
-      // Fetch from inventory_history with plate_formats join
+      // Fetch from file_entries joined with work_orders (closed CTP orders only)
       const { data, error } = await supabase
-        .from("inventory_history")
+        .from("file_entries")
         .select(`
-          change_amount,
-          plate_formats!inner(format_name)
+          quantity,
+          plate_formats!inner(format_name),
+          work_orders!inner(status, order_type, closed_at, deleted_at)
         `)
-        .lt("change_amount", 0)
-        .gte("created_at", startOfMonth);
+        .eq("work_orders.status", "closed")
+        .eq("work_orders.order_type", "ctp")
+        .is("work_orders.deleted_at", null)
+        .gte("work_orders.closed_at", startOfMonth)
+        .lte("work_orders.closed_at", endOfMonth);
 
       if (error) throw error;
       if (!data || data.length === 0) return [];
@@ -32,8 +37,8 @@ export const MonthlyPlateUsageChart = () => {
       
       data.forEach(row => {
         const format = (row.plate_formats as any)?.format_name || "Nepoznat";
-        const used = Math.abs(row.change_amount || 0);
-        formatMap.set(format, (formatMap.get(format) || 0) + used);
+        const qty = row.quantity || 0;
+        formatMap.set(format, (formatMap.get(format) || 0) + qty);
       });
 
       // Convert to pie chart format
