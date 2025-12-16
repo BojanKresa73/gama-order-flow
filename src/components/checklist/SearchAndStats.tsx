@@ -9,6 +9,8 @@ import { Eye, Receipt } from "lucide-react";
 import { format } from "date-fns";
 import ChecklistStats from "./ChecklistStats";
 import ChecklistFilters from "./ChecklistFilters";
+import WorkerProductivityStats from "./WorkerProductivityStats";
+import { useAuthz } from "@/hooks/useAuthz";
 
 interface WorkOrder {
   id: string;
@@ -23,6 +25,10 @@ interface WorkOrder {
   order_type: string;
   invoiced_at: string | null;
   invoice_number: string | null;
+  created_by: string | null;
+  created_by_name: string | null;
+  closed_by: string | null;
+  closed_by_name: string | null;
   file_entries?: FileEntry[];
 }
 
@@ -34,9 +40,16 @@ interface FileEntry {
   status: string;
 }
 
+interface Worker {
+  id: string;
+  name: string;
+}
+
 const SearchAndStats = () => {
   const navigate = useNavigate();
+  const { isSuper, isAdmin } = useAuthz();
   const [workOrders, setWorkOrders] = useState<WorkOrder[]>([]);
+  const [workers, setWorkers] = useState<Worker[]>([]);
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState("ctp");
 
@@ -46,12 +59,35 @@ const SearchAndStats = () => {
   const [selectedFormat, setSelectedFormat] = useState("all");
   const [selectedStatus, setSelectedStatus] = useState("all");
   const [selectedInvoiceStatus, setSelectedInvoiceStatus] = useState("all");
+  const [selectedCreatedBy, setSelectedCreatedBy] = useState("all");
+  const [selectedClosedBy, setSelectedClosedBy] = useState("all");
   const [dateFrom, setDateFrom] = useState("");
   const [dateTo, setDateTo] = useState("");
 
   useEffect(() => {
     fetchAllWorkOrders();
+    fetchWorkers();
   }, []);
+
+  const fetchWorkers = async () => {
+    try {
+      const { data, error } = await supabase
+        .from("profiles")
+        .select("id, full_name")
+        .not("full_name", "is", null)
+        .order("full_name");
+
+      if (error) throw error;
+
+      setWorkers(
+        (data || [])
+          .filter((p) => p.full_name)
+          .map((p) => ({ id: p.id, name: p.full_name! }))
+      );
+    } catch (error) {
+      console.error("Error fetching workers:", error);
+    }
+  };
 
   const fetchAllWorkOrders = async () => {
     try {
@@ -70,12 +106,30 @@ const SearchAndStats = () => {
           order_type,
           invoiced_at,
           invoice_number,
-          clients!inner(name)
+          created_by,
+          closed_by,
+          clients!inner(name),
+          profiles!work_orders_created_by_fkey(full_name)
         `)
         .is("deleted_at", null)
         .order("created_at", { ascending: false });
 
       if (error) throw error;
+
+      // Fetch closed_by names separately
+      const closedByIds = [...new Set((orders || []).map(o => o.closed_by).filter(Boolean))];
+      const closedByMap = new Map<string, string>();
+      
+      if (closedByIds.length > 0) {
+        const { data: closerProfiles } = await supabase
+          .from("profiles")
+          .select("id, full_name")
+          .in("id", closedByIds);
+        
+        (closerProfiles || []).forEach((p) => {
+          if (p.full_name) closedByMap.set(p.id, p.full_name);
+        });
+      }
 
       const ordersWithDetails = await Promise.all(
         (orders || []).map(async (order) => {
@@ -105,6 +159,10 @@ const SearchAndStats = () => {
               order_type: order.order_type,
               invoiced_at: order.invoiced_at,
               invoice_number: order.invoice_number,
+              created_by: order.created_by,
+              created_by_name: order.profiles?.full_name || null,
+              closed_by: order.closed_by,
+              closed_by_name: order.closed_by ? closedByMap.get(order.closed_by) || null : null,
               total_plates: 0,
               file_entries: [],
             };
@@ -132,6 +190,10 @@ const SearchAndStats = () => {
             order_type: order.order_type,
             invoiced_at: order.invoiced_at,
             invoice_number: order.invoice_number,
+            created_by: order.created_by,
+            created_by_name: order.profiles?.full_name || null,
+            closed_by: order.closed_by,
+            closed_by_name: order.closed_by ? closedByMap.get(order.closed_by) || null : null,
             total_plates: totalPlates,
             file_entries: fileEntries,
           };
@@ -198,6 +260,16 @@ const SearchAndStats = () => {
         return false;
       }
 
+      // Created by filter
+      if (selectedCreatedBy !== "all" && order.created_by !== selectedCreatedBy) {
+        return false;
+      }
+
+      // Closed by filter
+      if (selectedClosedBy !== "all" && order.closed_by !== selectedClosedBy) {
+        return false;
+      }
+
       if (activeTab === "ctp" && selectedFormat !== "all") {
         const hasFormat = order.file_entries?.some(
           (file) => file.plate_format_name === selectedFormat
@@ -220,7 +292,7 @@ const SearchAndStats = () => {
 
       return true;
     });
-  }, [workOrders, activeTab, searchTerm, selectedClient, selectedFormat, selectedStatus, selectedInvoiceStatus, dateFrom, dateTo]);
+  }, [workOrders, activeTab, searchTerm, selectedClient, selectedFormat, selectedStatus, selectedInvoiceStatus, selectedCreatedBy, selectedClosedBy, dateFrom, dateTo]);
 
   const stats = useMemo(() => {
     const openOrders = filteredOrders.filter((o) => o.status === "open").length;
@@ -241,16 +313,47 @@ const SearchAndStats = () => {
     setSelectedFormat("all");
     setSelectedStatus("all");
     setSelectedInvoiceStatus("all");
+    setSelectedCreatedBy("all");
+    setSelectedClosedBy("all");
     setDateFrom("");
     setDateTo("");
   };
+
+  // Prepare data for worker productivity (includes all order types)
+  const allFilteredOrdersForProductivity = useMemo(() => {
+    return workOrders.filter((order) => {
+      if (dateFrom) {
+        const orderDate = new Date(order.created_at);
+        const fromDate = new Date(dateFrom);
+        if (orderDate < fromDate) return false;
+      }
+      if (dateTo) {
+        const orderDate = new Date(order.created_at);
+        const toDate = new Date(dateTo);
+        toDate.setHours(23, 59, 59, 999);
+        if (orderDate > toDate) return false;
+      }
+      return true;
+    });
+  }, [workOrders, dateFrom, dateTo]);
 
   if (loading) {
     return <div className="p-4 text-center">Učitavanje...</div>;
   }
 
+  const canSeeProductivity = isSuper || isAdmin;
+
   return (
     <div className="mt-4">
+      {/* Worker Productivity Stats - Only for Superuser/Admin */}
+      {canSeeProductivity && (
+        <WorkerProductivityStats 
+          workOrders={allFilteredOrdersForProductivity}
+          dateFrom={dateFrom}
+          dateTo={dateTo}
+        />
+      )}
+
       <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
         <TabsList className="grid w-full grid-cols-3 mb-6">
           <TabsTrigger value="ctp">CTP Usluge</TabsTrigger>
@@ -284,6 +387,11 @@ const SearchAndStats = () => {
             onDateToChange={setDateTo}
             clients={uniqueClients}
             formats={uniqueFormats}
+            workers={workers}
+            selectedCreatedBy={selectedCreatedBy}
+            onCreatedByChange={setSelectedCreatedBy}
+            selectedClosedBy={selectedClosedBy}
+            onClosedByChange={setSelectedClosedBy}
             onClearFilters={clearFilters}
             orderType="ctp"
           />
@@ -320,6 +428,11 @@ const SearchAndStats = () => {
             onDateToChange={setDateTo}
             clients={uniqueClients}
             formats={uniqueFormats}
+            workers={workers}
+            selectedCreatedBy={selectedCreatedBy}
+            onCreatedByChange={setSelectedCreatedBy}
+            selectedClosedBy={selectedClosedBy}
+            onClosedByChange={setSelectedClosedBy}
             onClearFilters={clearFilters}
             orderType="digital"
           />
@@ -356,6 +469,11 @@ const SearchAndStats = () => {
             onDateToChange={setDateTo}
             clients={uniqueClients}
             formats={uniqueFormats}
+            workers={workers}
+            selectedCreatedBy={selectedCreatedBy}
+            onCreatedByChange={setSelectedCreatedBy}
+            selectedClosedBy={selectedClosedBy}
+            onClosedByChange={setSelectedClosedBy}
             onClearFilters={clearFilters}
             orderType="other"
           />
@@ -418,6 +536,8 @@ const SearchResultsTable = ({ orders, onViewOrder }: SearchResultsTableProps) =>
               <TableHead>Tip</TableHead>
               <TableHead>Datum</TableHead>
               <TableHead>Status</TableHead>
+              <TableHead>Kreirao</TableHead>
+              <TableHead>Zatvorio</TableHead>
               <TableHead>Fakturisano</TableHead>
               <TableHead className="text-right">Ploča/Stavki</TableHead>
               <TableHead className="w-[80px]"></TableHead>
@@ -433,6 +553,8 @@ const SearchResultsTable = ({ orders, onViewOrder }: SearchResultsTableProps) =>
                 </TableCell>
                 <TableCell>{format(new Date(order.created_at), "dd.MM.yyyy")}</TableCell>
                 <TableCell>{getStatusBadge(order.status)}</TableCell>
+                <TableCell className="text-sm text-muted-foreground">{order.created_by_name || "-"}</TableCell>
+                <TableCell className="text-sm text-muted-foreground">{order.closed_by_name || "-"}</TableCell>
                 <TableCell>
                   {order.invoiced_at ? (
                     <div className="flex items-center gap-1">
