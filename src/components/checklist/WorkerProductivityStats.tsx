@@ -49,15 +49,19 @@ const WorkerProductivityStats = ({ workOrders, dateFrom, dateTo, allWorkers }: W
     });
 
     workOrders.forEach((order) => {
+      // Only count plates for CTP orders (plates are only relevant for CTP)
+      const isCtp = order.order_type === "ctp";
+      const platesToCount = isCtp ? order.total_plates : 0;
+
       // Track orders opened and plates prepared
       if (order.created_by && statsMap.has(order.created_by)) {
         const stats = statsMap.get(order.created_by)!;
         stats.ordersOpened += 1;
-        stats.platesTotal += order.total_plates;
+        stats.platesTotal += platesToCount;
         
         // Track remaining plates (on open orders created by this worker)
         if (order.status === "open") {
-          stats.platesRemaining += order.total_plates;
+          stats.platesRemaining += platesToCount;
         }
       }
 
@@ -65,11 +69,11 @@ const WorkerProductivityStats = ({ workOrders, dateFrom, dateTo, allWorkers }: W
       if (order.closed_by && order.status === "closed" && statsMap.has(order.closed_by)) {
         const stats = statsMap.get(order.closed_by)!;
         stats.ordersClosed += 1;
-        stats.platesClosed += order.total_plates;
+        stats.platesClosed += platesToCount;
       }
     });
 
-    return Array.from(statsMap.values()).sort((a, b) => 
+    return Array.from(statsMap.values()).sort((a, b) =>
       (b.ordersOpened + b.ordersClosed) - (a.ordersOpened + a.ordersClosed)
     );
   }, [workOrders, allWorkers]);
