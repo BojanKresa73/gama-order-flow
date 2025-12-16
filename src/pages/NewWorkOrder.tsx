@@ -311,6 +311,19 @@ const NewWorkOrder = () => {
       });
       return;
     }
+
+    // Validate plate format selection for CTP items
+    if (orderType === "ctp") {
+      const missing = ctpItems.filter((it) => !it.plate_format_id);
+      if (missing.length > 0) {
+        toast({
+          title: "Greška",
+          description: "Molimo odaberite format ploče za sve fajlove pre kreiranja naloga.",
+          variant: "destructive",
+        });
+        return;
+      }
+    }
     
     setLoading(true);
 

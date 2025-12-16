@@ -41,6 +41,7 @@ interface FileEntry {
   id: string;
   filename: string;
   quantity: number;
+  plate_format_id: string | null;
   plate_format_name: string | null;
   status: string;
 }
@@ -57,11 +58,16 @@ const ChecklistView = ({ orderType, onNavigateToSearch }: ChecklistViewProps) =>
   const [expandedOrders, setExpandedOrders] = useState<Set<string>>(new Set());
   const [loading, setLoading] = useState(true);
   const [statusFilter, setStatusFilter] = useState<StatusFilter>("open");
+  const [plateFormats, setPlateFormats] = useState<Array<{ id: string; format_name: string }>>([]);
   const { toast } = useToast();
 
   useEffect(() => {
     fetchWorkOrders();
   }, [orderType, statusFilter]);
+
+  useEffect(() => {
+    if (orderType === "ctp") fetchPlateFormats();
+  }, [orderType]);
 
   const fetchWorkOrders = async () => {
     try {
@@ -113,6 +119,7 @@ const ChecklistView = ({ orderType, onNavigateToSearch }: ChecklistViewProps) =>
               quantity,
               file_type,
               status,
+              plate_format_id,
               plate_formats(format_name)
             `)
             .eq("work_order_id", order.id);
@@ -136,13 +143,19 @@ const ChecklistView = ({ orderType, onNavigateToSearch }: ChecklistViewProps) =>
           }
 
           // Calculate total plates and format file entries
-          const fileEntries = (files || []).map((file) => ({
-            id: file.id,
-            filename: file.filename,
-            quantity: file.quantity ?? (orderType === "ctp" ? 4 : 0),
-            plate_format_name: file.plate_formats?.format_name || null,
-            status: file.status || "open",
-          }));
+          const fileEntries = (files || []).map((file) => {
+            const pf = (file as any).plate_formats;
+            const pfName = Array.isArray(pf) ? pf[0]?.format_name : pf?.format_name;
+
+            return {
+              id: file.id,
+              filename: file.filename,
+              quantity: file.quantity ?? (orderType === "ctp" ? 4 : 0),
+              plate_format_id: (file as any).plate_format_id ?? null,
+              plate_format_name: pfName || null,
+              status: file.status || "open",
+            } as FileEntry;
+          });
 
           const totalPlates = fileEntries.reduce((sum, file) => sum + file.quantity, 0);
 
@@ -174,6 +187,20 @@ const ChecklistView = ({ orderType, onNavigateToSearch }: ChecklistViewProps) =>
     } finally {
       setLoading(false);
     }
+  };
+
+  const fetchPlateFormats = async () => {
+    const { data, error } = await supabase
+      .from("plate_formats")
+      .select("id, format_name")
+      .order("format_name");
+
+    if (error) {
+      console.error("Error fetching plate formats:", error);
+      return;
+    }
+
+    setPlateFormats((data || []) as Array<{ id: string; format_name: string }>);
   };
 
   const toggleExpand = (orderId: string) => {
@@ -355,6 +382,31 @@ const ChecklistView = ({ orderType, onNavigateToSearch }: ChecklistViewProps) =>
     }
   };
 
+  const updateFilePlateFormat = async (fileId: string, plateFormatId: string) => {
+    try {
+      const { error } = await supabase
+        .from("file_entries")
+        .update({ plate_format_id: plateFormatId || null })
+        .eq("id", fileId);
+
+      if (error) throw error;
+
+      toast({
+        title: "Sačuvano",
+        description: "Format ploče je ažuriran",
+      });
+
+      fetchWorkOrders();
+    } catch (error) {
+      console.error("Error updating plate format:", error);
+      toast({
+        title: "Greška",
+        description: "Ne mogu da sačuvam format ploče",
+        variant: "destructive",
+      });
+    }
+  };
+
   const getStatusBadge = (status: string) => {
     if (status === "closed") {
       return (
@@ -512,9 +564,28 @@ const ChecklistView = ({ orderType, onNavigateToSearch }: ChecklistViewProps) =>
                       </span>
                     </TableCell>
                     <TableCell>
-                      <span className="text-sm">
-                        Format: {file.plate_format_name || "N/A"}
-                      </span>
+                      {order.status === "open" ? (
+                        <div className="flex items-center gap-2">
+                          <span className="text-sm">Format:</span>
+                          <Select
+                            value={file.plate_format_id ?? ""}
+                            onValueChange={(v) => updateFilePlateFormat(file.id, v)}
+                          >
+                            <SelectTrigger className="h-8 w-[160px]">
+                              <SelectValue placeholder="N/A" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              {plateFormats.map((pf) => (
+                                <SelectItem key={pf.id} value={pf.id}>
+                                  {pf.format_name}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                        </div>
+                      ) : (
+                        <span className="text-sm">Format: {file.plate_format_name || "N/A"}</span>
+                      )}
                     </TableCell>
                     <TableCell>
                       <span className="text-sm">
