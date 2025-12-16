@@ -351,6 +351,7 @@ const SearchAndStats = () => {
           workOrders={allFilteredOrdersForProductivity}
           dateFrom={dateFrom}
           dateTo={dateTo}
+          allWorkers={workers}
         />
       )}
 
