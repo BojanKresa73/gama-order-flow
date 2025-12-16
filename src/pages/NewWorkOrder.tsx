@@ -1125,7 +1125,8 @@ const NewWorkOrder = () => {
         open={showCtpFilesModal}
         onOpenChange={setShowCtpFilesModal}
         onAddFiles={(items) => setCtpItems([...ctpItems, ...items])}
-        defaultQuantity={4}
+        defaultQuantity={bulkQuantity}
+        defaultFormatId={bulkFormat}
       />
       
       <AddCtpFilesModal
