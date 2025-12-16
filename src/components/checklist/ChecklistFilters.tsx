@@ -9,6 +9,11 @@ import {
 } from "@/components/ui/select";
 import { X } from "lucide-react";
 
+interface Worker {
+  id: string;
+  name: string;
+}
+
 interface ChecklistFiltersProps {
   searchTerm: string;
   onSearchChange: (value: string) => void;
@@ -26,6 +31,11 @@ interface ChecklistFiltersProps {
   onDateToChange: (value: string) => void;
   clients: string[];
   formats: string[];
+  workers?: Worker[];
+  selectedCreatedBy?: string;
+  onCreatedByChange?: (value: string) => void;
+  selectedClosedBy?: string;
+  onClosedByChange?: (value: string) => void;
   onClearFilters: () => void;
   orderType: string;
 }
@@ -47,12 +57,17 @@ const ChecklistFilters = ({
   onDateToChange,
   clients,
   formats,
+  workers = [],
+  selectedCreatedBy = "all",
+  onCreatedByChange,
+  selectedClosedBy = "all",
+  onClosedByChange,
   onClearFilters,
   orderType,
 }: ChecklistFiltersProps) => {
   return (
     <div className="mb-6 space-y-4">
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
         <div>
           <label className="text-sm font-medium mb-2 block">
             Pretraga po broju naloga ili fajlu
@@ -110,7 +125,7 @@ const ChecklistFilters = ({
         </div>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
         {orderType === "ctp" && (
           <div>
             <label className="text-sm font-medium mb-2 block">
@@ -125,6 +140,44 @@ const ChecklistFilters = ({
                 {formats.map((format) => (
                   <SelectItem key={format} value={format}>
                     {format}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+        )}
+
+        {workers.length > 0 && onCreatedByChange && (
+          <div>
+            <label className="text-sm font-medium mb-2 block">Ko Otvorio</label>
+            <Select value={selectedCreatedBy} onValueChange={onCreatedByChange}>
+              <SelectTrigger>
+                <SelectValue placeholder="Svi radnici" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Svi radnici</SelectItem>
+                {workers.map((worker) => (
+                  <SelectItem key={worker.id} value={worker.id}>
+                    {worker.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+        )}
+
+        {workers.length > 0 && onClosedByChange && (
+          <div>
+            <label className="text-sm font-medium mb-2 block">Ko Zatvorio</label>
+            <Select value={selectedClosedBy} onValueChange={onClosedByChange}>
+              <SelectTrigger>
+                <SelectValue placeholder="Svi radnici" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Svi radnici</SelectItem>
+                {workers.map((worker) => (
+                  <SelectItem key={worker.id} value={worker.id}>
+                    {worker.name}
                   </SelectItem>
                 ))}
               </SelectContent>
