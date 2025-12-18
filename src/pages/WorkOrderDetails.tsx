@@ -321,78 +321,121 @@ const WorkOrderDetails = () => {
           </TabsList>
 
           <TabsContent value="overview" className="mt-6">
-            <Card>
-              <CardHeader>
-                <CardTitle>Osnovne informacije</CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <p className="text-sm text-muted-foreground">Broj naloga</p>
-                    <p className="font-medium">{workOrder.order_number}</p>
-                  </div>
-                  <div>
-                    <p className="text-sm text-muted-foreground">Tip naloga</p>
-                    <p className="font-medium">{getOrderTypeLabel(workOrder.order_type)}</p>
-                  </div>
-                  <div>
-                    <p className="text-sm text-muted-foreground">Klijent</p>
-                    <p className="font-medium">{workOrder.clients?.name}</p>
-                  </div>
-                  <div>
-                    <p className="text-sm text-muted-foreground">Kreirao</p>
-                    <p className="font-medium">{workOrder.profiles?.full_name || "-"}</p>
-                  </div>
-                  <div>
-                    <p className="text-sm text-muted-foreground">Datum kreiranja</p>
-                    <p className="font-medium">{format(new Date(workOrder.created_at), "dd.MM.yyyy HH:mm")}</p>
-                  </div>
-                  {workOrder.closed_at && (
+            <div className="space-y-6">
+              <Card>
+                <CardHeader>
+                  <CardTitle>Osnovne informacije</CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <div className="grid grid-cols-2 gap-4">
                     <div>
-                      <p className="text-sm text-muted-foreground">Datum zatvaranja</p>
-                      <p className="font-medium">{format(new Date(workOrder.closed_at), "dd.MM.yyyy HH:mm")}</p>
+                      <p className="text-sm text-muted-foreground">Broj naloga</p>
+                      <p className="font-medium">{workOrder.order_number}</p>
                     </div>
-                  )}
-                  {emailStatus && (
                     <div>
-                      <p className="text-sm text-muted-foreground">Email status</p>
-                      <p className="font-medium">
-                        {emailStatus.status === "sent" && "📧 Poslato"}
-                        {emailStatus.status === "error" && (
-                          <span className="text-destructive">📧 Greška: {emailStatus.error_msg}</span>
-                        )}
-                        {emailStatus.status === "pending" && "📧 Čeka slanje"}
-                      </p>
+                      <p className="text-sm text-muted-foreground">Tip naloga</p>
+                      <p className="font-medium">{getOrderTypeLabel(workOrder.order_type)}</p>
                     </div>
-                  )}
-                  {workOrder.invoiced_at && (
                     <div>
-                      <p className="text-sm text-muted-foreground">Fakturisano</p>
-                      <div className="flex items-center gap-2">
-                        <p className="font-medium text-green-600">
-                          {format(new Date(workOrder.invoiced_at), "dd.MM.yyyy")}
-                          {workOrder.invoice_number && ` - ${workOrder.invoice_number}`}
-                        </p>
-                        <Button 
-                          variant="ghost" 
-                          size="sm" 
-                          className="h-6 px-2 text-xs text-muted-foreground hover:text-destructive"
-                          onClick={handleRemoveInvoiced}
-                        >
-                          Poništi
-                        </Button>
+                      <p className="text-sm text-muted-foreground">Klijent</p>
+                      <p className="font-medium">{workOrder.clients?.name}</p>
+                    </div>
+                    <div>
+                      <p className="text-sm text-muted-foreground">Kreirao</p>
+                      <p className="font-medium">{workOrder.profiles?.full_name || "-"}</p>
+                    </div>
+                    <div>
+                      <p className="text-sm text-muted-foreground">Datum kreiranja</p>
+                      <p className="font-medium">{format(new Date(workOrder.created_at), "dd.MM.yyyy HH:mm")}</p>
+                    </div>
+                    {workOrder.closed_at && (
+                      <div>
+                        <p className="text-sm text-muted-foreground">Datum zatvaranja</p>
+                        <p className="font-medium">{format(new Date(workOrder.closed_at), "dd.MM.yyyy HH:mm")}</p>
                       </div>
+                    )}
+                    {emailStatus && (
+                      <div>
+                        <p className="text-sm text-muted-foreground">Email status</p>
+                        <p className="font-medium">
+                          {emailStatus.status === "sent" && "📧 Poslato"}
+                          {emailStatus.status === "error" && (
+                            <span className="text-destructive">📧 Greška: {emailStatus.error_msg}</span>
+                          )}
+                          {emailStatus.status === "pending" && "📧 Čeka slanje"}
+                        </p>
+                      </div>
+                    )}
+                    {workOrder.invoiced_at && (
+                      <div>
+                        <p className="text-sm text-muted-foreground">Fakturisano</p>
+                        <div className="flex items-center gap-2">
+                          <p className="font-medium text-green-600">
+                            {format(new Date(workOrder.invoiced_at), "dd.MM.yyyy")}
+                            {workOrder.invoice_number && ` - ${workOrder.invoice_number}`}
+                          </p>
+                          <Button 
+                            variant="ghost" 
+                            size="sm" 
+                            className="h-6 px-2 text-xs text-muted-foreground hover:text-destructive"
+                            onClick={handleRemoveInvoiced}
+                          >
+                            Poništi
+                          </Button>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                  {workOrder.notes && (
+                    <div>
+                      <p className="text-sm text-muted-foreground">Napomene</p>
+                      <p className="font-medium whitespace-pre-wrap">{workOrder.notes}</p>
                     </div>
                   )}
-                </div>
-                {workOrder.notes && (
-                  <div>
-                    <p className="text-sm text-muted-foreground">Napomene</p>
-                    <p className="font-medium whitespace-pre-wrap">{workOrder.notes}</p>
-                  </div>
-                )}
-              </CardContent>
-            </Card>
+                </CardContent>
+              </Card>
+
+              {/* Items Summary */}
+              {workOrder.items && workOrder.items.length > 0 && (
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="flex items-center gap-2">
+                      <FileText className="h-5 w-5" />
+                      Stavke ({workOrder.items.length})
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="space-y-3">
+                      {workOrder.items.map((item: any) => (
+                        <div key={item.id} className="flex items-center justify-between border-b pb-3 last:border-b-0">
+                          <div className="flex-1">
+                            <p className="font-medium">{item.label}</p>
+                            {item.details && (
+                              <p className="text-sm text-muted-foreground">{item.details}</p>
+                            )}
+                            {item.note && (
+                              <p className="text-xs text-muted-foreground mt-1">Napomena: {item.note}</p>
+                            )}
+                          </div>
+                          <div className="text-right flex items-center gap-3">
+                            {item.total !== undefined && item.total > 0 && (
+                              <p className="text-sm font-medium text-primary">
+                                {item.total.toFixed(2)} {item.unit}
+                              </p>
+                            )}
+                            {item.status && (
+                              <Badge variant={item.status === 'open' ? 'default' : 'secondary'}>
+                                {item.status === 'open' ? 'Otvoren' : 'Zatvoren'}
+                              </Badge>
+                            )}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </CardContent>
+                </Card>
+              )}
+            </div>
           </TabsContent>
 
           <TabsContent value="files" className="mt-6">
