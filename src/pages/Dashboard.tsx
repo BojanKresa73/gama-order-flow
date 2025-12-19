@@ -4,14 +4,13 @@ import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
 import { useAuthz } from "@/hooks/useAuthz";
-import { FileText, BarChart3, ChevronDown } from "lucide-react";
+import { FileText, BarChart3, ChevronDown, Plus } from "lucide-react";
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import gamaLogo from "@/assets/gama-united-logo.svg";
 import { StatsCards } from "@/components/dashboard/StatsCards";
 import { OnlineUsersCard } from "@/components/dashboard/OnlineUsersCard";
 import { OrdersByTypeChart } from "@/components/dashboard/OrdersByTypeChart";
@@ -22,6 +21,7 @@ import { DailyPlateStats } from "@/components/dashboard/DailyPlateStats";
 import { TopClientsCard } from "@/components/dashboard/TopClientsCard";
 import AdminSection from "@/components/dashboard/AdminSection";
 import { DigitalStatsSection } from "@/components/dashboard/DigitalStatsSection";
+import { AppHeader } from "@/components/layout/AppHeader";
 
 const Dashboard = () => {
   const [loading, setLoading] = useState(true);
@@ -54,15 +54,6 @@ const Dashboard = () => {
     setLoading(false);
   };
 
-  const handleLogout = async () => {
-    await supabase.auth.signOut();
-    toast({
-      title: "Odjavljeni ste",
-      description: "Uspešno ste se odjavili iz sistema",
-    });
-    navigate("/");
-  };
-
   if (loading) {
     return (
       <div className="flex min-h-screen items-center justify-center">
@@ -73,31 +64,35 @@ const Dashboard = () => {
 
   return (
     <div className="min-h-screen bg-background">
-      <header className="border-b bg-card">
-        <div className="container mx-auto px-4 py-4 flex justify-between items-center">
-          <div className="flex items-center gap-3">
-            <img src={gamaLogo} alt="Gama United" className="h-14" />
-            <h1 className="text-2xl font-bold">Radni nalozi - Gama United</h1>
-          </div>
-          <div className="flex items-center gap-4">
-            <span className="text-sm text-muted-foreground">{profile?.full_name}</span>
-            {isSuper && (
-              <Button variant="outline" onClick={() => navigate("/admin/users")}>
-                Administracija
-              </Button>
-            )}
-            <Button variant="outline" onClick={handleLogout}>
-              Odjavi se
+      <AppHeader userName={profile?.full_name} />
+
+      <main className="max-w-[1400px] mx-auto px-4 md:px-6 py-4 md:py-6">
+        {/* Quick Actions Bar */}
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-6">
+          <h2 className="text-xl md:text-2xl font-semibold">
+            Dobrodošli, {profile?.full_name}!
+          </h2>
+          
+          {/* Mobile Quick Actions - Grid Layout */}
+          <div className="grid grid-cols-2 gap-2 md:hidden">
+            <Button onClick={() => navigate("/work-orders/new")} className="h-12">
+              <Plus className="h-4 w-4 mr-1" />
+              Novi nalog
+            </Button>
+            <Button variant="secondary" onClick={() => navigate("/work-orders")} className="h-12">
+              <FileText className="h-4 w-4 mr-1" />
+              Svi nalozi
+            </Button>
+            <Button variant="outline" onClick={() => navigate("/large-format/new?type=roll")} className="h-12 border-orange-300 text-orange-700">
+              + Rolna
+            </Button>
+            <Button variant="outline" onClick={() => navigate("/large-format/new?type=rigid")} className="h-12 border-teal-300 text-teal-700">
+              + Ploča
             </Button>
           </div>
-        </div>
-      </header>
 
-      <main className="max-w-[1400px] mx-auto px-6 py-6">
-        {/* Quick Actions Bar */}
-        <div className="flex items-center justify-between mb-6">
-          <h2 className="text-2xl font-semibold">Dobrodošli, {profile?.full_name}!</h2>
-          <div className="flex items-center gap-3 flex-wrap">
+          {/* Desktop Quick Actions */}
+          <div className="hidden md:flex items-center gap-3 flex-wrap">
             <Button onClick={() => navigate("/work-orders/new")}>
               + Novi nalog
             </Button>
