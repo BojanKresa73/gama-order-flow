@@ -4,7 +4,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
 import { useAuthz } from "@/hooks/useAuthz";
-import { FileText, BarChart3, ChevronDown, Plus } from "lucide-react";
+import { FileText, BarChart3, ChevronDown } from "lucide-react";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -73,26 +73,8 @@ const Dashboard = () => {
             Dobrodošli, {profile?.full_name}!
           </h2>
           
-          {/* Mobile Quick Actions - Grid Layout */}
-          <div className="grid grid-cols-2 gap-2 md:hidden">
-            <Button onClick={() => navigate("/work-orders/new")} className="h-12">
-              <Plus className="h-4 w-4 mr-1" />
-              Novi nalog
-            </Button>
-            <Button variant="secondary" onClick={() => navigate("/work-orders")} className="h-12">
-              <FileText className="h-4 w-4 mr-1" />
-              Svi nalozi
-            </Button>
-            <Button variant="outline" onClick={() => navigate("/large-format/new?type=roll")} className="h-12 border-orange-300 text-orange-700">
-              + Rolna
-            </Button>
-            <Button variant="outline" onClick={() => navigate("/large-format/new?type=rigid")} className="h-12 border-teal-300 text-teal-700">
-              + Ploča
-            </Button>
-          </div>
-
-          {/* Desktop Quick Actions */}
-          <div className="hidden md:flex items-center gap-3 flex-wrap">
+          {/* Desktop Quick Actions - unchanged from before */}
+          <div className="flex items-center gap-3 flex-wrap">
             <Button onClick={() => navigate("/work-orders/new")}>
               + Novi nalog
             </Button>

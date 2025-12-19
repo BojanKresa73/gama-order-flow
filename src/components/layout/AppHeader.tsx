@@ -4,7 +4,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { useAuthz } from "@/hooks/useAuthz";
 import gamaLogo from "@/assets/gama-united-logo.svg";
-import { MobileNav } from "./MobileNav";
+
 
 interface AppHeaderProps {
   userName?: string;
@@ -28,20 +28,19 @@ export const AppHeader = ({ userName, showBackButton, title }: AppHeaderProps) =
 
   return (
     <header className="border-b bg-card sticky top-0 z-50">
-      <div className="container mx-auto px-4 py-3 md:py-4 flex justify-between items-center">
-        <div className="flex items-center gap-3">
-          <MobileNav userName={userName} />
+      <div className="container mx-auto px-4 py-4 flex justify-between items-center">
+        <div className="flex items-center gap-4">
           <img 
             src={gamaLogo} 
             alt="Gama United" 
-            className="h-10 md:h-14 cursor-pointer" 
+            className="h-14 cursor-pointer" 
             onClick={() => navigate("/dashboard")}
           />
-          <h1 className="text-lg md:text-2xl font-bold hidden sm:block">
+          <h1 className="text-2xl font-bold">
             {title || "Radni nalozi - Gama United"}
           </h1>
         </div>
-        <div className="hidden md:flex items-center gap-4">
+        <div className="flex items-center gap-4">
           <span className="text-sm text-muted-foreground">{userName}</span>
           {isSuper && (
             <Button variant="outline" onClick={() => navigate("/admin/users")}>
