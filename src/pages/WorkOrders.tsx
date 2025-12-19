@@ -5,12 +5,12 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
-import { ArrowLeft, Plus, FileText, Eye, Lock, CheckCircle2, AlertTriangle, Trash2, Pencil, Send, Menu } from "lucide-react";
+import { ArrowLeft, Plus, FileText, Eye, Lock, CheckCircle2, AlertTriangle, Trash2, Pencil, Send } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { OrderFilesDialog } from "@/components/work-orders/OrderFilesDialog";
 import { InvalidateOrderDialog } from "@/components/work-orders/InvalidateOrderDialog";
 import { DeleteOrderDialog } from "@/components/work-orders/DeleteOrderDialog";
-import { MobileOrderCard } from "@/components/work-orders/MobileOrderCard";
+
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { Textarea } from "@/components/ui/textarea";
@@ -19,8 +19,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Progress } from "@/components/ui/progress";
 import { prefixFor, displayOrderNumber } from "@/lib/orderLabel";
 import { useAuthz } from "@/hooks/useAuthz";
-import { useIsMobile } from "@/hooks/use-mobile";
-import { MobileNav } from "@/components/layout/MobileNav";
+
 
 const WorkOrders = () => {
   const [workOrders, setWorkOrders] = useState<any[]>([]);
@@ -43,7 +42,7 @@ const WorkOrders = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
   const { isSuper, isAdmin } = useAuthz();
-  const isMobile = useIsMobile();
+  
 
   useEffect(() => {
     checkAuth();
@@ -457,63 +456,29 @@ const WorkOrders = () => {
   return (
     <div className="min-h-screen bg-background">
       <header className="border-b bg-card sticky top-0 z-50">
-        <div className="container mx-auto px-4 py-3 md:py-4 flex justify-between items-center">
-          <div className="flex items-center gap-3 md:gap-4">
-            <MobileNav />
-            <Button variant="ghost" size="icon" onClick={() => navigate("/dashboard")} className="hidden md:flex">
+        <div className="container mx-auto px-4 py-4 flex justify-between items-center">
+          <div className="flex items-center gap-4">
+            <Button variant="ghost" size="icon" onClick={() => navigate("/dashboard")}>
               <ArrowLeft className="h-5 w-5" />
             </Button>
-            <h1 className="text-lg md:text-2xl font-bold">Radni nalozi</h1>
+            <h1 className="text-2xl font-bold">Radni nalozi</h1>
           </div>
           <div className="flex items-center gap-2">
-            <Button variant="outline" size="sm" onClick={() => navigate("/checklist")} className="hidden md:flex">
+            <Button variant="outline" size="sm" onClick={() => navigate("/checklist")}>
               Checklist
             </Button>
-            <Button variant="outline" size="sm" onClick={() => navigate("/checklist?tab=pretraga")} className="hidden lg:flex">
+            <Button variant="outline" size="sm" onClick={() => navigate("/checklist?tab=pretraga")}>
               Pretraga i statistika
             </Button>
-            <Button onClick={() => navigate("/work-orders/new")} size={isMobile ? "sm" : "default"}>
-              <Plus className="h-4 w-4 md:mr-2" />
-              <span className="hidden md:inline">Novi nalog</span>
+            <Button onClick={() => navigate("/work-orders/new")}>
+              <Plus className="h-4 w-4 mr-2" />
+              Novi nalog
             </Button>
           </div>
         </div>
       </header>
 
-      <main className="mx-auto px-4 py-4 md:py-8 max-w-[1600px]">
-        {/* Mobile View */}
-        {isMobile ? (
-          <div>
-            <div className="flex items-center justify-between mb-4">
-              <h2 className="text-lg font-semibold flex items-center gap-2">
-                <FileText className="h-5 w-5" />
-                Svi radni nalozi ({workOrders.length})
-              </h2>
-            </div>
-            
-            {workOrders.length === 0 ? (
-              <div className="text-center py-12 text-muted-foreground">
-                <FileText className="h-12 w-12 mx-auto mb-4 opacity-50" />
-                <p>Nema radnih naloga. Kreirajte prvi nalog.</p>
-              </div>
-            ) : (
-              <div>
-                {workOrders.map((order) => (
-                  <MobileOrderCard
-                    key={order.id}
-                    order={order}
-                    onView={(id) => window.open(`/work-orders/${id}/print`, '_blank')}
-                    onDeliveryNote={(id) => navigate(`/work-orders/${id}/delivery-note`)}
-                    onEdit={order.status === 'open' && !order.invalidated_at ? (id) => navigate(`/work-orders/${id}/edit`) : undefined}
-                    onClose={(isSuper || isAdmin) ? (o) => handleCloseOrder(o, { stopPropagation: () => {} } as React.MouseEvent) : undefined}
-                    canClose={isSuper || isAdmin}
-                  />
-                ))}
-              </div>
-            )}
-          </div>
-        ) : (
-        /* Desktop View */
+      <main className="mx-auto px-4 py-8 max-w-[1600px]">
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center justify-between">
@@ -724,7 +689,6 @@ const WorkOrders = () => {
             )}
           </CardContent>
         </Card>
-        )}
       </main>
 
       <OrderFilesDialog
