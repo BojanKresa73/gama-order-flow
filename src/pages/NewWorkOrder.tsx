@@ -798,11 +798,11 @@ const NewWorkOrder = () => {
                           </Button>
                         </div>
                       </div>
-                      {!bulkFormat && (
-                        <p className="mt-2 text-sm text-muted-foreground">
-                          Odaberite format ploče pre dodavanja fajlova.
-                        </p>
-                      )}
+                    {!bulkFormat && (
+                      <p className="mt-2 text-sm text-muted-foreground">
+                        Izaberite format ploče da biste ga primenili na sve fajlove.
+                      </p>
+                    )}
                     </div>
 
                     <div className="flex items-center justify-between">
@@ -811,7 +811,6 @@ const NewWorkOrder = () => {
                         type="button"
                         variant="outline"
                         size="sm"
-                        disabled={!bulkFormat}
                         onClick={() => setShowCtpFilesModal(true)}
                       >
                         <FileUp className="h-4 w-4 mr-2" />
