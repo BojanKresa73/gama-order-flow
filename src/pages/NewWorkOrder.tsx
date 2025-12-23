@@ -1141,18 +1141,9 @@ const NewWorkOrder = () => {
         open={showCtpFilesModal}
         onOpenChange={setShowCtpFilesModal}
         onAddFiles={(items) => {
-          if (!bulkFormat) {
-            toast({
-              title: "Greška",
-              description: "Prvo odaberite format ploče.",
-              variant: "destructive",
-            });
-            return;
-          }
-
           const normalized = items.map((i) => ({
             ...i,
-            plate_format_id: i.plate_format_id || bulkFormat,
+            plate_format_id: i.plate_format_id || bulkFormat || "",
             quantity: i.quantity || bulkQuantity,
           }));
 
