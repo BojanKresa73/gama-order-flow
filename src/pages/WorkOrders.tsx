@@ -12,6 +12,7 @@ import { InvalidateOrderDialog } from "@/components/work-orders/InvalidateOrderD
 import { DeleteOrderDialog } from "@/components/work-orders/DeleteOrderDialog";
 import { WorkOrderFilters, WorkOrderFiltersState } from "@/components/work-orders/WorkOrderFilters";
 import { FilmStatsSummary } from "@/components/work-orders/FilmStatsSummary";
+import { CtpStatsSummary } from "@/components/work-orders/CtpStatsSummary";
 
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
@@ -178,6 +179,13 @@ const WorkOrders = () => {
   const filmOrderIds = useMemo(() => {
     return filteredWorkOrders
       .filter((order) => order.order_type === "film")
+      .map((order) => order.id);
+  }, [filteredWorkOrders]);
+
+  // Get CTP order IDs for stats summary
+  const ctpOrderIds = useMemo(() => {
+    return filteredWorkOrders
+      .filter((order) => order.order_type === "ctp")
       .map((order) => order.id);
   }, [filteredWorkOrders]);
 
@@ -534,6 +542,9 @@ const WorkOrders = () => {
         
         {/* Film Stats Summary - shows when there are film orders in filtered results */}
         <FilmStatsSummary workOrderIds={filmOrderIds} />
+
+        {/* CTP Stats Summary - shows when there are CTP orders in filtered results */}
+        <CtpStatsSummary workOrderIds={ctpOrderIds} />
 
         <Card>
           <CardHeader>
