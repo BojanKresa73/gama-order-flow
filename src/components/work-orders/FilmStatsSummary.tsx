@@ -3,6 +3,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Ruler, DollarSign, TrendingUp, FileText } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
+import { useAuthz } from "@/hooks/useAuthz";
 
 interface FilmStatsSummaryProps {
   workOrderIds: string[];
@@ -17,6 +18,9 @@ interface FilmStats {
 }
 
 export function FilmStatsSummary({ workOrderIds }: FilmStatsSummaryProps) {
+  const { isSuper, isAdmin } = useAuthz();
+  const canSeePrices = isSuper || isAdmin;
+
   const { data: filmSettings } = useQuery({
     queryKey: ["film-settings"],
     queryFn: async () => {
@@ -130,7 +134,7 @@ export function FilmStatsSummary({ workOrderIds }: FilmStatsSummaryProps) {
         </CardTitle>
       </CardHeader>
       <CardContent>
-        <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
+        <div className={`grid grid-cols-2 ${canSeePrices ? "md:grid-cols-5" : "md:grid-cols-2"} gap-4`}>
           <div className="space-y-1">
             <p className="text-sm text-muted-foreground flex items-center gap-1">
               <FileText className="h-4 w-4" />
@@ -149,33 +153,37 @@ export function FilmStatsSummary({ workOrderIds }: FilmStatsSummaryProps) {
               {stats.totalMeters.toFixed(2)} m
             </p>
           </div>
-          <div className="space-y-1">
-            <p className="text-sm text-muted-foreground flex items-center gap-1">
-              <DollarSign className="h-4 w-4" />
-              Trošak
-            </p>
-            <p className="text-2xl font-bold text-red-600 dark:text-red-400">
-              €{stats.totalCost.toFixed(2)}
-            </p>
-          </div>
-          <div className="space-y-1">
-            <p className="text-sm text-muted-foreground flex items-center gap-1">
-              <DollarSign className="h-4 w-4" />
-              Naplata
-            </p>
-            <p className="text-2xl font-bold text-green-600 dark:text-green-400">
-              €{stats.totalRevenue.toFixed(2)}
-            </p>
-          </div>
-          <div className="space-y-1">
-            <p className="text-sm text-muted-foreground flex items-center gap-1">
-              <TrendingUp className="h-4 w-4" />
-              Profit
-            </p>
-            <p className={`text-2xl font-bold ${stats.totalProfit >= 0 ? "text-green-600 dark:text-green-400" : "text-red-600 dark:text-red-400"}`}>
-              €{stats.totalProfit.toFixed(2)}
-            </p>
-          </div>
+          {canSeePrices && (
+            <>
+              <div className="space-y-1">
+                <p className="text-sm text-muted-foreground flex items-center gap-1">
+                  <DollarSign className="h-4 w-4" />
+                  Trošak
+                </p>
+                <p className="text-2xl font-bold text-red-600 dark:text-red-400">
+                  €{stats.totalCost.toFixed(2)}
+                </p>
+              </div>
+              <div className="space-y-1">
+                <p className="text-sm text-muted-foreground flex items-center gap-1">
+                  <DollarSign className="h-4 w-4" />
+                  Naplata
+                </p>
+                <p className="text-2xl font-bold text-green-600 dark:text-green-400">
+                  €{stats.totalRevenue.toFixed(2)}
+                </p>
+              </div>
+              <div className="space-y-1">
+                <p className="text-sm text-muted-foreground flex items-center gap-1">
+                  <TrendingUp className="h-4 w-4" />
+                  Profit
+                </p>
+                <p className={`text-2xl font-bold ${stats.totalProfit >= 0 ? "text-green-600 dark:text-green-400" : "text-red-600 dark:text-red-400"}`}>
+                  €{stats.totalProfit.toFixed(2)}
+                </p>
+              </div>
+            </>
+          )}
         </div>
       </CardContent>
     </Card>
