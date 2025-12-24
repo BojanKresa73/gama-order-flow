@@ -540,11 +540,11 @@ const WorkOrders = () => {
       <main className="mx-auto px-4 py-8 max-w-[1600px] space-y-4">
         <WorkOrderFilters filters={filters} onFiltersChange={setFilters} />
         
-        {/* Film Stats Summary - shows when there are film orders in filtered results */}
-        <FilmStatsSummary workOrderIds={filmOrderIds} />
+        {/* Film Stats Summary - shows when there are film orders in filtered results (admin/superuser only) */}
+        {(isSuper || isAdmin) && <FilmStatsSummary workOrderIds={filmOrderIds} />}
 
-        {/* CTP Stats Summary - shows when there are CTP orders in filtered results */}
-        <CtpStatsSummary workOrderIds={ctpOrderIds} />
+        {/* CTP Stats Summary - shows when there are CTP orders in filtered results (admin/superuser only) */}
+        {(isSuper || isAdmin) && <CtpStatsSummary workOrderIds={ctpOrderIds} />}
 
         <Card>
           <CardHeader>
