@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
@@ -10,6 +10,8 @@ import { useToast } from "@/hooks/use-toast";
 import { OrderFilesDialog } from "@/components/work-orders/OrderFilesDialog";
 import { InvalidateOrderDialog } from "@/components/work-orders/InvalidateOrderDialog";
 import { DeleteOrderDialog } from "@/components/work-orders/DeleteOrderDialog";
+import { WorkOrderFilters, WorkOrderFiltersState } from "@/components/work-orders/WorkOrderFilters";
+import { FilmStatsSummary } from "@/components/work-orders/FilmStatsSummary";
 
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
@@ -39,6 +41,13 @@ const WorkOrders = () => {
   const [orderToInvalidate, setOrderToInvalidate] = useState<any>(null);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [orderToDelete, setOrderToDelete] = useState<any>(null);
+  const [filters, setFilters] = useState<WorkOrderFiltersState>({
+    dateRange: { from: undefined, to: undefined },
+    clientIds: [],
+    orderType: "all",
+    status: "all",
+    searchText: "",
+  });
   const navigate = useNavigate();
   const { toast } = useToast();
   const { isSuper, isAdmin } = useAuthz();
@@ -131,10 +140,52 @@ const WorkOrders = () => {
     }
   };
 
+  // Apply filters to work orders
+  const filteredWorkOrders = useMemo(() => {
+    return workOrders.filter((order) => {
+      // Date range filter
+      if (filters.dateRange.from) {
+        const orderDate = new Date(order.created_at);
+        if (orderDate < filters.dateRange.from) return false;
+      }
+      if (filters.dateRange.to) {
+        const orderDate = new Date(order.created_at);
+        const endOfDay = new Date(filters.dateRange.to);
+        endOfDay.setHours(23, 59, 59, 999);
+        if (orderDate > endOfDay) return false;
+      }
+
+      // Client filter
+      if (filters.clientIds.length > 0 && !filters.clientIds.includes(order.client_id)) {
+        return false;
+      }
+
+      // Order type filter
+      if (filters.orderType !== "all" && order.order_type !== filters.orderType) {
+        return false;
+      }
+
+      // Status filter
+      if (filters.status !== "all" && order.status !== filters.status) {
+        return false;
+      }
+
+      return true;
+    });
+  }, [workOrders, filters]);
+
+  // Get film order IDs for stats summary
+  const filmOrderIds = useMemo(() => {
+    return filteredWorkOrders
+      .filter((order) => order.order_type === "film")
+      .map((order) => order.id);
+  }, [filteredWorkOrders]);
+
   const getOrderTypeLabel = (type: string) => {
     switch (type) {
       case "ctp": return "CTP";
       case "digital": return "Digital";
+      case "film": return "Filmovanje";
       case "other": return "Ostalo";
       default: return type;
     }
@@ -389,7 +440,7 @@ const WorkOrders = () => {
   };
 
   const toggleAllOrders = () => {
-    const openOrders = workOrders.filter(order => order.status === 'open');
+    const openOrders = filteredWorkOrders.filter(order => order.status === 'open');
     if (selectedOrders.size === openOrders.length) {
       setSelectedOrders(new Set());
     } else {
@@ -478,13 +529,21 @@ const WorkOrders = () => {
         </div>
       </header>
 
-      <main className="mx-auto px-4 py-8 max-w-[1600px]">
+      <main className="mx-auto px-4 py-8 max-w-[1600px] space-y-4">
+        <WorkOrderFilters filters={filters} onFiltersChange={setFilters} />
+        
+        {/* Film Stats Summary - shows when there are film orders in filtered results */}
+        <FilmStatsSummary workOrderIds={filmOrderIds} />
+
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center justify-between">
               <div className="flex items-center gap-2">
                 <FileText className="h-5 w-5" />
-                Svi radni nalozi
+                Radni nalozi
+                <Badge variant="outline" className="ml-2">
+                  {filteredWorkOrders.length} {filteredWorkOrders.length === 1 ? "nalog" : "naloga"}
+                </Badge>
               </div>
               {(isSuper || isAdmin) && selectedOrders.size > 0 && (
                 <Button onClick={handleBulkClose} variant="default">
@@ -495,10 +554,10 @@ const WorkOrders = () => {
             </CardTitle>
           </CardHeader>
           <CardContent>
-            {workOrders.length === 0 ? (
+            {filteredWorkOrders.length === 0 ? (
               <div className="text-center py-12 text-muted-foreground">
                 <FileText className="h-12 w-12 mx-auto mb-4 opacity-50" />
-                <p>Nema radnih naloga. Kreirajte prvi nalog.</p>
+                <p>Nema radnih naloga za izabrane filtere.</p>
               </div>
             ) : (
               <Table>
@@ -507,9 +566,9 @@ const WorkOrders = () => {
                     {(isSuper || isAdmin) && (
                       <TableHead className="w-12">
                         <Checkbox
-                          checked={selectedOrders.size > 0 && selectedOrders.size === workOrders.filter(o => o.status === 'open').length}
+                          checked={selectedOrders.size > 0 && selectedOrders.size === filteredWorkOrders.filter(o => o.status === 'open').length}
                           onCheckedChange={toggleAllOrders}
-                          disabled={workOrders.filter(o => o.status === 'open').length === 0}
+                          disabled={filteredWorkOrders.filter(o => o.status === 'open').length === 0}
                         />
                       </TableHead>
                     )}
@@ -525,7 +584,7 @@ const WorkOrders = () => {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {workOrders.map((order) => (
+                  {filteredWorkOrders.map((order) => (
                     <TableRow
                       key={order.id}
                       className="cursor-pointer hover:bg-muted/50"
