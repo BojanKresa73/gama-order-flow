@@ -6,6 +6,12 @@ export interface FitResult {
   total_m: number;
 }
 
+/**
+ * Računa filmovanje BEZ nesting-a.
+ * Mašina ne radi nesting - svaki komad ide jedan ispod drugog.
+ * Biramo orijentaciju tako da jedna dimenzija stane u širinu rolne,
+ * a druga dimenzija ide u dužinu (množi se sa količinom).
+ */
 export function fitOnRoll(
   w_mm: number,
   h_mm: number,
@@ -15,15 +21,19 @@ export function fitOnRoll(
   gap_mm = 0,
   waste_pct = 0
 ): FitResult {
+  const usable = roll_mm - 2 * margin_mm;
+
   const tryOrient = (o: 0 | 90) => {
+    // pieceW ide po širini rolne, pieceH ide po dužini rolne
     const pieceW = o === 0 ? w_mm : h_mm;
     const pieceH = o === 0 ? h_mm : w_mm;
 
-    const usable = roll_mm - 2 * margin_mm;
+    // Provera da li staje u širinu rolne
     if (pieceW > usable) return null;
 
-    const across = Math.max(1, Math.floor((usable + gap_mm) / (pieceW + gap_mm)));
-    const rows = Math.ceil(qty / across);
+    // Nema nesting-a - svaki komad ide jedan ispod drugog
+    const across = 1;
+    const rows = qty;
     const m_per_piece = pieceH / 1000;
     const total_m_raw = rows * m_per_piece;
     const total_m = total_m_raw * (1 + waste_pct);
@@ -37,11 +47,12 @@ export function fitOnRoll(
   if (!o0 && !o90) {
     throw new Error('NE_STAJE_U_ROLNU');
   }
+
   if (o0 && o90) {
-    // Choose more economical (lower total_m), or higher across if equal
+    // Obe orijentacije staju - biramo ekonomičniju (manji total_m)
     if (o90.total_m < o0.total_m) return o90;
-    if (o90.total_m === o0.total_m && o90.across > o0.across) return o90;
     return o0;
   }
+
   return (o0 ?? o90)!;
 }
