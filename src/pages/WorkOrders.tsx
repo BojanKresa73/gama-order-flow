@@ -77,7 +77,9 @@ const WorkOrders = () => {
           email_job_latest_status (
             status,
             error_msg
-          )
+          ),
+          file_entries (quantity),
+          film_jobs (computed_total_m)
         `)
         .is("deleted_at", null)
         .order("created_at", { ascending: false });
@@ -217,6 +219,27 @@ const WorkOrders = () => {
     if (order.status !== 'closed') return '-';
     if (order._closedByMix) return 'Mix';
     if (order._closedByName) return order._closedByName;
+    return '-';
+  };
+
+  // Get quantity display for order (plates for CTP, meters for film)
+  const getOrderQuantity = (order: any) => {
+    if (order.order_type === 'ctp') {
+      // Sum all plate quantities from file_entries
+      const totalPlates = (order.file_entries || []).reduce(
+        (sum: number, entry: any) => sum + (entry.quantity || 0),
+        0
+      );
+      return totalPlates > 0 ? `${totalPlates} ploča` : '-';
+    }
+    if (order.order_type === 'film') {
+      // Sum all meters from film_jobs
+      const totalMeters = (order.film_jobs || []).reduce(
+        (sum: number, job: any) => sum + (job.computed_total_m || 0),
+        0
+      );
+      return totalMeters > 0 ? `${totalMeters.toFixed(2)} m` : '-';
+    }
     return '-';
   };
 
@@ -586,6 +609,7 @@ const WorkOrders = () => {
                     <TableHead>Broj naloga</TableHead>
                     <TableHead>Klijent</TableHead>
                     <TableHead>Tip</TableHead>
+                    <TableHead className="text-right">Količina</TableHead>
                     <TableHead>Status</TableHead>
                     <TableHead>Kreirao</TableHead>
                     <TableHead>Zatvorio</TableHead>
@@ -622,6 +646,9 @@ const WorkOrders = () => {
                       </TableCell>
                       <TableCell>{order.clients?.name}</TableCell>
                       <TableCell>{getOrderTypeLabel(order.order_type)}</TableCell>
+                      <TableCell className="text-right font-medium">
+                        {getOrderQuantity(order)}
+                      </TableCell>
                       <TableCell>{getStatusBadge(order.status, order.invalidated_at, order.deleted_at)}</TableCell>
                       <TableCell>{order.profiles?.full_name || '-'}</TableCell>
                       <TableCell>{getClosedByDisplay(order)}</TableCell>
