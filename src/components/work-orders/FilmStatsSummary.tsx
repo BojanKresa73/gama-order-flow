@@ -68,16 +68,15 @@ export function FilmStatsSummary({ workOrderIds }: FilmStatsSummaryProps) {
 
       const costPerM = filmSettings?.cost_eur_per_m || 12.5;
       const defaultPricePerM = filmSettings?.price_eur_per_m || 17;
-      const wastePercent = filmSettings?.waste_percent || 3;
 
       for (const job of filmJobs || []) {
         if (job.computed_total_m && job.computed_total_m > 0) {
-          const metersWithWaste = job.computed_total_m * (1 + wastePercent / 100);
-          totalMeters += metersWithWaste;
-          totalCost += metersWithWaste * costPerM;
+          // computed_total_m already includes waste, don't add it again
+          totalMeters += job.computed_total_m;
+          totalCost += job.computed_total_m * costPerM;
           
           const pricePerM = priceOverrides.get(job.work_order_id) || defaultPricePerM;
-          totalRevenue += metersWithWaste * pricePerM;
+          totalRevenue += job.computed_total_m * pricePerM;
           
           ordersWithFilm.add(job.work_order_id);
         }
