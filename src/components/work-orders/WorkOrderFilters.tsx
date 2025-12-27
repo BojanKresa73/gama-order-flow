@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
@@ -54,6 +54,11 @@ export function WorkOrderFilters({ filters, onFiltersChange }: WorkOrderFiltersP
   const [localFilters, setLocalFilters] = useState(filters);
   const [clientsOpen, setClientsOpen] = useState(false);
   const [clientSearch, setClientSearch] = useState("");
+
+  // Sync local filters with props when they change (e.g., from URL params)
+  useEffect(() => {
+    setLocalFilters(filters);
+  }, [filters]);
 
   // Fetch clients
   const { data: clients = [] } = useQuery({
