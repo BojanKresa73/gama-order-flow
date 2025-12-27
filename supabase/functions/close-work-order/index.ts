@@ -204,13 +204,15 @@ function isSupportedFont(bytes: ArrayBuffer) {
   return sig === '\x00\x01\x00\x00' || sig === 'OTTO'; // TTF or OTF
 }
 
-// Film job computation logic (matching compute-film-job edge function)
+// Film job computation logic - NO NESTING, each piece goes one below the other
+// This matches src/lib/filmCalculations.ts and supabase/functions/_shared/film-calculations.ts
 interface FilmJobItem {
   id: string;
   width_mm: number;
   height_mm: number;
   qty: number;
   allow_rotate_90: boolean;
+  margin_mm?: number;
 }
 
 interface ComputeResult {
@@ -224,55 +226,50 @@ interface ComputeResult {
 function computeSingleFilmJob(
   item: FilmJobItem,
   rollWidthMm: number,
-  wastePercent: number
+  wastePercent: number,
+  marginMm: number = 0
 ): ComputeResult {
-  const MAX_COMPONENT_WIDTH_MM = 500;
+  const usable = rollWidthMm - 2 * marginMm;
 
-  // Check dimensions
-  if (item.width_mm > MAX_COMPONENT_WIDTH_MM || item.height_mm > MAX_COMPONENT_WIDTH_MM) {
-    throw new Error(`Preširoko za rolu (max ${MAX_COMPONENT_WIDTH_MM} mm) – stavka ${item.id}`);
+  const tryOrient = (o: 0 | 90) => {
+    // pieceW goes along roll width, pieceH goes along roll length
+    const pieceW = o === 0 ? item.width_mm : item.height_mm;
+    const pieceH = o === 0 ? item.height_mm : item.width_mm;
+
+    // Check if it fits in roll width
+    if (pieceW > usable) return null;
+
+    // No nesting - each piece goes one below the other
+    const across = 1;
+    const rows = item.qty;
+    const m_per_piece = pieceH / 1000;
+    const total_m_raw = rows * m_per_piece;
+    const total_m = total_m_raw * (1 + wastePercent / 100);
+
+    return { orientation: o, across, rows, m_per_piece, total_m };
+  };
+
+  const o0 = tryOrient(0);
+  const o90 = item.allow_rotate_90 ? tryOrient(90) : null;
+
+  if (!o0 && !o90) {
+    throw new Error(`NE_STAJE_U_ROLNU - stavka ${item.id} ne staje u širinu rolne (${usable}mm)`);
   }
 
-  let best: { rotation: number; copies: number; rows: number; totalMm: number } | null = null;
-
-  // Try 0° orientation
-  const copiesPerRow0 = Math.floor(rollWidthMm / item.width_mm);
-  if (copiesPerRow0 >= 1) {
-    const rows0 = Math.ceil(item.qty / copiesPerRow0);
-    const total0Mm = rows0 * item.height_mm;
-    best = { rotation: 0, copies: copiesPerRow0, rows: rows0, totalMm: total0Mm };
+  let best = o0;
+  if (o0 && o90) {
+    // Both orientations fit - choose the more economical one (smaller total_m)
+    if (o90.total_m < o0.total_m) best = o90;
+  } else if (!o0 && o90) {
+    best = o90;
   }
-
-  // Try 90° orientation if allowed
-  if (item.allow_rotate_90) {
-    const copiesPerRow90 = Math.floor(rollWidthMm / item.height_mm);
-    if (copiesPerRow90 >= 1) {
-      const rows90 = Math.ceil(item.qty / copiesPerRow90);
-      const total90Mm = rows90 * item.width_mm;
-      
-      if (!best || total90Mm < best.totalMm) {
-        best = { rotation: 90, copies: copiesPerRow90, rows: rows90, totalMm: total90Mm };
-      }
-    }
-  }
-
-  if (!best) {
-    throw new Error(`Preširoko za rolu (max ${MAX_COMPONENT_WIDTH_MM} mm) – stavka ${item.id}`);
-  }
-
-  // Apply waste percentage
-  const totalMmWithWaste = best.totalMm * (1 + wastePercent / 100);
-  
-  // Ceiling to centimeter (0.01 m)
-  const totalLengthM = Math.ceil(totalMmWithWaste / 10) / 100;
-  const mPerPiece = totalLengthM / item.qty;
 
   return {
-    rotation_deg: best.rotation,
-    m_per_piece: Number(mPerPiece.toFixed(4)),
-    total_m: Number(totalLengthM.toFixed(2)),
-    copies_per_row: best.copies,
-    rows_needed: best.rows
+    rotation_deg: best!.orientation,
+    m_per_piece: Number(best!.m_per_piece.toFixed(4)),
+    total_m: Number(best!.total_m.toFixed(4)),
+    copies_per_row: best!.across,
+    rows_needed: best!.rows
   };
 }
 
@@ -283,7 +280,7 @@ async function ensureFilmComputations(supabase: any, workOrderId: string) {
   // Fetch film settings
   const { data: settings, error: settingsError } = await supabase
     .from('film_settings')
-    .select('roll_width_mm, waste_percent')
+    .select('roll_width_mm, waste_percent, side_margin_mm')
     .single();
 
   if (settingsError) throw new Error('Greška pri učitavanju podešavanja filmovanja');
@@ -291,10 +288,10 @@ async function ensureFilmComputations(supabase: any, workOrderId: string) {
   const rollWidthMm = settings?.roll_width_mm || 500;
   const wastePercent = settings?.waste_percent || 3;
 
-  // Fetch all film jobs for this order
+  // Fetch all film jobs for this order (include margin_mm)
   const { data: filmJobs, error: fetchError } = await supabase
     .from('film_jobs')
-    .select('id, width_mm, height_mm, qty, allow_rotate_90, computed_total_m')
+    .select('id, width_mm, height_mm, qty, allow_rotate_90, margin_mm, computed_total_m')
     .eq('work_order_id', workOrderId);
 
   if (fetchError) throw new Error('Greška pri učitavanju filmskih stavki');
@@ -320,16 +317,21 @@ async function ensureFilmComputations(supabase: any, workOrderId: string) {
   const updates = [];
   for (const job of jobsNeedingComputation) {
     try {
+      // Use job's margin_mm or default from settings
+      const marginMm = job.margin_mm ?? settings?.side_margin_mm ?? 0;
+      
       const result = computeSingleFilmJob(
         {
           id: job.id,
           width_mm: job.width_mm,
           height_mm: job.height_mm,
           qty: job.qty,
-          allow_rotate_90: job.allow_rotate_90
+          allow_rotate_90: job.allow_rotate_90,
+          margin_mm: marginMm
         },
         rollWidthMm,
-        wastePercent
+        wastePercent,
+        marginMm
       );
 
       updates.push({
