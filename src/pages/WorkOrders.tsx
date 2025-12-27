@@ -1,5 +1,5 @@
-import { useEffect, useState, useMemo } from "react";
-import { useNavigate } from "react-router-dom";
+import { useEffect, useState, useMemo, useCallback } from "react";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -23,8 +23,52 @@ import { Progress } from "@/components/ui/progress";
 import { prefixFor, displayOrderNumber } from "@/lib/orderLabel";
 import { useAuthz } from "@/hooks/useAuthz";
 
+// Helper functions to serialize/deserialize filters to URL params
+const serializeFiltersToParams = (filters: WorkOrderFiltersState): URLSearchParams => {
+  const params = new URLSearchParams();
+  if (filters.dateRange.from) {
+    params.set("dateFrom", filters.dateRange.from.toISOString());
+  }
+  if (filters.dateRange.to) {
+    params.set("dateTo", filters.dateRange.to.toISOString());
+  }
+  if (filters.clientIds.length > 0) {
+    params.set("clients", filters.clientIds.join(","));
+  }
+  if (filters.orderType !== "all") {
+    params.set("type", filters.orderType);
+  }
+  if (filters.status !== "all") {
+    params.set("status", filters.status);
+  }
+  if (filters.searchText) {
+    params.set("search", filters.searchText);
+  }
+  return params;
+};
+
+const parseFiltersFromParams = (params: URLSearchParams): WorkOrderFiltersState => {
+  const dateFrom = params.get("dateFrom");
+  const dateTo = params.get("dateTo");
+  const clients = params.get("clients");
+  const type = params.get("type");
+  const status = params.get("status");
+  const search = params.get("search");
+
+  return {
+    dateRange: {
+      from: dateFrom ? new Date(dateFrom) : undefined,
+      to: dateTo ? new Date(dateTo) : undefined,
+    },
+    clientIds: clients ? clients.split(",").filter(Boolean) : [],
+    orderType: type || "all",
+    status: status || "all",
+    searchText: search || "",
+  };
+};
 
 const WorkOrders = () => {
+  const [searchParams, setSearchParams] = useSearchParams();
   const [workOrders, setWorkOrders] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [filesDialogOpen, setFilesDialogOpen] = useState(false);
@@ -42,17 +86,22 @@ const WorkOrders = () => {
   const [orderToInvalidate, setOrderToInvalidate] = useState<any>(null);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [orderToDelete, setOrderToDelete] = useState<any>(null);
-  const [filters, setFilters] = useState<WorkOrderFiltersState>({
-    dateRange: { from: undefined, to: undefined },
-    clientIds: [],
-    orderType: "all",
-    status: "all",
-    searchText: "",
-  });
+  
+  // Initialize filters from URL params
+  const [filters, setFilters] = useState<WorkOrderFiltersState>(() => 
+    parseFiltersFromParams(searchParams)
+  );
+  
   const navigate = useNavigate();
   const { toast } = useToast();
   const { isSuper, isAdmin } = useAuthz();
-  
+
+  // Update URL when filters change
+  const handleFiltersChange = useCallback((newFilters: WorkOrderFiltersState) => {
+    setFilters(newFilters);
+    const params = serializeFiltersToParams(newFilters);
+    setSearchParams(params, { replace: true });
+  }, [setSearchParams]);
 
   useEffect(() => {
     checkAuth();
@@ -561,7 +610,7 @@ const WorkOrders = () => {
       </header>
 
       <main className="mx-auto px-4 py-8 max-w-[1600px] space-y-4">
-        <WorkOrderFilters filters={filters} onFiltersChange={setFilters} />
+        <WorkOrderFilters filters={filters} onFiltersChange={handleFiltersChange} />
         
         {/* Film Stats Summary - shows when there are film orders in filtered results (admin/superuser only) */}
         {(isSuper || isAdmin) && <FilmStatsSummary workOrderIds={filmOrderIds} />}
