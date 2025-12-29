@@ -187,7 +187,7 @@ export const DigitalStatsSection = () => {
 
   if (isLoading) {
     return (
-      <div className="col-span-12 space-y-6">
+      <div className="col-span-1 sm:col-span-2 md:col-span-12 space-y-6 min-w-0">
         <div className="flex items-center gap-3 mb-2">
           <Skeleton className="h-8 w-8 rounded-lg" />
           <Skeleton className="h-8 w-64" />
@@ -206,7 +206,7 @@ export const DigitalStatsSection = () => {
   }
 
   return (
-    <div className="col-span-12 space-y-6">
+    <div className="col-span-1 sm:col-span-2 md:col-span-12 space-y-6 min-w-0">
       {/* Section Header */}
       <div className="flex items-center gap-3">
         <div className="p-2 rounded-xl bg-gradient-to-br from-indigo-500 to-purple-600 text-white shadow-lg shadow-indigo-500/25">
