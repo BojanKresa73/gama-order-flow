@@ -2,7 +2,9 @@ import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { Card, CardContent } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
+import { useIsMobile } from "@/hooks/use-mobile";
 import {
   Table,
   TableBody,
@@ -18,7 +20,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { ChevronDown, ChevronRight, CheckCircle, XCircle, Search, FileText } from "lucide-react";
+import { ChevronDown, ChevronRight, CheckCircle, XCircle, Search, FileText, Calendar, User } from "lucide-react";
 import { format, subDays } from "date-fns";
 import { prefixFor } from "@/lib/orderLabel";
 
@@ -59,6 +61,7 @@ const ChecklistView = ({ orderType, onNavigateToSearch }: ChecklistViewProps) =>
   const [loading, setLoading] = useState(true);
   const [statusFilter, setStatusFilter] = useState<StatusFilter>("open");
   const { toast } = useToast();
+  const isMobile = useIsMobile();
 
   useEffect(() => {
     fetchWorkOrders();
@@ -406,13 +409,96 @@ const ChecklistView = ({ orderType, onNavigateToSearch }: ChecklistViewProps) =>
     return <div className="p-4 text-center">Učitavanje...</div>;
   }
 
+  // Mobile card component for work orders
+  const MobileOrderCard = ({ order }: { order: WorkOrder }) => (
+    <Card className="mb-3">
+      <CardContent className="p-4">
+        <div className="flex justify-between items-start mb-2">
+          <div className="flex-1 min-w-0">
+            <p className="font-semibold text-sm truncate">
+              {order.order_code || (() => {
+                const year = new Date(order.created_at).getFullYear();
+                const serial = String(order.order_number).padStart(4, '0');
+                return `${prefixFor(order.type)}-${year}-${serial}`;
+              })()}
+            </p>
+            <p className="text-sm text-muted-foreground truncate">{order.client_name}</p>
+          </div>
+          <div className="flex items-center gap-2 flex-shrink-0">
+            {getStatusBadge(order.status)}
+            {getTypeBadge(order.type, order.kind)}
+          </div>
+        </div>
+        
+        <div className="grid grid-cols-2 gap-2 text-xs text-muted-foreground mb-3">
+          <div className="flex items-center gap-1">
+            <Calendar className="h-3 w-3" />
+            {format(new Date(order.created_at), "dd.MM.yyyy")}
+          </div>
+          <div className="flex items-center gap-1">
+            <User className="h-3 w-3" />
+            {order.created_by_name || "-"}
+          </div>
+          {orderType === "ctp" && (
+            <div className="col-span-2">
+              <span className="font-medium text-foreground">Ploče: {order.total_plates}</span>
+            </div>
+          )}
+        </div>
+
+        <div className="flex gap-2 flex-wrap">
+          {order.status === "open" && (
+            <Button size="sm" className="flex-1" onClick={() => closeWorkOrder(order.id)}>
+              Zatvori
+            </Button>
+          )}
+          {order.status === "closed" && (
+            <Button size="sm" variant="outline" className="flex-1" onClick={() => sendDeliveryNote(order.id)}>
+              <FileText className="h-3 w-3 mr-1" />
+              Otpremnica
+            </Button>
+          )}
+          {orderType === "ctp" && order.file_entries && order.file_entries.length > 0 && (
+            <Button size="sm" variant="ghost" onClick={() => toggleExpand(order.id)}>
+              {expandedOrders.has(order.id) ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
+            </Button>
+          )}
+        </div>
+
+        {/* Expanded file entries */}
+        {orderType === "ctp" && expandedOrders.has(order.id) && order.file_entries && (
+          <div className="mt-3 pt-3 border-t space-y-2">
+            {order.file_entries.map((file) => (
+              <div key={file.id} className="flex items-center justify-between bg-muted/50 p-2 rounded text-xs">
+                <div className="flex-1 min-w-0">
+                  <p className="truncate font-medium">📄 {file.filename}</p>
+                  <p className="text-muted-foreground">
+                    {file.plate_format_name || "N/A"} • Qty: {file.quantity}
+                  </p>
+                </div>
+                <div className="flex items-center gap-2 flex-shrink-0">
+                  {getStatusBadge(file.status)}
+                  {file.status === "open" && (
+                    <Button size="sm" variant="outline" className="h-7 text-xs" onClick={() => closeFileEntry(file.id, order.id)}>
+                      Zatvori
+                    </Button>
+                  )}
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+      </CardContent>
+    </Card>
+  );
+
   return (
     <div className="mt-4">
-      <div className="mb-6 flex items-center justify-between">
-        <div className="flex items-center gap-3">
-          <span className="text-sm font-medium">Status:</span>
+      <div className="mb-4 md:mb-6 flex flex-col md:flex-row gap-3 md:items-center md:justify-between">
+        <div className="flex items-center gap-2 md:gap-3">
+          <span className="text-xs md:text-sm font-medium">Status:</span>
           <Select value={statusFilter} onValueChange={(v) => setStatusFilter(v as StatusFilter)}>
-            <SelectTrigger className="w-[160px]">
+            <SelectTrigger className="w-[130px] md:w-[160px] h-9">
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
@@ -422,9 +508,10 @@ const ChecklistView = ({ orderType, onNavigateToSearch }: ChecklistViewProps) =>
             </SelectContent>
           </Select>
         </div>
-        <Button onClick={openSearchTab} className="gap-2">
+        <Button onClick={openSearchTab} size={isMobile ? "sm" : "default"} className="gap-2">
           <Search className="h-4 w-4" />
-          Pretraga i Statistika
+          <span className="hidden md:inline">Pretraga i Statistika</span>
+          <span className="md:hidden">Pretraga</span>
         </Button>
       </div>
 
@@ -432,124 +519,132 @@ const ChecklistView = ({ orderType, onNavigateToSearch }: ChecklistViewProps) =>
         <div className="p-8 text-center text-muted-foreground">
           Nema radnih naloga
         </div>
-      ) : (
-        <Table>
-        <TableHeader>
-          <TableRow>
-            <TableHead className="w-12"></TableHead>
-            <TableHead>Broj Naloga</TableHead>
-            <TableHead>Klijent</TableHead>
-            <TableHead>Kreirao</TableHead>
-            <TableHead>Tip</TableHead>
-            <TableHead>Datum Otvaranja</TableHead>
-            <TableHead>Datum Zatvaranja</TableHead>
-            <TableHead>Status</TableHead>
-            {orderType === "ctp" && <TableHead>Broj Ploča</TableHead>}
-            <TableHead className="text-right">Akcije</TableHead>
-          </TableRow>
-        </TableHeader>
-        <TableBody>
+      ) : isMobile ? (
+        // Mobile: Card-based layout
+        <div className="space-y-3">
           {workOrders.map((order) => (
-            <>
-              <TableRow key={order.id} className="cursor-pointer hover:bg-muted/50">
-                <TableCell onClick={() => toggleExpand(order.id)}>
-                  {orderType === "ctp" && order.file_entries && order.file_entries.length > 0 && (
-                    expandedOrders.has(order.id) ? (
-                      <ChevronDown className="h-4 w-4" />
-                    ) : (
-                      <ChevronRight className="h-4 w-4" />
-                    )
+            <MobileOrderCard key={order.id} order={order} />
+          ))}
+        </div>
+      ) : (
+        // Desktop: Table layout
+        <Table>
+          <TableHeader>
+            <TableRow>
+              <TableHead className="w-12"></TableHead>
+              <TableHead>Broj Naloga</TableHead>
+              <TableHead>Klijent</TableHead>
+              <TableHead>Kreirao</TableHead>
+              <TableHead>Tip</TableHead>
+              <TableHead>Datum Otvaranja</TableHead>
+              <TableHead>Datum Zatvaranja</TableHead>
+              <TableHead>Status</TableHead>
+              {orderType === "ctp" && <TableHead>Broj Ploča</TableHead>}
+              <TableHead className="text-right">Akcije</TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {workOrders.map((order) => (
+              <>
+                <TableRow key={order.id} className="cursor-pointer hover:bg-muted/50">
+                  <TableCell onClick={() => toggleExpand(order.id)}>
+                    {orderType === "ctp" && order.file_entries && order.file_entries.length > 0 && (
+                      expandedOrders.has(order.id) ? (
+                        <ChevronDown className="h-4 w-4" />
+                      ) : (
+                        <ChevronRight className="h-4 w-4" />
+                      )
+                    )}
+                  </TableCell>
+                  <TableCell className="font-medium">
+                    {order.order_code || (() => {
+                      const year = new Date(order.created_at).getFullYear();
+                      const serial = String(order.order_number).padStart(4, '0');
+                      return `${prefixFor(order.type)}-${year}-${serial}`;
+                    })()}
+                  </TableCell>
+                  <TableCell>{order.client_name}</TableCell>
+                  <TableCell className="text-muted-foreground">{order.created_by_name || "-"}</TableCell>
+                  <TableCell>{getTypeBadge(order.type, order.kind)}</TableCell>
+                  <TableCell>
+                    {format(new Date(order.created_at), "dd.MM.yyyy HH:mm")}
+                  </TableCell>
+                  <TableCell>
+                    {order.closed_at
+                      ? format(new Date(order.closed_at), "dd.MM.yyyy HH:mm")
+                      : "-"}
+                  </TableCell>
+                  <TableCell>{getStatusBadge(order.status)}</TableCell>
+                  {orderType === "ctp" && (
+                    <TableCell className="font-semibold">{order.total_plates}</TableCell>
                   )}
-                </TableCell>
-                <TableCell className="font-medium">
-                  {order.order_code || (() => {
-                    const year = new Date(order.created_at).getFullYear();
-                    const serial = String(order.order_number).padStart(4, '0');
-                    return `${prefixFor(order.type)}-${year}-${serial}`;
-                  })()}
-                </TableCell>
-                <TableCell>{order.client_name}</TableCell>
-                <TableCell className="text-muted-foreground">{order.created_by_name || "-"}</TableCell>
-                <TableCell>{getTypeBadge(order.type, order.kind)}</TableCell>
-                <TableCell>
-                  {format(new Date(order.created_at), "dd.MM.yyyy HH:mm")}
-                </TableCell>
-                <TableCell>
-                  {order.closed_at
-                    ? format(new Date(order.closed_at), "dd.MM.yyyy HH:mm")
-                    : "-"}
-                </TableCell>
-                <TableCell>{getStatusBadge(order.status)}</TableCell>
-                {orderType === "ctp" && (
-                  <TableCell className="font-semibold">{order.total_plates}</TableCell>
-                )}
-                <TableCell className="text-right">
-                  <div className="flex gap-2 justify-end">
-                    {order.status === "open" && (
-                      <Button
-                        size="sm"
-                        onClick={() => closeWorkOrder(order.id)}
-                      >
-                        Zatvori Nalog
-                      </Button>
-                    )}
-                    {order.status === "closed" && (
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        onClick={() => sendDeliveryNote(order.id)}
-                      >
-                        <FileText className="h-4 w-4 mr-2" />
-                        Pošalji Otpremnicu
-                      </Button>
-                    )}
-                  </div>
-                </TableCell>
-              </TableRow>
-
-              {/* Expanded file entries for CTP orders */}
-              {orderType === "ctp" &&
-                expandedOrders.has(order.id) &&
-                order.file_entries &&
-                order.file_entries.map((file) => (
-                  <TableRow key={file.id} className="bg-muted/30">
-                    <TableCell></TableCell>
-                    <TableCell colSpan={2} className="pl-8">
-                      <span className="text-sm text-muted-foreground">
-                        📄 {file.filename}
-                      </span>
-                    </TableCell>
-                    <TableCell>
-                      <span className="text-sm">
-                        Format: {file.plate_format_name || "N/A"}
-                      </span>
-                    </TableCell>
-                    <TableCell>
-                      <span className="text-sm">
-                        Količina: {file.quantity}
-                      </span>
-                    </TableCell>
-                    <TableCell colSpan={orderType === "ctp" ? 1 : 2}>
-                      {getStatusBadge(file.status)}
-                    </TableCell>
-                    {orderType === "ctp" && <TableCell></TableCell>}
-                    <TableCell className="text-right">
-                      {file.status === "open" && (
+                  <TableCell className="text-right">
+                    <div className="flex gap-2 justify-end">
+                      {order.status === "open" && (
+                        <Button
+                          size="sm"
+                          onClick={() => closeWorkOrder(order.id)}
+                        >
+                          Zatvori Nalog
+                        </Button>
+                      )}
+                      {order.status === "closed" && (
                         <Button
                           size="sm"
                           variant="outline"
-                          onClick={() => closeFileEntry(file.id, order.id)}
+                          onClick={() => sendDeliveryNote(order.id)}
                         >
-                          Zatvori Fajl
+                          <FileText className="h-4 w-4 mr-2" />
+                          Pošalji Otpremnicu
                         </Button>
                       )}
-                    </TableCell>
-                  </TableRow>
-                ))}
-            </>
-          ))}
-        </TableBody>
-      </Table>
+                    </div>
+                  </TableCell>
+                </TableRow>
+
+                {/* Expanded file entries for CTP orders */}
+                {orderType === "ctp" &&
+                  expandedOrders.has(order.id) &&
+                  order.file_entries &&
+                  order.file_entries.map((file) => (
+                    <TableRow key={file.id} className="bg-muted/30">
+                      <TableCell></TableCell>
+                      <TableCell colSpan={2} className="pl-8">
+                        <span className="text-sm text-muted-foreground">
+                          📄 {file.filename}
+                        </span>
+                      </TableCell>
+                      <TableCell>
+                        <span className="text-sm">
+                          Format: {file.plate_format_name || "N/A"}
+                        </span>
+                      </TableCell>
+                      <TableCell>
+                        <span className="text-sm">
+                          Količina: {file.quantity}
+                        </span>
+                      </TableCell>
+                      <TableCell colSpan={orderType === "ctp" ? 1 : 2}>
+                        {getStatusBadge(file.status)}
+                      </TableCell>
+                      {orderType === "ctp" && <TableCell></TableCell>}
+                      <TableCell className="text-right">
+                        {file.status === "open" && (
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={() => closeFileEntry(file.id, order.id)}
+                          >
+                            Zatvori Fajl
+                          </Button>
+                        )}
+                      </TableCell>
+                    </TableRow>
+                  ))}
+              </>
+            ))}
+          </TableBody>
+        </Table>
       )}
     </div>
   );
