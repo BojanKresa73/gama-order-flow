@@ -41,12 +41,12 @@ export const StatsCards = () => {
     return (
       <>
         {[1, 2, 3, 4].map((i) => (
-          <div key={i} className="col-span-3 h-28 rounded-2xl border border-neutral-200 dark:border-neutral-800 shadow-sm p-5 bg-card">
-            <div className="flex items-start justify-between mb-3">
-              <Skeleton className="h-4 w-24" />
-              <Skeleton className="h-6 w-6 rounded opacity-60" />
+          <div key={i} className="col-span-1 md:col-span-6 lg:col-span-3 h-24 md:h-28 rounded-xl md:rounded-2xl border border-neutral-200 dark:border-neutral-800 shadow-sm p-4 md:p-5 bg-card">
+            <div className="flex items-start justify-between mb-2 md:mb-3">
+              <Skeleton className="h-3 md:h-4 w-20 md:w-24" />
+              <Skeleton className="h-5 md:h-6 w-5 md:w-6 rounded opacity-60" />
             </div>
-            <Skeleton className="h-8 w-20 mb-2" />
+            <Skeleton className="h-7 md:h-8 w-16 md:w-20 mb-2" />
           </div>
         ))}
       </>
@@ -85,13 +85,13 @@ export const StatsCards = () => {
       {cards.map((card) => (
         <div 
           key={card.title} 
-          className="col-span-3 h-28 rounded-2xl border border-neutral-200 dark:border-neutral-800 shadow-sm p-5 bg-card hover:shadow-md transition-shadow"
+          className="col-span-1 md:col-span-6 lg:col-span-3 h-24 md:h-28 rounded-xl md:rounded-2xl border border-neutral-200 dark:border-neutral-800 shadow-sm p-4 md:p-5 bg-card hover:shadow-md transition-shadow"
         >
-          <div className="flex items-start justify-between mb-3">
-            <p className="text-sm text-muted-foreground">{card.title}</p>
-            <card.icon className={`h-6 w-6 ${card.color} opacity-60`} />
+          <div className="flex items-start justify-between mb-2 md:mb-3">
+            <p className="text-xs md:text-sm text-muted-foreground">{card.title}</p>
+            <card.icon className={`h-5 md:h-6 w-5 md:w-6 ${card.color} opacity-60`} />
           </div>
-          <div className="text-3xl font-semibold tracking-tight">{card.value}</div>
+          <div className="text-2xl md:text-3xl font-semibold tracking-tight">{card.value}</div>
         </div>
       ))}
     </>
