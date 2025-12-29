@@ -85,13 +85,13 @@ export const StatsCards = () => {
       {cards.map((card) => (
         <div 
           key={card.title} 
-          className="col-span-1 md:col-span-6 lg:col-span-3 h-24 md:h-28 rounded-xl md:rounded-2xl border border-neutral-200 dark:border-neutral-800 shadow-sm p-4 md:p-5 bg-card hover:shadow-md transition-shadow"
+          className="col-span-1 md:col-span-6 lg:col-span-3 h-20 md:h-28 rounded-xl md:rounded-2xl border border-neutral-200 dark:border-neutral-800 shadow-sm p-3 md:p-5 bg-card hover:shadow-md transition-shadow"
         >
-          <div className="flex items-start justify-between mb-2 md:mb-3">
-            <p className="text-xs md:text-sm text-muted-foreground">{card.title}</p>
-            <card.icon className={`h-5 md:h-6 w-5 md:w-6 ${card.color} opacity-60`} />
+          <div className="flex items-start justify-between mb-1 md:mb-3">
+            <p className="text-[10px] md:text-sm text-muted-foreground leading-tight">{card.title}</p>
+            <card.icon className={`h-4 md:h-6 w-4 md:w-6 ${card.color} opacity-60 shrink-0`} />
           </div>
-          <div className="text-2xl md:text-3xl font-semibold tracking-tight">{card.value}</div>
+          <div className="text-xl md:text-3xl font-semibold tracking-tight">{card.value}</div>
         </div>
       ))}
     </>

@@ -43,12 +43,12 @@ export default function AdminSection() {
   };
 
   return (
-    <Card className="col-span-12 xl:col-span-4 shadow-md">
-      <CardHeader className="flex flex-row items-center gap-2">
+    <Card className="shadow-md">
+      <CardHeader className="flex flex-row items-center gap-2 p-4 md:p-6">
         <Shield className="h-5 w-5" />
-        <CardTitle>Administracija</CardTitle>
+        <CardTitle className="text-base md:text-lg">Administracija</CardTitle>
       </CardHeader>
-      <CardContent className="grid grid-cols-2 gap-3">
+      <CardContent className="grid grid-cols-2 gap-2 md:gap-3 p-4 pt-0 md:p-6 md:pt-0">
         <Button
           variant="default"
           className="h-20 flex-col gap-2"
