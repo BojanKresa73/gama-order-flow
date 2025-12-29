@@ -3,8 +3,9 @@ import { Button } from "@/components/ui/button";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { useAuthz } from "@/hooks/useAuthz";
+import { useIsMobile } from "@/hooks/use-mobile";
 import gamaLogo from "@/assets/gama-united-logo.svg";
-
+import { MobileNav } from "./MobileNav";
 
 interface AppHeaderProps {
   userName?: string;
@@ -16,6 +17,7 @@ export const AppHeader = ({ userName, showBackButton, title }: AppHeaderProps) =
   const navigate = useNavigate();
   const { toast } = useToast();
   const { isSuper } = useAuthz();
+  const isMobile = useIsMobile();
 
   const handleLogout = async () => {
     await supabase.auth.signOut();
@@ -28,19 +30,24 @@ export const AppHeader = ({ userName, showBackButton, title }: AppHeaderProps) =
 
   return (
     <header className="border-b bg-card sticky top-0 z-50">
-      <div className="container mx-auto px-4 py-4 flex justify-between items-center">
-        <div className="flex items-center gap-4">
+      <div className="container mx-auto px-3 md:px-4 py-3 md:py-4 flex justify-between items-center">
+        <div className="flex items-center gap-2 md:gap-4">
+          {/* Mobile hamburger menu */}
+          <MobileNav userName={userName} />
+          
           <img 
             src={gamaLogo} 
             alt="Gama United" 
-            className="h-14 cursor-pointer" 
+            className="h-10 md:h-14 cursor-pointer" 
             onClick={() => navigate("/dashboard")}
           />
-          <h1 className="text-2xl font-bold">
-            {title || "Radni nalozi - Gama United"}
+          <h1 className="text-lg md:text-2xl font-bold hidden sm:block">
+            {title || "Radni nalozi"}
           </h1>
         </div>
-        <div className="flex items-center gap-4">
+        
+        {/* Desktop actions */}
+        <div className="hidden md:flex items-center gap-4">
           <span className="text-sm text-muted-foreground">{userName}</span>
           {isSuper && (
             <Button variant="outline" onClick={() => navigate("/admin/users")}>

@@ -66,15 +66,32 @@ const Dashboard = () => {
     <div className="min-h-screen bg-background">
       <AppHeader userName={profile?.full_name} />
 
-      <main className="max-w-[1400px] mx-auto px-4 md:px-6 py-4 md:py-6">
-        {/* Quick Actions Bar */}
-        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-6">
-          <h2 className="text-xl md:text-2xl font-semibold">
+      <main className="max-w-[1400px] mx-auto px-3 md:px-6 py-4 md:py-6">
+        {/* Welcome & Quick Actions */}
+        <div className="flex flex-col gap-4 mb-6">
+          <h2 className="text-lg md:text-2xl font-semibold">
             Dobrodošli, {profile?.full_name}!
           </h2>
           
-          {/* Desktop Quick Actions - unchanged from before */}
-          <div className="flex items-center gap-3 flex-wrap">
+          {/* Mobile Quick Actions - Primary actions only */}
+          <div className="flex md:hidden gap-2 overflow-x-auto pb-2 -mx-3 px-3">
+            <Button size="sm" className="shrink-0" onClick={() => navigate("/work-orders/new")}>
+              + Novi nalog
+            </Button>
+            <Button size="sm" variant="secondary" className="shrink-0" onClick={() => navigate("/work-orders")}>
+              <FileText className="h-4 w-4 mr-1" />
+              Nalozi
+            </Button>
+            <Button size="sm" variant="outline" className="shrink-0 border-orange-300 text-orange-700" onClick={() => navigate("/large-format/new?type=roll")}>
+              + Rolna
+            </Button>
+            <Button size="sm" variant="outline" className="shrink-0 border-teal-300 text-teal-700" onClick={() => navigate("/large-format/new?type=rigid")}>
+              + Ploča
+            </Button>
+          </div>
+          
+          {/* Desktop Quick Actions */}
+          <div className="hidden md:flex items-center gap-3 flex-wrap">
             <Button onClick={() => navigate("/work-orders/new")}>
               + Novi nalog
             </Button>
@@ -119,7 +136,8 @@ const Dashboard = () => {
           </div>
         </div>
 
-        <div className="grid grid-cols-12 gap-6 items-start">
+        {/* Dashboard Grid */}
+        <div className="grid grid-cols-1 md:grid-cols-12 gap-4 md:gap-6 items-start">
           {/* Stats Cards - only for admin/superuser */}
           {canViewStats && <StatsCards />}
           
@@ -129,35 +147,35 @@ const Dashboard = () => {
           {/* Charts and Stats - only for admin/superuser */}
           {canViewStats && (
             <>
-              <div className="col-span-12 xl:col-span-4">
+              <div className="col-span-1 md:col-span-12 xl:col-span-4">
                 <OrdersByTypeChart />
               </div>
               
-              <div className="col-span-12 xl:col-span-4">
+              <div className="col-span-1 md:col-span-12 xl:col-span-4">
                 <TopClientsCard />
               </div>
 
-              <div className="col-span-12 xl:col-span-4">
+              <div className="col-span-1 md:col-span-12 xl:col-span-4">
                 <MonthlyPlateUsageChart />
               </div>
 
-              <div className="col-span-12 xl:col-span-4">
+              <div className="col-span-1 md:col-span-12 xl:col-span-4">
                 <ClosedOrdersChart />
               </div>
               
-              <div className="col-span-12 xl:col-span-4">
+              <div className="col-span-1 md:col-span-12 xl:col-span-4">
                 <DailyPlateStats />
               </div>
             </>
           )}
 
           {/* Recent Orders - visible to all */}
-          <div className={`col-span-12 ${canViewStats ? 'xl:col-span-8' : ''}`}>
+          <div className={`col-span-1 md:col-span-12 ${canViewStats ? 'xl:col-span-8' : ''}`}>
             <RecentOrders />
           </div>
 
           {/* Online Users - visible to all */}
-          <div className="col-span-12 xl:col-span-4">
+          <div className="col-span-1 md:col-span-12 xl:col-span-4">
             <OnlineUsersCard />
           </div>
 
