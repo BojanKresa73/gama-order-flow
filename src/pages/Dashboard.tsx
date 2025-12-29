@@ -73,19 +73,19 @@ const Dashboard = () => {
             Dobrodošli, {profile?.full_name}!
           </h2>
           
-          {/* Mobile Quick Actions - Primary actions only */}
-          <div className="flex md:hidden gap-2 overflow-x-auto pb-2 -mx-3 px-3">
-            <Button size="sm" className="shrink-0" onClick={() => navigate("/work-orders/new")}>
+          {/* Mobile Quick Actions - Grid layout that wraps */}
+          <div className="grid grid-cols-2 md:hidden gap-2">
+            <Button size="sm" className="w-full" onClick={() => navigate("/work-orders/new")}>
               + Novi nalog
             </Button>
-            <Button size="sm" variant="secondary" className="shrink-0" onClick={() => navigate("/work-orders")}>
+            <Button size="sm" variant="secondary" className="w-full" onClick={() => navigate("/work-orders")}>
               <FileText className="h-4 w-4 mr-1" />
               Nalozi
             </Button>
-            <Button size="sm" variant="outline" className="shrink-0 border-orange-300 text-orange-700" onClick={() => navigate("/large-format/new?type=roll")}>
+            <Button size="sm" variant="outline" className="w-full border-orange-300 text-orange-700" onClick={() => navigate("/large-format/new?type=roll")}>
               + Rolna
             </Button>
-            <Button size="sm" variant="outline" className="shrink-0 border-teal-300 text-teal-700" onClick={() => navigate("/large-format/new?type=rigid")}>
+            <Button size="sm" variant="outline" className="w-full border-teal-300 text-teal-700" onClick={() => navigate("/large-format/new?type=rigid")}>
               + Ploča
             </Button>
           </div>
