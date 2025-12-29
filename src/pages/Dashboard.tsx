@@ -137,45 +137,47 @@ const Dashboard = () => {
         </div>
 
         {/* Dashboard Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-12 gap-4 md:gap-6 items-start">
+        <div className="grid grid-cols-2 md:grid-cols-12 gap-3 md:gap-6 items-start">
           {/* Stats Cards - only for admin/superuser */}
           {canViewStats && <StatsCards />}
           
           {/* Admin Section - already has its own visibility logic */}
-          <AdminSection />
+          <div className="col-span-2 md:col-span-12 xl:col-span-4">
+            <AdminSection />
+          </div>
           
           {/* Charts and Stats - only for admin/superuser */}
           {canViewStats && (
             <>
-              <div className="col-span-1 md:col-span-12 xl:col-span-4">
-                <OrdersByTypeChart />
-              </div>
-              
-              <div className="col-span-1 md:col-span-12 xl:col-span-4">
+              <div className="col-span-2 md:col-span-6 xl:col-span-4">
                 <TopClientsCard />
               </div>
 
-              <div className="col-span-1 md:col-span-12 xl:col-span-4">
+              <div className="col-span-2 md:col-span-6 xl:col-span-4">
                 <MonthlyPlateUsageChart />
               </div>
 
-              <div className="col-span-1 md:col-span-12 xl:col-span-4">
+              <div className="col-span-2 md:col-span-6 xl:col-span-4">
+                <OrdersByTypeChart />
+              </div>
+
+              <div className="col-span-2 md:col-span-6 xl:col-span-4">
                 <ClosedOrdersChart />
               </div>
               
-              <div className="col-span-1 md:col-span-12 xl:col-span-4">
+              <div className="col-span-2 md:col-span-6 xl:col-span-4">
                 <DailyPlateStats />
               </div>
             </>
           )}
 
           {/* Recent Orders - visible to all */}
-          <div className={`col-span-1 md:col-span-12 ${canViewStats ? 'xl:col-span-8' : ''}`}>
+          <div className={`col-span-2 md:col-span-12 ${canViewStats ? 'xl:col-span-8' : ''}`}>
             <RecentOrders />
           </div>
 
           {/* Online Users - visible to all */}
-          <div className="col-span-1 md:col-span-12 xl:col-span-4">
+          <div className="col-span-2 md:col-span-12 xl:col-span-4">
             <OnlineUsersCard />
           </div>
 
