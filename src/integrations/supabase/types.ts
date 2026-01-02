@@ -2745,6 +2745,7 @@ export type Database = {
         | "operator"
         | "superuser"
         | "operator_ctp"
+        | "admin_plus"
       checklist_item_status:
         | "Pending"
         | "InProgress"
@@ -2909,6 +2910,7 @@ export const Constants = {
         "operator",
         "superuser",
         "operator_ctp",
+        "admin_plus",
       ],
       checklist_item_status: ["Pending", "InProgress", "Blocked", "Done", "NA"],
       large_format_type: ["roll", "rigid"],
