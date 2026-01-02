@@ -15,6 +15,7 @@ import WorkOrderDetails from "./pages/WorkOrderDetails";
 import WorkOrderPrint from "./pages/WorkOrderPrint";
 import Clients from "./pages/Clients";
 import Inventory from "./pages/Inventory";
+import Procurement from "./pages/Procurement";
 import Checklist from "./pages/Checklist";
 import AdminPriceListDigital from "./pages/AdminPriceListDigital";
 import AdminUsers from "./pages/AdminUsers";
@@ -51,6 +52,7 @@ const App = () => {
               <Route path="/work-orders/:orderId/delivery-note" element={<OrderDeliveryNote />} />
               <Route path="/clients" element={<Clients />} />
               <Route path="/inventory" element={<Inventory />} />
+              <Route path="/nabavka" element={<Procurement />} />
               <Route path="/checklist" element={<Checklist />} />
               <Route path="/admin/price-list-digital" element={<AdminPriceListDigital />} />
               <Route path="/admin/users" element={<AdminGuard><AdminUsers /></AdminGuard>} />

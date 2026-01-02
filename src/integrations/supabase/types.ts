@@ -1458,6 +1458,107 @@ export type Database = {
         }
         Relationships: []
       }
+      procurement_order_items: {
+        Row: {
+          created_at: string
+          height_mm: number
+          id: string
+          plate_format_id: string
+          price_per_m2: number
+          procurement_order_id: string
+          quantity: number
+          width_mm: number
+        }
+        Insert: {
+          created_at?: string
+          height_mm: number
+          id?: string
+          plate_format_id: string
+          price_per_m2: number
+          procurement_order_id: string
+          quantity: number
+          width_mm: number
+        }
+        Update: {
+          created_at?: string
+          height_mm?: number
+          id?: string
+          plate_format_id?: string
+          price_per_m2?: number
+          procurement_order_id?: string
+          quantity?: number
+          width_mm?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "procurement_order_items_plate_format_id_fkey"
+            columns: ["plate_format_id"]
+            isOneToOne: false
+            referencedRelation: "plate_formats"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "procurement_order_items_procurement_order_id_fkey"
+            columns: ["procurement_order_id"]
+            isOneToOne: false
+            referencedRelation: "procurement_orders"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      procurement_orders: {
+        Row: {
+          actual_arrival_date: string | null
+          created_at: string
+          created_by: string | null
+          expected_arrival_date: string | null
+          id: string
+          notes: string | null
+          order_date: string
+          other_costs: number | null
+          status: string
+          supplier_name: string
+          transport_cost: number | null
+          updated_at: string
+        }
+        Insert: {
+          actual_arrival_date?: string | null
+          created_at?: string
+          created_by?: string | null
+          expected_arrival_date?: string | null
+          id?: string
+          notes?: string | null
+          order_date?: string
+          other_costs?: number | null
+          status?: string
+          supplier_name: string
+          transport_cost?: number | null
+          updated_at?: string
+        }
+        Update: {
+          actual_arrival_date?: string | null
+          created_at?: string
+          created_by?: string | null
+          expected_arrival_date?: string | null
+          id?: string
+          notes?: string | null
+          order_date?: string
+          other_costs?: number | null
+          status?: string
+          supplier_name?: string
+          transport_cost?: number | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "procurement_orders_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       profiles: {
         Row: {
           created_at: string
