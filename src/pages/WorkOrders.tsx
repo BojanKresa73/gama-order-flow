@@ -128,7 +128,7 @@ const WorkOrders = () => {
 
   const fetchWorkOrders = async () => {
     try {
-      const { data, error} = await supabase
+      const { data, error } = await supabase
         .from("work_orders")
         .select(`
           *,
@@ -138,30 +138,41 @@ const WorkOrders = () => {
             status,
             error_msg
           ),
-          file_entries (quantity),
+          file_entries (quantity, closed_by),
           film_jobs (computed_total_m)
         `)
         .is("deleted_at", null)
-        .order("created_at", { ascending: false });
+        .order("created_at", { ascending: false })
+        .limit(500);
 
       if (error) throw error;
       
-      // For each order, check if it was closed by multiple people (Mix)
-      const ordersWithClosers = await Promise.all((data || []).map(async (order) => {
+      // Get unique closed_by IDs to fetch their names in one query
+      const closedByIds = new Set<string>();
+      (data || []).forEach((order) => {
+        if (order.closed_by) closedByIds.add(order.closed_by);
+      });
+      
+      // Fetch all closer profiles in one query
+      let closerProfiles: Record<string, string> = {};
+      if (closedByIds.size > 0) {
+        const { data: profiles } = await supabase
+          .from("profiles")
+          .select("id, full_name")
+          .in("id", Array.from(closedByIds));
+        if (profiles) {
+          closerProfiles = Object.fromEntries(profiles.map(p => [p.id, p.full_name || '']));
+        }
+      }
+      
+      // Process orders to add _closedByName without additional per-order queries
+      const ordersWithClosers = (data || []).map((order) => {
         if (order.status !== 'closed') {
           return order;
         }
         
-        // First, get the closed_by profile name if it exists
-        let closedByName = null;
-        if (order.closed_by) {
-          const { data: closerProfile } = await supabase
-            .from("profiles")
-            .select("full_name")
-            .eq("id", order.closed_by)
-            .maybeSingle();
-          closedByName = closerProfile?.full_name;
-        }
+        // Get closed_by name from the batch-fetched profiles
+        const closedByName = order.closed_by ? closerProfiles[order.closed_by] || null : null;
         
         // For film and digital orders, just use the work order closer
         if (order.order_type === 'film' || order.order_type === 'digital') {
@@ -169,27 +180,16 @@ const WorkOrders = () => {
         }
         
         // Check file_entries for different closers (CTP and other orders)
-        const { data: files } = await supabase
-          .from("file_entries")
-          .select("closed_by, profiles:closed_by(full_name)")
-          .eq("work_order_id", order.id)
-          .not("closed_by", "is", null);
-        
-        if (files && files.length > 0) {
-          const uniqueClosers = new Set(files.map(f => f.closed_by).filter(Boolean));
+        const files = order.file_entries || [];
+        if (files.length > 0) {
+          const uniqueClosers = new Set(files.map((f: any) => f.closed_by).filter(Boolean));
           if (uniqueClosers.size > 1) {
             return { ...order, _closedByMix: true };
-          } else if (uniqueClosers.size === 1) {
-            // Use the file closer name
-            const firstCloser = files.find(f => f.profiles);
-            if (firstCloser?.profiles) {
-              return { ...order, _closedByName: (firstCloser.profiles as any).full_name };
-            }
           }
         }
         
         return { ...order, _closedByName: closedByName };
-      }));
+      });
       
       setWorkOrders(ordersWithClosers);
     } catch (error: any) {
