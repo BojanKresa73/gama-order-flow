@@ -105,9 +105,14 @@ const Procurement = () => {
                 Sledeći dolazak
               </div>
               <p className="text-lg font-bold mt-1">
-                {activeOrders.length > 0 && activeOrders[0]?.expected_arrival_date
-                  ? new Date(activeOrders[0].expected_arrival_date).toLocaleDateString("sr-Latn")
-                  : "-"}
+                {(() => {
+                  const nextArrival = activeOrders
+                    .filter((o) => o.expected_arrival_date)
+                    .sort((a, b) => new Date(a.expected_arrival_date!).getTime() - new Date(b.expected_arrival_date!).getTime())[0];
+                  return nextArrival
+                    ? new Date(nextArrival.expected_arrival_date).toLocaleDateString("sr-Latn")
+                    : "-";
+                })()}
               </p>
             </CardContent>
           </Card>
