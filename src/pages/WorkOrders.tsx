@@ -596,9 +596,25 @@ const WorkOrders = () => {
           quantity = totalPlates.toString();
           unit = 'ploča';
           // Format: "ClientName Format FileName (qty Format)"
+          // But avoid duplicating if filename already starts with client+format
           itemDetails = files?.map(f => {
             const formatName = (f.plate_formats as any)?.format_name || '';
-            return `${clientName} ${formatName} ${f.filename} (${f.quantity || 0} ${formatName})`;
+            const filename = f.filename || '';
+            
+            // Check if filename already contains client name (case-insensitive)
+            const clientLower = clientName.toLowerCase().trim();
+            const filenameLower = filename.toLowerCase();
+            
+            // If filename already starts with something like "clientname format" or contains client name, don't prepend
+            const alreadyHasClient = clientLower && filenameLower.includes(clientLower);
+            
+            if (alreadyHasClient) {
+              // Just use the filename as-is with quantity info
+              return `${filename} (${f.quantity || 0} ${formatName})`;
+            } else {
+              // Prepend client and format
+              return `${clientName} ${formatName} ${filename} (${f.quantity || 0} ${formatName})`;
+            }
           }) || [];
         } else if (order.order_type === 'film') {
           // Get film jobs
