@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
-import { ArrowLeft, Plus, FileText, Eye, Lock, CheckCircle2, AlertTriangle, Trash2, Pencil, Send, Download, Loader2 } from "lucide-react";
+import { ArrowLeft, Plus, FileText, Eye, Lock, CheckCircle2, AlertTriangle, Trash2, Pencil, Send, Download, Loader2, Receipt } from "lucide-react";
 import * as XLSX from "xlsx";
 import { format } from "date-fns";
 import { useToast } from "@/hooks/use-toast";
@@ -24,6 +24,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Progress } from "@/components/ui/progress";
 import { prefixFor, displayOrderNumber } from "@/lib/orderLabel";
 import { useAuthz } from "@/hooks/useAuthz";
+import { InvoiceDialog } from "@/components/work-orders/InvoiceDialog";
 
 // Helper functions to serialize/deserialize filters to URL params
 const serializeFiltersToParams = (filters: WorkOrderFiltersState): URLSearchParams => {
@@ -92,6 +93,10 @@ const WorkOrders = () => {
   // Export selection state (separate from bulk close selection)
   const [exportSelectedOrders, setExportSelectedOrders] = useState<Set<string>>(new Set());
   const [isExporting, setIsExporting] = useState(false);
+  
+  // Bulk invoice state
+  const [bulkInvoiceDialogOpen, setBulkInvoiceDialogOpen] = useState(false);
+  const [isInvoicing, setIsInvoicing] = useState(false);
   
   // Initialize filters from URL params
   const [filters, setFilters] = useState<WorkOrderFiltersState>(() => 
@@ -578,6 +583,8 @@ const WorkOrders = () => {
         let unit = '';
         let itemDetails: string[] = [];
 
+        const clientName = order.clients?.name || '';
+        
         if (order.order_type === 'ctp') {
           // Get file entries with plate formats
           const { data: files } = await supabase
@@ -588,7 +595,11 @@ const WorkOrders = () => {
           const totalPlates = files?.reduce((sum, f) => sum + (f.quantity || 0), 0) || 0;
           quantity = totalPlates.toString();
           unit = 'ploča';
-          itemDetails = files?.map(f => `${f.filename} (${f.quantity || 0} ${(f.plate_formats as any)?.format_name || ''})`) || [];
+          // Format: "ClientName Format FileName (qty Format)"
+          itemDetails = files?.map(f => {
+            const formatName = (f.plate_formats as any)?.format_name || '';
+            return `${clientName} ${formatName} ${f.filename} (${f.quantity || 0} ${formatName})`;
+          }) || [];
         } else if (order.order_type === 'film') {
           // Get film jobs
           const { data: films } = await supabase
@@ -746,6 +757,54 @@ const WorkOrders = () => {
     fetchWorkOrders();
   };
 
+  // Bulk invoice handlers
+  const handleBulkInvoice = () => {
+    if (exportSelectedOrders.size === 0) {
+      toast({
+        title: "Upozorenje",
+        description: "Odaberite barem jedan nalog za fakturisanje.",
+        variant: "destructive",
+      });
+      return;
+    }
+    setBulkInvoiceDialogOpen(true);
+  };
+
+  const confirmBulkInvoice = async (invoiceNumber: string) => {
+    setIsInvoicing(true);
+    try {
+      const orderIds = Array.from(exportSelectedOrders);
+      const now = new Date().toISOString();
+      
+      const { error } = await supabase
+        .from('work_orders')
+        .update({
+          invoiced_at: now,
+          invoice_number: invoiceNumber || null,
+        })
+        .in('id', orderIds);
+
+      if (error) throw error;
+
+      toast({
+        title: "Uspešno",
+        description: `${orderIds.length} ${orderIds.length === 1 ? 'nalog označen' : 'naloga označeno'} kao fakturisano.`,
+      });
+
+      setBulkInvoiceDialogOpen(false);
+      setExportSelectedOrders(new Set());
+      fetchWorkOrders();
+    } catch (error: any) {
+      toast({
+        title: "Greška",
+        description: error.message,
+        variant: "destructive",
+      });
+    } finally {
+      setIsInvoicing(false);
+    }
+  };
+
   if (loading) {
     return <div className="flex items-center justify-center min-h-screen">Učitavanje...</div>;
   }
@@ -801,18 +860,32 @@ const WorkOrders = () => {
               </div>
               <div className="flex items-center gap-2">
                 {exportSelectedOrders.size > 0 && (
-                  <Button 
-                    onClick={handleExportToExcel} 
-                    variant="outline"
-                    disabled={isExporting}
-                  >
-                    {isExporting ? (
-                      <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                    ) : (
-                      <Download className="h-4 w-4 mr-2" />
-                    )}
-                    Izvoz ({exportSelectedOrders.size})
-                  </Button>
+                  <>
+                    <Button 
+                      onClick={handleExportToExcel} 
+                      variant="outline"
+                      disabled={isExporting}
+                    >
+                      {isExporting ? (
+                        <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                      ) : (
+                        <Download className="h-4 w-4 mr-2" />
+                      )}
+                      Izvoz ({exportSelectedOrders.size})
+                    </Button>
+                    <Button 
+                      onClick={handleBulkInvoice} 
+                      variant="outline"
+                      disabled={isInvoicing}
+                    >
+                      {isInvoicing ? (
+                        <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                      ) : (
+                        <Receipt className="h-4 w-4 mr-2" />
+                      )}
+                      Fakturisano ({exportSelectedOrders.size})
+                    </Button>
+                  </>
                 )}
                 {(isSuper || isAdmin) && selectedOrders.size > 0 && (
                   <Button onClick={handleBulkClose} variant="default">
@@ -1168,6 +1241,13 @@ const WorkOrders = () => {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      <InvoiceDialog
+        open={bulkInvoiceDialogOpen}
+        onOpenChange={setBulkInvoiceDialogOpen}
+        onConfirm={confirmBulkInvoice}
+        isLoading={isInvoicing}
+      />
     </div>
   );
 };
