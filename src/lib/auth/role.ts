@@ -1,6 +1,6 @@
 import { supabase } from "@/integrations/supabase/client";
 
-export async function getCurrentRole(): Promise<"superuser"|"admin"|"operator"|"operator_ctp"|"unknown"> {
+export async function getCurrentRole(): Promise<"superuser"|"admin_plus"|"admin"|"operator"|"operator_ctp"|"unknown"> {
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return "unknown";
   

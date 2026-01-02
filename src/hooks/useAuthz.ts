@@ -13,6 +13,7 @@ export function useAuthz() {
 
   const role = (data ?? "guest") as
     | "superuser"
+    | "admin_plus"
     | "admin"
     | "operator"
     | "operator_ctp"
@@ -21,7 +22,8 @@ export function useAuthz() {
   return {
     role,
     isSuper: role === "superuser",
-    isAdmin: role === "admin",
+    isAdminPlus: role === "admin_plus" || role === "superuser",
+    isAdmin: role === "admin" || role === "admin_plus" || role === "superuser",
     isOp: role === "operator",
     isCtp: role === "operator_ctp",
   };

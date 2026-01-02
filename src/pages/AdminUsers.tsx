@@ -206,10 +206,22 @@ export default function AdminUsers() {
   const getRoleBadgeVariant = (role: AppRole | null) => {
     switch (role) {
       case "superuser": return "default";
+      case "admin_plus": return "default";
       case "admin": return "secondary";
       case "operator": return "outline";
       case "operator_ctp": return "outline";
       default: return "outline";
+    }
+  };
+
+  const getRoleLabel = (role: AppRole | null) => {
+    switch (role) {
+      case "superuser": return "Superuser";
+      case "admin_plus": return "Admin Plus";
+      case "admin": return "Admin";
+      case "operator": return "Operator";
+      case "operator_ctp": return "Operator CTP";
+      default: return role || "-";
     }
   };
 
@@ -279,6 +291,7 @@ export default function AdminUsers() {
                         </SelectTrigger>
                         <SelectContent>
                           <SelectItem value="superuser">Superuser</SelectItem>
+                          <SelectItem value="admin_plus">Admin Plus</SelectItem>
                           <SelectItem value="admin">Admin</SelectItem>
                           <SelectItem value="operator">Operator</SelectItem>
                           <SelectItem value="operator_ctp">Operator CTP</SelectItem>
@@ -337,6 +350,7 @@ export default function AdminUsers() {
                           </SelectTrigger>
                           <SelectContent>
                             <SelectItem value="superuser">Superuser</SelectItem>
+                            <SelectItem value="admin_plus">Admin Plus</SelectItem>
                             <SelectItem value="admin">Admin</SelectItem>
                             <SelectItem value="operator">Operator</SelectItem>
                             <SelectItem value="operator_ctp">Operator CTP</SelectItem>
@@ -462,6 +476,7 @@ export default function AdminUsers() {
                           </SelectTrigger>
                           <SelectContent>
                             <SelectItem value="superuser">Superuser</SelectItem>
+                            <SelectItem value="admin_plus">Admin Plus</SelectItem>
                             <SelectItem value="admin">Admin</SelectItem>
                             <SelectItem value="operator">Operator</SelectItem>
                             <SelectItem value="operator_ctp">Operator CTP</SelectItem>
