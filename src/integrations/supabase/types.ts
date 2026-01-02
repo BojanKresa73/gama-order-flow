@@ -2718,6 +2718,8 @@ export type Database = {
       }
       generate_order_number: { Args: never; Returns: string }
       get_work_order_full: { Args: { p_identifier: string }; Returns: Json }
+      has_admin_access: { Args: { _user_id: string }; Returns: boolean }
+      has_admin_plus_access: { Args: { _user_id: string }; Returns: boolean }
       has_any_role: {
         Args: { p_roles: Database["public"]["Enums"]["app_role"][] }
         Returns: boolean
