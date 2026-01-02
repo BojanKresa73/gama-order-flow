@@ -98,6 +98,10 @@ export function ProcurementForecast({ plateFormats, orders }: ProcurementForecas
       const daysToRecover = SHIPPING_DAYS + SAFETY_BUFFER_DAYS + 30;
       const recommendedOrder = Math.max(0, Math.ceil(avgDaily * daysToRecover) - currentStock - pendingPlates);
 
+      // Calculate estimated stockout date
+      const stockoutDate = new Date();
+      stockoutDate.setDate(stockoutDate.getDate() + daysWithPending);
+
       return {
         format,
         currentStock,
@@ -107,6 +111,7 @@ export function ProcurementForecast({ plateFormats, orders }: ProcurementForecas
         avgDaily: avgDaily.toFixed(1),
         daysUntilStockout,
         daysWithPending,
+        stockoutDate,
         shouldOrderNow,
         recommendedOrder,
         urgencyLevel: shouldOrderNow
@@ -180,6 +185,7 @@ export function ProcurementForecast({ plateFormats, orders }: ProcurementForecas
                   <TableHead className="text-right">Na putu</TableHead>
                   <TableHead className="text-right hidden sm:table-cell">Dnevna potrošnja</TableHead>
                   <TableHead className="text-right">Dana do 0</TableHead>
+                  <TableHead className="text-right hidden md:table-cell">Traje do</TableHead>
                   <TableHead className="text-right">Preporuka</TableHead>
                 </TableRow>
               </TableHeader>
@@ -245,6 +251,15 @@ export function ProcurementForecast({ plateFormats, orders }: ProcurementForecas
                       >
                         {row.daysWithPending > 365 ? "365+" : row.daysWithPending}
                       </Badge>
+                    </TableCell>
+                    <TableCell className="text-right hidden md:table-cell">
+                      {row.daysWithPending > 365 ? (
+                        <span className="text-muted-foreground">365+ dana</span>
+                      ) : (
+                        <span className={row.urgencyLevel === "critical" ? "text-destructive font-medium" : row.urgencyLevel === "warning" ? "text-orange-600" : ""}>
+                          {row.stockoutDate.toLocaleDateString("sr-Latn", { day: "numeric", month: "short", year: "numeric" })}
+                        </span>
+                      )}
                     </TableCell>
                     <TableCell className="text-right">
                       {row.shouldOrderNow && row.recommendedOrder > 0 ? (
