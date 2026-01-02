@@ -582,6 +582,7 @@ const WorkOrders = () => {
         let quantity = '';
         let unit = '';
         let itemDetails: string[] = [];
+        let plateFormat = '';
 
         const clientName = order.clients?.name || '';
         
@@ -595,8 +596,13 @@ const WorkOrders = () => {
           const totalPlates = files?.reduce((sum, f) => sum + (f.quantity || 0), 0) || 0;
           quantity = totalPlates.toString();
           unit = 'ploča';
-          // Format: "ClientName Format FileName (qty Format)"
-          // But avoid duplicating if filename already starts with client+format
+          
+          // Get unique plate formats for this order
+          const formats = [...new Set(files?.map(f => (f.plate_formats as any)?.format_name).filter(Boolean) || [])];
+          plateFormat = formats.join(', ');
+          
+          // Format items: "ClientName Format FileName (qty Format)"
+          // Avoid duplicating if filename already contains client name
           itemDetails = files?.map(f => {
             const formatName = (f.plate_formats as any)?.format_name || '';
             const filename = f.filename || '';
@@ -604,15 +610,11 @@ const WorkOrders = () => {
             // Check if filename already contains client name (case-insensitive)
             const clientLower = clientName.toLowerCase().trim();
             const filenameLower = filename.toLowerCase();
-            
-            // If filename already starts with something like "clientname format" or contains client name, don't prepend
             const alreadyHasClient = clientLower && filenameLower.includes(clientLower);
             
             if (alreadyHasClient) {
-              // Just use the filename as-is with quantity info
               return `${filename} (${f.quantity || 0} ${formatName})`;
             } else {
-              // Prepend client and format
               return `${clientName} ${formatName} ${filename} (${f.quantity || 0} ${formatName})`;
             }
           }) || [];
@@ -646,6 +648,7 @@ const WorkOrders = () => {
           "Klijent": order.clients?.name || '',
           "PIB klijenta": '', // Will be fetched
           "Tip": getOrderTypeLabel(order.order_type),
+          "Format": plateFormat,
           "Posao": order.job_name || '',
           "Količina": quantity,
           "Jedinica": unit,
@@ -682,6 +685,7 @@ const WorkOrders = () => {
         { wch: 25 },  // Klijent
         { wch: 12 },  // PIB
         { wch: 10 },  // Tip
+        { wch: 12 },  // Format
         { wch: 20 },  // Posao
         { wch: 10 },  // Količina
         { wch: 10 },  // Jedinica
@@ -694,11 +698,12 @@ const WorkOrders = () => {
       
       XLSX.utils.book_append_sheet(wb, ws, "Nalozi");
       
-      // Generate filename with date range
-      let filename = `nalozi-${format(new Date(), 'yyyy-MM-dd')}`;
-      if (filters.dateRange.from && filters.dateRange.to) {
-        filename = `nalozi-${format(filters.dateRange.from, 'yyyy-MM-dd')}-do-${format(filters.dateRange.to, 'yyyy-MM-dd')}`;
-      }
+      // Generate filename: ClientName + export date
+      // Get client name from first selected order, or use generic name
+      const firstClientName = ordersToExport[0]?.clients?.name || 'Nalozi';
+      const exportDate = format(new Date(), 'dd.MM.yyyy');
+      const sanitizedClientName = firstClientName.replace(/[\\/:*?"<>|]/g, '_'); // Remove invalid filename chars
+      const filename = `${sanitizedClientName}_${exportDate}`;
       
       XLSX.writeFile(wb, `${filename}.xlsx`);
       
