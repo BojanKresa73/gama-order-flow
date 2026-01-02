@@ -601,22 +601,10 @@ const WorkOrders = () => {
           const formats = [...new Set(files?.map(f => (f.plate_formats as any)?.format_name).filter(Boolean) || [])];
           plateFormat = formats.join(', ');
           
-          // Format items: "ClientName Format FileName (qty Format)"
-          // Avoid duplicating if filename already contains client name
+          // Simple format: just filename with quantity and format
           itemDetails = files?.map(f => {
             const formatName = (f.plate_formats as any)?.format_name || '';
-            const filename = f.filename || '';
-            
-            // Check if filename already contains client name (case-insensitive)
-            const clientLower = clientName.toLowerCase().trim();
-            const filenameLower = filename.toLowerCase();
-            const alreadyHasClient = clientLower && filenameLower.includes(clientLower);
-            
-            if (alreadyHasClient) {
-              return `${filename} (${f.quantity || 0} ${formatName})`;
-            } else {
-              return `${clientName} ${formatName} ${filename} (${f.quantity || 0} ${formatName})`;
-            }
+            return `${f.filename} (${f.quantity || 0} ${formatName})`;
           }) || [];
         } else if (order.order_type === 'film') {
           // Get film jobs
