@@ -22,54 +22,46 @@ export function ProcurementForecast({ plateFormats, orders }: ProcurementForecas
   const { data: consumptionData, isLoading } = useQuery({
     queryKey: ["plate-consumption"],
     queryFn: async () => {
-      const thirtyDaysAgo = new Date();
-      thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
-      
-      const ninetyDaysAgo = new Date();
-      ninetyDaysAgo.setDate(ninetyDaysAgo.getDate() - 90);
-
-      // Get consumption for last 90 days
+      // Get ALL consumption data to calculate proper daily average
       const { data, error } = await supabase
         .from("inventory_history")
         .select("plate_format_id, change_amount, created_at")
         .lt("change_amount", 0) // Only consumption (negative changes)
-        .gte("created_at", ninetyDaysAgo.toISOString());
+        .order("created_at", { ascending: true });
 
       if (error) throw error;
-      return data || [];
+      
+      // Calculate actual date range with data
+      if (data && data.length > 0) {
+        const firstDate = new Date(data[0].created_at);
+        const lastDate = new Date(data[data.length - 1].created_at);
+        const actualDays = Math.max(1, Math.ceil((lastDate.getTime() - firstDate.getTime()) / (1000 * 60 * 60 * 24)) + 1);
+        return { entries: data, actualDays, firstDate, lastDate };
+      }
+      return { entries: [], actualDays: 1, firstDate: new Date(), lastDate: new Date() };
     },
     staleTime: 60000,
   });
 
   // Calculate forecast data
   const forecastData = useMemo(() => {
-    if (!consumptionData || !plateFormats.length) return [];
+    if (!consumptionData?.entries || !plateFormats.length) return [];
 
-    const now = new Date();
-    const thirtyDaysAgo = new Date();
-    thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+    const { entries, actualDays } = consumptionData;
 
     return plateFormats.map((format) => {
-      // Calculate consumption for different periods
-      const formatConsumption = consumptionData.filter(
+      // Calculate total consumption for this format
+      const formatConsumption = entries.filter(
         (c) => c.plate_format_id === format.id
       );
 
-      const last30Days = formatConsumption
-        .filter((c) => new Date(c.created_at) >= thirtyDaysAgo)
-        .reduce((sum, c) => sum + Math.abs(c.change_amount), 0);
-
-      const last90Days = formatConsumption.reduce(
+      const totalConsumed = formatConsumption.reduce(
         (sum, c) => sum + Math.abs(c.change_amount),
         0
       );
 
-      // Daily averages
-      const avgDaily30 = last30Days / 30;
-      const avgDaily90 = last90Days / 90;
-
-      // Use weighted average (more weight to recent data)
-      const avgDaily = avgDaily30 * 0.7 + avgDaily90 * 0.3;
+      // Daily average based on actual days with data
+      const avgDaily = actualDays > 0 ? totalConsumed / actualDays : 0;
 
       // Current stock
       const currentStock = format.current_stock || 0;
@@ -106,8 +98,8 @@ export function ProcurementForecast({ plateFormats, orders }: ProcurementForecas
         format,
         currentStock,
         pendingPlates,
-        avgDaily30: avgDaily30.toFixed(1),
-        avgDaily90: avgDaily90.toFixed(1),
+        totalConsumed,
+        actualDays,
         avgDaily: avgDaily.toFixed(1),
         daysUntilStockout,
         daysWithPending,
@@ -235,7 +227,7 @@ export function ProcurementForecast({ plateFormats, orders }: ProcurementForecas
                       <div className="text-sm">
                         <span className="font-medium">{row.avgDaily}</span>
                         <span className="text-muted-foreground text-xs block">
-                          30d: {row.avgDaily30} | 90d: {row.avgDaily90}
+                          ({row.totalConsumed} za {row.actualDays}d)
                         </span>
                       </div>
                     </TableCell>
