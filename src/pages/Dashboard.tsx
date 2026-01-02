@@ -88,6 +88,9 @@ const Dashboard = () => {
             <Button size="sm" variant="outline" className="w-full border-teal-300 text-teal-700" onClick={() => navigate("/large-format/new?type=rigid")}>
               + Ploča
             </Button>
+            <Button size="sm" variant="outline" className="w-full col-span-2" onClick={() => navigate("/nabavka")}>
+              Nabavka
+            </Button>
           </div>
           
           {/* Desktop Quick Actions */}
@@ -110,6 +113,9 @@ const Dashboard = () => {
             </Button>
             <Button variant="outline" onClick={() => navigate("/inventory")}>
               Inventar
+            </Button>
+            <Button variant="outline" onClick={() => navigate("/nabavka")}>
+              Nabavka
             </Button>
             <Button variant="outline" onClick={() => navigate("/checklist")}>
               Checklist
