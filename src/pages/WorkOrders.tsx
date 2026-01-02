@@ -5,7 +5,9 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
-import { ArrowLeft, Plus, FileText, Eye, Lock, CheckCircle2, AlertTriangle, Trash2, Pencil, Send } from "lucide-react";
+import { ArrowLeft, Plus, FileText, Eye, Lock, CheckCircle2, AlertTriangle, Trash2, Pencil, Send, Download, Loader2 } from "lucide-react";
+import * as XLSX from "xlsx";
+import { format } from "date-fns";
 import { useToast } from "@/hooks/use-toast";
 import { OrderFilesDialog } from "@/components/work-orders/OrderFilesDialog";
 import { InvalidateOrderDialog } from "@/components/work-orders/InvalidateOrderDialog";
@@ -86,6 +88,10 @@ const WorkOrders = () => {
   const [orderToInvalidate, setOrderToInvalidate] = useState<any>(null);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [orderToDelete, setOrderToDelete] = useState<any>(null);
+  
+  // Export selection state (separate from bulk close selection)
+  const [exportSelectedOrders, setExportSelectedOrders] = useState<Set<string>>(new Set());
+  const [isExporting, setIsExporting] = useState(false);
   
   // Initialize filters from URL params
   const [filters, setFilters] = useState<WorkOrderFiltersState>(() => 
@@ -528,6 +534,166 @@ const WorkOrders = () => {
     }
   };
 
+  // Export selection functions
+  const toggleExportOrderSelection = (orderId: string) => {
+    setExportSelectedOrders(prev => {
+      const newSet = new Set(prev);
+      if (newSet.has(orderId)) {
+        newSet.delete(orderId);
+      } else {
+        newSet.add(orderId);
+      }
+      return newSet;
+    });
+  };
+
+  const toggleAllExportOrders = () => {
+    if (exportSelectedOrders.size === filteredWorkOrders.length) {
+      setExportSelectedOrders(new Set());
+    } else {
+      setExportSelectedOrders(new Set(filteredWorkOrders.map(order => order.id)));
+    }
+  };
+
+  const handleExportToExcel = async () => {
+    if (exportSelectedOrders.size === 0) {
+      toast({
+        title: "Upozorenje",
+        description: "Odaberite barem jedan nalog za izvoz.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setIsExporting(true);
+    try {
+      // Get selected orders from filtered list
+      const ordersToExport = filteredWorkOrders.filter(order => 
+        exportSelectedOrders.has(order.id)
+      );
+
+      // Fetch detailed data for each order
+      const exportData = await Promise.all(ordersToExport.map(async (order) => {
+        let quantity = '';
+        let unit = '';
+        let itemDetails: string[] = [];
+
+        if (order.order_type === 'ctp') {
+          // Get file entries with plate formats
+          const { data: files } = await supabase
+            .from('file_entries')
+            .select('filename, quantity, plate_formats(format_name)')
+            .eq('work_order_id', order.id);
+          
+          const totalPlates = files?.reduce((sum, f) => sum + (f.quantity || 0), 0) || 0;
+          quantity = totalPlates.toString();
+          unit = 'ploča';
+          itemDetails = files?.map(f => `${f.filename} (${f.quantity || 0} ${(f.plate_formats as any)?.format_name || ''})`) || [];
+        } else if (order.order_type === 'film') {
+          // Get film jobs
+          const { data: films } = await supabase
+            .from('film_jobs')
+            .select('file_name, qty, computed_total_m')
+            .eq('work_order_id', order.id);
+          
+          const totalMeters = films?.reduce((sum, f) => sum + (f.computed_total_m || 0), 0) || 0;
+          quantity = totalMeters.toFixed(2);
+          unit = 'm';
+          itemDetails = films?.map(f => `${f.file_name} (${f.qty}kom, ${(f.computed_total_m || 0).toFixed(2)}m)`) || [];
+        } else if (order.order_type === 'digital') {
+          // Get digital jobs
+          const { data: digitals } = await supabase
+            .from('digital_jobs')
+            .select('file_name, qty, computed_total_sheets, computed_color_clicks, computed_mono_clicks')
+            .eq('work_order_id', order.id);
+          
+          const totalSheets = digitals?.reduce((sum, d) => sum + (d.computed_total_sheets || 0), 0) || 0;
+          const totalClicks = digitals?.reduce((sum, d) => sum + (d.computed_color_clicks || 0) + (d.computed_mono_clicks || 0), 0) || 0;
+          quantity = totalClicks.toString();
+          unit = 'klikova';
+          itemDetails = digitals?.map(d => `${d.file_name} (${d.qty}kom, ${d.computed_total_sheets || 0} listova)`) || [];
+        }
+
+        return {
+          "Broj naloga": order.display_order_number || order.order_number,
+          "Klijent": order.clients?.name || '',
+          "PIB klijenta": '', // Will be fetched
+          "Tip": getOrderTypeLabel(order.order_type),
+          "Posao": order.job_name || '',
+          "Količina": quantity,
+          "Jedinica": unit,
+          "Status": order.status === 'open' ? 'Otvoren' : 'Zatvoren',
+          "Datum kreiranja": format(new Date(order.created_at), 'dd.MM.yyyy'),
+          "Datum zatvaranja": order.closed_at ? format(new Date(order.closed_at), 'dd.MM.yyyy') : '',
+          "Stavke": itemDetails.join('; '),
+          "Napomena": order.notes || '',
+        };
+      }));
+
+      // Fetch client PIBs
+      const clientIds = [...new Set(ordersToExport.map(o => o.client_id).filter(Boolean))];
+      const { data: clients } = await supabase
+        .from('clients')
+        .select('id, pib')
+        .in('id', clientIds);
+      
+      const clientPibMap = new Map(clients?.map(c => [c.id, c.pib]) || []);
+      
+      // Add PIB to export data
+      exportData.forEach((row, idx) => {
+        const order = ordersToExport[idx];
+        row["PIB klijenta"] = clientPibMap.get(order.client_id) || '';
+      });
+
+      // Create workbook
+      const wb = XLSX.utils.book_new();
+      const ws = XLSX.utils.json_to_sheet(exportData);
+      
+      // Set column widths
+      ws['!cols'] = [
+        { wch: 15 },  // Broj naloga
+        { wch: 25 },  // Klijent
+        { wch: 12 },  // PIB
+        { wch: 10 },  // Tip
+        { wch: 20 },  // Posao
+        { wch: 10 },  // Količina
+        { wch: 10 },  // Jedinica
+        { wch: 10 },  // Status
+        { wch: 12 },  // Datum kreiranja
+        { wch: 12 },  // Datum zatvaranja
+        { wch: 50 },  // Stavke
+        { wch: 30 },  // Napomena
+      ];
+      
+      XLSX.utils.book_append_sheet(wb, ws, "Nalozi");
+      
+      // Generate filename with date range
+      let filename = `nalozi-${format(new Date(), 'yyyy-MM-dd')}`;
+      if (filters.dateRange.from && filters.dateRange.to) {
+        filename = `nalozi-${format(filters.dateRange.from, 'yyyy-MM-dd')}-do-${format(filters.dateRange.to, 'yyyy-MM-dd')}`;
+      }
+      
+      XLSX.writeFile(wb, `${filename}.xlsx`);
+      
+      toast({
+        title: "Uspešno",
+        description: `Izvezeno ${exportData.length} naloga u Excel.`,
+      });
+      
+      // Clear selection after export
+      setExportSelectedOrders(new Set());
+    } catch (error: any) {
+      console.error("Export error:", error);
+      toast({
+        title: "Greška",
+        description: "Greška pri izvozu u Excel.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsExporting(false);
+    }
+  };
+
   const handleBulkClose = () => {
     if (selectedOrders.size === 0) return;
     setBulkResults(null);
@@ -620,20 +786,41 @@ const WorkOrders = () => {
 
         <Card>
           <CardHeader>
-            <CardTitle className="flex items-center justify-between">
+            <CardTitle className="flex items-center justify-between flex-wrap gap-2">
               <div className="flex items-center gap-2">
                 <FileText className="h-5 w-5" />
                 Radni nalozi
                 <Badge variant="outline" className="ml-2">
                   {filteredWorkOrders.length} {filteredWorkOrders.length === 1 ? "nalog" : "naloga"}
                 </Badge>
+                {exportSelectedOrders.size > 0 && (
+                  <Badge variant="secondary" className="ml-1">
+                    {exportSelectedOrders.size} odabrano za izvoz
+                  </Badge>
+                )}
               </div>
-              {(isSuper || isAdmin) && selectedOrders.size > 0 && (
-                <Button onClick={handleBulkClose} variant="default">
-                  <CheckCircle2 className="h-4 w-4 mr-2" />
-                  Zatvori odabrane ({selectedOrders.size})
-                </Button>
-              )}
+              <div className="flex items-center gap-2">
+                {exportSelectedOrders.size > 0 && (
+                  <Button 
+                    onClick={handleExportToExcel} 
+                    variant="outline"
+                    disabled={isExporting}
+                  >
+                    {isExporting ? (
+                      <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                    ) : (
+                      <Download className="h-4 w-4 mr-2" />
+                    )}
+                    Izvoz ({exportSelectedOrders.size})
+                  </Button>
+                )}
+                {(isSuper || isAdmin) && selectedOrders.size > 0 && (
+                  <Button onClick={handleBulkClose} variant="default">
+                    <CheckCircle2 className="h-4 w-4 mr-2" />
+                    Zatvori odabrane ({selectedOrders.size})
+                  </Button>
+                )}
+              </div>
             </CardTitle>
           </CardHeader>
           <CardContent>
@@ -646,12 +833,20 @@ const WorkOrders = () => {
               <Table>
                 <TableHeader>
                   <TableRow>
+                    <TableHead className="w-12">
+                      <Checkbox
+                        checked={exportSelectedOrders.size > 0 && exportSelectedOrders.size === filteredWorkOrders.length}
+                        onCheckedChange={toggleAllExportOrders}
+                        title="Odaberi sve za izvoz"
+                      />
+                    </TableHead>
                     {(isSuper || isAdmin) && (
                       <TableHead className="w-12">
                         <Checkbox
                           checked={selectedOrders.size > 0 && selectedOrders.size === filteredWorkOrders.filter(o => o.status === 'open').length}
                           onCheckedChange={toggleAllOrders}
                           disabled={filteredWorkOrders.filter(o => o.status === 'open').length === 0}
+                          title="Odaberi sve za zatvaranje"
                         />
                       </TableHead>
                     )}
@@ -674,12 +869,20 @@ const WorkOrders = () => {
                       className="cursor-pointer hover:bg-muted/50"
                       onClick={() => navigate(`/work-orders/${order.id}`)}
                     >
+                      <TableCell onClick={(e) => e.stopPropagation()}>
+                        <Checkbox
+                          checked={exportSelectedOrders.has(order.id)}
+                          onCheckedChange={() => toggleExportOrderSelection(order.id)}
+                          title="Odaberi za izvoz"
+                        />
+                      </TableCell>
                       {(isSuper || isAdmin) && (
                         <TableCell onClick={(e) => e.stopPropagation()}>
                           <Checkbox
                             checked={selectedOrders.has(order.id)}
                             onCheckedChange={() => toggleOrderSelection(order.id, order.status === 'open')}
                             disabled={order.status === 'closed'}
+                            title="Odaberi za zatvaranje"
                           />
                         </TableCell>
                       )}
