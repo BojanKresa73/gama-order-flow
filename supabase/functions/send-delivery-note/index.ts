@@ -4,8 +4,9 @@ import { Buffer } from "node:buffer";
 
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.3";
-import { sendDeliveryNoteEmail, retryWithBackoff } from '../_shared/email-helpers.ts';
+import { sendDeliveryNoteEmail, retryWithBackoff } from '../_shared/smtp-helpers.ts';
 import { generateDeliveryNotePDF } from '../_shared/delivery-note-pdf.ts';
+import { generateDeliveryNoteEmailHtml } from '../_shared/email-template.ts';
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -347,282 +348,26 @@ const handler = async (req: Request): Promise<Response> => {
 
     // Send email if notification email(s) exist
     if (notificationEmails.length > 0) {
-      const emailContent = `
-        <!DOCTYPE html>
-        <html>
-          <head>
-            <meta charset="UTF-8">
-            <style>
-              @page {
-                size: A5 landscape;
-                margin: 10mm;
-              }
-              
-              * {
-                margin: 0;
-                padding: 0;
-                box-sizing: border-box;
-              }
-              
-              body {
-                font-family: system-ui, -apple-system, 'Segoe UI', Roboto, Arial, sans-serif;
-                font-size: 11px;
-                line-height: 1.4;
-                color: #000;
-              }
-              
-              .document {
-                width: 100%;
-                height: 100%;
-              }
-              
-              /* Header */
-              .doc-header {
-                display: flex;
-                justify-content: space-between;
-                margin-bottom: 12px;
-                padding-bottom: 8px;
-                border-bottom: 2px solid #000;
-              }
-              
-              .company-info {
-                flex: 1;
-              }
-              
-              .company-info h1 {
-                font-size: 16px;
-                font-weight: bold;
-                margin-bottom: 4px;
-                color: #1e40af;
-              }
-              
-              .company-info p {
-                font-size: 10px;
-                line-height: 1.4;
-                color: #374151;
-              }
-              
-              .delivery-info {
-                text-align: right;
-                flex: 1;
-              }
-              
-              .delivery-info h2 {
-                font-size: 18px;
-                font-weight: bold;
-                margin-bottom: 8px;
-                color: #1e40af;
-                letter-spacing: 1px;
-              }
-              
-              .delivery-info p {
-                font-size: 11px;
-                margin-bottom: 3px;
-                color: #374151;
-              }
-              
-              /* Client box */
-              .client-box {
-                border: 2px solid #1e40af;
-                border-radius: 6px;
-                padding: 10px 12px;
-                margin-bottom: 14px;
-                background: linear-gradient(135deg, #eff6ff 0%, #f8fafc 100%);
-              }
-              
-              .client-box p {
-                margin-bottom: 3px;
-              }
-              
-              .client-box strong {
-                font-weight: 600;
-              }
-              
-              /* Table */
-              table {
-                width: 100%;
-                border-collapse: collapse;
-                margin-bottom: 12px;
-              }
-              
-              th, td {
-                border: 1px solid #ddd;
-                padding: 6px 8px;
-                text-align: left;
-              }
-              
-              th {
-                background: linear-gradient(135deg, #1e40af 0%, #3b82f6 100%);
-                color: white;
-                font-weight: 600;
-                font-size: 10px;
-                text-transform: uppercase;
-              }
-              
-              td {
-                font-size: 11px;
-              }
-              
-              td.number {
-                text-align: center;
-                width: 40px;
-              }
-              
-              td.quantity {
-                text-align: center;
-                width: 80px;
-              }
-              
-              td.format {
-                width: 120px;
-              }
-              
-              thead {
-                display: table-header-group;
-              }
-              
-              tfoot {
-                display: table-footer-group;
-              }
-              
-              tr {
-                page-break-inside: avoid;
-              }
-              
-              /* Footer */
-              .doc-footer {
-                margin-top: 20px;
-                padding-top: 12px;
-                border-top: 1px solid #ddd;
-                display: flex;
-                justify-content: space-between;
-                align-items: center;
-              }
-              
-              .signature-line {
-                font-size: 10px;
-              }
-              
-              .signature-line span {
-                display: inline-block;
-                margin-right: 15px;
-              }
-              
-              .signature-line .underline {
-                border-bottom: 1px solid #000;
-                display: inline-block;
-                width: 150px;
-                margin-left: 5px;
-              }
-              
-              .pagination {
-                font-size: 10px;
-                text-align: right;
-              }
-              
-              .no-items {
-                text-align: center;
-                padding: 40px;
-                font-style: italic;
-                color: #666;
-              }
-              
-              @media print {
-                body {
-                  margin: 0;
-                  padding: 0;
-                }
-                
-                .doc-footer {
-                  position: fixed;
-                  bottom: 0;
-                  width: 100%;
-                }
-              }
-            </style>
-          </head>
-          <body>
-            <div class="document">
-              <!-- Header -->
-              <div class="doc-header">
-                <div class="company-info">
-                  <h1>Gama United</h1>
-                  <p>Veljka Milićevića 2/10, 11000 Beograd</p>
-                  <p>PIB: 114876455</p>
-                </div>
-                <div class="delivery-info">
-                  <h2>OTPREMNICA</h2>
-                  <p><strong>Br. naloga:</strong> ${workOrder.order_number}</p>
-                  <p><strong>Datum:</strong> ${formatDate(deliveryNote.closed_at)}</p>
-                </div>
-              </div>
-              
-              <!-- Client info -->
-              <div class="client-box">
-                <p><strong>Klijent:</strong> ${workOrder.client.name}</p>
-                ${workOrder.client.pib && workOrder.client.pib.trim() ? `<p><strong>PIB:</strong> ${workOrder.client.pib}</p>` : ""}
-                ${workOrder.client.notification_email && workOrder.client.notification_email.trim() ? `<p><strong>Email:</strong> ${workOrder.client.notification_email}</p>` : ""}
-              </div>
-              </div>
-              
-              ${
-                items && items.length > 0
-                  ? `
-              <!-- Items table -->
-              <table>
-                <thead>
-                  <tr>
-                    <th class="number">#</th>
-                    <th>Naziv fajla</th>
-                    <th class="format">${orderType === 'film' ? 'Potrošeno' : orderType === 'digital' ? 'Format' : 'Format ploče'}</th>
-                    <th class="quantity">Količina</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  ${items
-                    .map(
-                      (item: any, index: number) => `
-                    <tr>
-                      <td class="number">${index + 1}</td>
-                      <td>${item.filename}</td>
-                      <td class="format">${orderType === 'film' 
-                        ? (item.computed_total_m ? item.computed_total_m.toFixed(2) + ' m' : '-') 
-                        : item.file_type === 'digital_product'
-                        ? '-'
-                        : item.file_type === 'digital_sheet'
-                        ? (item.machine_sheet_format || '-')
-                        : (item.plate_format?.format_name || "-")}</td>
-                      <td class="quantity">${item.quantity || "-"}</td>
-                    </tr>
-                  `
-                    )
-                    .join("")}
-                </tbody>
-              </table>
-              `
-                  : `
-              <div class="no-items">
-                <p>Nema zatvorenih stavki za otpremnicu.</p>
-              </div>
-              `
-              }
-              
-              <!-- Footer -->
-              <div class="doc-footer">
-                <div class="signature-line">
-                  <span>Robu preuzeo: <span class="underline"></span></span>
-                  <span>Broj lične karte: <span class="underline"></span></span>
-                </div>
-                <div class="pagination">
-                  Strana 1/1
-                </div>
-              </div>
-            </div>
-          </body>
-        </html>
-      `;
+      // Generate beautiful newsletter-style email HTML
+      const emailContent = generateDeliveryNoteEmailHtml({
+        clientName: workOrder.client.name,
+        orderNumber: deliveryNumber,
+        orderDate: formatDate(workOrder.created_at),
+        closedDate: formatDate(deliveryNote.closed_at),
+        itemCount: items.length,
+        orderType: orderType || 'ctp',
+        items: items.map((item: any) => ({
+          filename: item.filename,
+          details: orderType === 'film' 
+            ? (item.computed_total_m ? item.computed_total_m.toFixed(2) + ' m' : '-')
+            : orderType === 'digital' && item.file_type !== 'digital_product'
+            ? (item.machine_sheet_format || '-')
+            : (item.plate_format?.format_name || '-'),
+          quantity: item.quantity || '-',
+        })),
+      });
 
-      // Send email using Gmail SMTP helper
+      // Send email using Resend helper
       console.log('[send-delivery-note] Sending email to:', notificationEmails);
 
       const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
@@ -633,7 +378,7 @@ const handler = async (req: Request): Promise<Response> => {
           subject: `Završen posao – ${workOrder.client.name} – ${deliveryNumber}`,
           to: notificationEmails,
           pdfBucket: 'delivery-notes',
-          pdfPath: pdfPath, // Use the local variable, not deliveryNote.pdf_path which is still null
+          pdfPath: pdfPath,
           html: emailContent,
           sbUrl: supabaseUrl,
           serviceKey: serviceKey,
