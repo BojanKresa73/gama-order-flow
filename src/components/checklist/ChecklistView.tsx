@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -20,10 +21,9 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { ChevronDown, ChevronRight, CheckCircle, XCircle, Search, FileText, Calendar, User } from "lucide-react";
+import { CheckCircle, XCircle, Search, FileText, Calendar, User, Eye } from "lucide-react";
 import { format, subDays } from "date-fns";
 import { prefixFor } from "@/lib/orderLabel";
-
 interface WorkOrder {
   id: string;
   order_number: string;
@@ -57,11 +57,11 @@ type StatusFilter = "open" | "closed" | "all";
 
 const ChecklistView = ({ orderType, onNavigateToSearch }: ChecklistViewProps) => {
   const [workOrders, setWorkOrders] = useState<WorkOrder[]>([]);
-  const [expandedOrders, setExpandedOrders] = useState<Set<string>>(new Set());
   const [loading, setLoading] = useState(true);
   const [statusFilter, setStatusFilter] = useState<StatusFilter>("open");
   const { toast } = useToast();
   const isMobile = useIsMobile();
+  const navigate = useNavigate();
 
   useEffect(() => {
     fetchWorkOrders();
@@ -187,15 +187,6 @@ const ChecklistView = ({ orderType, onNavigateToSearch }: ChecklistViewProps) =>
     }
   };
 
-  const toggleExpand = (orderId: string) => {
-    const newExpanded = new Set(expandedOrders);
-    if (newExpanded.has(orderId)) {
-      newExpanded.delete(orderId);
-    } else {
-      newExpanded.add(orderId);
-    }
-    setExpandedOrders(newExpanded);
-  };
 
   const closeWorkOrder = async (workOrderId: string) => {
     try {
@@ -447,6 +438,14 @@ const ChecklistView = ({ orderType, onNavigateToSearch }: ChecklistViewProps) =>
         </div>
 
         <div className="flex gap-2 flex-wrap">
+          <Button 
+            size="sm" 
+            variant="outline" 
+            onClick={() => navigate(`/work-orders/${order.id}`)}
+            title="Pogledaj nalog"
+          >
+            <Eye className="h-4 w-4" />
+          </Button>
           {order.status === "open" && (
             <Button size="sm" className="flex-1" onClick={() => closeWorkOrder(order.id)}>
               Zatvori
@@ -458,43 +457,7 @@ const ChecklistView = ({ orderType, onNavigateToSearch }: ChecklistViewProps) =>
               Otpremnica
             </Button>
           )}
-          <Button size="sm" variant="ghost" onClick={() => toggleExpand(order.id)}>
-            {expandedOrders.has(order.id) ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
-            <span className="ml-1 text-xs">Detalji</span>
-          </Button>
         </div>
-
-        {/* Expanded order details */}
-        {expandedOrders.has(order.id) && (
-          <div className="mt-3 pt-3 border-t space-y-2">
-            {orderType === "ctp" && order.file_entries && order.file_entries.length > 0 ? (
-              order.file_entries.map((file) => (
-                <div key={file.id} className="flex items-center justify-between bg-muted/50 p-2 rounded text-xs">
-                  <div className="flex-1 min-w-0">
-                    <p className="truncate font-medium">📄 {file.filename}</p>
-                    <p className="text-muted-foreground">
-                      {file.plate_format_name || "N/A"} • Qty: {file.quantity}
-                    </p>
-                  </div>
-                  <div className="flex items-center gap-2 flex-shrink-0">
-                    {getStatusBadge(file.status)}
-                    {file.status === "open" && (
-                      <Button size="sm" variant="outline" className="h-7 text-xs" onClick={() => closeFileEntry(file.id, order.id)}>
-                        Zatvori
-                      </Button>
-                    )}
-                  </div>
-                </div>
-              ))
-            ) : (
-              <div className="text-xs text-muted-foreground p-2 bg-muted/50 rounded">
-                <p><strong>Tip:</strong> {order.type || orderType}</p>
-                <p><strong>Status:</strong> {order.status === "open" ? "Otvoren" : "Zatvoren"}</p>
-                {order.closed_at && <p><strong>Zatvoren:</strong> {format(new Date(order.closed_at), "dd.MM.yyyy HH:mm")}</p>}
-              </div>
-            )}
-          </div>
-        )}
       </CardContent>
     </Card>
   );
@@ -538,7 +501,6 @@ const ChecklistView = ({ orderType, onNavigateToSearch }: ChecklistViewProps) =>
         <Table>
           <TableHeader>
             <TableRow>
-              <TableHead className="w-12"></TableHead>
               <TableHead>Broj Naloga</TableHead>
               <TableHead>Klijent</TableHead>
               <TableHead>Kreirao</TableHead>
@@ -552,114 +514,60 @@ const ChecklistView = ({ orderType, onNavigateToSearch }: ChecklistViewProps) =>
           </TableHeader>
           <TableBody>
             {workOrders.map((order) => (
-              <>
-                <TableRow key={order.id} className="cursor-pointer hover:bg-muted/50">
-                  <TableCell onClick={() => toggleExpand(order.id)}>
-                    {expandedOrders.has(order.id) ? (
-                      <ChevronDown className="h-4 w-4" />
-                    ) : (
-                      <ChevronRight className="h-4 w-4" />
-                    )}
-                  </TableCell>
-                  <TableCell className="font-medium">
-                    {order.order_code || (() => {
-                      const year = new Date(order.created_at).getFullYear();
-                      const serial = String(order.order_number).padStart(4, '0');
-                      return `${prefixFor(order.type)}-${year}-${serial}`;
-                    })()}
-                  </TableCell>
-                  <TableCell>{order.client_name}</TableCell>
-                  <TableCell className="text-muted-foreground">{order.created_by_name || "-"}</TableCell>
-                  <TableCell>{getTypeBadge(order.type, order.kind)}</TableCell>
-                  <TableCell>
-                    {format(new Date(order.created_at), "dd.MM.yyyy HH:mm")}
-                  </TableCell>
-                  <TableCell>
-                    {order.closed_at
-                      ? format(new Date(order.closed_at), "dd.MM.yyyy HH:mm")
-                      : "-"}
-                  </TableCell>
-                  <TableCell>{getStatusBadge(order.status)}</TableCell>
-                  {orderType === "ctp" && (
-                    <TableCell className="font-semibold">{order.total_plates}</TableCell>
-                  )}
-                  <TableCell className="text-right">
-                    <div className="flex gap-2 justify-end">
-                      {order.status === "open" && (
-                        <Button
-                          size="sm"
-                          onClick={() => closeWorkOrder(order.id)}
-                        >
-                          Zatvori Nalog
-                        </Button>
-                      )}
-                      {order.status === "closed" && (
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          onClick={() => sendDeliveryNote(order.id)}
-                        >
-                          <FileText className="h-4 w-4 mr-2" />
-                          Pošalji Otpremnicu
-                        </Button>
-                      )}
-                    </div>
-                  </TableCell>
-                </TableRow>
-
-                {/* Expanded order details */}
-                {expandedOrders.has(order.id) && (
-                  orderType === "ctp" && order.file_entries && order.file_entries.length > 0 ? (
-                    order.file_entries.map((file) => (
-                      <TableRow key={file.id} className="bg-muted/30">
-                        <TableCell></TableCell>
-                        <TableCell colSpan={2} className="pl-8">
-                          <span className="text-sm text-muted-foreground">
-                            📄 {file.filename}
-                          </span>
-                        </TableCell>
-                        <TableCell>
-                          <span className="text-sm">
-                            Format: {file.plate_format_name || "N/A"}
-                          </span>
-                        </TableCell>
-                        <TableCell>
-                          <span className="text-sm">
-                            Količina: {file.quantity}
-                          </span>
-                        </TableCell>
-                        <TableCell colSpan={orderType === "ctp" ? 1 : 2}>
-                          {getStatusBadge(file.status)}
-                        </TableCell>
-                        {orderType === "ctp" && <TableCell></TableCell>}
-                        <TableCell className="text-right">
-                          {file.status === "open" && (
-                            <Button
-                              size="sm"
-                              variant="outline"
-                              onClick={() => closeFileEntry(file.id, order.id)}
-                            >
-                              Zatvori Fajl
-                            </Button>
-                          )}
-                        </TableCell>
-                      </TableRow>
-                    ))
-                  ) : (
-                    <TableRow className="bg-muted/30">
-                      <TableCell></TableCell>
-                      <TableCell colSpan={orderType === "ctp" ? 8 : 7} className="pl-8">
-                        <div className="text-sm text-muted-foreground py-2">
-                          <span className="font-medium">Detalji naloga:</span>
-                          <span className="ml-4">Tip: {order.type || orderType}</span>
-                          <span className="ml-4">Status: {order.status === "open" ? "Otvoren" : "Zatvoren"}</span>
-                          {order.closed_at && <span className="ml-4">Zatvoren: {format(new Date(order.closed_at), "dd.MM.yyyy HH:mm")}</span>}
-                        </div>
-                      </TableCell>
-                    </TableRow>
-                  )
+              <TableRow key={order.id} className="hover:bg-muted/50">
+                <TableCell className="font-medium">
+                  {order.order_code || (() => {
+                    const year = new Date(order.created_at).getFullYear();
+                    const serial = String(order.order_number).padStart(4, '0');
+                    return `${prefixFor(order.type)}-${year}-${serial}`;
+                  })()}
+                </TableCell>
+                <TableCell>{order.client_name}</TableCell>
+                <TableCell className="text-muted-foreground">{order.created_by_name || "-"}</TableCell>
+                <TableCell>{getTypeBadge(order.type, order.kind)}</TableCell>
+                <TableCell>
+                  {format(new Date(order.created_at), "dd.MM.yyyy HH:mm")}
+                </TableCell>
+                <TableCell>
+                  {order.closed_at
+                    ? format(new Date(order.closed_at), "dd.MM.yyyy HH:mm")
+                    : "-"}
+                </TableCell>
+                <TableCell>{getStatusBadge(order.status)}</TableCell>
+                {orderType === "ctp" && (
+                  <TableCell className="font-semibold">{order.total_plates}</TableCell>
                 )}
-              </>
+                <TableCell className="text-right">
+                  <div className="flex gap-2 justify-end">
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      onClick={() => navigate(`/work-orders/${order.id}`)}
+                      title="Pogledaj nalog"
+                    >
+                      <Eye className="h-4 w-4" />
+                    </Button>
+                    {order.status === "open" && (
+                      <Button
+                        size="sm"
+                        onClick={() => closeWorkOrder(order.id)}
+                      >
+                        Zatvori Nalog
+                      </Button>
+                    )}
+                    {order.status === "closed" && (
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={() => sendDeliveryNote(order.id)}
+                      >
+                        <FileText className="h-4 w-4 mr-2" />
+                        Pošalji Otpremnicu
+                      </Button>
+                    )}
+                  </div>
+                </TableCell>
+              </TableRow>
             ))}
           </TableBody>
         </Table>
