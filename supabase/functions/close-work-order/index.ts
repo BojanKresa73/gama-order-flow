@@ -436,7 +436,7 @@ async function generateWorkOrderPDF(
   yPos -= 30;
 
   // Order info
-  page.drawText(`Broj naloga: ${workOrder.display_order_number || workOrder.order_number}`, {
+  page.drawText(`Broj naloga: ${workOrder.order_number}`, {
     x: margin,
     y: yPos,
     size: 12,
@@ -776,8 +776,8 @@ const handler = async (req: Request): Promise<Response> => {
     const tmpDir = "/tmp";
     await ensureDir(tmpDir);
     
-    // Use work order number as delivery number
-    const orderNo = workOrder.display_order_number || workOrder.order_number;
+    // Use work order number as delivery number (order_number is the correct format)
+    const orderNo = workOrder.order_number;
     const deliveryNumber = orderNo;
     const clientName = workOrder.clients?.name || "N/A";
     const orderType = workOrder.order_type.toUpperCase();

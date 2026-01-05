@@ -92,7 +92,7 @@ Deno.serve(async (req) => {
       return json(500, { ok: false, error: `Greška pri brisanju: ${delErr.message}` });
     }
 
-    console.log(`Work order ${workOrder.display_order_number || workOrder.order_number} deleted by user ${user.id}`);
+    console.log(`Work order ${workOrder.order_number} deleted by user ${user.id}`);
     
     return json(200, { ok: true });
   } catch (e) {

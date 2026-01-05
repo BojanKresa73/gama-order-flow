@@ -81,7 +81,7 @@ const handler = async (req: Request): Promise<Response> => {
     const pdfBuffer = await generateDeliveryNotePDF(workOrder, fileEntries);
 
     // Generate filename matching work order number format
-    const fileName = `Otpremnica-${workOrder.display_order_number || workOrder.order_number}.pdf`;
+    const fileName = `Otpremnica-${workOrder.order_number}.pdf`;
     
     return new Response(pdfBuffer as any, {
       status: 200,

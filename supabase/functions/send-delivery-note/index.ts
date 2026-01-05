@@ -270,8 +270,8 @@ const handler = async (req: Request): Promise<Response> => {
       );
     }
 
-    // Use work order number as delivery number
-    const deliveryNumber = workOrder.display_order_number || workOrder.order_number;
+    // Use work order number as delivery number (order_number is the correct format)
+    const deliveryNumber = workOrder.order_number;
 
     // Create delivery note
     const { data: deliveryNote, error: dnError } = await supabaseClient
