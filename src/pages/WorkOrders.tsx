@@ -577,78 +577,7 @@ const WorkOrders = () => {
         exportSelectedOrders.has(order.id)
       );
 
-      // Fetch detailed data for each order
-      const exportData = await Promise.all(ordersToExport.map(async (order) => {
-        let quantity = '';
-        let unit = '';
-        let itemDetails: string[] = [];
-        let plateFormat = '';
-
-        const clientName = order.clients?.name || '';
-        
-        if (order.order_type === 'ctp') {
-          // Get file entries with plate formats
-          const { data: files } = await supabase
-            .from('file_entries')
-            .select('filename, quantity, plate_formats(format_name)')
-            .eq('work_order_id', order.id);
-          
-          const totalPlates = files?.reduce((sum, f) => sum + (f.quantity || 0), 0) || 0;
-          quantity = totalPlates.toString();
-          unit = 'ploča';
-          
-          // Get unique plate formats for this order
-          const formats = [...new Set(files?.map(f => (f.plate_formats as any)?.format_name).filter(Boolean) || [])];
-          plateFormat = formats.join(', ');
-          
-          // Simple format: just filename with quantity and format
-          itemDetails = files?.map(f => {
-            const formatName = (f.plate_formats as any)?.format_name || '';
-            return `${f.filename} (${f.quantity || 0} ${formatName})`;
-          }) || [];
-        } else if (order.order_type === 'film') {
-          // Get film jobs
-          const { data: films } = await supabase
-            .from('film_jobs')
-            .select('file_name, qty, computed_total_m')
-            .eq('work_order_id', order.id);
-          
-          const totalMeters = films?.reduce((sum, f) => sum + (f.computed_total_m || 0), 0) || 0;
-          quantity = totalMeters.toFixed(2);
-          unit = 'm';
-          itemDetails = films?.map(f => `${f.file_name} (${f.qty}kom, ${(f.computed_total_m || 0).toFixed(2)}m)`) || [];
-        } else if (order.order_type === 'digital') {
-          // Get digital jobs
-          const { data: digitals } = await supabase
-            .from('digital_jobs')
-            .select('file_name, qty, computed_total_sheets, computed_color_clicks, computed_mono_clicks')
-            .eq('work_order_id', order.id);
-          
-          const totalSheets = digitals?.reduce((sum, d) => sum + (d.computed_total_sheets || 0), 0) || 0;
-          const totalClicks = digitals?.reduce((sum, d) => sum + (d.computed_color_clicks || 0) + (d.computed_mono_clicks || 0), 0) || 0;
-          quantity = totalClicks.toString();
-          unit = 'klikova';
-          itemDetails = digitals?.map(d => `${d.file_name} (${d.qty}kom, ${d.computed_total_sheets || 0} listova)`) || [];
-        }
-
-        return {
-          "Broj naloga": order.display_order_number || order.order_number,
-          "Klijent": order.clients?.name || '',
-          "PIB klijenta": '', // Will be fetched
-          "Tip": getOrderTypeLabel(order.order_type),
-          "Format": plateFormat,
-          "Posao": order.job_name || '',
-          "Količina": quantity,
-          "Jedinica": unit,
-          "Status": order.status === 'open' ? 'Otvoren' : 'Zatvoren',
-          "Datum kreiranja": format(new Date(order.created_at), 'dd.MM.yyyy'),
-          "Datum zatvaranja": order.closed_at ? format(new Date(order.closed_at), 'dd.MM.yyyy') : '',
-          "Stavke": itemDetails.join('; '),
-          "Napomena": order.notes || '',
-        };
-      }));
-
-      // Fetch client PIBs
+      // Fetch client PIBs first
       const clientIds = [...new Set(ordersToExport.map(o => o.client_id).filter(Boolean))];
       const { data: clients } = await supabase
         .from('clients')
@@ -656,16 +585,115 @@ const WorkOrders = () => {
         .in('id', clientIds);
       
       const clientPibMap = new Map(clients?.map(c => [c.id, c.pib]) || []);
-      
-      // Add PIB to export data
-      exportData.forEach((row, idx) => {
-        const order = ordersToExport[idx];
-        row["PIB klijenta"] = clientPibMap.get(order.client_id) || '';
-      });
+
+      // Build export rows - each file/item gets its own row
+      const exportRows: any[] = [];
+
+      for (const order of ordersToExport) {
+        const baseRowData = {
+          "Broj naloga": order.display_order_number || order.order_number,
+          "Klijent": order.clients?.name || '',
+          "PIB klijenta": clientPibMap.get(order.client_id) || '',
+          "Tip": getOrderTypeLabel(order.order_type),
+          "Posao": order.job_name || '',
+          "Status": order.status === 'open' ? 'Otvoren' : 'Zatvoren',
+          "Datum kreiranja": format(new Date(order.created_at), 'dd.MM.yyyy'),
+          "Datum zatvaranja": order.closed_at ? format(new Date(order.closed_at), 'dd.MM.yyyy') : '',
+          "Napomena": order.notes || '',
+        };
+
+        if (order.order_type === 'ctp') {
+          const { data: files } = await supabase
+            .from('file_entries')
+            .select('filename, quantity, plate_formats(format_name)')
+            .eq('work_order_id', order.id);
+          
+          if (files && files.length > 0) {
+            for (const file of files) {
+              const formatName = (file.plate_formats as any)?.format_name || '';
+              exportRows.push({
+                ...baseRowData,
+                "Format": formatName,
+                "Fajl": file.filename,
+                "Količina": file.quantity || 0,
+                "Jedinica": 'ploča',
+              });
+            }
+          } else {
+            exportRows.push({
+              ...baseRowData,
+              "Format": '',
+              "Fajl": '',
+              "Količina": '',
+              "Jedinica": '',
+            });
+          }
+        } else if (order.order_type === 'film') {
+          const { data: films } = await supabase
+            .from('film_jobs')
+            .select('file_name, qty, computed_total_m')
+            .eq('work_order_id', order.id);
+          
+          if (films && films.length > 0) {
+            for (const film of films) {
+              exportRows.push({
+                ...baseRowData,
+                "Format": '',
+                "Fajl": film.file_name,
+                "Količina": (film.computed_total_m || 0).toFixed(2),
+                "Jedinica": 'm',
+              });
+            }
+          } else {
+            exportRows.push({
+              ...baseRowData,
+              "Format": '',
+              "Fajl": '',
+              "Količina": '',
+              "Jedinica": '',
+            });
+          }
+        } else if (order.order_type === 'digital') {
+          const { data: digitals } = await supabase
+            .from('digital_jobs')
+            .select('file_name, qty, computed_total_sheets, computed_color_clicks, computed_mono_clicks')
+            .eq('work_order_id', order.id);
+          
+          if (digitals && digitals.length > 0) {
+            for (const digital of digitals) {
+              const clicks = (digital.computed_color_clicks || 0) + (digital.computed_mono_clicks || 0);
+              exportRows.push({
+                ...baseRowData,
+                "Format": '',
+                "Fajl": digital.file_name,
+                "Količina": clicks,
+                "Jedinica": 'klikova',
+              });
+            }
+          } else {
+            exportRows.push({
+              ...baseRowData,
+              "Format": '',
+              "Fajl": '',
+              "Količina": '',
+              "Jedinica": '',
+            });
+          }
+        } else {
+          // Other order types
+          exportRows.push({
+            ...baseRowData,
+            "Format": '',
+            "Fajl": '',
+            "Količina": '',
+            "Jedinica": '',
+          });
+        }
+      }
 
       // Create workbook
       const wb = XLSX.utils.book_new();
-      const ws = XLSX.utils.json_to_sheet(exportData);
+      const ws = XLSX.utils.json_to_sheet(exportRows);
       
       // Set column widths
       ws['!cols'] = [
@@ -673,31 +701,30 @@ const WorkOrders = () => {
         { wch: 25 },  // Klijent
         { wch: 12 },  // PIB
         { wch: 10 },  // Tip
-        { wch: 12 },  // Format
         { wch: 20 },  // Posao
-        { wch: 10 },  // Količina
-        { wch: 10 },  // Jedinica
         { wch: 10 },  // Status
         { wch: 12 },  // Datum kreiranja
         { wch: 12 },  // Datum zatvaranja
-        { wch: 50 },  // Stavke
         { wch: 30 },  // Napomena
+        { wch: 12 },  // Format
+        { wch: 40 },  // Fajl
+        { wch: 12 },  // Količina
+        { wch: 10 },  // Jedinica
       ];
       
       XLSX.utils.book_append_sheet(wb, ws, "Nalozi");
       
-      // Generate filename: ClientName + export date
-      // Get client name from first selected order, or use generic name
+      // Generate filename
       const firstClientName = ordersToExport[0]?.clients?.name || 'Nalozi';
       const exportDate = format(new Date(), 'dd.MM.yyyy');
-      const sanitizedClientName = firstClientName.replace(/[\\/:*?"<>|]/g, '_'); // Remove invalid filename chars
+      const sanitizedClientName = firstClientName.replace(/[\\/:*?"<>|]/g, '_');
       const filename = `${sanitizedClientName}_${exportDate}`;
       
       XLSX.writeFile(wb, `${filename}.xlsx`);
       
       toast({
         title: "Uspešno",
-        description: `Izvezeno ${exportData.length} naloga u Excel.`,
+        description: `Izvezeno ${exportRows.length} stavki u Excel.`,
       });
       
       // Clear selection after export

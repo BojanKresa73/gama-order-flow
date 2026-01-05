@@ -231,7 +231,7 @@ const WorkOrderDetails = () => {
       <div className="min-h-screen bg-background">
         <header className="border-b bg-card">
           <div className="container mx-auto px-4 py-4">
-            <Button variant="ghost" onClick={() => navigate("/work-orders")}>
+            <Button variant="ghost" onClick={() => navigate(-1)}>
               <ArrowLeft className="h-5 w-5" />
             </Button>
           </div>
@@ -248,7 +248,7 @@ const WorkOrderDetails = () => {
       <header className="border-b bg-card">
         <div className="container mx-auto px-4 py-4 flex items-center justify-between">
           <div className="flex items-center gap-4">
-            <Button variant="ghost" onClick={() => navigate("/work-orders")}>
+            <Button variant="ghost" onClick={() => navigate(-1)}>
               <ArrowLeft className="h-5 w-5" />
             </Button>
             <div>
