@@ -275,11 +275,21 @@ export async function generateDeliveryNotePDF(
       // Subtitle
       page.drawText('Grafička industrija', {
         x: margin + (logoImg ? CONFIG.logo.width + 15 : 0),
-        y: leftY - 20,
-        size: 11,
+        y: leftY - 18,
+        size: 10,
         font: notoFont,
         color: rgb(1, 1, 1),
         opacity: 0.75,
+      });
+
+      // Address line
+      page.drawText('Veljka Milićevića 2/10, Beograd | ctp@gamaunited.rs | PIB: 114876455', {
+        x: margin + (logoImg ? CONFIG.logo.width + 15 : 0),
+        y: leftY - 32,
+        size: 8,
+        font: notoFont,
+        color: rgb(1, 1, 1),
+        opacity: 0.6,
       });
 
       // Right side - Document badge
