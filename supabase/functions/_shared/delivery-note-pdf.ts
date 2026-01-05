@@ -1,35 +1,53 @@
 import { PDFDocument, rgb } from "https://esm.sh/pdf-lib@1.17.1";
 import fontkit from "https://esm.sh/@pdf-lib/fontkit@1.1.1";
 
-// Modern brand colors - professional dark blue theme
+// Newsletter-inspired brand colors - modern gradient theme
 const COLORS = {
-  primary: rgb(0.102, 0.212, 0.365),      // #1a365d - dark navy
-  primaryLight: rgb(0.173, 0.322, 0.510), // #2c5282 - medium blue
-  accent: rgb(0.196, 0.506, 0.780),       // #3281c7 - bright blue
-  success: rgb(0.220, 0.631, 0.412),      // #38a169 - green
-  textDark: rgb(0.102, 0.212, 0.365),     // #1a365d - dark navy
-  textMuted: rgb(0.443, 0.506, 0.580),    // #718096 - gray
-  textLight: rgb(0.631, 0.675, 0.725),    // #a1acb9 - light gray
-  border: rgb(0.886, 0.898, 0.918),       // #e2e5ea - light border
-  borderLight: rgb(0.937, 0.945, 0.957),  // #eff1f4 - very light border
-  headerBg: rgb(0.102, 0.212, 0.365),     // dark navy header
-  rowAlt: rgb(0.973, 0.976, 0.984),       // #f8f9fb - very light blue/gray
-  cardBg: rgb(0.961, 0.969, 0.980),       // #f5f7fa - card background
+  // Primary gradient colors
+  gradientStart: rgb(0.102, 0.212, 0.365),   // #1a365d - dark navy
+  gradientMid: rgb(0.173, 0.322, 0.510),     // #2c5282 - medium blue
+  gradientEnd: rgb(0.169, 0.420, 0.690),     // #2b6cb0 - bright blue
+  
+  // Accent colors
+  accent: rgb(0.196, 0.506, 0.780),          // #3281c7 - accent blue
+  accentLight: rgb(0.235, 0.612, 0.890),     // #3c9ce3 - light accent
+  success: rgb(0.220, 0.631, 0.412),         // #38a169 - green
+  successLight: rgb(0.282, 0.733, 0.471),    // #48bb78 - light green
+  purple: rgb(0.502, 0.353, 0.835),          // #805ad5 - purple
+  orange: rgb(0.867, 0.420, 0.125),          // #dd6b20 - orange
+  
+  // Text colors
+  textDark: rgb(0.102, 0.212, 0.365),        // #1a365d - dark navy
+  textBody: rgb(0.290, 0.341, 0.388),        // #4a5568 - body text
+  textMuted: rgb(0.443, 0.506, 0.580),       // #718096 - gray
+  textLight: rgb(0.627, 0.675, 0.725),       // #a0acb9 - light gray
+  
+  // Backgrounds
+  bgLight: rgb(0.941, 0.953, 0.969),         // #f0f3f8 - light bg
+  bgCard: rgb(0.961, 0.969, 0.980),          // #f5f7fa - card bg
+  bgBlue: rgb(0.922, 0.957, 1),              // #ebf4ff - light blue bg
+  bgGreen: rgb(0.941, 1, 0.957),             // #f0fff4 - light green bg
+  
+  // Borders
+  border: rgb(0.886, 0.898, 0.918),          // #e2e5ea
+  borderLight: rgb(0.937, 0.945, 0.957),     // #eff1f4
+  borderBlue: rgb(0.765, 0.855, 0.980),      // #c3dafe
+  borderGreen: rgb(0.604, 0.902, 0.706),     // #9ae6b4
+  
   white: rgb(1, 1, 1),
 };
 
 const CONFIG = {
   pageWidth: 595.28,  // A4 width
-  pageHeight: 841.89, // A4 height (full page for cleaner look)
+  pageHeight: 841.89, // A4 height
   margin: 40,
   marginRight: 40,
-  logo: { width: 100 },
+  logo: { width: 80 },
   table: {
     cols: { rbr: 40, filename: 260, details: 130, quantity: 85 },
-    rowHeight: 28,
-    headerBg: COLORS.headerBg,
+    rowHeight: 32,
   },
-  signature: { lineWidth: 140, yOffset: 100 },
+  signature: { lineWidth: 140, yOffset: 85 },
 };
 
 // Module-level cache for assets
@@ -169,196 +187,176 @@ export async function generateDeliveryNotePDF(
     const contentWidth = pageWidth - margin - marginRight;
 
     const signatureY = CONFIG.signature.yOffset;
-    const tableBottomMargin = signatureY + 50;
+    const tableBottomMargin = signatureY + 60;
 
-    // Draw modern header with gradient effect
-    const drawModernHeader = (page: any): number => {
-      const headerHeight = 90;
+    // Helper: Draw rounded rectangle
+    const drawRoundedRect = (page: any, x: number, y: number, width: number, height: number, color: any, borderColor?: any) => {
+      page.drawRectangle({
+        x,
+        y,
+        width,
+        height,
+        color,
+      });
+      if (borderColor) {
+        page.drawRectangle({
+          x,
+          y,
+          width,
+          height,
+          borderColor,
+          borderWidth: 1,
+        });
+      }
+    };
+
+    // Draw newsletter-style header with gradient simulation
+    const drawNewsletterHeader = (page: any): number => {
+      const headerHeight = 100;
       
-      // Header background
+      // Gradient simulation with overlapping rectangles
       page.drawRectangle({
         x: 0,
         y: pageHeight - headerHeight,
         width: pageWidth,
         height: headerHeight,
-        color: COLORS.primary,
+        color: COLORS.gradientStart,
       });
       
-      // Subtle accent bar at bottom of header
+      // Lighter overlay on right side for gradient effect
+      page.drawRectangle({
+        x: pageWidth * 0.5,
+        y: pageHeight - headerHeight,
+        width: pageWidth * 0.5,
+        height: headerHeight,
+        color: COLORS.gradientMid,
+        opacity: 0.7,
+      });
+      
+      // Accent bar at bottom
       page.drawRectangle({
         x: 0,
         y: pageHeight - headerHeight,
         width: pageWidth,
-        height: 3,
+        height: 4,
         color: COLORS.accent,
       });
+      
+      // Curved separator effect (white arc)
+      page.drawRectangle({
+        x: 0,
+        y: pageHeight - headerHeight - 15,
+        width: pageWidth,
+        height: 18,
+        color: COLORS.white,
+      });
 
-      let leftY = pageHeight - 32;
+      let leftY = pageHeight - 35;
       
       // Logo
       if (logoImg) {
-        const scaledLogoWidth = CONFIG.logo.width;
-        const scaledLogoHeight = logoHeight;
         page.drawImage(logoImg, {
           x: margin,
-          y: leftY - scaledLogoHeight + 10,
-          width: scaledLogoWidth,
-          height: scaledLogoHeight,
+          y: leftY - logoHeight + 8,
+          width: CONFIG.logo.width,
+          height: logoHeight,
         });
       }
 
-      // Company name
+      // Company name - large and bold
       page.drawText('GAMA UNITED', {
         x: margin + (logoImg ? CONFIG.logo.width + 15 : 0),
-        y: leftY - 5,
-        size: 22,
+        y: leftY,
+        size: 26,
         font: notoBold,
         color: COLORS.white,
       });
 
+      // Subtitle
       page.drawText('Grafička industrija', {
         x: margin + (logoImg ? CONFIG.logo.width + 15 : 0),
-        y: leftY - 22,
-        size: 10,
+        y: leftY - 20,
+        size: 11,
         font: notoFont,
         color: rgb(1, 1, 1),
-        opacity: 0.8,
+        opacity: 0.75,
       });
 
-      // Right side - Document title and number
+      // Right side - Document badge
       const rightX = pageWidth - marginRight;
       
-      // OTPREMNICA badge
+      // OTPREMNICA badge with pill shape
       const badgeText = 'OTPREMNICA';
-      const badgeWidth = notoBold.widthOfTextAtSize(badgeText, 12);
-      page.drawText(badgeText, {
+      const badgeWidth = notoBold.widthOfTextAtSize(badgeText, 11) + 30;
+      
+      drawRoundedRect(
+        page,
+        rightX - badgeWidth,
+        leftY - 5,
+        badgeWidth,
+        26,
+        rgb(1, 1, 1),
+      );
+      page.drawRectangle({
         x: rightX - badgeWidth,
         y: leftY - 5,
-        size: 12,
+        width: badgeWidth,
+        height: 26,
+        opacity: 0.15,
+      });
+      
+      page.drawText(badgeText, {
+        x: rightX - badgeWidth + 15,
+        y: leftY + 2,
+        size: 11,
         font: notoBold,
-        color: COLORS.white,
+        color: COLORS.gradientStart,
       });
 
-      // Document number
+      // Document number below badge
       const deliveryNumber = workOrder.display_order_number || workOrder.order_number;
-      const numWidth = notoBold.widthOfTextAtSize(deliveryNumber, 14);
+      const numWidth = notoBold.widthOfTextAtSize(deliveryNumber, 16);
       page.drawText(deliveryNumber, {
         x: rightX - numWidth,
-        y: leftY - 26,
-        size: 14,
-        font: notoBold,
-        color: rgb(1, 1, 1),
-        opacity: 0.95,
-      });
-
-      return pageHeight - headerHeight - 20;
-    };
-
-    // Draw info cards (client and order details)
-    const drawInfoCards = (page: any, startY: number): number => {
-      const cardHeight = 90;
-      const cardWidth = (contentWidth - 15) / 2;
-      const cardRadius = 8;
-
-      // Left card - Client info
-      page.drawRectangle({
-        x: margin,
-        y: startY - cardHeight,
-        width: cardWidth,
-        height: cardHeight,
-        color: COLORS.cardBg,
-      });
-      page.drawRectangle({
-        x: margin,
-        y: startY - cardHeight,
-        width: cardWidth,
-        height: cardHeight,
-        borderColor: COLORS.border,
-        borderWidth: 1,
-      });
-
-      // Client info header
-      page.drawRectangle({
-        x: margin,
-        y: startY - 24,
-        width: cardWidth,
-        height: 24,
-        color: COLORS.primary,
-      });
-      page.drawText('KLIJENT', {
-        x: margin + 12,
-        y: startY - 17,
-        size: 9,
+        y: leftY - 30,
+        size: 16,
         font: notoBold,
         color: COLORS.white,
       });
 
-      // Client details
-      const clientName = (workOrder.client?.name || workOrder.clients?.name || 'N/A').substring(0, 35);
-      page.drawText(clientName, {
-        x: margin + 12,
-        y: startY - 44,
-        size: 12,
+      return pageHeight - headerHeight - 25;
+    };
+
+    // Draw greeting section
+    const drawGreeting = (page: any, startY: number): number => {
+      const clientName = workOrder.client?.name || workOrder.clients?.name || 'Klijent';
+      
+      page.drawText(`Poštovani ${clientName},`, {
+        x: margin,
+        y: startY,
+        size: 18,
         font: notoBold,
         color: COLORS.textDark,
       });
-
-      if (workOrder.client?.pib || workOrder.clients?.pib) {
-        page.drawText(`PIB: ${workOrder.client?.pib || workOrder.clients?.pib}`, {
-          x: margin + 12,
-          y: startY - 60,
-          size: 9,
-          font: notoFont,
-          color: COLORS.textMuted,
-        });
-      }
-
-      if (workOrder.client?.email || workOrder.clients?.email) {
-        const email = (workOrder.client?.email || workOrder.clients?.email || '').substring(0, 35);
-        page.drawText(email, {
-          x: margin + 12,
-          y: startY - 76,
-          size: 9,
-          font: notoFont,
-          color: COLORS.textMuted,
-        });
-      }
-
-      // Right card - Order info
-      const rightCardX = margin + cardWidth + 15;
-      page.drawRectangle({
-        x: rightCardX,
-        y: startY - cardHeight,
-        width: cardWidth,
-        height: cardHeight,
-        color: COLORS.cardBg,
-      });
-      page.drawRectangle({
-        x: rightCardX,
-        y: startY - cardHeight,
-        width: cardWidth,
-        height: cardHeight,
-        borderColor: COLORS.border,
-        borderWidth: 1,
+      
+      page.drawText('Vaša porudžbina je uspešno završena i spremna za preuzimanje.', {
+        x: margin,
+        y: startY - 22,
+        size: 11,
+        font: notoFont,
+        color: COLORS.textBody,
       });
 
-      // Order info header
-      page.drawRectangle({
-        x: rightCardX,
-        y: startY - 24,
-        width: cardWidth,
-        height: 24,
-        color: COLORS.primary,
-      });
-      page.drawText('DETALJI NALOGA', {
-        x: rightCardX + 12,
-        y: startY - 17,
-        size: 9,
-        font: notoBold,
-        color: COLORS.white,
-      });
+      return startY - 50;
+    };
 
-      // Order type
+    // Draw info cards in newsletter style (2x2 grid)
+    const drawInfoCards = (page: any, startY: number): number => {
+      const cardWidth = (contentWidth - 15) / 2;
+      const cardHeight = 70;
+      const gap = 15;
+
+      // Order Type Card (blue theme)
       const orderKindKey = (workOrder.kind || 'CTP') as string;
       const orderTypeLabels: Record<string, string> = {
         'CTP': 'CTP ploče',
@@ -367,82 +365,209 @@ export async function generateDeliveryNotePDF(
         'RAZNO': 'Ostalo',
       };
       const orderTypeLabel = orderTypeLabels[orderKindKey] || workOrder.kind;
+
+      // Card 1: Order Type
+      drawRoundedRect(page, margin, startY - cardHeight, cardWidth, cardHeight, COLORS.bgBlue, COLORS.borderBlue);
       
-      page.drawText(`Tip: ${orderTypeLabel}`, {
-        x: rightCardX + 12,
-        y: startY - 44,
-        size: 10,
+      // Icon circle
+      page.drawRectangle({
+        x: margin + 15,
+        y: startY - cardHeight + 20,
+        width: 36,
+        height: 36,
+        color: COLORS.accent,
+      });
+      page.drawText('📦', {
+        x: margin + 24,
+        y: startY - cardHeight + 30,
+        size: 16,
+        font: notoFont,
+        color: COLORS.white,
+      });
+      
+      page.drawText('TIP NALOGA', {
+        x: margin + 60,
+        y: startY - 25,
+        size: 8,
+        font: notoBold,
+        color: COLORS.textMuted,
+      });
+      page.drawText(orderTypeLabel, {
+        x: margin + 60,
+        y: startY - 42,
+        size: 14,
         font: notoBold,
         color: COLORS.textDark,
       });
 
-      // Dates
-      const createdDate = formatDate(workOrder.created_at);
-      const closedDate = formatDate(workOrder.closed_at || new Date().toISOString());
+      // Card 2: Items Count (green theme)
+      const rightCardX = margin + cardWidth + gap;
+      drawRoundedRect(page, rightCardX, startY - cardHeight, cardWidth, cardHeight, COLORS.bgGreen, COLORS.borderGreen);
       
-      page.drawText(`Kreiran: ${createdDate}`, {
-        x: rightCardX + 12,
-        y: startY - 60,
-        size: 9,
-        font: notoFont,
-        color: COLORS.textMuted,
-      });
-
-      page.drawText(`Zatvoren: ${closedDate}`, {
-        x: rightCardX + 12,
-        y: startY - 76,
-        size: 9,
-        font: notoFont,
-        color: COLORS.textMuted,
-      });
-
-      return startY - cardHeight - 20;
-    };
-
-    // Draw items section label
-    const drawItemsLabel = (page: any, startY: number): number => {
-      page.drawText('STAVKE', {
-        x: margin,
-        y: startY,
-        size: 11,
-        font: notoBold,
-        color: COLORS.primary,
-      });
-      
-      // Item count badge
-      const countText = `${fileEntries.length}`;
-      const countWidth = notoBold.widthOfTextAtSize(countText, 10);
       page.drawRectangle({
-        x: margin + 55,
-        y: startY - 4,
-        width: countWidth + 14,
-        height: 18,
-        color: COLORS.primary,
+        x: rightCardX + 15,
+        y: startY - cardHeight + 20,
+        width: 36,
+        height: 36,
+        color: COLORS.success,
       });
-      page.drawText(countText, {
-        x: margin + 62,
-        y: startY + 1,
-        size: 10,
-        font: notoBold,
+      page.drawText('📄', {
+        x: rightCardX + 24,
+        y: startY - cardHeight + 30,
+        size: 16,
+        font: notoFont,
         color: COLORS.white,
       });
+      
+      page.drawText('BROJ STAVKI', {
+        x: rightCardX + 60,
+        y: startY - 25,
+        size: 8,
+        font: notoBold,
+        color: COLORS.textMuted,
+      });
+      page.drawText(String(fileEntries.length), {
+        x: rightCardX + 60,
+        y: startY - 42,
+        size: 14,
+        font: notoBold,
+        color: COLORS.textDark,
+      });
 
-      return startY - 18;
+      // Second row of cards
+      const secondRowY = startY - cardHeight - 10;
+
+      // Card 3: Created Date (purple theme)
+      drawRoundedRect(page, margin, secondRowY - cardHeight, cardWidth, cardHeight, COLORS.bgCard, COLORS.border);
+      
+      page.drawRectangle({
+        x: margin + 15,
+        y: secondRowY - cardHeight + 20,
+        width: 36,
+        height: 36,
+        color: COLORS.purple,
+      });
+      page.drawText('📅', {
+        x: margin + 24,
+        y: secondRowY - cardHeight + 30,
+        size: 16,
+        font: notoFont,
+        color: COLORS.white,
+      });
+      
+      page.drawText('KREIRAN', {
+        x: margin + 60,
+        y: secondRowY - 25,
+        size: 8,
+        font: notoBold,
+        color: COLORS.textMuted,
+      });
+      page.drawText(formatDate(workOrder.created_at), {
+        x: margin + 60,
+        y: secondRowY - 42,
+        size: 13,
+        font: notoBold,
+        color: COLORS.textDark,
+      });
+
+      // Card 4: Closed Date (orange theme)
+      drawRoundedRect(page, rightCardX, secondRowY - cardHeight, cardWidth, cardHeight, COLORS.bgCard, COLORS.border);
+      
+      page.drawRectangle({
+        x: rightCardX + 15,
+        y: secondRowY - cardHeight + 20,
+        width: 36,
+        height: 36,
+        color: COLORS.orange,
+      });
+      page.drawText('✅', {
+        x: rightCardX + 24,
+        y: secondRowY - cardHeight + 30,
+        size: 16,
+        font: notoFont,
+        color: COLORS.white,
+      });
+      
+      page.drawText('ZATVOREN', {
+        x: rightCardX + 60,
+        y: secondRowY - 25,
+        size: 8,
+        font: notoBold,
+        color: COLORS.textMuted,
+      });
+      page.drawText(formatDate(workOrder.closed_at || new Date().toISOString()), {
+        x: rightCardX + 60,
+        y: secondRowY - 42,
+        size: 13,
+        font: notoBold,
+        color: COLORS.textDark,
+      });
+
+      // Client info card below
+      const clientCardY = secondRowY - cardHeight - 15;
+      const clientCardHeight = 55;
+      
+      drawRoundedRect(page, margin, clientCardY - clientCardHeight, contentWidth, clientCardHeight, COLORS.bgCard, COLORS.border);
+      
+      page.drawText('KLIJENT', {
+        x: margin + 15,
+        y: clientCardY - 18,
+        size: 8,
+        font: notoBold,
+        color: COLORS.textMuted,
+      });
+      
+      const clientName = (workOrder.client?.name || workOrder.clients?.name || 'N/A').substring(0, 50);
+      page.drawText(clientName, {
+        x: margin + 15,
+        y: clientCardY - 35,
+        size: 14,
+        font: notoBold,
+        color: COLORS.textDark,
+      });
+      
+      if (workOrder.client?.pib || workOrder.clients?.pib) {
+        const pibText = `PIB: ${workOrder.client?.pib || workOrder.clients?.pib}`;
+        const pibWidth = notoFont.widthOfTextAtSize(pibText, 10);
+        page.drawText(pibText, {
+          x: pageWidth - marginRight - pibWidth - 15,
+          y: clientCardY - 35,
+          size: 10,
+          font: notoFont,
+          color: COLORS.textMuted,
+        });
+      }
+
+      return clientCardY - clientCardHeight - 20;
     };
 
-    // Draw table header
+    // Draw items section header
+    const drawItemsHeader = (page: any, startY: number): number => {
+      // Section title with badge
+      page.drawText('📋 PREGLED STAVKI', {
+        x: margin,
+        y: startY,
+        size: 12,
+        font: notoBold,
+        color: COLORS.gradientStart,
+      });
+
+      return startY - 20;
+    };
+
+    // Draw modern table header
     const drawTableHeader = (page: any, y: number): number => {
       const { rbr, filename, details, quantity } = CONFIG.table.cols;
       const tableWidth = rbr + filename + details + quantity;
-      const headerHeight = 32;
+      const headerHeight = 36;
       
-      // Header background
+      // Header with gradient effect
       page.drawRectangle({
         x: margin,
         y: y - headerHeight,
         width: tableWidth,
         height: headerHeight,
-        color: COLORS.headerBg,
+        color: COLORS.gradientStart,
       });
       
       // Column headers
@@ -455,15 +580,15 @@ export async function generateDeliveryNotePDF(
       ];
       
       headers.forEach(h => {
-        const textWidth = notoBold.widthOfTextAtSize(h.text, 9);
-        let textX = x + 10;
+        const textWidth = notoBold.widthOfTextAtSize(h.text, 10);
+        let textX = x + 12;
         if (h.align === 'center') {
           textX = x + (h.width - textWidth) / 2;
         }
         page.drawText(h.text, {
           x: textX,
-          y: y - 20,
-          size: 9,
+          y: y - 22,
+          size: 10,
           font: notoBold,
           color: COLORS.white,
         });
@@ -473,7 +598,7 @@ export async function generateDeliveryNotePDF(
       return y - headerHeight;
     };
 
-    // Draw table row
+    // Draw table row with alternating colors
     let rowIndex = 0;
     const drawTableRow = (page: any, y: number, rbr: number, entry: any): number => {
       const { rbr: rbrW, filename: fnW, details: detW, quantity: qtyW } = CONFIG.table.cols;
@@ -481,34 +606,33 @@ export async function generateDeliveryNotePDF(
       const rowHeight = CONFIG.table.rowHeight;
       
       // Alternating row background
-      if (rowIndex % 2 === 1) {
-        page.drawRectangle({
-          x: margin,
-          y: y - rowHeight,
-          width: tableWidth,
-          height: rowHeight,
-          color: COLORS.rowAlt,
-        });
-      }
+      const bgColor = rowIndex % 2 === 0 ? COLORS.white : COLORS.bgLight;
+      page.drawRectangle({
+        x: margin,
+        y: y - rowHeight,
+        width: tableWidth,
+        height: rowHeight,
+        color: bgColor,
+      });
       
       // Bottom border
       page.drawLine({
         start: { x: margin, y: y - rowHeight },
         end: { x: margin + tableWidth, y: y - rowHeight },
         thickness: 0.5,
-        color: COLORS.borderLight,
+        color: COLORS.border,
       });
       
       // Row content
       let x = margin;
       const orderKind = workOrder.kind || 'CTP';
       
-      // Row number (centered)
+      // Row number (centered, with circle bg)
       const rbrText = String(rbr);
       const rbrWidth = notoFont.widthOfTextAtSize(rbrText, 9);
       page.drawText(rbrText, {
         x: x + (rbrW - rbrWidth) / 2,
-        y: y - 18,
+        y: y - 20,
         size: 9,
         font: notoFont,
         color: COLORS.textMuted,
@@ -516,22 +640,22 @@ export async function generateDeliveryNotePDF(
       x += rbrW;
 
       // Filename
-      const fileName = (entry.filename || entry.file_name || 'N/A').substring(0, 45);
+      const fileName = (entry.filename || entry.file_name || 'N/A').substring(0, 42);
       page.drawText(fileName, {
-        x: x + 10,
-        y: y - 18,
-        size: 9,
+        x: x + 12,
+        y: y - 20,
+        size: 10,
         font: notoFont,
         color: COLORS.textDark,
       });
       x += fnW;
 
       // Details (centered)
-      const detailsText = getDetailsText(entry, orderKind).substring(0, 20);
+      const detailsText = getDetailsText(entry, orderKind).substring(0, 18);
       const detWidth = notoFont.widthOfTextAtSize(detailsText, 9);
       page.drawText(detailsText, {
         x: x + (detW - detWidth) / 2,
-        y: y - 18,
+        y: y - 20,
         size: 9,
         font: notoFont,
         color: COLORS.textMuted,
@@ -539,12 +663,12 @@ export async function generateDeliveryNotePDF(
       x += detW;
 
       // Quantity (centered, bold)
-      const qtyText = getQuantityText(entry, orderKind, workOrder).substring(0, 15);
-      const qtyWidth = notoBold.widthOfTextAtSize(qtyText, 9);
+      const qtyText = getQuantityText(entry, orderKind, workOrder).substring(0, 12);
+      const qtyWidth = notoBold.widthOfTextAtSize(qtyText, 10);
       page.drawText(qtyText, {
         x: x + (qtyW - qtyWidth) / 2,
-        y: y - 18,
-        size: 9,
+        y: y - 20,
+        size: 10,
         font: notoBold,
         color: COLORS.textDark,
       });
@@ -557,22 +681,22 @@ export async function generateDeliveryNotePDF(
     const drawSummaryRow = (page: any, y: number): number => {
       const { rbr, filename, details, quantity } = CONFIG.table.cols;
       const tableWidth = rbr + filename + details + quantity;
-      const rowHeight = CONFIG.table.rowHeight + 4;
+      const rowHeight = CONFIG.table.rowHeight + 6;
 
-      // Summary background
+      // Summary with gradient bg
       page.drawRectangle({
         x: margin,
         y: y - rowHeight,
         width: tableWidth,
         height: rowHeight,
-        color: COLORS.primary,
+        color: COLORS.gradientStart,
       });
 
       // Total text
       page.drawText(`UKUPNO STAVKI: ${fileEntries.length}`, {
-        x: margin + rbr + 10,
-        y: y - 20,
-        size: 10,
+        x: margin + rbr + 12,
+        y: y - 24,
+        size: 11,
         font: notoBold,
         color: COLORS.white,
       });
@@ -580,75 +704,58 @@ export async function generateDeliveryNotePDF(
       return y - rowHeight;
     };
 
-    // Draw signature block
+    // Draw modern signature block
     const drawSignature = (page: any) => {
       const y = signatureY;
-      const lineY = y + 20;
+      const lineY = y + 15;
       const lineWidth = CONFIG.signature.lineWidth;
       const spacing = (contentWidth - lineWidth * 3) / 2;
       
-      // Divider line above signatures
+      // Divider with gradient effect
       page.drawLine({
-        start: { x: margin, y: y + 45 },
-        end: { x: margin + contentWidth, y: y + 45 },
+        start: { x: margin + 50, y: y + 40 },
+        end: { x: pageWidth - marginRight - 50, y: y + 40 },
         thickness: 1,
         color: COLORS.border,
       });
 
-      // Prepared by
-      page.drawText('Pripremio:', {
-        x: margin,
-        y: y + 30,
-        size: 9,
-        font: notoFont,
-        color: COLORS.textMuted,
-      });
-      page.drawLine({
-        start: { x: margin, y: lineY },
-        end: { x: margin + lineWidth, y: lineY },
-        thickness: 1,
-        color: COLORS.textDark,
-      });
+      const signatures = [
+        { label: 'Pripremio', x: margin },
+        { label: 'Predao', x: margin + lineWidth + spacing },
+        { label: 'Preuzeo', x: margin + (lineWidth + spacing) * 2 },
+      ];
 
-      // Handed over
-      const handX = margin + lineWidth + spacing;
-      page.drawText('Predao:', {
-        x: handX,
-        y: y + 30,
-        size: 9,
-        font: notoFont,
-        color: COLORS.textMuted,
-      });
-      page.drawLine({
-        start: { x: handX, y: lineY },
-        end: { x: handX + lineWidth, y: lineY },
-        thickness: 1,
-        color: COLORS.textDark,
-      });
-
-      // Received
-      const recvX = handX + lineWidth + spacing;
-      page.drawText('Preuzeo:', {
-        x: recvX,
-        y: y + 30,
-        size: 9,
-        font: notoFont,
-        color: COLORS.textMuted,
-      });
-      page.drawLine({
-        start: { x: recvX, y: lineY },
-        end: { x: recvX + lineWidth, y: lineY },
-        thickness: 1,
-        color: COLORS.textDark,
+      signatures.forEach(sig => {
+        page.drawText(sig.label + ':', {
+          x: sig.x,
+          y: y + 26,
+          size: 9,
+          font: notoFont,
+          color: COLORS.textMuted,
+        });
+        page.drawLine({
+          start: { x: sig.x, y: lineY },
+          end: { x: sig.x + lineWidth, y: lineY },
+          thickness: 1,
+          color: COLORS.textDark,
+        });
       });
     };
 
-    // Draw footer
+    // Draw footer with company info
     const drawFooter = (page: any, pageNum: number, totalPages: number) => {
-      const footerY = 30;
+      const footerY = 25;
+      
+      // Subtle divider
+      page.drawLine({
+        start: { x: margin, y: footerY + 15 },
+        end: { x: pageWidth - marginRight, y: footerY + 15 },
+        thickness: 0.5,
+        color: COLORS.border,
+      });
       
       // Company info
-      page.drawText('GAMA UNITED d.o.o. | Veljka Milićevića 2/10, 11000 Beograd | PIB: 114876455', {
+      page.drawText('GAMA UNITED d.o.o. | Veljka Milićevića 2/10, Beograd | ctp@gamaunited.rs | PIB: 114876455', {
         x: margin,
         y: footerY,
         size: 8,
@@ -658,10 +765,10 @@ export async function generateDeliveryNotePDF(
 
       // Page number
       if (totalPages > 1) {
-        const pageText = `Strana ${pageNum} / ${totalPages}`;
-        const pageWidth = notoFont.widthOfTextAtSize(pageText, 9);
+        const pageText = `${pageNum} / ${totalPages}`;
+        const pageWidth2 = notoFont.widthOfTextAtSize(pageText, 9);
         page.drawText(pageText, {
-          x: pageWidth - marginRight - pageWidth,
+          x: pageWidth - marginRight - pageWidth2,
           y: footerY,
           size: 9,
           font: notoFont,
@@ -674,9 +781,10 @@ export async function generateDeliveryNotePDF(
     let currentPage = pdfDoc.addPage([pageWidth, pageHeight]);
     
     // First page content
-    let y = drawModernHeader(currentPage);
+    let y = drawNewsletterHeader(currentPage);
+    y = drawGreeting(currentPage, y);
     y = drawInfoCards(currentPage, y);
-    y = drawItemsLabel(currentPage, y);
+    y = drawItemsHeader(currentPage, y);
     y = drawTableHeader(currentPage, y);
 
     let pageNum = 1;
@@ -687,38 +795,47 @@ export async function generateDeliveryNotePDF(
       const needsNewPage = y < tableBottomMargin + CONFIG.table.rowHeight;
       
       if (needsNewPage) {
-        // New page
+        // New page with minimal header
         currentPage = pdfDoc.addPage([pageWidth, pageHeight]);
         pages.push(currentPage);
         pageNum++;
         
-        // Draw minimal header on continuation pages
+        // Continuation header
         currentPage.drawRectangle({
           x: 0,
-          y: pageHeight - 50,
+          y: pageHeight - 55,
           width: pageWidth,
-          height: 50,
-          color: COLORS.primary,
+          height: 55,
+          color: COLORS.gradientStart,
         });
         
         const deliveryNumber = workOrder.display_order_number || workOrder.order_number;
-        currentPage.drawText(`OTPREMNICA - ${deliveryNumber} (nastavak)`, {
+        currentPage.drawText(`OTPREMNICA ${deliveryNumber}`, {
           x: margin,
-          y: pageHeight - 32,
-          size: 12,
+          y: pageHeight - 28,
+          size: 14,
           font: notoBold,
           color: COLORS.white,
         });
+        
+        currentPage.drawText('(nastavak)', {
+          x: margin,
+          y: pageHeight - 44,
+          size: 10,
+          font: notoFont,
+          color: rgb(1, 1, 1),
+          opacity: 0.7,
+        });
 
-        y = pageHeight - 70;
+        y = pageHeight - 75;
         y = drawTableHeader(currentPage, y);
       }
       
       y = drawTableRow(currentPage, y, idx + 1, entry);
     });
 
-    // Draw summary row
-    if (y > tableBottomMargin + CONFIG.table.rowHeight + 10) {
+    // Draw summary row if space allows
+    if (y > tableBottomMargin + CONFIG.table.rowHeight + 15) {
       y = drawSummaryRow(currentPage, y);
     }
 
