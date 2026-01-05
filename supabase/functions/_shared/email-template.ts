@@ -31,7 +31,7 @@ export function generateDeliveryNoteEmailHtml(data: EmailTemplateData): string {
     companyName = 'GAMA UNITED d.o.o.',
     companyAddress = 'Veljka Milićevića 2/10, 11000 Beograd',
     companyPhone = '+381 11 316 16 29',
-    companyEmail = 'office@gamaunited.rs',
+    companyEmail = 'ctp@gamaunited.rs',
     companyPib = '114876455',
   } = data;
 
