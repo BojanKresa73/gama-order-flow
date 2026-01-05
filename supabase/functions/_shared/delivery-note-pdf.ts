@@ -273,7 +273,7 @@ export async function generateDeliveryNotePDF(
       });
 
       // Subtitle
-      page.drawText('Grafička industrija', {
+      page.drawText('All you can print..', {
         x: margin + (logoImg ? CONFIG.logo.width + 15 : 0),
         y: leftY - 18,
         size: 10,
@@ -283,9 +283,19 @@ export async function generateDeliveryNotePDF(
       });
 
       // Address line
-      page.drawText('Veljka Milićevića 2/10, Beograd | ctp@gamaunited.rs | PIB: 114876455', {
+      page.drawText('Veljka Milićevića 2/10, Beograd | ctp@gamaunited.rs', {
         x: margin + (logoImg ? CONFIG.logo.width + 15 : 0),
-        y: leftY - 32,
+        y: leftY - 30,
+        size: 8,
+        font: notoFont,
+        color: rgb(1, 1, 1),
+        opacity: 0.6,
+      });
+
+      // PIB line
+      page.drawText('PIB: 114876455', {
+        x: margin + (logoImg ? CONFIG.logo.width + 15 : 0),
+        y: leftY - 40,
         size: 8,
         font: notoFont,
         color: rgb(1, 1, 1),
