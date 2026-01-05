@@ -323,8 +323,8 @@ export async function generateDeliveryNotePDF(
         color: COLORS.gradientStart,
       });
 
-      // Document number below badge
-      const deliveryNumber = workOrder.display_order_number || workOrder.order_number;
+      // Document number below badge - use order_number which is the correct work order number
+      const deliveryNumber = workOrder.order_number;
       const numWidth = notoBold.widthOfTextAtSize(deliveryNumber, 16);
       page.drawText(deliveryNumber, {
         x: rightX - numWidth,
@@ -819,7 +819,7 @@ export async function generateDeliveryNotePDF(
           color: COLORS.gradientStart,
         });
         
-        const deliveryNumber = workOrder.display_order_number || workOrder.order_number;
+        const deliveryNumber = workOrder.order_number;
         currentPage.drawText(`OTPREMNICA ${deliveryNumber}`, {
           x: margin,
           y: pageHeight - 28,

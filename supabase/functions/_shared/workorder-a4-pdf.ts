@@ -153,7 +153,7 @@ export async function generateWorkOrderPDF(
       page.drawText('RADNI NALOG', { x: rightX, y: rightY, size: 16, font: notoBold });
       rightY -= 22;
 
-      const orderNumber = workOrder.display_order_number || workOrder.order_number;
+      const orderNumber = workOrder.order_number;
       page.drawText(`Broj naloga: ${orderNumber}`, { x: rightX, y: rightY, size: 9, font: notoFont });
       rightY -= 13;
       

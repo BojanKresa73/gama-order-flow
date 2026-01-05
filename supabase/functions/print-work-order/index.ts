@@ -112,7 +112,7 @@ async function handler(req: Request) {
     // Generate PDF
     const pdfBytes = await generateWorkOrderPDF(workOrder, fileEntries);
 
-    const orderNumber = workOrder.display_order_number || workOrder.order_number || workOrderId;
+    const orderNumber = workOrder.order_number || workOrderId;
     const filename = `RadniNalog_${orderNumber}.pdf`;
 
     return new Response(pdfBytes as unknown as BodyInit, {
