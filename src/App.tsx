@@ -22,6 +22,7 @@ import AdminUsers from "./pages/AdminUsers";
 import AdminInventory from "./pages/AdminInventory";
 import DevPreview from "./pages/DevPreview";
 import DeliveryNotePreview from "./pages/DeliveryNotePreview";
+import DeliveryNotePdfPreview from "./pages/DeliveryNotePdfPreview";
 import OrderDeliveryNote from "./pages/OrderDeliveryNote";
 import CtpStats from "./pages/CtpStats";
 import DigitalStats from "./pages/DigitalStats";
@@ -61,9 +62,10 @@ const App = () => {
               <Route path="/stats/digital" element={<DigitalStats />} />
               <Route path="/large-format/new" element={<LargeFormatNew />} />
               {import.meta.env.VITE_SHOW_DEV_PREVIEW === "true" && (
-                <>
+              <>
                   <Route path="/dev/preview" element={<DevPreview />} />
                   <Route path="/dev/preview/delivery-note" element={<DeliveryNotePreview />} />
+                  <Route path="/dev/preview/delivery-note-pdf" element={<DeliveryNotePdfPreview />} />
                 </>
               )}
               {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
