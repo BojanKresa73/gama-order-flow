@@ -5,7 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
-import { AlertTriangle, TrendingUp, Package, Calendar, Clock } from "lucide-react";
+import { AlertTriangle, TrendingUp, Package, Calendar, Clock, BarChart3 } from "lucide-react";
 import { Progress } from "@/components/ui/progress";
 
 interface ProcurementForecastProps {
@@ -17,21 +17,78 @@ interface ProcurementForecastProps {
 const SHIPPING_DAYS = 90; // ~3 months
 const SAFETY_BUFFER_DAYS = 30; // 1 month buffer for delays
 
+interface MonthlyData {
+  month: string;
+  formatName: string;
+  totalPlates: number;
+}
+
 export function ProcurementForecast({ plateFormats, orders }: ProcurementForecastProps) {
-  // Fetch consumption data from inventory_history
-  const { data: consumptionData, isLoading } = useQuery({
+  // Fetch monthly consumption by format from file_entries for better analysis
+  const { data: monthlyData, isLoading: loadingMonthly } = useQuery({
+    queryKey: ["monthly-consumption-by-format"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("file_entries")
+        .select(`
+          quantity,
+          plate_format_id,
+          plate_formats(format_name),
+          work_orders!inner(status, order_type, closed_at, deleted_at)
+        `)
+        .eq("work_orders.order_type", "ctp")
+        .eq("work_orders.status", "closed")
+        .is("work_orders.deleted_at", null)
+        .not("work_orders.closed_at", "is", null);
+
+      if (error) throw error;
+      
+      // Group by month and format
+      const monthlyMap = new Map<string, Map<string, { total: number; formatId: string }>>();
+      
+      data?.forEach((row: any) => {
+        const closedAt = row.work_orders?.closed_at;
+        if (!closedAt) return;
+        
+        const date = new Date(closedAt);
+        const monthKey = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
+        const formatName = row.plate_formats?.format_name || "Nepoznat";
+        const formatId = row.plate_format_id;
+        const qty = row.quantity || 0;
+        
+        if (!monthlyMap.has(monthKey)) {
+          monthlyMap.set(monthKey, new Map());
+        }
+        const formatMap = monthlyMap.get(monthKey)!;
+        const existing = formatMap.get(formatId) || { total: 0, formatId };
+        formatMap.set(formatId, { total: existing.total + qty, formatId });
+      });
+      
+      // Convert to array with month info
+      const result: { month: string; formatId: string; total: number }[] = [];
+      monthlyMap.forEach((formats, month) => {
+        formats.forEach(({ total, formatId }) => {
+          result.push({ month, formatId, total });
+        });
+      });
+      
+      return result.sort((a, b) => b.month.localeCompare(a.month));
+    },
+    staleTime: 60000,
+  });
+
+  // Fetch consumption data from inventory_history for daily averages
+  const { data: consumptionData, isLoading: loadingConsumption } = useQuery({
     queryKey: ["plate-consumption"],
     queryFn: async () => {
-      // Get ALL consumption data to calculate proper daily average
       const { data, error } = await supabase
         .from("inventory_history")
         .select("plate_format_id, change_amount, created_at")
-        .lt("change_amount", 0) // Only consumption (negative changes)
+        .lt("change_amount", 0)
         .order("created_at", { ascending: true });
 
       if (error) throw error;
       
-      // Calculate actual date range with data
       if (data && data.length > 0) {
         const firstDate = new Date(data[0].created_at);
         const lastDate = new Date(data[data.length - 1].created_at);
@@ -43,14 +100,56 @@ export function ProcurementForecast({ plateFormats, orders }: ProcurementForecas
     staleTime: 60000,
   });
 
-  // Calculate forecast data
+  // Calculate forecast with monthly trends
   const forecastData = useMemo(() => {
     if (!consumptionData?.entries || !plateFormats.length) return [];
 
     const { entries, actualDays } = consumptionData;
+    
+    // Get current month for seasonality
+    const now = new Date();
+    const currentMonth = now.getMonth(); // 0-11
+    
+    // Calculate monthly averages per format
+    const monthlyAvgByFormat = new Map<string, { avg: number; months: number; lastMonthUsage: number; trend: number }>();
+    
+    if (monthlyData && monthlyData.length > 0) {
+      const formatMonths = new Map<string, { totals: number[]; months: string[] }>();
+      
+      monthlyData.forEach(({ month, formatId, total }) => {
+        if (!formatMonths.has(formatId)) {
+          formatMonths.set(formatId, { totals: [], months: [] });
+        }
+        const data = formatMonths.get(formatId)!;
+        data.totals.push(total);
+        data.months.push(month);
+      });
+      
+      formatMonths.forEach((data, formatId) => {
+        const avg = data.totals.reduce((a, b) => a + b, 0) / data.totals.length;
+        const lastMonthUsage = data.totals[0] || 0; // Most recent month
+        
+        // Calculate trend (is usage increasing or decreasing?)
+        let trend = 1;
+        if (data.totals.length >= 2) {
+          const recentAvg = data.totals.slice(0, Math.min(2, data.totals.length)).reduce((a, b) => a + b, 0) / Math.min(2, data.totals.length);
+          const olderAvg = data.totals.length > 2 
+            ? data.totals.slice(2).reduce((a, b) => a + b, 0) / (data.totals.length - 2)
+            : recentAvg;
+          trend = olderAvg > 0 ? recentAvg / olderAvg : 1;
+        }
+        
+        monthlyAvgByFormat.set(formatId, {
+          avg,
+          months: data.months.length,
+          lastMonthUsage,
+          trend: Math.max(0.5, Math.min(2, trend)) // Clamp between 0.5x and 2x
+        });
+      });
+    }
 
     return plateFormats.map((format) => {
-      // Calculate total consumption for this format
+      // Calculate total consumption for this format from inventory_history
       const formatConsumption = entries.filter(
         (c) => c.plate_format_id === format.id
       );
@@ -61,7 +160,30 @@ export function ProcurementForecast({ plateFormats, orders }: ProcurementForecas
       );
 
       // Daily average based on actual days with data
-      const avgDaily = actualDays > 0 ? totalConsumed / actualDays : 0;
+      const rawAvgDaily = actualDays > 0 ? totalConsumed / actualDays : 0;
+      
+      // Get monthly data for this format
+      const monthlyStats = monthlyAvgByFormat.get(format.id);
+      
+      // Calculate weighted daily average:
+      // - Use monthly average if we have good monthly data
+      // - Apply trend factor for growing/shrinking formats
+      let avgDaily = rawAvgDaily;
+      let monthlyAvg = 0;
+      let activeMonths = 0;
+      let lastMonthUsage = 0;
+      let trend = 1;
+      
+      if (monthlyStats) {
+        monthlyAvg = monthlyStats.avg;
+        activeMonths = monthlyStats.months;
+        lastMonthUsage = monthlyStats.lastMonthUsage;
+        trend = monthlyStats.trend;
+        
+        // Weight: 60% monthly average with trend, 40% raw daily calculation
+        const trendAdjustedMonthly = (monthlyAvg / 30) * trend;
+        avgDaily = (trendAdjustedMonthly * 0.6) + (rawAvgDaily * 0.4);
+      }
 
       // Current stock
       const currentStock = format.current_stock || 0;
@@ -87,7 +209,8 @@ export function ProcurementForecast({ plateFormats, orders }: ProcurementForecas
       const shouldOrderNow = daysWithPending < minDaysNeeded;
 
       // How much to order: cover shipping time + buffer + extra month
-      const daysToRecover = SHIPPING_DAYS + SAFETY_BUFFER_DAYS + 30;
+      // Adjust based on trend - if growing, order more
+      const daysToRecover = (SHIPPING_DAYS + SAFETY_BUFFER_DAYS + 30) * trend;
       const recommendedOrder = Math.max(0, Math.ceil(avgDaily * daysToRecover) - currentStock - pendingPlates);
 
       // Calculate estimated stockout date
@@ -101,6 +224,10 @@ export function ProcurementForecast({ plateFormats, orders }: ProcurementForecas
         totalConsumed,
         actualDays,
         avgDaily: avgDaily.toFixed(1),
+        monthlyAvg: Math.round(monthlyAvg),
+        activeMonths,
+        lastMonthUsage,
+        trend,
         daysUntilStockout,
         daysWithPending,
         stockoutDate,
@@ -113,7 +240,9 @@ export function ProcurementForecast({ plateFormats, orders }: ProcurementForecas
           : "ok",
       };
     }).sort((a, b) => a.daysWithPending - b.daysWithPending);
-  }, [consumptionData, plateFormats, orders]);
+  }, [consumptionData, monthlyData, plateFormats, orders]);
+
+  const isLoading = loadingMonthly || loadingConsumption;
 
   if (isLoading) {
     return (
@@ -127,6 +256,9 @@ export function ProcurementForecast({ plateFormats, orders }: ProcurementForecas
 
   const criticalFormats = forecastData.filter((f) => f.urgencyLevel === "critical");
   const warningFormats = forecastData.filter((f) => f.urgencyLevel === "warning");
+
+  // Calculate total recommended order
+  const totalRecommended = forecastData.reduce((sum, f) => sum + f.recommendedOrder, 0);
 
   return (
     <div className="space-y-6">
@@ -150,6 +282,11 @@ export function ProcurementForecast({ plateFormats, orders }: ProcurementForecas
                 ⚠️ UPOZORENJE: Za {warningFormats.length} format(a) treba naručiti odmah zbog vremena isporuke.
               </p>
             )}
+            {totalRecommended > 0 && (
+              <p className="text-sm font-medium mt-3 pt-3 border-t">
+                📦 Ukupno preporučena narudžbina: <span className="text-primary">{totalRecommended.toLocaleString('sr-RS')} ploča</span>
+              </p>
+            )}
           </CardContent>
         </Card>
       )}
@@ -162,7 +299,7 @@ export function ProcurementForecast({ plateFormats, orders }: ProcurementForecas
             Predikcija po formatima
           </CardTitle>
           <CardDescription>
-            Bazirano na prosečnoj potrošnji (30 dana: 70%, 90 dana: 30%)
+            Bazirano na mesečnoj potrošnji sa analizom trenda
             <br />
             Vreme isporuke: ~{SHIPPING_DAYS} dana + {SAFETY_BUFFER_DAYS} dana rezerve
           </CardDescription>
@@ -175,9 +312,10 @@ export function ProcurementForecast({ plateFormats, orders }: ProcurementForecas
                   <TableHead>Format</TableHead>
                   <TableHead className="text-right">Stanje</TableHead>
                   <TableHead className="text-right">Na putu</TableHead>
-                  <TableHead className="text-right hidden sm:table-cell">Dnevna potrošnja</TableHead>
+                  <TableHead className="text-right hidden sm:table-cell">Mesečni prosek</TableHead>
+                  <TableHead className="text-right hidden md:table-cell">Trend</TableHead>
                   <TableHead className="text-right">Dana do 0</TableHead>
-                  <TableHead className="text-right hidden md:table-cell">Traje do</TableHead>
+                  <TableHead className="text-right hidden lg:table-cell">Traje do</TableHead>
                   <TableHead className="text-right">Preporuka</TableHead>
                 </TableRow>
               </TableHeader>
@@ -206,7 +344,7 @@ export function ProcurementForecast({ plateFormats, orders }: ProcurementForecas
                     </TableCell>
                     <TableCell className="text-right">
                       <div className="flex flex-col items-end">
-                        <span className="font-medium">{row.currentStock}</span>
+                        <span className="font-medium">{row.currentStock.toLocaleString('sr-RS')}</span>
                         <Progress
                           value={Math.min(100, (row.daysWithPending / 150) * 100)}
                           className="h-1 w-16 mt-1"
@@ -225,11 +363,29 @@ export function ProcurementForecast({ plateFormats, orders }: ProcurementForecas
                     </TableCell>
                     <TableCell className="text-right hidden sm:table-cell">
                       <div className="text-sm">
-                        <span className="font-medium">{row.avgDaily}</span>
+                        <span className="font-medium">{row.monthlyAvg.toLocaleString('sr-RS')}</span>
                         <span className="text-muted-foreground text-xs block">
-                          ({row.totalConsumed} za {row.actualDays}d)
+                          ({row.activeMonths} mesec{row.activeMonths === 1 ? '' : 'a'})
                         </span>
                       </div>
+                    </TableCell>
+                    <TableCell className="text-right hidden md:table-cell">
+                      {row.activeMonths >= 2 ? (
+                        <Badge 
+                          variant={row.trend > 1.1 ? "default" : row.trend < 0.9 ? "secondary" : "outline"}
+                          className="gap-1"
+                        >
+                          {row.trend > 1.1 ? (
+                            <>↑ {((row.trend - 1) * 100).toFixed(0)}%</>
+                          ) : row.trend < 0.9 ? (
+                            <>↓ {((1 - row.trend) * 100).toFixed(0)}%</>
+                          ) : (
+                            "→ stabilan"
+                          )}
+                        </Badge>
+                      ) : (
+                        <span className="text-muted-foreground text-xs">malo podataka</span>
+                      )}
                     </TableCell>
                     <TableCell className="text-right">
                       <Badge
@@ -244,7 +400,7 @@ export function ProcurementForecast({ plateFormats, orders }: ProcurementForecas
                         {row.daysWithPending > 365 ? "365+" : row.daysWithPending}
                       </Badge>
                     </TableCell>
-                    <TableCell className="text-right hidden md:table-cell">
+                    <TableCell className="text-right hidden lg:table-cell">
                       {row.daysWithPending > 365 ? (
                         <span className="text-muted-foreground">365+ dana</span>
                       ) : (
@@ -256,7 +412,7 @@ export function ProcurementForecast({ plateFormats, orders }: ProcurementForecas
                     <TableCell className="text-right">
                       {row.shouldOrderNow && row.recommendedOrder > 0 ? (
                         <span className="font-bold text-orange-600">
-                          Naruči {row.recommendedOrder}
+                          Naruči {row.recommendedOrder.toLocaleString('sr-RS')}
                         </span>
                       ) : (
                         <span className="text-muted-foreground">OK</span>
@@ -269,6 +425,52 @@ export function ProcurementForecast({ plateFormats, orders }: ProcurementForecas
           </div>
         </CardContent>
       </Card>
+
+      {/* Monthly Breakdown */}
+      {monthlyData && monthlyData.length > 0 && (
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <BarChart3 className="h-5 w-5" />
+              Potrošnja po mesecima
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="overflow-x-auto">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Format</TableHead>
+                    {[...new Set(monthlyData.map(d => d.month))].slice(0, 6).map(month => (
+                      <TableHead key={month} className="text-right">
+                        {new Date(month + '-01').toLocaleDateString('sr-Latn', { month: 'short', year: '2-digit' })}
+                      </TableHead>
+                    ))}
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {plateFormats.filter(f => monthlyData.some(d => d.formatId === f.id)).map(format => {
+                    const months = [...new Set(monthlyData.map(d => d.month))].slice(0, 6);
+                    return (
+                      <TableRow key={format.id}>
+                        <TableCell className="font-medium">{format.format_name}</TableCell>
+                        {months.map(month => {
+                          const data = monthlyData.find(d => d.month === month && d.formatId === format.id);
+                          return (
+                            <TableCell key={month} className="text-right">
+                              {data ? data.total.toLocaleString('sr-RS') : '-'}
+                            </TableCell>
+                          );
+                        })}
+                      </TableRow>
+                    );
+                  })}
+                </TableBody>
+              </Table>
+            </div>
+          </CardContent>
+        </Card>
+      )}
 
       {/* Legend / Explanation */}
       <Card>
