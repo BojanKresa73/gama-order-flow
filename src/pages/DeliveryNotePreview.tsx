@@ -102,11 +102,11 @@ const DeliveryNotePreview = () => {
       if (orderError) throw orderError;
       setSelectedOrder(orderData);
 
-      // Fetch items based on order type
-      const orderType = orderData.order_type?.toLowerCase();
+      // Fetch items based on order kind
+      const orderKind = orderData.kind?.toUpperCase() || 'CTP';
       let items: any[] = [];
 
-      if (orderType === 'film') {
+      if (orderKind === 'FILMOVANJE') {
         // Fetch film jobs
         const { data: filmJobs, error: filmError } = await supabase
           .from("film_jobs")
@@ -121,7 +121,7 @@ const DeliveryNotePreview = () => {
           format: `${job.width_mm}x${job.height_mm} mm`,
           details: job.computed_total_m ? `${job.computed_total_m.toFixed(2)} m` : '-'
         }));
-      } else if (orderType === 'digital') {
+      } else if (orderKind === 'DIGITALA') {
         // Fetch digital jobs
         const { data: digitalJobs, error: digitalError } = await supabase
           .from("digital_jobs")
@@ -147,12 +147,12 @@ const DeliveryNotePreview = () => {
           items = (digitalJobs || []).map(job => ({
             id: job.id,
             filename: job.file_name || job.name,
-            quantity: `${job.obim * job.qty} tab.`,
+            quantity: `${(job.obim || 1) * (job.qty || 1)} tab.`,
             format: job.machine_sheet_format || '-',
             details: job.print_sides || '-'
           }));
         }
-      } else if (orderType === 'ctp') {
+      } else if (orderKind === 'CTP') {
         // CTP orders: use file entries
         const { data: filesData, error: filesError } = await supabase
           .from("file_entries")
