@@ -152,6 +152,15 @@ export const CtpInventoryForecast = () => {
             )}
           </TableBody>
         </Table>
+        
+        {forecastData && forecastData.length > 0 && (
+          <div className="mt-4 pt-4 border-t flex justify-between items-center">
+            <span className="text-sm text-muted-foreground">Ukupno formata: {forecastData.length}</span>
+            <span className="text-lg font-semibold">
+              Ukupno ploča: {forecastData.reduce((sum, item) => sum + item.currentStock, 0).toLocaleString('sr-RS')}
+            </span>
+          </div>
+        )}
       </CardContent>
     </Card>
   );
