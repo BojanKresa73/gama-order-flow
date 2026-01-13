@@ -314,6 +314,15 @@ const Inventory = () => {
                 ))}
               </TableBody>
             </Table>
+            
+            {plateFormats.length > 0 && (
+              <div className="mt-4 pt-4 border-t flex justify-between items-center">
+                <span className="text-sm text-muted-foreground">Ukupno formata: {plateFormats.length}</span>
+                <span className="text-lg font-semibold">
+                  Ukupno ploča: {plateFormats.reduce((sum, f) => sum + (f.current_stock || 0), 0).toLocaleString('sr-RS')}
+                </span>
+              </div>
+            )}
           </CardContent>
         </Card>
       </main>
