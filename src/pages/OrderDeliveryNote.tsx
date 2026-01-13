@@ -58,19 +58,89 @@ const OrderDeliveryNote = () => {
       if (orderError) throw orderError;
       setWorkOrder(orderData);
 
-      const { data: filesData, error: filesError } = await supabase
-        .from("file_entries")
-        .select(`
-          *,
-          plate_format:plate_formats (
-            format_name
-          )
-        `)
-        .eq("work_order_id", orderId)
-        .eq("status", "closed");
+      // Fetch items based on order kind
+      const orderKind = orderData.kind?.toUpperCase() || 'CTP';
+      let items: any[] = [];
 
-      if (filesError) throw filesError;
-      setFileEntries(filesData || []);
+      if (orderKind === 'FILMOVANJE') {
+        // Fetch film jobs
+        const { data: filmJobs, error: filmError } = await supabase
+          .from("film_jobs")
+          .select("*")
+          .eq("work_order_id", orderId);
+
+        if (filmError) throw filmError;
+        items = (filmJobs || []).map(job => ({
+          id: job.id,
+          filename: job.file_name,
+          quantity: job.qty,
+          format: `${job.width_mm}x${job.height_mm} mm`,
+          details: job.computed_total_m ? `${job.computed_total_m.toFixed(2)} m` : '-'
+        }));
+      } else if (orderKind === 'DIGITALA') {
+        // Fetch digital jobs
+        const { data: digitalJobs, error: digitalError } = await supabase
+          .from("digital_jobs")
+          .select("*")
+          .eq("work_order_id", orderId);
+
+        if (digitalError) throw digitalError;
+
+        // Check if work order has job_name (product mode vs sheet mode)
+        const hasJobName = orderData.job_name && orderData.job_name.trim().length > 0;
+
+        if (hasJobName) {
+          // Product mode: show single item with job name and run_quantity
+          items = [{
+            id: orderData.id,
+            filename: orderData.job_name,
+            quantity: orderData.run_quantity || 1,
+            format: '-',
+            details: 'Proizvod'
+          }];
+        } else {
+          // Sheet mode: show individual files with format and print type
+          items = (digitalJobs || []).map(job => ({
+            id: job.id,
+            filename: job.file_name || job.name,
+            quantity: `${(job.obim || 1) * (job.qty || 1)} tab.`,
+            format: job.machine_sheet_format || '-',
+            details: job.print_sides || '-'
+          }));
+        }
+      } else if (orderKind === 'CTP') {
+        // CTP orders: use file entries
+        const { data: filesData, error: filesError } = await supabase
+          .from("file_entries")
+          .select(`
+            *,
+            plate_format:plate_formats (
+              format_name
+            )
+          `)
+          .eq("work_order_id", orderId)
+          .eq("status", "closed");
+
+        if (filesError) throw filesError;
+        items = (filesData || []).map(entry => ({
+          id: entry.id,
+          filename: entry.filename,
+          quantity: entry.quantity || 1,
+          format: entry.plate_format?.format_name || '-',
+          details: 'CTP'
+        }));
+      } else {
+        // RAZNO orders: use job_name and run_quantity from work order
+        items = [{
+          id: orderData.id,
+          filename: orderData.job_name || 'Usluga',
+          quantity: orderData.run_quantity || 1,
+          format: '-',
+          details: 'Ostalo'
+        }];
+      }
+
+      setFileEntries(items);
 
       // Fetch delivery note if exists
       const { data: deliveryNoteData, error: dnError } = await supabase
@@ -418,31 +488,13 @@ const OrderDeliveryNote = () => {
             )}
           </div>
 
-          {/* For OSTALO orders, show job_name and run_quantity from work order */}
-          {workOrder.order_type === "other" && workOrder.job_name ? (
+          {fileEntries && fileEntries.length > 0 ? (
             <table className="items-table">
               <thead>
                 <tr>
                   <th className="number">#</th>
-                  <th>Naziv posla</th>
-                  <th className="quantity">Količina</th>
-                </tr>
-              </thead>
-              <tbody>
-                <tr>
-                  <td className="number">1</td>
-                  <td>{workOrder.job_name}</td>
-                  <td className="quantity">{workOrder.run_quantity || "-"}</td>
-                </tr>
-              </tbody>
-            </table>
-          ) : fileEntries && fileEntries.length > 0 ? (
-            <table className="items-table">
-              <thead>
-                <tr>
-                  <th className="number">#</th>
-                  <th>Naziv fajla</th>
-                  <th className="format">Format ploče</th>
+                  <th>Naziv</th>
+                  <th className="format">Format / Detalji</th>
                   <th className="quantity">Količina</th>
                 </tr>
               </thead>
@@ -451,7 +503,7 @@ const OrderDeliveryNote = () => {
                   <tr key={entry.id}>
                     <td className="number">{index + 1}</td>
                     <td>{entry.filename}</td>
-                    <td className="format">{entry.plate_format?.format_name || "-"}</td>
+                    <td className="format">{entry.format || entry.details || "-"}</td>
                     <td className="quantity">{entry.quantity || "-"}</td>
                   </tr>
                 ))}
