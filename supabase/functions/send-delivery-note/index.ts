@@ -94,15 +94,22 @@ const handler = async (req: Request): Promise<Response> => {
   }
 
   try {
-    const supabaseClient = createClient(
-      Deno.env.get("SUPABASE_URL") ?? "",
-      Deno.env.get("SUPABASE_ANON_KEY") ?? "",
-      {
-        global: {
-          headers: { Authorization: req.headers.get("Authorization")! },
-        },
-      }
-    );
+    const supabaseUrl = Deno.env.get("SUPABASE_URL") ?? "";
+    const serviceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "";
+    if (!supabaseUrl || !serviceKey) {
+      throw new Error("Server nije podešen (SUPABASE_URL / SERVICE_ROLE_KEY)");
+    }
+
+    const authHeader = req.headers.get("Authorization");
+    if (!authHeader) throw new Error("Nedostaje autorizacija");
+
+    const token = authHeader.replace("Bearer ", "");
+
+    // Use service role for DB ops (bypasses RLS) + verify user token explicitly
+    const supabaseClient = createClient(supabaseUrl, serviceKey);
+
+    const { data: { user }, error: authError } = await supabaseClient.auth.getUser(token);
+    if (authError || !user) throw new Error("Niste autentifikovani");
 
     const { workOrderId }: DeliveryNoteRequest = await req.json();
 
@@ -358,8 +365,10 @@ const handler = async (req: Request): Promise<Response> => {
         orderType: orderType || 'ctp',
         items: items.map((item: any) => ({
           filename: item.filename,
-          details: orderType === 'film' 
-            ? (item.computed_total_m ? item.computed_total_m.toFixed(2) + ' m' : '-')
+          details: orderType === 'film'
+            ? (Number(item.computed_total_m ?? 0) > 0
+              ? `${Number(item.computed_total_m).toFixed(2)} m`
+              : '-')
             : orderType === 'digital' && item.file_type !== 'digital_product'
             ? (item.machine_sheet_format || '-')
             : (item.plate_format?.format_name || '-'),

@@ -114,13 +114,16 @@ const DeliveryNotePreview = () => {
           .eq("work_order_id", selectedOrderId);
 
         if (filmError) throw filmError;
-        items = (filmJobs || []).map(job => ({
-          id: job.id,
-          filename: job.file_name,
-          quantity: job.qty,
-          format: `${job.width_mm}x${job.height_mm} mm`,
-          details: job.computed_total_m ? `${job.computed_total_m.toFixed(2)} m` : '-'
-        }));
+        items = (filmJobs || []).map(job => {
+          const totalM = Number(job.computed_total_m ?? 0);
+          return {
+            id: job.id,
+            filename: job.file_name,
+            quantity: job.qty,
+            format: `${job.width_mm}x${job.height_mm} mm`,
+            details: totalM > 0 ? `${totalM.toFixed(2)} m` : '-',
+          };
+        });
       } else if (orderKind === 'DIGITALA') {
         // Fetch digital jobs
         const { data: digitalJobs, error: digitalError } = await supabase
