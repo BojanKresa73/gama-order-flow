@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
-import { ArrowLeft, Plus, FileText, Eye, Lock, CheckCircle2, AlertTriangle, Trash2, Pencil, Send, Download, Loader2, Receipt } from "lucide-react";
+import { ArrowLeft, Plus, FileText, Eye, Lock, CheckCircle2, AlertTriangle, Trash2, Pencil, Send, Download, Loader2, Receipt, FileCheck } from "lucide-react";
 import * as XLSX from "xlsx";
 import { format } from "date-fns";
 import { useToast } from "@/hooks/use-toast";
@@ -229,8 +229,13 @@ const WorkOrders = () => {
       }
 
       // Status filter
-      if (filters.status !== "all" && order.status !== filters.status) {
-        return false;
+      if (filters.status !== "all") {
+        if (filters.status === "invoiced") {
+          // Filter for invoiced orders only
+          if (!order.invoiced_at) return false;
+        } else if (order.status !== filters.status) {
+          return false;
+        }
       }
 
       return true;
@@ -996,14 +1001,26 @@ const WorkOrders = () => {
                         </TableCell>
                       )}
                       <TableCell className="font-medium">
-                        <div className="flex flex-col gap-1">
+                        <div className="flex items-center gap-2">
                           <span>{displayOrderNumber(order)}</span>
-                          {order.invalid_reason && (
-                            <span className="text-xs text-orange-600">
-                              Razlog: {order.invalid_reason}
-                            </span>
+                          {order.invoiced_at && (
+                            <TooltipProvider>
+                              <Tooltip>
+                                <TooltipTrigger asChild>
+                                  <FileCheck className="h-4 w-4 text-green-600" />
+                                </TooltipTrigger>
+                                <TooltipContent>
+                                  Fakturisano: {order.invoice_number || 'Da'}
+                                </TooltipContent>
+                              </Tooltip>
+                            </TooltipProvider>
                           )}
                         </div>
+                        {order.invalid_reason && (
+                          <span className="text-xs text-orange-600 block mt-1">
+                            Razlog: {order.invalid_reason}
+                          </span>
+                        )}
                       </TableCell>
                       <TableCell>{order.clients?.name}</TableCell>
                       <TableCell>{getOrderTypeLabel(order.order_type)}</TableCell>
