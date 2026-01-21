@@ -11,6 +11,7 @@ import ChecklistStats from "./ChecklistStats";
 import ChecklistFilters from "./ChecklistFilters";
 import WorkerProductivityStats from "./WorkerProductivityStats";
 import { useAuthz } from "@/hooks/useAuthz";
+import { displayOrderNumber } from "@/lib/orderLabel";
 
 interface WorkOrder {
   id: string;
@@ -101,6 +102,7 @@ const SearchAndStats = () => {
         .select(`
           id,
           order_number,
+          display_order_number,
           order_code,
           created_at,
           closed_at,
@@ -550,7 +552,7 @@ const SearchResultsTable = ({ orders, onViewOrder }: SearchResultsTableProps) =>
           <TableBody>
             {orders.slice(0, 100).map((order) => (
               <TableRow key={order.id} className="cursor-pointer hover:bg-muted/50" onClick={() => onViewOrder(order.id)}>
-                <TableCell className="font-medium">{order.order_number}</TableCell>
+                <TableCell className="font-medium">{displayOrderNumber(order)}</TableCell>
                 <TableCell>{order.client_name}</TableCell>
                 <TableCell>
                   <Badge variant="secondary">{getOrderTypeLabel(order.order_type)}</Badge>

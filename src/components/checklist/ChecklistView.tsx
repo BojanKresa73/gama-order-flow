@@ -23,7 +23,7 @@ import {
 } from "@/components/ui/select";
 import { CheckCircle, XCircle, Search, FileText, Calendar, User, Eye } from "lucide-react";
 import { format, subDays } from "date-fns";
-import { prefixFor } from "@/lib/orderLabel";
+import { displayOrderNumber } from "@/lib/orderLabel";
 interface WorkOrder {
   id: string;
   order_number: string;
@@ -77,6 +77,7 @@ const ChecklistView = ({ orderType, onNavigateToSearch }: ChecklistViewProps) =>
         .select(`
           id,
           order_number,
+          display_order_number,
           order_code,
           created_at,
           closed_at,
@@ -407,11 +408,7 @@ const ChecklistView = ({ orderType, onNavigateToSearch }: ChecklistViewProps) =>
         <div className="flex justify-between items-start mb-2">
           <div className="flex-1 min-w-0">
             <p className="font-semibold text-sm truncate">
-              {order.order_code || (() => {
-                const year = new Date(order.created_at).getFullYear();
-                const serial = String(order.order_number).padStart(4, '0');
-                return `${prefixFor(order.type)}-${year}-${serial}`;
-              })()}
+              {displayOrderNumber(order)}
             </p>
             <p className="text-sm text-muted-foreground truncate">{order.client_name}</p>
           </div>
@@ -516,11 +513,7 @@ const ChecklistView = ({ orderType, onNavigateToSearch }: ChecklistViewProps) =>
             {workOrders.map((order) => (
               <TableRow key={order.id} className="hover:bg-muted/50">
                 <TableCell className="font-medium">
-                  {order.order_code || (() => {
-                    const year = new Date(order.created_at).getFullYear();
-                    const serial = String(order.order_number).padStart(4, '0');
-                    return `${prefixFor(order.type)}-${year}-${serial}`;
-                  })()}
+                  {displayOrderNumber(order)}
                 </TableCell>
                 <TableCell>{order.client_name}</TableCell>
                 <TableCell className="text-muted-foreground">{order.created_by_name || "-"}</TableCell>

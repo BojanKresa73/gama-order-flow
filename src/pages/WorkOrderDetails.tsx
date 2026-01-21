@@ -12,6 +12,7 @@ import { WorkOrderChecklistTab } from "@/components/work-orders/WorkOrderCheckli
 import { InvoiceDialog } from "@/components/work-orders/InvoiceDialog";
 import { format } from "date-fns";
 import { getOrderItems } from "@/lib/orderItems";
+import { displayOrderNumber } from "@/lib/orderLabel";
 
 const WorkOrderDetails = () => {
   const { id } = useParams<{ id: string }>();
@@ -252,7 +253,7 @@ const WorkOrderDetails = () => {
               <ArrowLeft className="h-5 w-5" />
             </Button>
             <div>
-              <h1 className="text-2xl font-bold">Nalog {workOrder.order_number}</h1>
+              <h1 className="text-2xl font-bold">Nalog {displayOrderNumber(workOrder)}</h1>
               <p className="text-sm text-muted-foreground">
                 {workOrder.clients?.name}
               </p>
