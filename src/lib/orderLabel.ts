@@ -73,11 +73,22 @@ export const safeFileName = (s: string) =>
    .replace(/\s+/g, '_');
 
 export const displayOrderNumber = (o: {
+  display_order_number?: string;
+  order_number?: string;
   order_code?: string;
   created_at?: string;
   client_name?: string;
   type?: string;
 }) => {
+  // Prioritize display_order_number from database
+  if (o.display_order_number) {
+    return o.display_order_number;
+  }
+  // Fallback to order_number
+  if (o.order_number) {
+    return o.order_number;
+  }
+  // Legacy fallback for old format
   const seq  = extractSeq(o.order_code);
   const date = formatDateSR(o.created_at);
   const typ  = toTypeShort(o.type);
