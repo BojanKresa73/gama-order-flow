@@ -26,7 +26,9 @@ interface WorkOrderData {
   client_email: string | null;
   client_pib: string | null;
   created_by: string;
+  created_by_name: string | null;
   closed_by: string | null;
+  closed_by_name: string | null;
   items: any[];
 }
 
@@ -75,25 +77,9 @@ export default function WorkOrderPrint() {
       const orderData = result as unknown as WorkOrderData;
       setData(orderData);
 
-      // Fetch creator name
-      if (orderData.created_by) {
-        const { data: creatorProfile } = await supabase
-          .from('profiles')
-          .select('full_name')
-          .eq('id', orderData.created_by)
-          .single();
-        setCreatorName(creatorProfile?.full_name || null);
-      }
-
-      // Fetch closer information
-      if (orderData.closed_by) {
-        const { data: closerProfile } = await supabase
-          .from('profiles')
-          .select('full_name')
-          .eq('id', orderData.closed_by)
-          .single();
-        setCloserName(closerProfile?.full_name || null);
-      }
+      // Use names from RPC result directly (no separate profile queries needed)
+      setCreatorName(orderData.created_by_name || null);
+      setCloserName(orderData.closed_by_name || null);
 
       // For CTP/Other orders, check file_entries for individual closers
       if (orderData.order_type === 'ctp' || orderData.order_type === 'other') {
