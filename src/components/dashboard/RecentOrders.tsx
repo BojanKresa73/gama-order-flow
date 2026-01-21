@@ -6,7 +6,7 @@ import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useNavigate } from "react-router-dom";
 import { ArrowRight } from "lucide-react";
-import { prefixFor } from "@/lib/orderLabel";
+import { displayOrderNumber } from "@/lib/orderLabel";
 import { useIsMobile } from "@/hooks/use-mobile";
 
 const ORDER_TYPE_COLORS = {
@@ -15,17 +15,6 @@ const ORDER_TYPE_COLORS = {
   film: "bg-amber-100 text-amber-800 dark:bg-amber-900 dark:text-amber-300",
   other: "bg-gray-100 text-gray-800 dark:bg-gray-900 dark:text-gray-300",
 };
-
-function renderOrderCode(order: any) {
-  return (
-    order.order_code ||
-    (() => {
-      const year = new Date(order.created_at).getFullYear();
-      const serial = String(order.order_number).padStart(4, "0");
-      return `${prefixFor(order.type)}-${year}-${serial}`;
-    })()
-  );
-}
 
 export const RecentOrders = () => {
   const navigate = useNavigate();
@@ -38,7 +27,7 @@ export const RecentOrders = () => {
       const { data } = await supabase
         .from("work_orders")
         .select(
-          "id, order_number, order_code, order_type, type, status, created_at, clients(name)"
+          "id, order_number, display_order_number, order_code, order_type, type, status, created_at, clients(name)"
         )
         .is("deleted_at", null)
         .order("created_at", { ascending: false })
@@ -75,7 +64,7 @@ export const RecentOrders = () => {
         {/* Mobile: compact list (no horizontal overflow) */}
         <div className="md:hidden space-y-2">
           {orders?.map((order: any) => {
-            const code = renderOrderCode(order);
+            const code = displayOrderNumber(order);
             const clientName = order.clients?.name || "-";
             const typeColor =
               ORDER_TYPE_COLORS[order.order_type as keyof typeof ORDER_TYPE_COLORS] ||
@@ -131,7 +120,7 @@ export const RecentOrders = () => {
                     className="font-medium text-primary hover:underline"
                     onClick={() => navigate("/work-orders")}
                   >
-                    {renderOrderCode(order)}
+                    {displayOrderNumber(order)}
                   </TableCell>
                   <TableCell>{order.clients?.name || "-"}</TableCell>
                   <TableCell>
