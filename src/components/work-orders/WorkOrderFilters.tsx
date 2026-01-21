@@ -48,6 +48,7 @@ const STATUS_OPTIONS = [
   { value: "all", label: "Svi statusi" },
   { value: "open", label: "Otvoreni" },
   { value: "closed", label: "Zatvoreni" },
+  { value: "invoiced", label: "Fakturisano" },
 ];
 
 export function WorkOrderFilters({ filters, onFiltersChange }: WorkOrderFiltersProps) {
