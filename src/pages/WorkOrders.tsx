@@ -233,6 +233,9 @@ const WorkOrders = () => {
         if (filters.status === "invoiced") {
           // Filter for invoiced orders only
           if (!order.invoiced_at) return false;
+        } else if (filters.status === "not_invoiced") {
+          // Filter for not invoiced orders only
+          if (order.invoiced_at) return false;
         } else if (order.status !== filters.status) {
           return false;
         }
