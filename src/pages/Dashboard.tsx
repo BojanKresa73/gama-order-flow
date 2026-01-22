@@ -21,6 +21,7 @@ import { DailyPlateStats } from "@/components/dashboard/DailyPlateStats";
 import { TopClientsCard } from "@/components/dashboard/TopClientsCard";
 import AdminSection from "@/components/dashboard/AdminSection";
 import { DigitalStatsSection } from "@/components/dashboard/DigitalStatsSection";
+import { InvoiceStatsCard } from "@/components/dashboard/InvoiceStatsCard";
 import { AppHeader } from "@/components/layout/AppHeader";
 
 const Dashboard = () => {
@@ -173,6 +174,10 @@ const Dashboard = () => {
 
               <div className="col-span-1 sm:col-span-2 md:col-span-6 xl:col-span-4 min-w-0">
                 <DailyPlateStats />
+              </div>
+
+              <div className="col-span-1 sm:col-span-2 md:col-span-6 xl:col-span-4 min-w-0">
+                <InvoiceStatsCard />
               </div>
             </>
           )}
