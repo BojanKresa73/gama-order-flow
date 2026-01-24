@@ -6,6 +6,7 @@ import { Printer } from "lucide-react";
 import { computeFilmUsage } from "@/lib/filmUsage";
 import { format, differenceInHours, differenceInMinutes } from "date-fns";
 import { calculateGroupedPricing, formatTierLabel, type DigitalJobItem } from "@/lib/digitalGroupedPricing";
+import { useAuthz } from "@/hooks/useAuthz";
 
 interface WorkOrderData {
   id: string;
@@ -169,6 +170,7 @@ const DigitalPricingPrintSection = ({ items }: { items: any[] }) => {
 export default function WorkOrderPrint() {
   const { id } = useParams();
   const navigate = useNavigate();
+  const { isAdmin } = useAuthz(); // Check if user is admin, admin_plus, or superuser
   const [data, setData] = useState<WorkOrderData | null>(null);
   const [loading, setLoading] = useState(true);
   const [creatorName, setCreatorName] = useState<string | null>(null);
@@ -538,8 +540,8 @@ export default function WorkOrderPrint() {
                 </table>
               </div>
 
-              {/* Digital Pricing Section - only for digital orders */}
-              {data.order_type === 'digital' && data.items.length > 0 && (
+              {/* Digital Pricing Section - only for digital orders and admin/admin_plus/superuser */}
+              {isAdmin && data.order_type === 'digital' && data.items.length > 0 && (
                 <DigitalPricingPrintSection items={data.items} />
               )}
 
