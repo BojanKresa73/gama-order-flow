@@ -511,8 +511,11 @@ export default function WorkOrderPrint() {
                     <tr>
                       <th style={{ width: '6%' }}>R.br</th>
                       <th>Naziv</th>
-                      <th style={{ width: '35%' }}>Detalji</th>
+                      <th style={{ width: data.order_type === 'digital' ? '30%' : '35%' }}>Detalji</th>
                       <th style={{ width: '10%' }}>Količina</th>
+                      {data.order_type === 'digital' && (
+                        <th style={{ width: '10%' }}>Komada</th>
+                      )}
                     </tr>
                   </thead>
                   <tbody>
@@ -522,17 +525,20 @@ export default function WorkOrderPrint() {
                         <td>{row.name}</td>
                         <td>{row.details}</td>
                         <td>{row.qty}</td>
+                        {data.order_type === 'digital' && (
+                          <td>{row.piecesCount || '-'}</td>
+                        )}
                       </tr>
                     ))}
                   </tbody>
                   <tfoot>
                     <tr>
-                      <td colSpan={3} className="text-right"><strong>UKUPNO:</strong></td>
+                      <td colSpan={data.order_type === 'digital' ? 4 : 3} className="text-right"><strong>UKUPNO:</strong></td>
                       <td><strong>{totalQty}</strong></td>
                     </tr>
                     {totalFilmMeters !== null && (
                       <tr>
-                        <td colSpan={3} className="text-right"><strong>UKUPNO FILMA:</strong></td>
+                        <td colSpan={data.order_type === 'digital' ? 4 : 3} className="text-right"><strong>UKUPNO FILMA:</strong></td>
                         <td><strong>{totalFilmMeters.toFixed(2)} m</strong></td>
                       </tr>
                     )}
