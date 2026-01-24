@@ -11,21 +11,23 @@ import {
 
 /**
  * Calculate price per piece for an item using stored pieces_count
+ * pieces_count represents the TOTAL number of pieces (e.g., 130 flyers total),
+ * NOT pieces per copy
  */
 function calculatePricePerPiece(
   item: GroupedPricingItem, 
   pricePerSheet: number, 
   formatMultiplier: number
-): { piecesPerCopy: number; totalPieces: number; pricePerPiece: number } | null {
+): { totalPieces: number; pricePerPiece: number } | null {
   if (!item.piecesCount || item.piecesCount <= 0) return null;
   
-  // Total pieces = pieces per copy * qty (tiraz)
-  const totalPieces = item.piecesCount * item.qty;
+  // pieces_count IS the total number of pieces (user-entered)
+  const totalPieces = item.piecesCount;
   // Item price = sheets * pricePerSheet * formatMultiplier
   const itemPrice = item.sheets * pricePerSheet * formatMultiplier;
   const pricePerPiece = itemPrice / totalPieces;
   
-  return { piecesPerCopy: item.piecesCount, totalPieces, pricePerPiece };
+  return { totalPieces, pricePerPiece };
 }
 
 interface DigitalPricingBreakdownProps {
@@ -97,9 +99,6 @@ export const DigitalPricingBreakdown = ({
                             <span>{perPieceInfo.pricePerPiece.toFixed(4)} €</span>
                             {" = "}
                             <span className="font-medium">{(perPieceInfo.totalPieces * perPieceInfo.pricePerPiece).toFixed(2)} €</span>
-                            <span className="text-muted-foreground ml-2">
-                              ({perPieceInfo.piecesPerCopy} kom/kopiji)
-                            </span>
                           </div>
                         )}
                       </TableCell>
