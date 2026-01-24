@@ -63,12 +63,25 @@ const DigitalPricingPrintSection = ({ items }: { items: any[] }) => {
     print_sides: item.print_sides || '4/4',
     machine_sheet_format: item.machine_sheet_format || '488x330',
     paper_type: item.paper_type,
-    is_test_print: item.is_test_print || false,
+    // Normalize to a strict boolean. Some JSON sources can provide "false" as a string,
+    // which would otherwise be treated as truthy and filter out all items.
+    is_test_print:
+      item.is_test_print === true || item.is_test_print === 1 || item.is_test_print === "true",
     pieces_count: item.pieces_count || null,
   }));
 
   const pricing = calculateGroupedPricing(digitalJobs);
-  if (pricing.groups.length === 0) return null;
+  if (pricing.groups.length === 0) {
+    const testCount = digitalJobs.filter(j => j.is_test_print).length;
+    return (
+      <div className="digital-pricing-section">
+        <div className="section-title">Kalkulacija digitale</div>
+        <div style={{ fontSize: '11px', color: '#666' }}>
+          Nema stavki za obračun{testCount > 0 ? ` (test štampa: ${testCount}/${digitalJobs.length})` : ''}.
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="digital-pricing-section">
