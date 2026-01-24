@@ -5,8 +5,44 @@ import { Badge } from "@/components/ui/badge";
 import { 
   calculateGroupedPricing, 
   formatTierLabel,
-  type DigitalJobItem 
+  type DigitalJobItem,
+  type GroupedPricingItem
 } from "@/lib/digitalGroupedPricing";
+
+/**
+ * Parse item name to extract pieces count
+ * Pattern: "XX tab__YYY description" where YYY is the pieces count
+ * Example: "22 tab__130 flajer DZ Grocka 2.new" -> 130 pieces
+ */
+function extractPiecesFromName(name: string): number | null {
+  // Pattern: "N tab__M" where M is the pieces count
+  const match = name.match(/\d+\s*tab__(\d+)/i);
+  if (match) {
+    return parseInt(match[1], 10);
+  }
+  return null;
+}
+
+/**
+ * Calculate price per piece for an item
+ */
+function calculatePricePerPiece(
+  item: GroupedPricingItem, 
+  pricePerSheet: number, 
+  formatMultiplier: number,
+  qty: number
+): { pieces: number; pricePerPiece: number } | null {
+  const pieces = extractPiecesFromName(item.name);
+  if (!pieces || pieces <= 0) return null;
+  
+  // Total pieces = pieces per copy * qty (tiraz)
+  const totalPieces = pieces * qty;
+  // Item price = sheets * pricePerSheet * formatMultiplier
+  const itemPrice = item.sheets * pricePerSheet * formatMultiplier;
+  const pricePerPiece = itemPrice / totalPieces;
+  
+  return { pieces: totalPieces, pricePerPiece };
+}
 
 interface DigitalPricingBreakdownProps {
   jobs: DigitalJobItem[];
@@ -59,19 +95,35 @@ export const DigitalPricingBreakdown = ({
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {group.items.map((item, itemIndex) => (
-                  <TableRow key={itemIndex}>
-                    <TableCell className="font-medium">{item.name}</TableCell>
-                    <TableCell className="text-center">{item.obim}</TableCell>
-                    <TableCell className="text-center">{item.qty}</TableCell>
-                    <TableCell className="text-right">{item.sheets}</TableCell>
-                    {group.format === '760x330' && (
-                      <TableCell className="text-right text-muted-foreground">
-                        {item.sheetsForTier}
+                {group.items.map((item, itemIndex) => {
+                  const perPieceInfo = calculatePricePerPiece(
+                    item, 
+                    group.pricePerSheetBase, 
+                    group.formatMultiplier,
+                    item.qty
+                  );
+                  
+                  return (
+                    <TableRow key={itemIndex}>
+                      <TableCell className="font-medium">
+                        <div>{item.name}</div>
+                        {perPieceInfo && (
+                          <div className="text-xs text-muted-foreground mt-1">
+                            {perPieceInfo.pieces} kom × {perPieceInfo.pricePerPiece.toFixed(4)} € = {(perPieceInfo.pieces * perPieceInfo.pricePerPiece).toFixed(2)} €
+                          </div>
+                        )}
                       </TableCell>
-                    )}
-                  </TableRow>
-                ))}
+                      <TableCell className="text-center">{item.obim}</TableCell>
+                      <TableCell className="text-center">{item.qty}</TableCell>
+                      <TableCell className="text-right">{item.sheets}</TableCell>
+                      {group.format === '760x330' && (
+                        <TableCell className="text-right text-muted-foreground">
+                          {item.sheetsForTier}
+                        </TableCell>
+                      )}
+                    </TableRow>
+                  );
+                })}
                 
                 {/* Group subtotal row */}
                 <TableRow className="bg-muted/50 font-semibold">
