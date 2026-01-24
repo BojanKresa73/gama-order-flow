@@ -197,14 +197,26 @@ export default function WorkOrderPrint() {
   // Fetch role directly to avoid React Query timing issues in new tab
   useEffect(() => {
     let cancelled = false;
+    const sleep = (ms: number) => new Promise((res) => setTimeout(res, ms));
+
     (async () => {
       try {
+        // When opening /print in a new tab, the auth session can take a moment to
+        // hydrate from storage. If we call the role RPC too early it may behave
+        // like an unauthenticated request and return "guest".
+        for (let i = 0; i < 10; i++) {
+          const { data } = await supabase.auth.getSession();
+          if (data.session?.access_token) break;
+          await sleep(150);
+        }
+
         const { data: role, error } = await supabase.rpc("current_user_role");
         if (error) throw error;
         const r = (role as string) || "guest";
         const allowed = r === "superuser" || r === "admin_plus" || r === "admin";
         if (!cancelled) setCanSeePricing(allowed);
-      } catch {
+      } catch (e) {
+        console.warn("[WorkOrderPrint] Role check failed", e);
         if (!cancelled) setCanSeePricing(false);
       } finally {
         if (!cancelled) setRoleLoading(false);
