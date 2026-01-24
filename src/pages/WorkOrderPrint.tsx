@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Printer } from "lucide-react";
 import { computeFilmUsage } from "@/lib/filmUsage";
 import { format, differenceInHours, differenceInMinutes } from "date-fns";
+import { calculateGroupedPricing, formatTierLabel, type DigitalJobItem } from "@/lib/digitalGroupedPricing";
 
 interface WorkOrderData {
   id: string;
@@ -48,7 +49,122 @@ interface PreparedRow {
   details: string;
   qty: number;
   closedBy?: string;
+  piecesCount?: number | null;
 }
+
+// Digital Pricing Print Section Component
+const DigitalPricingPrintSection = ({ items }: { items: any[] }) => {
+  const digitalJobs: DigitalJobItem[] = items.map(item => ({
+    id: item.id,
+    name: item.name || item.file_name,
+    file_name: item.file_name,
+    obim: item.obim || 1,
+    qty: item.qty || 1,
+    print_sides: item.print_sides || '4/4',
+    machine_sheet_format: item.machine_sheet_format || '488x330',
+    paper_type: item.paper_type,
+    is_test_print: item.is_test_print || false,
+    pieces_count: item.pieces_count || null,
+  }));
+
+  const pricing = calculateGroupedPricing(digitalJobs);
+  if (pricing.groups.length === 0) return null;
+
+  return (
+    <div className="digital-pricing-section">
+      <div className="section-title">Kalkulacija digitale</div>
+      
+      {pricing.groups.map((group) => (
+        <div key={`${group.coverage}-${group.format}`} className="pricing-group">
+          <div className="pricing-group-header">
+            <span className="coverage-badge">{group.coverage}</span>
+            <span className="format-badge">{group.format}</span>
+            <span className="tier-info">Kategorija: {formatTierLabel(group.tier)}</span>
+          </div>
+          
+          <table className="pricing-items-table">
+            <thead>
+              <tr>
+                <th>Naziv</th>
+                <th>Obim</th>
+                <th>Tiraž</th>
+                <th>Tabaka</th>
+                {group.format === '760x330' && <th>× 1.5</th>}
+              </tr>
+            </thead>
+            <tbody>
+              {group.items.map((item, idx) => {
+                // Calculate price per piece if pieces_count exists
+                const itemPrice = item.sheets * group.pricePerSheetBase * group.formatMultiplier;
+                const piecesCount = item.piecesCount;
+                const totalPieces = piecesCount ? piecesCount * item.qty : null;
+                const pricePerPiece = totalPieces ? itemPrice / totalPieces : null;
+                
+                return (
+                  <tr key={idx}>
+                    <td>
+                      {item.name}
+                      {pricePerPiece !== null && totalPieces && (
+                        <div className="price-per-piece">
+                          {totalPieces} kom × {pricePerPiece.toFixed(4)} € = {(totalPieces * pricePerPiece).toFixed(2)} €
+                        </div>
+                      )}
+                    </td>
+                    <td>{item.obim}</td>
+                    <td>{item.qty}</td>
+                    <td>{item.sheets}</td>
+                    {group.format === '760x330' && <td>{item.sheetsForTier}</td>}
+                  </tr>
+                );
+              })}
+            </tbody>
+            <tfoot>
+              <tr>
+                <td colSpan={3}><strong>Ukupno {group.coverage} {group.format}</strong></td>
+                <td><strong>{group.totalSheets} tab.</strong></td>
+                {group.format === '760x330' && <td><strong>{group.totalSheetsForTier}</strong></td>}
+              </tr>
+            </tfoot>
+          </table>
+          
+          <div className="pricing-calculation">
+            <div className="calc-row">
+              <span>Cena po tabaku ({group.coverage}):</span>
+              <span>{group.pricePerSheetBase.toFixed(2)} €</span>
+            </div>
+            <div className="calc-row total">
+              <span>{group.totalSheets} × {group.pricePerSheetBase.toFixed(2)} €{group.format === '760x330' ? ' × 1.5' : ''}</span>
+              <span className="price-value">{group.groupTotal.toFixed(2)} €</span>
+            </div>
+          </div>
+        </div>
+      ))}
+      
+      <div className="pricing-summary">
+        <div className="summary-row grand-total">
+          <span>UKUPNA CENA:</span>
+          <span>{pricing.totalAmount.toFixed(2)} €</span>
+        </div>
+        <div className="summary-row">
+          <span>Trošak papira:</span>
+          <span>{pricing.totalPaperCost.toFixed(2)} €</span>
+        </div>
+        <div className="summary-row">
+          <span>Trošak klikova (Color: {pricing.totalColorClicks}, Mono: {pricing.totalMonoClicks}):</span>
+          <span>{pricing.totalClickCost.toFixed(2)} €</span>
+        </div>
+        <div className="summary-row">
+          <span>Ukupan trošak:</span>
+          <span>{pricing.totalCost.toFixed(2)} €</span>
+        </div>
+        <div className="summary-row ruc">
+          <span>RUC (Razlika u ceni):</span>
+          <span>{pricing.ruc.toFixed(2)} € ({pricing.rucPercent.toFixed(1)}%)</span>
+        </div>
+      </div>
+    </div>
+  );
+};
 
 export default function WorkOrderPrint() {
   const { id } = useParams();
@@ -187,8 +303,9 @@ export default function WorkOrderPrint() {
       return data.items.map((item: any, i: number) => ({
         rbr: i + 1,
         name: item.file_name ?? item.name ?? 'N/A',
-        details: `Format: ${item.machine_sheet_format || '488×330'} | Štampa: ${item.print_sides ?? 'N/A'} | Obim: ${item.obim || 1}`,
+        details: `Format: ${item.machine_sheet_format || '488×330'} | Štampa: ${item.print_sides ?? 'N/A'} | Obim: ${item.obim || 1}${item.pieces_count ? ` | Komada: ${item.pieces_count}` : ''}`,
         qty: Number(item.qty ?? item.quantity ?? 1),
+        piecesCount: item.pieces_count || null,
       }));
     }
 
@@ -420,6 +537,11 @@ export default function WorkOrderPrint() {
                   </tfoot>
                 </table>
               </div>
+
+              {/* Digital Pricing Section - only for digital orders */}
+              {data.order_type === 'digital' && data.items.length > 0 && (
+                <DigitalPricingPrintSection items={data.items} />
+              )}
 
               {/* Notes */}
               {data.notes && (
@@ -712,5 +834,136 @@ body {
     margin: 0 !important;
     padding: 0 !important;
   }
+}
+
+/* Digital Pricing Section Styles */
+.digital-pricing-section {
+  margin-top: 20px;
+  padding-top: 16px;
+  border-top: 2px solid #1e40af;
+}
+
+.pricing-group {
+  margin-bottom: 16px;
+  page-break-inside: avoid;
+}
+
+.pricing-group-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+
+.coverage-badge {
+  background: #1e40af;
+  color: white;
+  padding: 2px 8px;
+  border-radius: 4px;
+  font-size: 11px;
+  font-weight: 600;
+}
+
+.format-badge {
+  background: #e5e7eb;
+  padding: 2px 8px;
+  border-radius: 4px;
+  font-size: 11px;
+}
+
+.tier-info {
+  font-size: 10px;
+  color: #666;
+}
+
+.pricing-items-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 10px;
+  margin-bottom: 8px;
+}
+
+.pricing-items-table th {
+  text-align: left;
+  background: #f3f4f6;
+  border: 1px solid #e5e7eb;
+  padding: 4px 8px;
+  font-weight: 600;
+}
+
+.pricing-items-table td {
+  border: 1px solid #e5e7eb;
+  padding: 4px 8px;
+  vertical-align: top;
+}
+
+.pricing-items-table tfoot td {
+  background: #f8fafc;
+  font-weight: 600;
+}
+
+.price-per-piece {
+  font-size: 9px;
+  color: #2563eb;
+  background: #eff6ff;
+  padding: 2px 4px;
+  border-radius: 2px;
+  margin-top: 2px;
+}
+
+.pricing-calculation {
+  background: #f8fafc;
+  padding: 8px 12px;
+  border-radius: 4px;
+  font-size: 10px;
+}
+
+.calc-row {
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: 4px;
+}
+
+.calc-row.total {
+  border-top: 1px solid #e5e7eb;
+  padding-top: 4px;
+  margin-top: 4px;
+  font-weight: 600;
+}
+
+.price-value {
+  color: #1e40af;
+}
+
+.pricing-summary {
+  margin-top: 16px;
+  padding: 12px;
+  background: #f0f9ff;
+  border-radius: 6px;
+  border-left: 4px solid #1e40af;
+}
+
+.summary-row {
+  display: flex;
+  justify-content: space-between;
+  font-size: 11px;
+  margin-bottom: 4px;
+}
+
+.summary-row.grand-total {
+  font-size: 14px;
+  font-weight: 700;
+  color: #1e40af;
+  margin-bottom: 8px;
+  padding-bottom: 8px;
+  border-bottom: 1px solid #bfdbfe;
+}
+
+.summary-row.ruc {
+  margin-top: 8px;
+  padding-top: 8px;
+  border-top: 1px solid #bfdbfe;
+  font-weight: 600;
+  color: #16a34a;
 }
 `;
