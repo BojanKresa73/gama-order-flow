@@ -409,6 +409,7 @@ export type Database = {
           pages: number
           paper_gsm: number | null
           paper_type: string | null
+          pieces_count: number | null
           pieces_per_sheet: number | null
           pieces_per_sheet_override: number | null
           print_sides: string
@@ -448,6 +449,7 @@ export type Database = {
           pages?: number
           paper_gsm?: number | null
           paper_type?: string | null
+          pieces_count?: number | null
           pieces_per_sheet?: number | null
           pieces_per_sheet_override?: number | null
           print_sides: string
@@ -487,6 +489,7 @@ export type Database = {
           pages?: number
           paper_gsm?: number | null
           paper_type?: string | null
+          pieces_count?: number | null
           pieces_per_sheet?: number | null
           pieces_per_sheet_override?: number | null
           print_sides?: string

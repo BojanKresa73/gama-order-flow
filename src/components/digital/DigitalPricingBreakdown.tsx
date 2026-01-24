@@ -10,38 +10,22 @@ import {
 } from "@/lib/digitalGroupedPricing";
 
 /**
- * Parse item name to extract pieces count
- * Pattern: "XX tab__YYY description" where YYY is the pieces count
- * Example: "22 tab__130 flajer DZ Grocka 2.new" -> 130 pieces
- */
-function extractPiecesFromName(name: string): number | null {
-  // Pattern: "N tab__M" where M is the pieces count
-  const match = name.match(/\d+\s*tab__(\d+)/i);
-  if (match) {
-    return parseInt(match[1], 10);
-  }
-  return null;
-}
-
-/**
- * Calculate price per piece for an item
+ * Calculate price per piece for an item using stored pieces_count
  */
 function calculatePricePerPiece(
   item: GroupedPricingItem, 
   pricePerSheet: number, 
-  formatMultiplier: number,
-  qty: number
-): { pieces: number; pricePerPiece: number } | null {
-  const pieces = extractPiecesFromName(item.name);
-  if (!pieces || pieces <= 0) return null;
+  formatMultiplier: number
+): { piecesPerCopy: number; totalPieces: number; pricePerPiece: number } | null {
+  if (!item.piecesCount || item.piecesCount <= 0) return null;
   
   // Total pieces = pieces per copy * qty (tiraz)
-  const totalPieces = pieces * qty;
+  const totalPieces = item.piecesCount * item.qty;
   // Item price = sheets * pricePerSheet * formatMultiplier
   const itemPrice = item.sheets * pricePerSheet * formatMultiplier;
   const pricePerPiece = itemPrice / totalPieces;
   
-  return { pieces: totalPieces, pricePerPiece };
+  return { piecesPerCopy: item.piecesCount, totalPieces, pricePerPiece };
 }
 
 interface DigitalPricingBreakdownProps {
@@ -99,8 +83,7 @@ export const DigitalPricingBreakdown = ({
                   const perPieceInfo = calculatePricePerPiece(
                     item, 
                     group.pricePerSheetBase, 
-                    group.formatMultiplier,
-                    item.qty
+                    group.formatMultiplier
                   );
                   
                   return (
@@ -108,8 +91,15 @@ export const DigitalPricingBreakdown = ({
                       <TableCell className="font-medium">
                         <div>{item.name}</div>
                         {perPieceInfo && (
-                          <div className="text-xs text-muted-foreground mt-1">
-                            {perPieceInfo.pieces} kom × {perPieceInfo.pricePerPiece.toFixed(4)} € = {(perPieceInfo.pieces * perPieceInfo.pricePerPiece).toFixed(2)} €
+                          <div className="text-xs text-blue-600 mt-1 bg-blue-50 px-2 py-1 rounded">
+                            <span className="font-medium">{perPieceInfo.totalPieces} kom</span>
+                            {" × "}
+                            <span>{perPieceInfo.pricePerPiece.toFixed(4)} €</span>
+                            {" = "}
+                            <span className="font-medium">{(perPieceInfo.totalPieces * perPieceInfo.pricePerPiece).toFixed(2)} €</span>
+                            <span className="text-muted-foreground ml-2">
+                              ({perPieceInfo.piecesPerCopy} kom/kopiji)
+                            </span>
                           </div>
                         )}
                       </TableCell>
