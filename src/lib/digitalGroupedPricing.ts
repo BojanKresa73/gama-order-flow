@@ -21,6 +21,7 @@ export interface DigitalJobItem {
   machine_sheet_format?: string;
   paper_type?: string;
   is_test_print?: boolean;
+  pieces_count?: number | null; // Number of pieces (flyers, cards) imposed per copy
 }
 
 export interface GroupedPricingItem {
@@ -29,6 +30,7 @@ export interface GroupedPricingItem {
   qty: number;
   sheets: number;
   sheetsForTier: number; // For 760x330, this is sheets * 1.5
+  piecesCount?: number | null; // Number of pieces per copy (for price per piece calculation)
 }
 
 export interface PricingGroup {
@@ -172,7 +174,8 @@ export function calculateGroupedPricing(jobs: DigitalJobItem[]): GroupedPricingR
       obim,
       qty,
       sheets,
-      sheetsForTier
+      sheetsForTier,
+      piecesCount: job.pieces_count
     });
     group.totalSheets += sheets;
     group.totalSheetsForTier += sheetsForTier;

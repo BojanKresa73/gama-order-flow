@@ -29,6 +29,7 @@ export interface LocalDigitalJob {
   paper_type?: string;
   machine_sheet_format?: string; // "488x330" or "760x330"
   pieces_per_sheet_override?: number | null;
+  pieces_count?: number | null; // Number of pieces (flyers, cards) imposed per copy
   test_sheets?: number;
   include_test_in_clicks?: boolean;
   finishing?: string;
@@ -136,12 +137,13 @@ export const LocalDigitalJobsTable = ({ jobs, onChange, printSides, clientRabatP
             <TableHeader>
               <TableRow>
                 <TableHead className="w-[180px]">Naziv</TableHead>
-                <TableHead className="w-[80px]">Obim</TableHead>
-                <TableHead className="w-[90px]">Štampa</TableHead>
-                <TableHead className="w-[90px]">Tiraž</TableHead>
-                <TableHead className="w-[140px]">Papir</TableHead>
-                <TableHead className="w-[120px]">Format tabaka</TableHead>
-                <TableHead className="w-[50px]"></TableHead>
+                <TableHead className="w-[70px]">Obim</TableHead>
+                <TableHead className="w-[80px]">Štampa</TableHead>
+                <TableHead className="w-[70px]">Tiraž</TableHead>
+                <TableHead className="w-[70px]">Komada</TableHead>
+                <TableHead className="w-[130px]">Papir</TableHead>
+                <TableHead className="w-[110px]">Format</TableHead>
+                <TableHead className="w-[40px]"></TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -186,8 +188,22 @@ export const LocalDigitalJobsTable = ({ jobs, onChange, printSides, clientRabatP
                       value={job.qty || ''}
                       onChange={(e) => handleFieldChange(index, 'qty', parseInt(e.target.value) || 1)}
                       min={1}
-                      placeholder="Kopije"
-                      className="w-20 h-8"
+                      placeholder="Tiraž"
+                      className="w-16 h-8"
+                    />
+                  </TableCell>
+                  <TableCell className="py-2">
+                    <Input
+                      type="number"
+                      value={job.pieces_count || ''}
+                      onChange={(e) => {
+                        const val = e.target.value;
+                        handleFieldChange(index, 'pieces_count', val ? parseInt(val) : null);
+                      }}
+                      min={1}
+                      placeholder="—"
+                      className="w-16 h-8"
+                      title="Broj komada (flajera, kartica) po kopiji"
                     />
                   </TableCell>
                   <TableCell className="py-2">
