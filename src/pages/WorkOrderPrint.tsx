@@ -96,9 +96,9 @@ const DigitalPricingPrintSection = ({ items }: { items: any[] }) => {
             <tbody>
               {group.items.map((item, idx) => {
                 // Calculate price per piece if pieces_count exists
+                // pieces_count is the TOTAL number of pieces, not per copy
                 const itemPrice = item.sheets * group.pricePerSheetBase * group.formatMultiplier;
-                const piecesCount = item.piecesCount;
-                const totalPieces = piecesCount ? piecesCount * item.qty : null;
+                const totalPieces = item.piecesCount || null;
                 const pricePerPiece = totalPieces ? itemPrice / totalPieces : null;
                 
                 return (
