@@ -13,7 +13,7 @@ import { InvoiceDialog } from "@/components/work-orders/InvoiceDialog";
 import { format } from "date-fns";
 import { getOrderItems } from "@/lib/orderItems";
 import { displayOrderNumber } from "@/lib/orderLabel";
-import { DigitalJobsSummary } from "@/components/digital/DigitalJobsSummary";
+import { DigitalPricingBreakdown } from "@/components/digital/DigitalPricingBreakdown";
 import { useAuthz } from "@/hooks/useAuthz";
 import type { LocalDigitalJob } from "@/components/digital/LocalDigitalJobsTable";
 const WorkOrderDetails = () => {
@@ -415,11 +415,11 @@ const WorkOrderDetails = () => {
                 </CardContent>
               </Card>
 
-              {/* Digital Jobs Summary - for superuser, admin, admin_plus */}
+              {/* Digital Pricing Breakdown - for superuser, admin, admin_plus */}
               {workOrder.order_type === 'digital' && digitalJobs.length > 0 && canSeeDigitalSummary && (
                 <div className="space-y-4">
-                  <h3 className="text-lg font-semibold">Stavke digitale</h3>
-                  <DigitalJobsSummary 
+                  <h3 className="text-lg font-semibold">Kalkulacija digitale</h3>
+                  <DigitalPricingBreakdown 
                     jobs={digitalJobs} 
                     clientRabatProcenat={workOrder.clients?.rabat_procenat || 0} 
                   />
