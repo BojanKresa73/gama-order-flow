@@ -13,17 +13,23 @@ import { InvoiceDialog } from "@/components/work-orders/InvoiceDialog";
 import { format } from "date-fns";
 import { getOrderItems } from "@/lib/orderItems";
 import { displayOrderNumber } from "@/lib/orderLabel";
-
+import { DigitalJobsSummary } from "@/components/digital/DigitalJobsSummary";
+import { useAuthz } from "@/hooks/useAuthz";
+import type { LocalDigitalJob } from "@/components/digital/LocalDigitalJobsTable";
 const WorkOrderDetails = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
+  const { isSuper, isAdmin, isAdminPlus } = useAuthz();
   const [workOrder, setWorkOrder] = useState<any>(null);
+  const [digitalJobs, setDigitalJobs] = useState<LocalDigitalJob[]>([]);
   const [loading, setLoading] = useState(true);
   const [emailStatus, setEmailStatus] = useState<any>(null);
   const [resending, setResending] = useState(false);
   const [downloading, setDownloading] = useState(false);
   const [invoiceDialogOpen, setInvoiceDialogOpen] = useState(false);
   const [markingInvoiced, setMarkingInvoiced] = useState(false);
+  
+  const canSeeDigitalSummary = isSuper || isAdmin || isAdminPlus;
 
   useEffect(() => {
     checkAuth();
@@ -45,7 +51,7 @@ const WorkOrderDetails = () => {
         .from("work_orders")
         .select(`
           *,
-          clients (name, email, pib, adresa),
+          clients (name, email, pib, adresa, rabat_procenat),
           profiles (full_name)
         `)
         .eq("id", id)
@@ -58,6 +64,19 @@ const WorkOrderDetails = () => {
       const items = await getOrderItems(id!);
       
       setWorkOrder({ ...data, items });
+
+      // Fetch digital jobs for summary if it's a digital order
+      if (data.order_type === 'digital') {
+        const { data: digitalJobsData, error: digitalError } = await supabase
+          .from('digital_jobs')
+          .select('*')
+          .eq('work_order_id', id)
+          .order('order_index');
+        
+        if (!digitalError && digitalJobsData) {
+          setDigitalJobs(digitalJobsData as LocalDigitalJob[]);
+        }
+      }
 
       // Fetch email status
       const { data: emailData } = await supabase
@@ -395,6 +414,17 @@ const WorkOrderDetails = () => {
                   )}
                 </CardContent>
               </Card>
+
+              {/* Digital Jobs Summary - for superuser, admin, admin_plus */}
+              {workOrder.order_type === 'digital' && digitalJobs.length > 0 && canSeeDigitalSummary && (
+                <div className="space-y-4">
+                  <h3 className="text-lg font-semibold">Stavke digitale</h3>
+                  <DigitalJobsSummary 
+                    jobs={digitalJobs} 
+                    clientRabatProcenat={workOrder.clients?.rabat_procenat || 0} 
+                  />
+                </div>
+              )}
 
               {/* Items Summary */}
               {workOrder.items && workOrder.items.length > 0 && (
