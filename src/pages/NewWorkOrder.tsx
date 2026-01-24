@@ -381,7 +381,7 @@ const NewWorkOrder = () => {
           description: "Radni nalog je ažuriran",
         });
 
-        navigate(`/work-orders/${id}`);
+        navigate(`/work-orders/${id}`, { replace: true });
         setLoading(false);
         return;
       }
