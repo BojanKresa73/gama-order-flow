@@ -17,6 +17,8 @@ import { useDigitalPaperTypes } from "@/hooks/useDigitalPaperTypes";
 import { SHEET_FORMATS, PRINT_MODES } from "@/lib/digitalCalculations";
 
 export interface LocalDigitalJob {
+  id?: string; // UUID from database for existing items
+  __status?: 'unchanged' | 'created' | 'updated' | 'deleted'; // Tracking status for diff
   name?: string;
   file_name: string;
   finished_w_mm: number;
@@ -86,7 +88,10 @@ export const LocalDigitalJobsTable = ({ jobs, onChange, printSides, clientRabatP
 
   const handleFieldChange = (index: number, field: keyof LocalDigitalJob, value: any) => {
     const updated = [...jobs];
-    updated[index] = { ...updated[index], [field]: value };
+    const job = updated[index];
+    // Mark existing items (with id) as updated so they get saved
+    const newStatus = job.id ? 'updated' : job.__status;
+    updated[index] = { ...job, [field]: value, __status: newStatus };
     onChange(updated);
   };
 
