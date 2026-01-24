@@ -6,7 +6,6 @@ import { Printer } from "lucide-react";
 import { computeFilmUsage } from "@/lib/filmUsage";
 import { format, differenceInHours, differenceInMinutes } from "date-fns";
 import { calculateGroupedPricing, formatTierLabel, type DigitalJobItem } from "@/lib/digitalGroupedPricing";
-import { useAuthz } from "@/hooks/useAuthz";
 
 interface WorkOrderData {
   id: string;
@@ -170,13 +169,36 @@ const DigitalPricingPrintSection = ({ items }: { items: any[] }) => {
 export default function WorkOrderPrint() {
   const { id } = useParams();
   const navigate = useNavigate();
-  const { isAdmin } = useAuthz(); // Check if user is admin, admin_plus, or superuser
+  
+  // Direct role check for print view - ensures role is loaded before rendering pricing
+  const [canSeePricing, setCanSeePricing] = useState(false);
+  const [roleLoading, setRoleLoading] = useState(true);
+  
   const [data, setData] = useState<WorkOrderData | null>(null);
   const [loading, setLoading] = useState(true);
   const [creatorName, setCreatorName] = useState<string | null>(null);
   const [closerName, setCloserName] = useState<string | null>(null);
   const [closerDetails, setCloserDetails] = useState<CloserInfo[]>([]);
   const [isMixCloser, setIsMixCloser] = useState(false);
+
+  // Fetch role directly to avoid React Query timing issues in new tab
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      try {
+        const { data: role, error } = await supabase.rpc("current_user_role");
+        if (error) throw error;
+        const r = (role as string) || "guest";
+        const allowed = r === "superuser" || r === "admin_plus" || r === "admin";
+        if (!cancelled) setCanSeePricing(allowed);
+      } catch {
+        if (!cancelled) setCanSeePricing(false);
+      } finally {
+        if (!cancelled) setRoleLoading(false);
+      }
+    })();
+    return () => { cancelled = true; };
+  }, []);
 
   useEffect(() => {
     if (id) {
@@ -547,8 +569,14 @@ export default function WorkOrderPrint() {
               </div>
 
               {/* Digital Pricing Section - only for digital orders and admin/admin_plus/superuser */}
-              {isAdmin && data.order_type === 'digital' && data.items.length > 0 && (
-                <DigitalPricingPrintSection items={data.items} />
+              {data.order_type === 'digital' && data.items.length > 0 && (
+                roleLoading ? (
+                  <div className="digital-pricing-section" style={{ fontSize: '12px', color: '#666' }}>
+                    Učitavanje kalkulacije...
+                  </div>
+                ) : canSeePricing ? (
+                  <DigitalPricingPrintSection items={data.items} />
+                ) : null
               )}
 
               {/* Notes */}
