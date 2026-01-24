@@ -861,6 +861,12 @@ const WorkOrders = () => {
             <Button variant="ghost" size="icon" onClick={() => navigate("/dashboard")}>
               <ArrowLeft className="h-5 w-5" />
             </Button>
+            <img 
+              src="/gama-united-logo.svg" 
+              alt="Gama United" 
+              className="h-10 md:h-14 cursor-pointer hidden sm:block" 
+              onClick={() => navigate("/dashboard")}
+            />
             <h1 className="text-2xl font-bold">Radni nalozi</h1>
           </div>
           <div className="flex items-center gap-2">
