@@ -2,7 +2,7 @@ import { FileSpreadsheet } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { LocalDigitalJob } from "./LocalDigitalJobsTable";
-import { calculateWorkOrderTotals } from "@/lib/digitalCalculations";
+import { calculateGroupedPricing, formatTierLabel } from "@/lib/digitalGroupedPricing";
 import { useAuthz } from "@/hooks/useAuthz";
 import * as XLSX from "xlsx";
 
@@ -15,8 +15,8 @@ export const DigitalJobsSummary = ({ jobs, clientRabatProcenat = 0 }: DigitalJob
   const { isSuper, isAdmin } = useAuthz();
   const canSeePrices = isSuper || isAdmin;
 
-  // Calculate totals using new simplified logic
-  const totals = calculateWorkOrderTotals(jobs);
+  // Calculate totals using new grouped logic
+  const pricing = calculateGroupedPricing(jobs);
   const { 
     totalSheets, 
     totalColorClicks, 
@@ -24,12 +24,13 @@ export const DigitalJobsSummary = ({ jobs, clientRabatProcenat = 0 }: DigitalJob
     totalAmount,
     totalPaperCost,
     ruc,
-    rucPercent 
-  } = totals;
+    rucPercent,
+    groups
+  } = pricing;
   const amountWithDiscount = totalAmount * (1 - clientRabatProcenat / 100);
 
   const handleExportXLSX = () => {
-    const worksheetData = [
+    const worksheetData: (string | number)[][] = [
       ["DIGITALNA ŠTAMPA - SAŽETAK"],
       [],
       ["Naziv", "Obim", "Štampa", "Tiraž", "Papir", "Format tabaka"],
@@ -42,11 +43,32 @@ export const DigitalJobsSummary = ({ jobs, clientRabatProcenat = 0 }: DigitalJob
         job.machine_sheet_format || "-",
       ]),
       [],
-      ["UKUPNO"],
-      ["Ukupno tabaka:", totalSheets],
-      ["Color klikovi:", totalColorClicks],
-      ["Mono klikovi:", totalMonoClicks],
+      ["KALKULACIJA PO GRUPAMA"],
     ];
+
+    // Add groups breakdown
+    for (const group of groups) {
+      worksheetData.push([]);
+      worksheetData.push([`${group.coverage} ${group.format}`]);
+      worksheetData.push(["Stavka", "Obim", "Tiraž", "Tabaka"]);
+      
+      for (const item of group.items) {
+        worksheetData.push([item.name, item.obim, item.qty, item.sheets]);
+      }
+      
+      worksheetData.push([
+        `Ukupno: ${group.totalSheets} tab.`,
+        `Kategorija: ${formatTierLabel(group.tier)}`,
+        `Cena/tab: ${group.pricePerSheetBase.toFixed(2)} €`,
+        `Iznos: ${group.groupTotal.toFixed(2)} €`
+      ]);
+    }
+
+    worksheetData.push([]);
+    worksheetData.push(["UKUPNO"]);
+    worksheetData.push(["Ukupno tabaka:", totalSheets]);
+    worksheetData.push(["Color klikovi:", totalColorClicks]);
+    worksheetData.push(["Mono klikovi:", totalMonoClicks]);
 
     // Only include prices for admins/superusers
     if (canSeePrices) {
