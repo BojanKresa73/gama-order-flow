@@ -37,6 +37,7 @@ interface WorkOrder {
   total_plates: number;
   created_by_name: string | null;
   file_entries?: FileEntry[];
+  priority: number;
 }
 
 interface FileEntry {
@@ -86,6 +87,7 @@ const ChecklistView = ({ orderType, onNavigateToSearch }: ChecklistViewProps) =>
           kind,
           order_type,
           created_by,
+          priority,
           clients!inner(name),
           profiles!work_orders_created_by_fkey(full_name)
         `)
@@ -138,6 +140,7 @@ const ChecklistView = ({ orderType, onNavigateToSearch }: ChecklistViewProps) =>
               total_plates: 0,
               created_by_name: (order.profiles as any)?.full_name || null,
               file_entries: [],
+              priority: (order as any).priority ?? 5,
             };
           }
 
@@ -171,6 +174,7 @@ const ChecklistView = ({ orderType, onNavigateToSearch }: ChecklistViewProps) =>
             total_plates: totalPlates,
             created_by_name: (order.profiles as any)?.full_name || null,
             file_entries: fileEntries,
+            priority: (order as any).priority ?? 5,
           };
         })
       );
