@@ -56,6 +56,27 @@ interface Client {
   name: string;
 }
 
+const getFunctionErrorMessage = (err: any): string | null => {
+  // supabase-js FunctionsHttpError includes context.body
+  const body = err?.context?.body;
+  if (!body) return null;
+
+  if (typeof body === "string") {
+    try {
+      const parsed = JSON.parse(body);
+      return parsed?.error ?? null;
+    } catch {
+      return null;
+    }
+  }
+
+  if (typeof body === "object") {
+    return body?.error ?? null;
+  }
+
+  return null;
+};
+
 const AdminPriority = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
@@ -114,16 +135,14 @@ const AdminPriority = () => {
         }
       );
 
-      // Check for error in response data first (edge function errors)
-      if (data?.error) {
-        throw new Error(data.error);
-      }
-      
-      // Then check for invoke errors
+      // Edge function can return a JSON body even on non-2xx status.
+      if (data?.error) throw new Error(data.error);
+
       if (error) {
-        throw new Error(error.message || "Greška pri kreiranju korisnika");
+        const msgFromBody = getFunctionErrorMessage(error);
+        throw new Error(msgFromBody || error.message || "Greška pri kreiranju korisnika");
       }
-      
+
       return data;
     },
     onSuccess: () => {

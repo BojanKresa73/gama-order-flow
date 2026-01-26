@@ -130,14 +130,19 @@ const handler = async (req: Request): Promise<Response> => {
 
     const userId = newUser.user.id;
 
-    // Create profile
+    // Create or update profile
+    // NOTE: In many setups a DB trigger auto-creates a profiles row when an auth user is created.
+    // Using upsert avoids duplicate key errors.
     const { error: profileError } = await supabase
       .from("profiles")
-      .insert({
-        id: userId,
-        full_name: fullName,
-        is_active: true,
-      });
+      .upsert(
+        {
+          id: userId,
+          full_name: fullName,
+          is_active: true,
+        },
+        { onConflict: "id" }
+      );
 
     if (profileError) {
       console.error("Error creating profile:", profileError);
