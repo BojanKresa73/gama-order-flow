@@ -6,6 +6,7 @@ import { useAuthz } from "@/hooks/useAuthz";
 import { useIsMobile } from "@/hooks/use-mobile";
 import gamaLogo from "@/assets/gama-united-logo.svg";
 import { MobileNav } from "./MobileNav";
+import { PriorityNotificationBell } from "@/components/priority/PriorityNotificationBell";
 
 interface AppHeaderProps {
   userName?: string;
@@ -48,6 +49,7 @@ export const AppHeader = ({ userName, showBackButton, title }: AppHeaderProps) =
         
         {/* Desktop actions */}
         <div className="hidden md:flex items-center gap-4">
+          <PriorityNotificationBell />
           <span className="text-sm text-muted-foreground">{userName}</span>
           {isSuper && (
             <Button variant="outline" onClick={() => navigate("/admin/users")}>

@@ -32,3 +32,9 @@ verify_jwt = false
 
 [functions.print-work-order]
 verify_jwt = true
+
+[functions.notify-priority-change]
+verify_jwt = true
+
+[functions.create-client-portal-user]
+verify_jwt = true

@@ -20,6 +20,7 @@ import Checklist from "./pages/Checklist";
 import AdminPriceListDigital from "./pages/AdminPriceListDigital";
 import AdminUsers from "./pages/AdminUsers";
 import AdminInventory from "./pages/AdminInventory";
+import AdminPriority from "./pages/AdminPriority";
 import DevPreview from "./pages/DevPreview";
 import DeliveryNotePreview from "./pages/DeliveryNotePreview";
 import DeliveryNotePdfPreview from "./pages/DeliveryNotePdfPreview";
@@ -27,6 +28,8 @@ import OrderDeliveryNote from "./pages/OrderDeliveryNote";
 import CtpStats from "./pages/CtpStats";
 import DigitalStats from "./pages/DigitalStats";
 import LargeFormatNew from "./pages/LargeFormatNew";
+import ClientPortal from "./pages/ClientPortal";
+import ClientPortalLogin from "./pages/ClientPortalLogin";
 import NotFound from "./pages/NotFound";
 import AdminGuard from "./components/guards/AdminGuard";
 
@@ -58,6 +61,9 @@ const App = () => {
               <Route path="/admin/price-list-digital" element={<AdminPriceListDigital />} />
               <Route path="/admin/users" element={<AdminGuard><AdminUsers /></AdminGuard>} />
               <Route path="/admin/inventory" element={<AdminGuard><AdminInventory /></AdminGuard>} />
+              <Route path="/admin/priority" element={<AdminGuard><AdminPriority /></AdminGuard>} />
+              <Route path="/portal" element={<ClientPortal />} />
+              <Route path="/portal/login" element={<ClientPortalLogin />} />
               <Route path="/stats/ctp" element={<CtpStats />} />
               <Route path="/stats/digital" element={<DigitalStats />} />
               <Route path="/large-format/new" element={<LargeFormatNew />} />
