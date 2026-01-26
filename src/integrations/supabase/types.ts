@@ -202,6 +202,47 @@ export type Database = {
           },
         ]
       }
+      client_portal_users: {
+        Row: {
+          client_id: string
+          created_at: string
+          full_name: string
+          id: string
+          is_active: boolean
+          phone: string | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          client_id: string
+          created_at?: string
+          full_name: string
+          id?: string
+          is_active?: boolean
+          phone?: string | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          client_id?: string
+          created_at?: string
+          full_name?: string
+          id?: string
+          is_active?: boolean
+          phone?: string | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "client_portal_users_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       clients: {
         Row: {
           adresa: string | null
@@ -1461,6 +1502,162 @@ export type Database = {
         }
         Relationships: []
       }
+      priority_change_log: {
+        Row: {
+          changed_by: string
+          changed_by_type: string
+          created_at: string
+          id: string
+          new_priority: number
+          note: string | null
+          old_priority: number | null
+          work_order_id: string
+        }
+        Insert: {
+          changed_by: string
+          changed_by_type: string
+          created_at?: string
+          id?: string
+          new_priority: number
+          note?: string | null
+          old_priority?: number | null
+          work_order_id: string
+        }
+        Update: {
+          changed_by?: string
+          changed_by_type?: string
+          created_at?: string
+          id?: string
+          new_priority?: number
+          note?: string | null
+          old_priority?: number | null
+          work_order_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "priority_change_log_work_order_id_fkey"
+            columns: ["work_order_id"]
+            isOneToOne: false
+            referencedRelation: "v_ctp_items"
+            referencedColumns: ["work_order_id"]
+          },
+          {
+            foreignKeyName: "priority_change_log_work_order_id_fkey"
+            columns: ["work_order_id"]
+            isOneToOne: false
+            referencedRelation: "work_orders"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "priority_change_log_work_order_id_fkey"
+            columns: ["work_order_id"]
+            isOneToOne: false
+            referencedRelation: "work_orders_ctp"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "priority_change_log_work_order_id_fkey"
+            columns: ["work_order_id"]
+            isOneToOne: false
+            referencedRelation: "work_orders_digitala"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "priority_change_log_work_order_id_fkey"
+            columns: ["work_order_id"]
+            isOneToOne: false
+            referencedRelation: "work_orders_filmovanje"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "priority_change_log_work_order_id_fkey"
+            columns: ["work_order_id"]
+            isOneToOne: false
+            referencedRelation: "work_orders_razno"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      priority_notifications: {
+        Row: {
+          acknowledged_at: string | null
+          acknowledged_by: string | null
+          created_at: string
+          id: string
+          is_read: boolean
+          priority_change_log_id: string
+          work_order_id: string
+        }
+        Insert: {
+          acknowledged_at?: string | null
+          acknowledged_by?: string | null
+          created_at?: string
+          id?: string
+          is_read?: boolean
+          priority_change_log_id: string
+          work_order_id: string
+        }
+        Update: {
+          acknowledged_at?: string | null
+          acknowledged_by?: string | null
+          created_at?: string
+          id?: string
+          is_read?: boolean
+          priority_change_log_id?: string
+          work_order_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "priority_notifications_priority_change_log_id_fkey"
+            columns: ["priority_change_log_id"]
+            isOneToOne: false
+            referencedRelation: "priority_change_log"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "priority_notifications_work_order_id_fkey"
+            columns: ["work_order_id"]
+            isOneToOne: false
+            referencedRelation: "v_ctp_items"
+            referencedColumns: ["work_order_id"]
+          },
+          {
+            foreignKeyName: "priority_notifications_work_order_id_fkey"
+            columns: ["work_order_id"]
+            isOneToOne: false
+            referencedRelation: "work_orders"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "priority_notifications_work_order_id_fkey"
+            columns: ["work_order_id"]
+            isOneToOne: false
+            referencedRelation: "work_orders_ctp"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "priority_notifications_work_order_id_fkey"
+            columns: ["work_order_id"]
+            isOneToOne: false
+            referencedRelation: "work_orders_digitala"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "priority_notifications_work_order_id_fkey"
+            columns: ["work_order_id"]
+            isOneToOne: false
+            referencedRelation: "work_orders_filmovanje"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "priority_notifications_work_order_id_fkey"
+            columns: ["work_order_id"]
+            isOneToOne: false
+            referencedRelation: "work_orders_razno"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       procurement_order_items: {
         Row: {
           created_at: string
@@ -1990,6 +2187,7 @@ export type Database = {
           paper_gsm_text: number | null
           print_format: string | null
           print_spec: string | null
+          priority: number
           run_quantity: number | null
           serial: number | null
           sheets_used: number | null
@@ -2031,6 +2229,7 @@ export type Database = {
           paper_gsm_text?: number | null
           print_format?: string | null
           print_spec?: string | null
+          priority?: number
           run_quantity?: number | null
           serial?: number | null
           sheets_used?: number | null
@@ -2072,6 +2271,7 @@ export type Database = {
           paper_gsm_text?: number | null
           print_format?: string | null
           print_spec?: string | null
+          priority?: number
           run_quantity?: number | null
           serial?: number | null
           sheets_used?: number | null
@@ -2675,6 +2875,10 @@ export type Database = {
       }
     }
     Functions: {
+      acknowledge_priority_notification: {
+        Args: { p_notification_id: string }
+        Returns: boolean
+      }
       admin_list_users: {
         Args: { p_limit?: number; p_offset?: number; p_search?: string }
         Returns: {
@@ -2710,6 +2914,7 @@ export type Database = {
         Args: { p_user_id: string; p_work_order_id: string }
         Returns: Json
       }
+      current_user_client_id: { Args: never; Returns: string }
       current_user_is_active: { Args: never; Returns: boolean }
       current_user_role: {
         Args: never
@@ -2720,6 +2925,7 @@ export type Database = {
         Returns: undefined
       }
       generate_order_number: { Args: never; Returns: string }
+      get_unread_priority_notifications_count: { Args: never; Returns: number }
       get_work_order_full: { Args: { p_identifier: string }; Returns: Json }
       has_admin_access: { Args: { _user_id: string }; Returns: boolean }
       has_admin_plus_access: { Args: { _user_id: string }; Returns: boolean }
@@ -2738,8 +2944,17 @@ export type Database = {
         Args: { p_type: string; p_year: number }
         Returns: number
       }
+      is_client_portal_user: { Args: never; Returns: boolean }
       is_superuser: { Args: { p_uid: string }; Returns: boolean }
       refresh_plate_usage_stats: { Args: never; Returns: undefined }
+      update_work_order_priority: {
+        Args: {
+          p_new_priority: number
+          p_note?: string
+          p_work_order_id: string
+        }
+        Returns: Json
+      }
     }
     Enums: {
       app_role:
@@ -2749,6 +2964,7 @@ export type Database = {
         | "superuser"
         | "operator_ctp"
         | "admin_plus"
+        | "client_user"
       checklist_item_status:
         | "Pending"
         | "InProgress"
@@ -2914,6 +3130,7 @@ export const Constants = {
         "superuser",
         "operator_ctp",
         "admin_plus",
+        "client_user",
       ],
       checklist_item_status: ["Pending", "InProgress", "Blocked", "Done", "NA"],
       large_format_type: ["roll", "rigid"],
