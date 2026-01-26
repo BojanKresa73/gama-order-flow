@@ -114,8 +114,16 @@ const AdminPriority = () => {
         }
       );
 
-      if (error) throw error;
-      if (data?.error) throw new Error(data.error);
+      // Check for error in response data first (edge function errors)
+      if (data?.error) {
+        throw new Error(data.error);
+      }
+      
+      // Then check for invoke errors
+      if (error) {
+        throw new Error(error.message || "Greška pri kreiranju korisnika");
+      }
+      
       return data;
     },
     onSuccess: () => {
