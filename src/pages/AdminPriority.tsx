@@ -33,7 +33,8 @@ import {
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
-import { ArrowLeft, Plus, Users, Building2, History, Search, ExternalLink, ArrowUp, ArrowDown, Minus } from "lucide-react";
+import { ArrowLeft, Plus, Users, Building2, History, Search, ExternalLink, ArrowUp, ArrowDown, Minus, Pencil } from "lucide-react";
+import { EditPortalUserDialog } from "@/components/portal/EditPortalUserDialog";
 import { format } from "date-fns";
 import { sr } from "date-fns/locale";
 import { PriorityBadge } from "@/components/priority/PriorityBadge";
@@ -105,6 +106,7 @@ const AdminPriority = () => {
   const queryClient = useQueryClient();
   const [activeTab, setActiveTab] = useState("users");
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
+  const [editUser, setEditUser] = useState<ClientPortalUser | null>(null);
   const [selectedClientId, setSelectedClientId] = useState<string>("");
   const [clientSearch, setClientSearch] = useState("");
   const [logSearch, setLogSearch] = useState("");
@@ -532,18 +534,27 @@ const AdminPriority = () => {
                             {format(new Date(user.created_at), "dd.MM.yyyy")}
                           </TableCell>
                           <TableCell>
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              onClick={() =>
-                                toggleActiveMutation.mutate({
-                                  id: user.id,
-                                  isActive: !user.is_active,
-                                })
-                              }
-                            >
-                              {user.is_active ? "Deaktiviraj" : "Aktiviraj"}
-                            </Button>
+                            <div className="flex items-center gap-2">
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => setEditUser(user)}
+                              >
+                                <Pencil className="h-4 w-4" />
+                              </Button>
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() =>
+                                  toggleActiveMutation.mutate({
+                                    id: user.id,
+                                    isActive: !user.is_active,
+                                  })
+                                }
+                              >
+                                {user.is_active ? "Deaktiviraj" : "Aktiviraj"}
+                              </Button>
+                            </div>
                           </TableCell>
                         </TableRow>
                       ))}
@@ -589,6 +600,13 @@ const AdminPriority = () => {
                 </p>
               </CardContent>
             </Card>
+
+            {/* Edit user dialog */}
+            <EditPortalUserDialog
+              user={editUser}
+              open={!!editUser}
+              onOpenChange={(open) => !open && setEditUser(null)}
+            />
           </TabsContent>
 
           {/* KLIJENTI TAB */}

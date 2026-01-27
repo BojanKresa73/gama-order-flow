@@ -9,7 +9,6 @@ import { Textarea } from "@/components/ui/textarea";
 import {
   Table,
   TableBody,
-  TableCell,
   TableHead,
   TableHeader,
   TableRow,
@@ -29,13 +28,11 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
-import { LogOut, Search, Calendar } from "lucide-react";
-import { format } from "date-fns";
-import { sr } from "date-fns/locale";
+import { LogOut, Search } from "lucide-react";
 import { PriorityBadge } from "@/components/priority/PriorityBadge";
 import { PrioritySelect } from "@/components/priority/PrioritySelect";
+import { ClientOrderRow } from "@/components/portal/ClientOrderRow";
 
 interface ClientPortalUser {
   id: string;
@@ -55,6 +52,7 @@ interface WorkOrder {
   priority: number;
   created_at: string;
   closed_at: string | null;
+  order_type: string;
 }
 
 const ClientPortal = () => {
@@ -118,7 +116,7 @@ const ClientPortal = () => {
 
       let query = supabase
         .from("work_orders")
-        .select("id, order_code, display_order_number, job_name, status, priority, created_at, closed_at")
+        .select("id, order_code, display_order_number, job_name, status, priority, created_at, closed_at, order_type")
         .eq("client_id", portalUser.client_id)
         .is("deleted_at", null)
         .order("priority", { ascending: false })
@@ -135,6 +133,52 @@ const ClientPortal = () => {
       return data as WorkOrder[];
     },
     enabled: !!portalUser?.client_id,
+  });
+
+  // Fetch all files for search
+  const { data: allFiles = [] } = useQuery({
+    queryKey: ["client-portal-files", portalUser?.client_id],
+    queryFn: async () => {
+      if (!portalUser?.client_id) return [];
+
+      const orderIds = workOrders.map((o) => o.id);
+      if (orderIds.length === 0) return [];
+
+      const files: { orderId: string; name: string }[] = [];
+
+      // Fetch CTP files
+      const { data: ctpFiles } = await supabase
+        .from("file_entries")
+        .select("work_order_id, filename")
+        .in("work_order_id", orderIds);
+      
+      (ctpFiles || []).forEach((f) => {
+        files.push({ orderId: f.work_order_id, name: f.filename });
+      });
+
+      // Fetch film files
+      const { data: filmFiles } = await supabase
+        .from("film_jobs")
+        .select("work_order_id, file_name")
+        .in("work_order_id", orderIds);
+      
+      (filmFiles || []).forEach((f) => {
+        files.push({ orderId: f.work_order_id, name: f.file_name });
+      });
+
+      // Fetch digital files
+      const { data: digitalFiles } = await supabase
+        .from("digital_jobs")
+        .select("work_order_id, file_name")
+        .in("work_order_id", orderIds);
+      
+      (digitalFiles || []).forEach((f) => {
+        files.push({ orderId: f.work_order_id, name: f.file_name });
+      });
+
+      return files;
+    },
+    enabled: workOrders.length > 0,
   });
 
   // Update priority mutation
@@ -212,15 +256,25 @@ const ClientPortal = () => {
     });
   };
 
-  // Filter work orders by search
+  // Filter work orders by search (including files)
   const filteredOrders = workOrders.filter((order) => {
     if (!searchQuery) return true;
     const search = searchQuery.toLowerCase();
-    return (
+    
+    // Check order fields
+    const orderMatch =
       order.order_code?.toLowerCase().includes(search) ||
       order.display_order_number?.toLowerCase().includes(search) ||
-      order.job_name?.toLowerCase().includes(search)
+      order.job_name?.toLowerCase().includes(search);
+    
+    if (orderMatch) return true;
+    
+    // Check if any file matches
+    const fileMatch = allFiles.some(
+      (f) => f.orderId === order.id && f.name.toLowerCase().includes(search)
     );
+    
+    return fileMatch;
   });
 
   if (isLoading) {
@@ -262,7 +316,7 @@ const ClientPortal = () => {
                 <div className="relative">
                   <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                   <Input
-                    placeholder="Pretraži naloge..."
+                    placeholder="Pretraži naloge ili fajlove..."
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
                     className="pl-9"
@@ -297,6 +351,7 @@ const ClientPortal = () => {
                 <Table>
                   <TableHeader>
                     <TableRow>
+                      <TableHead className="w-8"></TableHead>
                       <TableHead>Broj naloga</TableHead>
                       <TableHead>Naziv</TableHead>
                       <TableHead>Status</TableHead>
@@ -307,41 +362,12 @@ const ClientPortal = () => {
                   </TableHeader>
                   <TableBody>
                     {filteredOrders.map((order) => (
-                      <TableRow key={order.id}>
-                        <TableCell className="font-medium">
-                          {order.display_order_number || order.order_code}
-                        </TableCell>
-                        <TableCell>{order.job_name || "-"}</TableCell>
-                        <TableCell>
-                          <Badge
-                            variant={order.status === "open" ? "default" : "secondary"}
-                          >
-                            {order.status === "open" ? "Otvoren" : "Zatvoren"}
-                          </Badge>
-                        </TableCell>
-                        <TableCell>
-                          <PriorityBadge priority={order.priority} />
-                        </TableCell>
-                        <TableCell>
-                          <div className="flex items-center gap-1 text-sm text-muted-foreground">
-                            <Calendar className="h-3 w-3" />
-                            {format(new Date(order.created_at), "dd.MM.yyyy", { locale: sr })}
-                          </div>
-                        </TableCell>
-                        <TableCell>
-                          {order.status === "open" ? (
-                            <Button
-                              size="sm"
-                              variant="outline"
-                              onClick={() => openPriorityDialog(order)}
-                            >
-                              Promeni prioritet
-                            </Button>
-                          ) : (
-                            <span className="text-sm text-muted-foreground">-</span>
-                          )}
-                        </TableCell>
-                      </TableRow>
+                      <ClientOrderRow
+                        key={order.id}
+                        order={order}
+                        onChangePriority={openPriorityDialog}
+                        searchQuery={searchQuery}
+                      />
                     ))}
                   </TableBody>
                 </Table>
