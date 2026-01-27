@@ -89,7 +89,15 @@ export function ProcurementOrdersList({ orders, onUpdate }: ProcurementOrdersLis
 
   const saveEdit = () => {
     if (!editingOrder) return;
-    updateMutation.mutate({ id: editingOrder, values: editValues });
+    
+    // Convert empty date strings to null for proper database handling
+    const valuesToSave = {
+      ...editValues,
+      expected_arrival_date: editValues.expected_arrival_date || null,
+      actual_arrival_date: editValues.actual_arrival_date || null,
+    };
+    
+    updateMutation.mutate({ id: editingOrder, values: valuesToSave });
   };
 
   const calculateOrderTotal = (order: any) => {
