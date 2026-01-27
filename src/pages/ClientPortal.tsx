@@ -93,12 +93,13 @@ const ClientPortal = () => {
         .single();
 
       if (error || !portalData) {
+        await supabase.auth.signOut();
         toast({
           title: "Pristup odbijen",
           description: "Nemate pristup klijent portalu",
           variant: "destructive",
         });
-        navigate("/");
+        navigate("/portal/login");
         return;
       }
 
