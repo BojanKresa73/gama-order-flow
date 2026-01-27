@@ -33,6 +33,8 @@ import { LogOut, Search } from "lucide-react";
 import { PriorityBadge } from "@/components/priority/PriorityBadge";
 import { PrioritySelect } from "@/components/priority/PrioritySelect";
 import { ClientOrderRow } from "@/components/portal/ClientOrderRow";
+import { ClientOrderCard } from "@/components/portal/ClientOrderCard";
+import { useIsMobile } from "@/hooks/use-mobile";
 
 interface ClientPortalUser {
   id: string;
@@ -59,6 +61,7 @@ const ClientPortal = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
   const queryClient = useQueryClient();
+  const isMobile = useIsMobile();
   const [portalUser, setPortalUser] = useState<ClientPortalUser | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [statusFilter, setStatusFilter] = useState<"open" | "closed" | "all">("open");
@@ -346,7 +349,20 @@ const ClientPortal = () => {
               <p className="text-center py-8 text-muted-foreground">
                 Nema naloga
               </p>
+            ) : isMobile ? (
+              /* Mobile: Card view */
+              <div className="space-y-3">
+                {filteredOrders.map((order) => (
+                  <ClientOrderCard
+                    key={order.id}
+                    order={order}
+                    onChangePriority={openPriorityDialog}
+                    searchQuery={searchQuery}
+                  />
+                ))}
+              </div>
             ) : (
+              /* Desktop: Table view */
               <div className="overflow-x-auto">
                 <Table>
                   <TableHeader>
