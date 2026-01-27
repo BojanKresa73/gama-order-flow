@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, Fragment } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
@@ -7,11 +7,6 @@ import {
   TableCell,
   TableRow,
 } from "@/components/ui/table";
-import {
-  Collapsible,
-  CollapsibleContent,
-  CollapsibleTrigger,
-} from "@/components/ui/collapsible";
 import { PriorityBadge } from "@/components/priority/PriorityBadge";
 import { Calendar, ChevronDown, ChevronRight, FileText } from "lucide-react";
 import { format } from "date-fns";
@@ -103,11 +98,6 @@ export function ClientOrderRow({ order, onChangePriority, searchQuery }: Props) 
     enabled: isOpen,
   });
 
-  // Check if any file matches the search
-  const filesMatchSearch = files.some((f) =>
-    f.name.toLowerCase().includes(searchQuery.toLowerCase())
-  );
-
   // Highlight matching text
   const highlightMatch = (text: string) => {
     if (!searchQuery) return text;
@@ -124,18 +114,21 @@ export function ClientOrderRow({ order, onChangePriority, searchQuery }: Props) 
   };
 
   return (
-    <Collapsible open={isOpen} onOpenChange={setIsOpen}>
+    <Fragment>
       <TableRow className="hover:bg-muted/50">
-        <TableCell>
-          <CollapsibleTrigger asChild>
-            <Button variant="ghost" size="sm" className="p-0 h-auto">
-              {isOpen ? (
-                <ChevronDown className="h-4 w-4" />
-              ) : (
-                <ChevronRight className="h-4 w-4" />
-              )}
-            </Button>
-          </CollapsibleTrigger>
+        <TableCell className="w-10">
+          <Button 
+            variant="ghost" 
+            size="sm" 
+            className="p-0 h-auto"
+            onClick={() => setIsOpen(!isOpen)}
+          >
+            {isOpen ? (
+              <ChevronDown className="h-4 w-4" />
+            ) : (
+              <ChevronRight className="h-4 w-4" />
+            )}
+          </Button>
         </TableCell>
         <TableCell className="font-medium">
           {order.display_order_number || order.order_code}
@@ -169,7 +162,7 @@ export function ClientOrderRow({ order, onChangePriority, searchQuery }: Props) 
           )}
         </TableCell>
       </TableRow>
-      <CollapsibleContent asChild>
+      {isOpen && (
         <TableRow className="bg-muted/30 hover:bg-muted/30">
           <TableCell colSpan={7} className="py-3">
             <div className="pl-8">
@@ -200,7 +193,7 @@ export function ClientOrderRow({ order, onChangePriority, searchQuery }: Props) 
             </div>
           </TableCell>
         </TableRow>
-      </CollapsibleContent>
-    </Collapsible>
+      )}
+    </Fragment>
   );
 }
