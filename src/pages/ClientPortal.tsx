@@ -121,14 +121,25 @@ const ClientPortal = () => {
         .from("work_orders")
         .select("id, order_code, display_order_number, job_name, status, priority, created_at, closed_at, order_type")
         .eq("client_id", portalUser.client_id)
-        .is("deleted_at", null)
-        .order("priority", { ascending: false })
-        .order("created_at", { ascending: true });
+        .is("deleted_at", null);
 
       if (statusFilter === "open") {
-        query = query.eq("status", "open");
+        // Open orders: sort by priority (high first), then by created_at (oldest first)
+        query = query
+          .eq("status", "open")
+          .order("priority", { ascending: false })
+          .order("created_at", { ascending: true });
       } else if (statusFilter === "closed") {
-        query = query.eq("status", "closed");
+        // Closed orders: sort by closed_at (newest first)
+        query = query
+          .eq("status", "closed")
+          .order("closed_at", { ascending: false });
+      } else {
+        // All orders: show open first sorted by priority, then closed sorted by closed_at
+        query = query
+          .order("status", { ascending: true }) // 'closed' < 'open' alphabetically, so ascending puts 'closed' first - we need opposite
+          .order("priority", { ascending: false })
+          .order("closed_at", { ascending: false, nullsFirst: true });
       }
 
       const { data, error } = await query.limit(100);
