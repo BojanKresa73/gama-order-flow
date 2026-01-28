@@ -5,6 +5,7 @@ import { Badge } from "@/components/ui/badge";
 import { 
   calculateGroupedPricing, 
   formatTierLabel,
+  PREP_HOUR_RATE,
   type DigitalJobItem,
   type GroupedPricingItem
 } from "@/lib/digitalGroupedPricing";
@@ -33,17 +34,19 @@ function calculatePricePerPiece(
 interface DigitalPricingBreakdownProps {
   jobs: DigitalJobItem[];
   clientRabatProcenat?: number;
+  prepHours?: number;
 }
 
 export const DigitalPricingBreakdown = ({ 
   jobs, 
-  clientRabatProcenat = 0 
+  clientRabatProcenat = 0,
+  prepHours = 0
 }: DigitalPricingBreakdownProps) => {
   if (jobs.length === 0) return null;
 
-  const pricing = calculateGroupedPricing(jobs);
-  const amountWithDiscount = pricing.totalAmount * (1 - clientRabatProcenat / 100);
-  const discountAmount = pricing.totalAmount - amountWithDiscount;
+  const pricing = calculateGroupedPricing(jobs, prepHours);
+  const amountWithDiscount = pricing.totalWithPrep * (1 - clientRabatProcenat / 100);
+  const discountAmount = pricing.totalWithPrep - amountWithDiscount;
 
   return (
     <Card>
@@ -173,10 +176,20 @@ export const DigitalPricingBreakdown = ({
 
           <Separator />
 
+          {/* Prep hours if applicable */}
+          {pricing.prepCost > 0 && (
+            <>
+              <div className="flex justify-between text-sm bg-blue-50 dark:bg-blue-950/30 p-2 rounded">
+                <span>Priprema ({prepHours} sati × {PREP_HOUR_RATE} €):</span>
+                <span className="font-medium text-blue-600">{pricing.prepCost.toFixed(2)} €</span>
+              </div>
+            </>
+          )}
+
           {/* Total price */}
           <div className="flex justify-between text-lg font-bold">
             <span>Ukupna cena:</span>
-            <span className="text-primary">{pricing.totalAmount.toFixed(2)} €</span>
+            <span className="text-primary">{pricing.totalWithPrep.toFixed(2)} €</span>
           </div>
 
           {/* Discount if applicable */}

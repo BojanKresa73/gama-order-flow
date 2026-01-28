@@ -56,7 +56,12 @@ export interface GroupedPricingResult {
   totalCost: number;
   ruc: number;
   rucPercent: number;
+  prepCost: number;
+  totalWithPrep: number;
 }
+
+// Preparation hour rate in EUR
+export const PREP_HOUR_RATE = 25;
 
 // Get tier for a given quantity
 function getTierForQuantity(qty: number): { minQty: number; maxQty: number; label: string } {
@@ -132,7 +137,7 @@ function calculateClickCosts(jobs: DigitalJobItem[]): { colorClicks: number; mon
  * Groups items by coverage (print_sides) + format (machine_sheet_format)
  * Then calculates price tier based on aggregated sheets per group
  */
-export function calculateGroupedPricing(jobs: DigitalJobItem[]): GroupedPricingResult {
+export function calculateGroupedPricing(jobs: DigitalJobItem[], prepHours: number = 0): GroupedPricingResult {
   // Filter out test prints for pricing
   const billableJobs = jobs.filter(j => !j.is_test_print);
   
@@ -216,8 +221,10 @@ export function calculateGroupedPricing(jobs: DigitalJobItem[]): GroupedPricingR
   const clickCosts = calculateClickCosts(jobs);
   const totalClickCost = clickCosts.totalCost;
   const totalCost = totalPaperCost + totalClickCost;
-  const ruc = totalAmount - totalCost;
-  const rucPercent = totalAmount > 0 ? (ruc / totalAmount) * 100 : 0;
+  const prepCost = prepHours * PREP_HOUR_RATE;
+  const totalWithPrep = totalAmount + prepCost;
+  const ruc = totalWithPrep - totalCost;
+  const rucPercent = totalWithPrep > 0 ? (ruc / totalWithPrep) * 100 : 0;
   
   return {
     groups,
@@ -229,7 +236,9 @@ export function calculateGroupedPricing(jobs: DigitalJobItem[]): GroupedPricingR
     totalClickCost,
     totalCost,
     ruc,
-    rucPercent
+    rucPercent,
+    prepCost,
+    totalWithPrep
   };
 }
 

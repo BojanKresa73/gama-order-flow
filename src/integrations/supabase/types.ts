@@ -2185,6 +2185,7 @@ export type Database = {
           pages: number | null
           paper_gsm_cover: number | null
           paper_gsm_text: number | null
+          prep_hours: number | null
           print_format: string | null
           print_spec: string | null
           priority: number
@@ -2227,6 +2228,7 @@ export type Database = {
           pages?: number | null
           paper_gsm_cover?: number | null
           paper_gsm_text?: number | null
+          prep_hours?: number | null
           print_format?: string | null
           print_spec?: string | null
           priority?: number
@@ -2269,6 +2271,7 @@ export type Database = {
           pages?: number | null
           paper_gsm_cover?: number | null
           paper_gsm_text?: number | null
+          prep_hours?: number | null
           print_format?: string | null
           print_spec?: string | null
           priority?: number

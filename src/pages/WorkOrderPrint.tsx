@@ -23,6 +23,7 @@ interface WorkOrderData {
   print_format: string | null;
   binding: string | null;
   lamination: string | null;
+  prep_hours: number | null;
   client_name: string;
   client_email: string | null;
   client_pib: string | null;
@@ -53,7 +54,7 @@ interface PreparedRow {
 }
 
 // Digital Pricing Print Section Component
-const DigitalPricingPrintSection = ({ items }: { items: any[] }) => {
+const DigitalPricingPrintSection = ({ items, prepHours = 0 }: { items: any[]; prepHours?: number }) => {
   const digitalJobs: DigitalJobItem[] = items.map(item => ({
     id: item.id,
     name: item.name || item.file_name,
@@ -70,7 +71,7 @@ const DigitalPricingPrintSection = ({ items }: { items: any[] }) => {
     pieces_count: item.pieces_count || null,
   }));
 
-  const pricing = calculateGroupedPricing(digitalJobs);
+  const pricing = calculateGroupedPricing(digitalJobs, prepHours);
   if (pricing.groups.length === 0) {
     const testCount = digitalJobs.filter(j => j.is_test_print).length;
     return (
@@ -154,9 +155,15 @@ const DigitalPricingPrintSection = ({ items }: { items: any[] }) => {
       ))}
       
       <div className="pricing-summary">
+        {pricing.prepCost > 0 && (
+          <div className="summary-row prep-cost">
+            <span>Priprema ({prepHours} sati × 25 €):</span>
+            <span>{pricing.prepCost.toFixed(2)} €</span>
+          </div>
+        )}
         <div className="summary-row grand-total">
           <span>UKUPNA CENA:</span>
-          <span>{pricing.totalAmount.toFixed(2)} €</span>
+          <span>{pricing.totalWithPrep.toFixed(2)} €</span>
         </div>
         <div className="summary-row">
           <span>Trošak papira:</span>
@@ -600,7 +607,7 @@ export default function WorkOrderPrint() {
                     Učitavanje kalkulacije...
                   </div>
                 ) : canSeePricing ? (
-                  <DigitalPricingPrintSection items={data.items} />
+                  <DigitalPricingPrintSection items={data.items} prepHours={data.prep_hours || 0} />
                 ) : null
               )}
 
@@ -1018,6 +1025,15 @@ body {
   margin-bottom: 8px;
   padding-bottom: 8px;
   border-bottom: 1px solid #bfdbfe;
+}
+
+.summary-row.prep-cost {
+  font-weight: 600;
+  color: #2563eb;
+  background: #eff6ff;
+  padding: 4px 8px;
+  border-radius: 4px;
+  margin-bottom: 8px;
 }
 
 .summary-row.ruc {

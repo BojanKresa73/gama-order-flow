@@ -421,7 +421,8 @@ const WorkOrderDetails = () => {
                   <h3 className="text-lg font-semibold">Kalkulacija digitale</h3>
                   <DigitalPricingBreakdown 
                     jobs={digitalJobs} 
-                    clientRabatProcenat={workOrder.clients?.rabat_procenat || 0} 
+                    clientRabatProcenat={workOrder.clients?.rabat_procenat || 0}
+                    prepHours={workOrder.prep_hours || 0}
                   />
                 </div>
               )}
