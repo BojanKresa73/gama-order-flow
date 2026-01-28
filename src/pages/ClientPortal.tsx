@@ -130,10 +130,10 @@ const ClientPortal = () => {
           .order("priority", { ascending: false })
           .order("created_at", { ascending: true });
       } else if (statusFilter === "closed") {
-        // Closed orders: sort by closed_at (newest first)
+        // Closed orders: sort by order number descending (newer/higher numbers first)
         query = query
           .eq("status", "closed")
-          .order("closed_at", { ascending: false });
+          .order("display_order_number", { ascending: false });
       } else {
         // All orders: show open first sorted by priority, then closed sorted by closed_at
         query = query
