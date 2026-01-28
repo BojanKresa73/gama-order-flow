@@ -22,6 +22,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { CheckCircle, XCircle, Search, FileText, Calendar, User, Eye } from "lucide-react";
+import { PriorityBadge } from "@/components/priority/PriorityBadge";
 import { format, subDays } from "date-fns";
 import { displayOrderNumber } from "@/lib/orderLabel";
 interface WorkOrder {
@@ -411,9 +412,12 @@ const ChecklistView = ({ orderType, onNavigateToSearch }: ChecklistViewProps) =>
       <CardContent className="p-4">
         <div className="flex justify-between items-start mb-2">
           <div className="flex-1 min-w-0">
-            <p className="font-semibold text-sm truncate">
-              {displayOrderNumber(order)}
-            </p>
+            <div className="flex items-center gap-2">
+              <PriorityBadge priority={order.priority} size="sm" />
+              <p className="font-semibold text-sm truncate">
+                {displayOrderNumber(order)}
+              </p>
+            </div>
             <p className="text-sm text-muted-foreground truncate">{order.client_name}</p>
           </div>
           <div className="flex items-center gap-2 flex-shrink-0">
@@ -502,6 +506,7 @@ const ChecklistView = ({ orderType, onNavigateToSearch }: ChecklistViewProps) =>
         <Table>
           <TableHeader>
             <TableRow>
+              <TableHead className="w-16">P</TableHead>
               <TableHead>Broj Naloga</TableHead>
               <TableHead>Klijent</TableHead>
               <TableHead>Kreirao</TableHead>
@@ -516,6 +521,9 @@ const ChecklistView = ({ orderType, onNavigateToSearch }: ChecklistViewProps) =>
           <TableBody>
             {workOrders.map((order) => (
               <TableRow key={order.id} className="hover:bg-muted/50">
+                <TableCell>
+                  <PriorityBadge priority={order.priority} size="sm" />
+                </TableCell>
                 <TableCell className="font-medium">
                   {displayOrderNumber(order)}
                 </TableCell>
