@@ -32,6 +32,7 @@ import ClientPortal from "./pages/ClientPortal";
 import ClientPortalLogin from "./pages/ClientPortalLogin";
 import NotFound from "./pages/NotFound";
 import AdminGuard from "./components/guards/AdminGuard";
+import InternalUserGuard from "./components/guards/InternalUserGuard";
 
 const queryClient = new QueryClient();
 
@@ -44,29 +45,34 @@ const App = () => {
           <SonnerToaster richColors position="top-right" />
           <BrowserRouter>
             <Routes>
+              {/* Public routes */}
               <Route path="/" element={<Index />} />
               <Route path="/register" element={<Register />} />
               <Route path="/reset-password" element={<ResetPassword />} />
-              <Route path="/dashboard" element={<Dashboard />} />
-              <Route path="/work-orders" element={<WorkOrders />} />
-              <Route path="/work-orders/new" element={<NewWorkOrder />} />
-              <Route path="/work-orders/:id/edit" element={<NewWorkOrder />} />
-              <Route path="/work-orders/:id/print" element={<WorkOrderPrint />} />
-              <Route path="/work-orders/:id" element={<WorkOrderDetails />} />
-              <Route path="/work-orders/:orderId/delivery-note" element={<OrderDeliveryNote />} />
-              <Route path="/clients" element={<Clients />} />
-              <Route path="/inventory" element={<Inventory />} />
-              <Route path="/nabavka" element={<Procurement />} />
-              <Route path="/checklist" element={<Checklist />} />
-              <Route path="/admin/price-list-digital" element={<AdminPriceListDigital />} />
+              
+              {/* Client Portal routes (separate from internal app) */}
+              <Route path="/portal" element={<ClientPortal />} />
+              <Route path="/portal/login" element={<ClientPortalLogin />} />
+              
+              {/* Internal app routes - protected from client_user */}
+              <Route path="/dashboard" element={<InternalUserGuard><Dashboard /></InternalUserGuard>} />
+              <Route path="/work-orders" element={<InternalUserGuard><WorkOrders /></InternalUserGuard>} />
+              <Route path="/work-orders/new" element={<InternalUserGuard><NewWorkOrder /></InternalUserGuard>} />
+              <Route path="/work-orders/:id/edit" element={<InternalUserGuard><NewWorkOrder /></InternalUserGuard>} />
+              <Route path="/work-orders/:id/print" element={<InternalUserGuard><WorkOrderPrint /></InternalUserGuard>} />
+              <Route path="/work-orders/:id" element={<InternalUserGuard><WorkOrderDetails /></InternalUserGuard>} />
+              <Route path="/work-orders/:orderId/delivery-note" element={<InternalUserGuard><OrderDeliveryNote /></InternalUserGuard>} />
+              <Route path="/clients" element={<InternalUserGuard><Clients /></InternalUserGuard>} />
+              <Route path="/inventory" element={<InternalUserGuard><Inventory /></InternalUserGuard>} />
+              <Route path="/nabavka" element={<InternalUserGuard><Procurement /></InternalUserGuard>} />
+              <Route path="/checklist" element={<InternalUserGuard><Checklist /></InternalUserGuard>} />
+              <Route path="/admin/price-list-digital" element={<InternalUserGuard><AdminPriceListDigital /></InternalUserGuard>} />
               <Route path="/admin/users" element={<AdminGuard><AdminUsers /></AdminGuard>} />
               <Route path="/admin/inventory" element={<AdminGuard><AdminInventory /></AdminGuard>} />
               <Route path="/admin/priority" element={<AdminGuard><AdminPriority /></AdminGuard>} />
-              <Route path="/portal" element={<ClientPortal />} />
-              <Route path="/portal/login" element={<ClientPortalLogin />} />
-              <Route path="/stats/ctp" element={<CtpStats />} />
-              <Route path="/stats/digital" element={<DigitalStats />} />
-              <Route path="/large-format/new" element={<LargeFormatNew />} />
+              <Route path="/stats/ctp" element={<InternalUserGuard><CtpStats /></InternalUserGuard>} />
+              <Route path="/stats/digital" element={<InternalUserGuard><DigitalStats /></InternalUserGuard>} />
+              <Route path="/large-format/new" element={<InternalUserGuard><LargeFormatNew /></InternalUserGuard>} />
               {import.meta.env.VITE_SHOW_DEV_PREVIEW === "true" && (
               <>
                   <Route path="/dev/preview" element={<DevPreview />} />

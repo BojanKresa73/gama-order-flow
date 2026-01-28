@@ -21,7 +21,7 @@ export const LoginForm = () => {
     e.preventDefault();
     setLoading(true);
 
-    const { error } = await supabase.auth.signInWithPassword({
+    const { data, error } = await supabase.auth.signInWithPassword({
       email,
       password,
     });
@@ -32,14 +32,29 @@ export const LoginForm = () => {
         description: error.message,
         variant: "destructive",
       });
-    } else {
-      toast({
-        title: "Uspešno prijavljivanje",
-        description: "Dobrodošli!",
-      });
-      navigate("/dashboard");
+      setLoading(false);
+      return;
     }
 
+    // Check if user is a client_user (portal user) - block them from main app
+    const { data: roleData } = await supabase.rpc("current_user_role");
+    
+    if (roleData === "client_user") {
+      await supabase.auth.signOut();
+      toast({
+        title: "Pristup odbijen",
+        description: "Ovaj nalog je za Klijent Portal. Koristite /portal/login za pristup.",
+        variant: "destructive",
+      });
+      setLoading(false);
+      return;
+    }
+
+    toast({
+      title: "Uspešno prijavljivanje",
+      description: "Dobrodošli!",
+    });
+    navigate("/dashboard");
     setLoading(false);
   };
 

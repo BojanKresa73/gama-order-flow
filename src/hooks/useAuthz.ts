@@ -1,6 +1,15 @@
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 
+export type AppRole = 
+  | "superuser"
+  | "admin_plus"
+  | "admin"
+  | "operator"
+  | "operator_ctp"
+  | "client_user"
+  | "guest";
+
 export function useAuthz() {
   const { data, isLoading } = useQuery({
     queryKey: ["authz-role"],
@@ -11,13 +20,7 @@ export function useAuthz() {
     },
   });
 
-  const role = (data ?? "guest") as
-    | "superuser"
-    | "admin_plus"
-    | "admin"
-    | "operator"
-    | "operator_ctp"
-    | "guest";
+  const role = (data ?? "guest") as AppRole;
 
   return {
     role,
@@ -27,5 +30,7 @@ export function useAuthz() {
     isAdmin: role === "admin" || role === "admin_plus" || role === "superuser",
     isOp: role === "operator",
     isCtp: role === "operator_ctp",
+    isClientUser: role === "client_user",
+    isInternalUser: role !== "client_user" && role !== "guest",
   };
 }

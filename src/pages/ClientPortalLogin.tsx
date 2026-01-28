@@ -28,6 +28,14 @@ const ClientPortalLogin = () => {
 
       if (error) throw error;
 
+      // Check user role - only allow client_user
+      const { data: roleData } = await supabase.rpc("current_user_role");
+      
+      if (roleData && roleData !== "client_user") {
+        await supabase.auth.signOut();
+        throw new Error("Ovaj nalog je za interni sistem. Koristite glavnu stranicu za prijavu.");
+      }
+
       // Check if user is a portal user
       const { data: portalUser, error: portalError } = await supabase
         .from("client_portal_users")
