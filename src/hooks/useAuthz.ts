@@ -2,7 +2,7 @@ import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 
 export function useAuthz() {
-  const { data } = useQuery({
+  const { data, isLoading } = useQuery({
     queryKey: ["authz-role"],
     queryFn: async () => {
       const { data, error } = await supabase.rpc("current_user_role");
@@ -21,6 +21,7 @@ export function useAuthz() {
 
   return {
     role,
+    isLoading,
     isSuper: role === "superuser",
     isAdminPlus: role === "admin_plus" || role === "superuser",
     isAdmin: role === "admin" || role === "admin_plus" || role === "superuser",
