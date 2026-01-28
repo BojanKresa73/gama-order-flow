@@ -65,6 +65,9 @@ const ClientPortal = () => {
   const [portalUser, setPortalUser] = useState<ClientPortalUser | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [statusFilter, setStatusFilter] = useState<"open" | "closed" | "all">("open");
+  const [sortBy, setSortBy] = useState<
+    "created_desc" | "created_asc" | "priority_desc" | "order_desc"
+  >("created_desc");
   const [searchQuery, setSearchQuery] = useState("");
   const [changePriorityDialog, setChangePriorityDialog] = useState<{
     open: boolean;
@@ -113,7 +116,7 @@ const ClientPortal = () => {
 
   // Fetch work orders for this client
   const { data: workOrders = [], isLoading: ordersLoading } = useQuery({
-    queryKey: ["client-portal-orders", portalUser?.client_id, statusFilter],
+    queryKey: ["client-portal-orders", portalUser?.client_id, statusFilter, sortBy],
     queryFn: async () => {
       if (!portalUser?.client_id) return [];
 
@@ -124,25 +127,25 @@ const ClientPortal = () => {
         .is("deleted_at", null);
 
       if (statusFilter === "open") {
-        // Open orders: sort by priority (high first), then by created_at (oldest first)
-        query = query
-          .eq("status", "open")
-          .order("priority", { ascending: false })
-          .order("created_at", { ascending: true });
+        query = query.eq("status", "open");
       } else if (statusFilter === "closed") {
-        // Closed orders: sort by created_at descending (newer first, older at bottom)
-        query = query
-          .eq("status", "closed")
-          .order("created_at", { ascending: false });
-      } else {
-        // All orders: show open first sorted by priority, then closed sorted by closed_at
-        query = query
-          .order("status", { ascending: true }) // 'closed' < 'open' alphabetically, so ascending puts 'closed' first - we need opposite
-          .order("priority", { ascending: false })
-          .order("closed_at", { ascending: false, nullsFirst: true });
+        query = query.eq("status", "closed");
       }
 
-      const { data, error } = await query.limit(100);
+      // Sorting
+      // Default: created_at DESC (noviji gore, stariji dole)
+      if (sortBy === "created_desc") {
+        query = query.order("created_at", { ascending: false });
+      } else if (sortBy === "created_asc") {
+        query = query.order("created_at", { ascending: true });
+      } else if (sortBy === "priority_desc") {
+        query = query.order("priority", { ascending: false }).order("created_at", { ascending: false });
+      } else if (sortBy === "order_desc") {
+        query = query.order("display_order_number", { ascending: false });
+      }
+
+      // Avoid truncating results too aggressively (helps when 'Svi' has many closed orders)
+      const { data, error } = await query.limit(500);
       if (error) throw error;
       return data as WorkOrder[];
     },
@@ -337,19 +340,33 @@ const ClientPortal = () => {
                   />
                 </div>
               </div>
-              <Select
-                value={statusFilter}
-                onValueChange={(v) => setStatusFilter(v as typeof statusFilter)}
-              >
-                <SelectTrigger className="w-[180px]">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="open">Otvoreni</SelectItem>
-                  <SelectItem value="closed">Zatvoreni</SelectItem>
-                  <SelectItem value="all">Svi</SelectItem>
-                </SelectContent>
-              </Select>
+              <div className="flex gap-3">
+                <Select
+                  value={statusFilter}
+                  onValueChange={(v) => setStatusFilter(v as typeof statusFilter)}
+                >
+                  <SelectTrigger className="w-[180px]">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="open">Otvoreni</SelectItem>
+                    <SelectItem value="closed">Zatvoreni</SelectItem>
+                    <SelectItem value="all">Svi</SelectItem>
+                  </SelectContent>
+                </Select>
+
+                <Select value={sortBy} onValueChange={(v) => setSortBy(v as typeof sortBy)}>
+                  <SelectTrigger className="w-[220px]">
+                    <SelectValue placeholder="Sortiraj" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="created_desc">Kreiran (noviji prvo)</SelectItem>
+                    <SelectItem value="created_asc">Kreiran (stariji prvo)</SelectItem>
+                    <SelectItem value="priority_desc">Prioritet (veći prvo)</SelectItem>
+                    <SelectItem value="order_desc">Broj naloga (veći prvo)</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
             </div>
 
             {ordersLoading ? (
