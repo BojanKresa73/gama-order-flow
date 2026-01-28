@@ -9,10 +9,12 @@ import { useState } from "react";
 
 export default function AdminSection() {
   const nav = useNavigate();
-  const { isSuper, isAdmin } = useAuthz();
+  const { isSuper, isAdmin, isLoading } = useAuthz();
   const { toast } = useToast();
   const [isBackingUp, setIsBackingUp] = useState(false);
 
+  // Wait for role to load before hiding the section
+  if (isLoading) return null;
   if (!isSuper && !isAdmin) return null;
 
   const handleBackup = async () => {
