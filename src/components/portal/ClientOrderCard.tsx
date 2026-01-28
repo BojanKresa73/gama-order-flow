@@ -19,6 +19,7 @@ interface WorkOrder {
   created_at: string;
   closed_at: string | null;
   order_type: string;
+  total_plates: number;
 }
 
 interface FileItem {
@@ -30,11 +31,12 @@ interface FileItem {
 
 interface Props {
   order: WorkOrder;
+  index: number;
   onChangePriority: (order: WorkOrder) => void;
   searchQuery: string;
 }
 
-export function ClientOrderCard({ order, onChangePriority, searchQuery }: Props) {
+export function ClientOrderCard({ order, index, onChangePriority, searchQuery }: Props) {
   const [isOpen, setIsOpen] = useState(false);
 
   // Fetch files for this order
@@ -113,11 +115,17 @@ export function ClientOrderCard({ order, onChangePriority, searchQuery }: Props)
   return (
     <Card className="overflow-hidden">
       <CardContent className="p-4">
-        {/* Header row with order number and status */}
+        {/* Header row with index, order number and status */}
         <div className="flex items-start justify-between gap-2 mb-3">
           <div className="flex-1 min-w-0">
-            <div className="font-semibold text-base">
+            <div className="font-semibold text-base flex items-center gap-2">
+              <span className="text-muted-foreground text-sm">#{index}</span>
               {order.display_order_number || order.order_code}
+              {order.order_type === "ctp" && order.total_plates > 0 && (
+                <span className="text-xs bg-muted px-1.5 py-0.5 rounded">
+                  {order.total_plates} ploča
+                </span>
+              )}
             </div>
             {order.job_name && (
               <div className="text-sm text-muted-foreground truncate">

@@ -55,6 +55,7 @@ interface WorkOrder {
   created_at: string;
   closed_at: string | null;
   order_type: string;
+  total_plates: number;
 }
 
 const ClientPortal = () => {
@@ -114,7 +115,7 @@ const ClientPortal = () => {
     checkPortalUser();
   }, [navigate, toast]);
 
-  // Fetch work orders for this client
+  // Fetch work orders for this client with plate counts
   const { data: workOrders = [], isLoading: ordersLoading } = useQuery({
     queryKey: ["client-portal-orders", portalUser?.client_id, statusFilter, sortBy],
     queryFn: async () => {
@@ -133,7 +134,6 @@ const ClientPortal = () => {
       }
 
       // Sorting
-      // Default: created_at DESC (noviji gore, stariji dole)
       if (sortBy === "created_desc") {
         query = query.order("created_at", { ascending: false });
       } else if (sortBy === "created_asc") {
@@ -144,10 +144,27 @@ const ClientPortal = () => {
         query = query.order("display_order_number", { ascending: false });
       }
 
-      // Avoid truncating results too aggressively (helps when 'Svi' has many closed orders)
       const { data, error } = await query.limit(500);
       if (error) throw error;
-      return data as WorkOrder[];
+
+      // Fetch plate counts for CTP orders
+      const orderIds = (data || []).map(o => o.id);
+      const { data: plateCounts } = await supabase
+        .from("file_entries")
+        .select("work_order_id, quantity")
+        .in("work_order_id", orderIds);
+
+      // Calculate totals per order
+      const plateMap = new Map<string, number>();
+      (plateCounts || []).forEach(p => {
+        const current = plateMap.get(p.work_order_id) || 0;
+        plateMap.set(p.work_order_id, current + (p.quantity || 0));
+      });
+
+      return (data || []).map(order => ({
+        ...order,
+        total_plates: plateMap.get(order.id) || 0,
+      })) as WorkOrder[];
     },
     enabled: !!portalUser?.client_id,
   });
@@ -380,10 +397,11 @@ const ClientPortal = () => {
             ) : isMobile ? (
               /* Mobile: Card view */
               <div className="space-y-3">
-                {filteredOrders.map((order) => (
+                {filteredOrders.map((order, index) => (
                   <ClientOrderCard
                     key={order.id}
                     order={order}
+                    index={index + 1}
                     onChangePriority={openPriorityDialog}
                     searchQuery={searchQuery}
                   />
@@ -396,8 +414,10 @@ const ClientPortal = () => {
                   <TableHeader>
                     <TableRow>
                       <TableHead className="w-8"></TableHead>
+                      <TableHead className="w-12">#</TableHead>
                       <TableHead>Broj naloga</TableHead>
                       <TableHead>Naziv</TableHead>
+                      <TableHead className="text-center">Ploče</TableHead>
                       <TableHead>Status</TableHead>
                       <TableHead>Prioritet</TableHead>
                       <TableHead>Kreiran</TableHead>
@@ -405,10 +425,11 @@ const ClientPortal = () => {
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {filteredOrders.map((order) => (
+                    {filteredOrders.map((order, index) => (
                       <ClientOrderRow
                         key={order.id}
                         order={order}
+                        index={index + 1}
                         onChangePriority={openPriorityDialog}
                         searchQuery={searchQuery}
                       />

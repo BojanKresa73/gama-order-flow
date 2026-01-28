@@ -22,6 +22,7 @@ interface WorkOrder {
   created_at: string;
   closed_at: string | null;
   order_type: string;
+  total_plates: number;
 }
 
 interface FileItem {
@@ -33,11 +34,12 @@ interface FileItem {
 
 interface Props {
   order: WorkOrder;
+  index: number;
   onChangePriority: (order: WorkOrder) => void;
   searchQuery: string;
 }
 
-export function ClientOrderRow({ order, onChangePriority, searchQuery }: Props) {
+export function ClientOrderRow({ order, index, onChangePriority, searchQuery }: Props) {
   const [isOpen, setIsOpen] = useState(false);
 
   // Fetch files for this order
@@ -130,10 +132,16 @@ export function ClientOrderRow({ order, onChangePriority, searchQuery }: Props) 
             )}
           </Button>
         </TableCell>
+        <TableCell className="text-muted-foreground text-center w-12">
+          {index}
+        </TableCell>
         <TableCell className="font-medium">
           {order.display_order_number || order.order_code}
         </TableCell>
         <TableCell>{highlightMatch(order.job_name || "-")}</TableCell>
+        <TableCell className="text-center font-medium">
+          {order.order_type === "ctp" && order.total_plates > 0 ? order.total_plates : "-"}
+        </TableCell>
         <TableCell>
           <Badge variant={order.status === "open" ? "default" : "secondary"}>
             {order.status === "open" ? "Otvoren" : "Zatvoren"}
@@ -164,7 +172,7 @@ export function ClientOrderRow({ order, onChangePriority, searchQuery }: Props) 
       </TableRow>
       {isOpen && (
         <TableRow className="bg-muted/30 hover:bg-muted/30">
-          <TableCell colSpan={7} className="py-3">
+          <TableCell colSpan={9} className="py-3">
             <div className="pl-8">
               <div className="flex items-center gap-2 mb-2">
                 <FileText className="h-4 w-4 text-muted-foreground" />
