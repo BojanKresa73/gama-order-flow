@@ -572,13 +572,13 @@ const AdminPriority = () => {
               <CardContent>
                 <div className="flex items-center gap-2">
                   <code className="flex-1 p-3 bg-muted rounded-lg text-sm font-mono">
-                    {window.location.origin}/portal/login
+                    https://gama-order-flow.lovable.app/portal/login
                   </code>
                   <Button
                     variant="outline"
                     size="sm"
                     onClick={() => {
-                      navigator.clipboard.writeText(`${window.location.origin}/portal/login`);
+                      navigator.clipboard.writeText("https://gama-order-flow.lovable.app/portal/login");
                       toast({
                         title: "Kopirano",
                         description: "Link je kopiran u clipboard",
@@ -590,7 +590,7 @@ const AdminPriority = () => {
                   <Button
                     variant="outline"
                     size="sm"
-                    onClick={() => window.open("/portal/login", "_blank")}
+                    onClick={() => window.open("https://gama-order-flow.lovable.app/portal/login", "_blank")}
                   >
                     <ExternalLink className="h-4 w-4" />
                   </Button>
