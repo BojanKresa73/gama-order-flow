@@ -54,9 +54,10 @@ interface LocalDigitalJobsTableProps {
   onChange: (jobs: LocalDigitalJob[]) => void;
   printSides: string;
   clientRabatProcenat?: number;
+  prepHours?: number;
 }
 
-export const LocalDigitalJobsTable = ({ jobs, onChange, printSides, clientRabatProcenat }: LocalDigitalJobsTableProps) => {
+export const LocalDigitalJobsTable = ({ jobs, onChange, printSides, clientRabatProcenat, prepHours = 0 }: LocalDigitalJobsTableProps) => {
   const [showAddFilesModal, setShowAddFilesModal] = useState(false);
   const { data: paperTypes } = useDigitalPaperTypes();
 
@@ -109,7 +110,7 @@ export const LocalDigitalJobsTable = ({ jobs, onChange, printSides, clientRabatP
 
   return (
     <div className="space-y-4">
-      <DigitalJobsSummary jobs={jobs} clientRabatProcenat={clientRabatProcenat} />
+      <DigitalJobsSummary jobs={jobs} clientRabatProcenat={clientRabatProcenat} prepHours={prepHours} />
       
       <div className="flex gap-2">
         <Button

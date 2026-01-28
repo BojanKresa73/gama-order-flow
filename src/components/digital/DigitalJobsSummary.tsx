@@ -9,14 +9,15 @@ import * as XLSX from "xlsx";
 interface DigitalJobsSummaryProps {
   jobs: LocalDigitalJob[];
   clientRabatProcenat?: number;
+  prepHours?: number;
 }
 
-export const DigitalJobsSummary = ({ jobs, clientRabatProcenat = 0 }: DigitalJobsSummaryProps) => {
+export const DigitalJobsSummary = ({ jobs, clientRabatProcenat = 0, prepHours = 0 }: DigitalJobsSummaryProps) => {
   const { isSuper, isAdmin } = useAuthz();
   const canSeePrices = isSuper || isAdmin;
 
   // Calculate totals using new grouped logic
-  const pricing = calculateGroupedPricing(jobs);
+  const pricing = calculateGroupedPricing(jobs, prepHours);
   const { 
     totalSheets, 
     totalColorClicks, 
@@ -25,9 +26,11 @@ export const DigitalJobsSummary = ({ jobs, clientRabatProcenat = 0 }: DigitalJob
     totalPaperCost,
     ruc,
     rucPercent,
-    groups
+    groups,
+    prepCost,
+    totalWithPrep
   } = pricing;
-  const amountWithDiscount = totalAmount * (1 - clientRabatProcenat / 100);
+  const amountWithDiscount = totalWithPrep * (1 - clientRabatProcenat / 100);
 
   const handleExportXLSX = () => {
     const worksheetData: (string | number)[][] = [
@@ -73,7 +76,9 @@ export const DigitalJobsSummary = ({ jobs, clientRabatProcenat = 0 }: DigitalJob
     // Only include prices for admins/superusers
     if (canSeePrices) {
       worksheetData.push(
-        ["Ukupna cena (€):", totalAmount.toFixed(2)],
+        ["Štampa (€):", totalAmount.toFixed(2)],
+        ["Priprema (€):", prepCost.toFixed(2)],
+        ["Ukupno (€):", totalWithPrep.toFixed(2)],
         ["Papir (€):", totalPaperCost.toFixed(2)],
         ["RUC (€):", ruc.toFixed(2)],
         ["RUC (%):", rucPercent.toFixed(1) + "%"]
@@ -81,7 +86,7 @@ export const DigitalJobsSummary = ({ jobs, clientRabatProcenat = 0 }: DigitalJob
 
       if (clientRabatProcenat > 0) {
         worksheetData.push(
-          [`Rabat (${clientRabatProcenat}%):`, (totalAmount - amountWithDiscount).toFixed(2)],
+          [`Rabat (${clientRabatProcenat}%):`, (totalWithPrep - amountWithDiscount).toFixed(2)],
           ["Sa rabatom (€):", amountWithDiscount.toFixed(2)]
         );
       }
@@ -116,8 +121,18 @@ export const DigitalJobsSummary = ({ jobs, clientRabatProcenat = 0 }: DigitalJob
             {canSeePrices && (
               <>
                 <div>
-                  <div className="text-sm text-muted-foreground">Cena</div>
-                  <div className="text-2xl font-bold text-primary">€{totalAmount.toFixed(2)}</div>
+                  <div className="text-sm text-muted-foreground">Štampa</div>
+                  <div className="text-xl font-bold text-primary">€{totalAmount.toFixed(2)}</div>
+                </div>
+                {prepCost > 0 && (
+                  <div>
+                    <div className="text-sm text-muted-foreground">Priprema</div>
+                    <div className="text-xl font-bold text-blue-600">€{prepCost.toFixed(2)}</div>
+                  </div>
+                )}
+                <div>
+                  <div className="text-sm text-muted-foreground">Ukupno</div>
+                  <div className="text-2xl font-bold text-primary">€{totalWithPrep.toFixed(2)}</div>
                 </div>
                 <div>
                   <div className="text-sm text-muted-foreground">Papir</div>

@@ -50,6 +50,7 @@ const NewWorkOrder = () => {
     clicks_count: 0,
     test_clicks: 0,
     finishing: [] as string[],
+    prep_hours: 0,
   });
 
   // Use stable IDs for items
@@ -195,6 +196,7 @@ const NewWorkOrder = () => {
         clicks_count: order.clicks_count || 0,
         test_clicks: order.test_clicks || 0,
         finishing: finishingOptions,
+        prep_hours: order.prep_hours || 0,
       });
 
       // Set order type
@@ -367,6 +369,7 @@ const NewWorkOrder = () => {
                 lamination: formData.lamination,
                 trial_print: formData.trial_print,
                 trial_sheets: formData.trial_sheets,
+                prep_hours: formData.prep_hours,
               },
               items: itemsDiff,
             },
@@ -448,6 +451,7 @@ const NewWorkOrder = () => {
         print_spec: formData.print_spec,
         lamination: formData.lamination,
         film_note: formData.notes,
+        prep_hours: formData.prep_hours,
       };
 
       // Call edge function to create work order with proper serial number
@@ -972,7 +976,23 @@ const NewWorkOrder = () => {
                         </Select>
                       </div>
 
-                      {/* Finishing Options */}
+                      <div className="space-y-2">
+                        <Label htmlFor="prep_hours">Priprema (sati)</Label>
+                        <Input
+                          id="prep_hours"
+                          type="number"
+                          step="0.5"
+                          min="0"
+                          value={formData.prep_hours || ''}
+                          onChange={(e) => setFormData({ ...formData, prep_hours: parseFloat(e.target.value) || 0 })}
+                          placeholder="Broj sati"
+                        />
+                        {formData.prep_hours > 0 && (
+                          <p className="text-xs text-muted-foreground">
+                            = {(formData.prep_hours * 25).toFixed(2)} € (25 €/sat)
+                          </p>
+                        )}
+                      </div>
                       <div className="space-y-2 md:col-span-2">
                         <Label>Dorada</Label>
                         <div className="flex flex-wrap gap-3 p-3 border rounded-lg bg-background">
@@ -1023,6 +1043,7 @@ const NewWorkOrder = () => {
                         onChange={handleDigitalJobsChange}
                         printSides={formData.print_spec || "4/4"}
                         clientRabatProcenat={clients.find(c => c.id === formData.client_id)?.rabat_procenat || 0}
+                        prepHours={formData.prep_hours}
                       />
                     </div>
                   </div>

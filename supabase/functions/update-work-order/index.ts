@@ -13,12 +13,14 @@ interface UpdateWorkOrderRequest {
     client_id: string;
     notes?: string;
     job_name?: string;
+    run_quantity?: number;
     print_format?: string;
     binding?: string;
     print_spec?: string;
     lamination?: string;
     trial_print?: boolean;
     trial_sheets?: number;
+    prep_hours?: number;
   };
   items: {
     created: any[];
