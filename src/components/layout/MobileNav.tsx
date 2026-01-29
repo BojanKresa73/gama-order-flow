@@ -20,6 +20,7 @@ import { useToast } from "@/hooks/use-toast";
 import { useAuthz } from "@/hooks/useAuthz";
 import gamaLogo from "@/assets/gama-united-logo.svg";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
+import { PriorityNotificationBell } from "@/components/priority/PriorityNotificationBell";
 
 interface MobileNavProps {
   userName?: string;
@@ -75,9 +76,12 @@ export const MobileNav = ({ userName }: MobileNavProps) => {
       </SheetTrigger>
       <SheetContent side="left" className="w-[300px] p-0">
         <SheetHeader className="p-4 border-b">
-          <div className="flex items-center gap-3">
-            <img src={gamaLogo} alt="Gama United" className="h-10" />
-            <SheetTitle className="text-left">Gama United</SheetTitle>
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <img src={gamaLogo} alt="Gama United" className="h-10" />
+              <SheetTitle className="text-left">Gama United</SheetTitle>
+            </div>
+            <PriorityNotificationBell />
           </div>
           {userName && (
             <p className="text-sm text-muted-foreground text-left mt-2">{userName}</p>
