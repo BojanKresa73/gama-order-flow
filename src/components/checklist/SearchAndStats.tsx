@@ -75,17 +75,33 @@ const SearchAndStats = () => {
 
   const fetchWorkers = async () => {
     try {
-      const { data, error } = await supabase
+      // Fetch profiles with their roles, excluding client_user role (portal users)
+      const { data: profilesData, error: profilesError } = await supabase
         .from("profiles")
         .select("id, full_name")
         .not("full_name", "is", null)
         .order("full_name");
 
-      if (error) throw error;
+      if (profilesError) throw profilesError;
 
+      // Fetch user roles to filter out client_user
+      const { data: rolesData, error: rolesError } = await supabase
+        .from("user_roles")
+        .select("user_id, role");
+
+      if (rolesError) throw rolesError;
+
+      // Create a set of client_user IDs to exclude
+      const clientUserIds = new Set(
+        (rolesData || [])
+          .filter((r) => r.role === "client_user")
+          .map((r) => r.user_id)
+      );
+
+      // Filter out client_user profiles from workers list
       setWorkers(
-        (data || [])
-          .filter((p) => p.full_name)
+        (profilesData || [])
+          .filter((p) => p.full_name && !clientUserIds.has(p.id))
           .map((p) => ({ id: p.id, name: p.full_name! }))
       );
     } catch (error) {
