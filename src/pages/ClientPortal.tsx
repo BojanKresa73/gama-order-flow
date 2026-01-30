@@ -77,6 +77,10 @@ const ClientPortal = () => {
     note: string;
   }>({ open: false, workOrder: null, newPriority: 5, note: "" });
 
+  // Presence tracking ref
+  const presenceChannelRef = useRef<ReturnType<typeof supabase.channel> | null>(null);
+  const heartbeatIntervalRef = useRef<NodeJS.Timeout | null>(null);
+
   // Check if user is a portal user
   useEffect(() => {
     const checkPortalUser = async () => {
@@ -123,39 +127,46 @@ const ClientPortal = () => {
         },
       });
 
+      presenceChannelRef.current = presenceChannel;
+
       presenceChannel.subscribe(async (status) => {
+        console.log("[Portal User Presence] Channel status:", status);
         if (status === "SUBSCRIBED") {
-          await presenceChannel.track({
+          const result = await presenceChannel.track({
+            user_id: user.id,
+            full_name: portalData.full_name,
+            client_name: portalData.clients?.name || "Nepoznat klijent",
+            online_at: new Date().toISOString(),
+          });
+          console.log("[Portal User Presence] Track result:", result);
+        }
+      });
+
+      // Heartbeat every 30 seconds
+      heartbeatIntervalRef.current = setInterval(async () => {
+        if (presenceChannelRef.current) {
+          await presenceChannelRef.current.track({
             user_id: user.id,
             full_name: portalData.full_name,
             client_name: portalData.clients?.name || "Nepoznat klijent",
             online_at: new Date().toISOString(),
           });
         }
-      });
-
-      // Heartbeat every 30 seconds
-      const heartbeatInterval = setInterval(async () => {
-        await presenceChannel.track({
-          user_id: user.id,
-          full_name: portalData.full_name,
-          client_name: portalData.clients?.name || "Nepoznat klijent",
-          online_at: new Date().toISOString(),
-        });
       }, 30000);
-
-      // Cleanup function
-      return () => {
-        clearInterval(heartbeatInterval);
-        presenceChannel.untrack();
-        presenceChannel.unsubscribe();
-      };
     };
 
-    const cleanup = checkPortalUser();
+    checkPortalUser();
     
     return () => {
-      cleanup?.then((fn) => fn?.());
+      if (heartbeatIntervalRef.current) {
+        clearInterval(heartbeatIntervalRef.current);
+        heartbeatIntervalRef.current = null;
+      }
+      if (presenceChannelRef.current) {
+        presenceChannelRef.current.untrack();
+        presenceChannelRef.current.unsubscribe();
+        presenceChannelRef.current = null;
+      }
     };
   }, [navigate, toast]);
 
