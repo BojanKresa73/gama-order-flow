@@ -8,15 +8,24 @@ import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
 import { LogIn, Eye, EyeOff } from "lucide-react";
 
-// Removes invisible unicode characters that can sneak in via copy-paste
-const sanitizeInput = (str: string): string => {
-  return str
-    // Remove zero-width characters
-    .replace(/[\u200B-\u200D\uFEFF\u00A0]/g, '')
-    // Replace non-breaking spaces with regular spaces
-    .replace(/\s+/g, ' ')
+// Copy/paste can include invisible Unicode chars (zero-width, bidi marks, NBSP, etc.).
+// Auth treats them as real characters -> "Invalid login credentials" even if it looks correct.
+const stripFormatChars = (str: string): string =>
+  str
+    .normalize("NFKC")
+    // Unicode "Format" chars (Cf) + soft hyphen
+    .replace(/[\p{Cf}\u00AD]/gu, "");
+
+const sanitizeEmail = (str: string): string =>
+  stripFormatChars(str)
+    // remove *all* whitespace/separators for emails
+    .replace(/[\p{Z}\s]+/gu, "")
     .trim();
-};
+
+const sanitizePassword = (str: string): string =>
+  stripFormatChars(str)
+    // keep internal spaces, only trim leading/trailing
+    .replace(/^[\p{Z}\s]+|[\p{Z}\s]+$/gu, "");
 
 const ClientPortalLogin = () => {
   const navigate = useNavigate();
@@ -31,8 +40,8 @@ const ClientPortalLogin = () => {
     setIsLoading(true);
 
     try {
-      const emailClean = sanitizeInput(email);
-      const passwordClean = sanitizeInput(password);
+      const emailClean = sanitizeEmail(email);
+      const passwordClean = sanitizePassword(password);
 
       const { data, error } = await supabase.auth.signInWithPassword({
         email: emailClean,
@@ -101,6 +110,13 @@ const ClientPortalLogin = () => {
                 autoComplete="email"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
+                onPaste={(e) => {
+                  const pasted = e.clipboardData.getData("text");
+                  if (pasted) {
+                    e.preventDefault();
+                    setEmail(sanitizeEmail(pasted));
+                  }
+                }}
                 placeholder="vas@email.com"
                 required
               />
@@ -114,6 +130,13 @@ const ClientPortalLogin = () => {
                   type={showPassword ? "text" : "password"}
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
+                  onPaste={(e) => {
+                    const pasted = e.clipboardData.getData("text");
+                    if (pasted) {
+                      e.preventDefault();
+                      setPassword(sanitizePassword(pasted));
+                    }
+                  }}
                   placeholder="••••••••"
                   required
                   className="pr-10"
