@@ -38,3 +38,6 @@ verify_jwt = true
 
 [functions.create-client-portal-user]
 verify_jwt = true
+
+[functions.generate-client-delivery-report]
+verify_jwt = true
