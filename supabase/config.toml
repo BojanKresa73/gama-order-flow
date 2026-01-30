@@ -41,3 +41,6 @@ verify_jwt = true
 
 [functions.generate-client-delivery-report]
 verify_jwt = true
+
+[functions.email-client-delivery-report]
+verify_jwt = true
