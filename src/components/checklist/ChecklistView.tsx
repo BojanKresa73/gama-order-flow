@@ -28,6 +28,7 @@ import { displayOrderNumber } from "@/lib/orderLabel";
 interface WorkOrder {
   id: string;
   order_number: string;
+  display_order_number?: string | null;
   order_code?: string | null;
   client_name: string;
   created_at: string;
@@ -131,6 +132,7 @@ const ChecklistView = ({ orderType, onNavigateToSearch }: ChecklistViewProps) =>
             return {
               id: order.id,
               order_number: order.order_number,
+              display_order_number: order.display_order_number,
               order_code: order.order_code,
               client_name: (order.clients as any).name,
               created_at: order.created_at,
@@ -165,6 +167,7 @@ const ChecklistView = ({ orderType, onNavigateToSearch }: ChecklistViewProps) =>
           return {
             id: order.id,
             order_number: order.order_number,
+            display_order_number: order.display_order_number,
             order_code: order.order_code,
             client_name: (order.clients as any).name,
             created_at: order.created_at,
