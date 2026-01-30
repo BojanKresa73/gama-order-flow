@@ -79,15 +79,19 @@ Deno.serve(async (req) => {
 
       // Update email if provided
       if (email && userId) {
+        const emailClean = String(email).trim();
+        if (!emailClean) {
+          // Empty after trimming, skip
+        } else {
         // First check if email is already the same
         const { data: existingUser } = await supabaseAdmin.auth.admin.getUserById(userId);
         
-        if (existingUser?.user?.email?.toLowerCase() === email.toLowerCase()) {
+        if (existingUser?.user?.email?.toLowerCase() === emailClean.toLowerCase()) {
           console.log("Email is the same, skipping update");
           // Email is the same, no need to update - just continue
         } else {
           const { error: emailError } = await supabaseAdmin.auth.admin.updateUserById(userId, {
-            email: email,
+            email: emailClean,
           });
 
           if (emailError) {
@@ -104,6 +108,7 @@ Deno.serve(async (req) => {
               { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
             );
           }
+        }
         }
       }
 
