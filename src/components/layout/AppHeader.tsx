@@ -7,6 +7,7 @@ import { useIsMobile } from "@/hooks/use-mobile";
 import gamaLogo from "@/assets/gama-united-logo.svg";
 import { MobileNav } from "./MobileNav";
 import { PriorityNotificationBell } from "@/components/priority/PriorityNotificationBell";
+import { Flag } from "lucide-react";
 
 interface AppHeaderProps {
   userName?: string;
@@ -17,7 +18,7 @@ interface AppHeaderProps {
 export const AppHeader = ({ userName, showBackButton, title }: AppHeaderProps) => {
   const navigate = useNavigate();
   const { toast } = useToast();
-  const { isSuper } = useAuthz();
+  const { isSuper, isAdmin, isLoading: isAuthzLoading } = useAuthz();
   const isMobile = useIsMobile();
 
   const handleLogout = async () => {
@@ -51,6 +52,14 @@ export const AppHeader = ({ userName, showBackButton, title }: AppHeaderProps) =
         <div className="hidden md:flex items-center gap-4">
           <PriorityNotificationBell />
           <span className="text-sm text-muted-foreground">{userName}</span>
+
+          {!isAuthzLoading && isAdmin && (
+            <Button variant="outline" onClick={() => navigate("/admin/priority")}>
+              <Flag className="h-4 w-4 mr-2" />
+              Prioritet
+            </Button>
+          )}
+
           {isSuper && (
             <Button variant="outline" onClick={() => navigate("/admin/users")}>
               Administracija
