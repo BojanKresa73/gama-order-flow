@@ -79,16 +79,31 @@ Deno.serve(async (req) => {
 
       // Update email if provided
       if (email && userId) {
-        const { error: emailError } = await supabaseAdmin.auth.admin.updateUserById(userId, {
-          email: email,
-        });
+        // First check if email is already the same
+        const { data: existingUser } = await supabaseAdmin.auth.admin.getUserById(userId);
+        
+        if (existingUser?.user?.email?.toLowerCase() === email.toLowerCase()) {
+          console.log("Email is the same, skipping update");
+          // Email is the same, no need to update - just continue
+        } else {
+          const { error: emailError } = await supabaseAdmin.auth.admin.updateUserById(userId, {
+            email: email,
+          });
 
-        if (emailError) {
-          console.error("Email update error:", emailError);
-          return new Response(
-            JSON.stringify({ error: "Greška pri promeni emaila: " + emailError.message }),
-            { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-          );
+          if (emailError) {
+            console.error("Email update error:", emailError);
+            // Check if it's a validation error
+            if (emailError.message?.includes("invalid format") || emailError.message?.includes("validate email")) {
+              return new Response(
+                JSON.stringify({ error: "Email format nije prihvaćen od sistema. Proverite da li je email ispravan ili kontaktirajte podršku." }),
+                { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+              );
+            }
+            return new Response(
+              JSON.stringify({ error: "Greška pri promeni emaila: " + emailError.message }),
+              { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+            );
+          }
         }
       }
 
