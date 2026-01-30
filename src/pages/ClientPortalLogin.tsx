@@ -21,9 +21,12 @@ const ClientPortalLogin = () => {
     setIsLoading(true);
 
     try {
+      const emailClean = email.trim();
+      const passwordClean = password.trim();
+
       const { data, error } = await supabase.auth.signInWithPassword({
-        email,
-        password,
+        email: emailClean,
+        password: passwordClean,
       });
 
       if (error) throw error;
@@ -57,7 +60,10 @@ const ClientPortalLogin = () => {
     } catch (error: any) {
       toast({
         title: "Greška pri prijavi",
-        description: error.message,
+        description:
+          error?.message === "Invalid login credentials"
+            ? "Pogrešan email ili lozinka. Ako treba, resetuj lozinku u Admin → Priority."
+            : error.message,
         variant: "destructive",
       });
     } finally {
