@@ -20,24 +20,16 @@ export function OnlinePortalUsersProvider({ children }: { children: ReactNode })
   const [onlinePortalUsers, setOnlinePortalUsers] = useState<OnlinePortalUser[]>([]);
 
   useEffect(() => {
-    // Listen to the portal users presence channel (read-only for internal users)
-    const channel = supabase.channel("online-portal-users", {
-      config: {
-        presence: {
-          key: "listener",
-        },
-      },
-    });
+    // Listen to the portal users presence channel
+    const channel = supabase.channel("online-portal-users");
 
     channel
       .on("presence", { event: "sync" }, () => {
         const state = channel.presenceState();
+        console.log("[Portal Presence] Sync event, state:", state);
         const users: OnlinePortalUser[] = [];
         
         Object.entries(state).forEach(([key, presences]) => {
-          // Skip our own listener key
-          if (key === "listener") return;
-          
           if (presences && presences.length > 0) {
             const presence = presences[0] as any;
             // Only include portal users (they have client_name)
@@ -52,9 +44,18 @@ export function OnlinePortalUsersProvider({ children }: { children: ReactNode })
           }
         });
         
+        console.log("[Portal Presence] Online portal users:", users);
         setOnlinePortalUsers(users);
       })
-      .subscribe();
+      .on("presence", { event: "join" }, ({ key, newPresences }) => {
+        console.log("[Portal Presence] User joined:", key, newPresences);
+      })
+      .on("presence", { event: "leave" }, ({ key, leftPresences }) => {
+        console.log("[Portal Presence] User left:", key, leftPresences);
+      })
+      .subscribe((status) => {
+        console.log("[Portal Presence] Channel status:", status);
+      });
 
     return () => {
       channel.unsubscribe();
