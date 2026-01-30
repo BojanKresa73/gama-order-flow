@@ -29,6 +29,7 @@ import OrderDeliveryNote from "./pages/OrderDeliveryNote";
 import CtpStats from "./pages/CtpStats";
 import DigitalStats from "./pages/DigitalStats";
 import LargeFormatNew from "./pages/LargeFormatNew";
+import ClientDeliveryReport from "./pages/ClientDeliveryReport";
 import ClientPortal from "./pages/ClientPortal";
 import ClientPortalLogin from "./pages/ClientPortalLogin";
 import NotFound from "./pages/NotFound";
@@ -75,6 +76,7 @@ const App = () => {
               <Route path="/stats/ctp" element={<InternalUserGuard><CtpStats /></InternalUserGuard>} />
               <Route path="/stats/digital" element={<InternalUserGuard><DigitalStats /></InternalUserGuard>} />
               <Route path="/large-format/new" element={<InternalUserGuard><LargeFormatNew /></InternalUserGuard>} />
+              <Route path="/reports/delivery-notes" element={<InternalUserGuard><ClientDeliveryReport /></InternalUserGuard>} />
               {import.meta.env.VITE_SHOW_DEV_PREVIEW === "true" && (
               <>
                   <Route path="/dev/preview" element={<DevPreview />} />
