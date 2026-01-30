@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
@@ -110,9 +110,53 @@ const ClientPortal = () => {
 
       setPortalUser(portalData);
       setIsLoading(false);
+
+      // Setup presence tracking for portal users
+      const presenceChannel = supabase.channel("online-portal-users", {
+        config: {
+          presence: {
+            key: user.id,
+          },
+          broadcast: {
+            self: true,
+          },
+        },
+      });
+
+      presenceChannel.subscribe(async (status) => {
+        if (status === "SUBSCRIBED") {
+          await presenceChannel.track({
+            user_id: user.id,
+            full_name: portalData.full_name,
+            client_name: portalData.clients?.name || "Nepoznat klijent",
+            online_at: new Date().toISOString(),
+          });
+        }
+      });
+
+      // Heartbeat every 30 seconds
+      const heartbeatInterval = setInterval(async () => {
+        await presenceChannel.track({
+          user_id: user.id,
+          full_name: portalData.full_name,
+          client_name: portalData.clients?.name || "Nepoznat klijent",
+          online_at: new Date().toISOString(),
+        });
+      }, 30000);
+
+      // Cleanup function
+      return () => {
+        clearInterval(heartbeatInterval);
+        presenceChannel.untrack();
+        presenceChannel.unsubscribe();
+      };
     };
 
-    checkPortalUser();
+    const cleanup = checkPortalUser();
+    
+    return () => {
+      cleanup?.then((fn) => fn?.());
+    };
   }, [navigate, toast]);
 
   // Fetch work orders for this client with plate counts
