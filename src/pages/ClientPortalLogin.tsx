@@ -8,6 +8,16 @@ import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
 import { LogIn, Eye, EyeOff } from "lucide-react";
 
+// Removes invisible unicode characters that can sneak in via copy-paste
+const sanitizeInput = (str: string): string => {
+  return str
+    // Remove zero-width characters
+    .replace(/[\u200B-\u200D\uFEFF\u00A0]/g, '')
+    // Replace non-breaking spaces with regular spaces
+    .replace(/\s+/g, ' ')
+    .trim();
+};
+
 const ClientPortalLogin = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
@@ -21,8 +31,8 @@ const ClientPortalLogin = () => {
     setIsLoading(true);
 
     try {
-      const emailClean = email.trim();
-      const passwordClean = password.trim();
+      const emailClean = sanitizeInput(email);
+      const passwordClean = sanitizeInput(password);
 
       const { data, error } = await supabase.auth.signInWithPassword({
         email: emailClean,
