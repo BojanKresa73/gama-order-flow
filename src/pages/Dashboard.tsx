@@ -22,6 +22,7 @@ import { TopClientsCard } from "@/components/dashboard/TopClientsCard";
 import AdminSection from "@/components/dashboard/AdminSection";
 import { DigitalStatsSection } from "@/components/dashboard/DigitalStatsSection";
 import { InvoiceStatsCard } from "@/components/dashboard/InvoiceStatsCard";
+import { OnlinePortalUsersCard } from "@/components/dashboard/OnlinePortalUsersCard";
 import { AppHeader } from "@/components/layout/AppHeader";
 
 const Dashboard = () => {
@@ -192,9 +193,16 @@ const Dashboard = () => {
           </div>
 
           {/* Online Users - visible to all */}
-          <div className="col-span-1 sm:col-span-2 md:col-span-12 xl:col-span-4 min-w-0">
+          <div className="col-span-1 sm:col-span-2 md:col-span-6 xl:col-span-4 min-w-0">
             <OnlineUsersCard />
           </div>
+
+          {/* Online Portal Users - only for admin/superuser */}
+          {canViewStats && (
+            <div className="col-span-1 sm:col-span-2 md:col-span-6 xl:col-span-4 min-w-0">
+              <OnlinePortalUsersCard />
+            </div>
+          )}
 
           {/* Digital Stats Section - only for admin/superuser */}
           {canViewStats && <DigitalStatsSection />}
