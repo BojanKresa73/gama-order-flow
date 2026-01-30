@@ -195,7 +195,9 @@ export function EditPortalUserDialog({ user, open, onOpenChange }: Props) {
               <Label htmlFor="edit-email">Novi email (ostavite prazno da zadržite postojeći)</Label>
               <Input
                 id="edit-email"
-                type="email"
+                type="text"
+                inputMode="email"
+                autoComplete="email"
                 value={form.email}
                 onChange={(e) => setForm({ ...form, email: e.target.value })}
                 placeholder="novi@email.com"
