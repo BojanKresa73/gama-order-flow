@@ -112,8 +112,8 @@ export function generateMinimaxOrderXml(workOrder: WorkOrderData): string {
   // Build Artikli section
   const artikliXml = artikliData.map(art => `
     <Artikel>
-      <Sifra>${escapeXml(art.sifra)}</Sifra>
-      <Naziv>${escapeXml(art.naziv)}</Naziv>
+      <SifraArtikla>${escapeXml(art.sifra)}</SifraArtikla>
+      <NazivArtikla>${escapeXml(art.naziv)}</NazivArtikla>
       <MerskaEnota>${escapeXml(art.enota)}</MerskaEnota>
       <VrstaArtikla>B</VrstaArtikla>
       <Uporaba>D</Uporaba>
