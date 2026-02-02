@@ -95,17 +95,22 @@ export function generateMinimaxOrderXml(workOrder: WorkOrderData): string {
     : truncate(client.name.replace(/[^A-Za-z0-9]/g, "").toUpperCase(), 30);
 
   // Build NarociloVrstice (order lines)
+  // Build item description for article name (since Opis is not allowed in NarociloVrstica)
   const vrsticeXml = workOrder.items.map((item, index) => {
     const qty = item.total || item.qty || 1;
     const artikalSifra = `${getArtikalSifra(workOrder.order_type)}-${(index + 1).toString().padStart(3, "0")}`;
     
+    // Combine label with details in NazivArtikla since Opis is not valid per Minimax schema
+    const fullName = item.details 
+      ? `${item.label} (${item.details}${item.note ? " | " + item.note : ""})`
+      : item.label;
+    
     return `
       <NarociloVrstica>
         <SifraArtikla>${escapeXml(truncate(artikalSifra, 30))}</SifraArtikla>
-        <NazivArtikla>${escapeXml(truncate(item.label, 250))}</NazivArtikla>
+        <NazivArtikla>${escapeXml(truncate(fullName, 250))}</NazivArtikla>
         <MerskaEnota>${escapeXml(getMernaJedinica(workOrder.order_type, item.unit))}</MerskaEnota>
         <Kolicina>${qty.toFixed(6)}</Kolicina>
-        ${item.details ? `<Opis>${escapeXml(truncate(item.details + (item.note ? " | " + item.note : ""), 8000))}</Opis>` : ""}
       </NarociloVrstica>`;
   }).join("");
 
