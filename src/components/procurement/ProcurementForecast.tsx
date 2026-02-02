@@ -102,90 +102,89 @@ export function ProcurementForecast({ plateFormats, orders }: ProcurementForecas
 
   // Calculate forecast with monthly trends
   const forecastData = useMemo(() => {
-    if (!consumptionData?.entries || !plateFormats.length) return [];
+    if (!plateFormats.length) return [];
 
-    const { entries, actualDays } = consumptionData;
-    
-    // Get current month for seasonality
     const now = new Date();
-    const currentMonth = now.getMonth(); // 0-11
     
-    // Calculate monthly averages per format
-    const monthlyAvgByFormat = new Map<string, { avg: number; months: number; lastMonthUsage: number; trend: number }>();
+    // Build monthly stats from file_entries data (primary source)
+    const monthlyStatsByFormat = new Map<string, { 
+      totals: number[]; 
+      months: string[];
+      totalPlates: number;
+    }>();
     
     if (monthlyData && monthlyData.length > 0) {
-      const formatMonths = new Map<string, { totals: number[]; months: string[] }>();
+      // Sort by month descending to ensure most recent comes first
+      const sortedMonthly = [...monthlyData].sort((a, b) => b.month.localeCompare(a.month));
       
-      monthlyData.forEach(({ month, formatId, total }) => {
-        if (!formatMonths.has(formatId)) {
-          formatMonths.set(formatId, { totals: [], months: [] });
+      sortedMonthly.forEach(({ month, formatId, total }) => {
+        if (!monthlyStatsByFormat.has(formatId)) {
+          monthlyStatsByFormat.set(formatId, { totals: [], months: [], totalPlates: 0 });
         }
-        const data = formatMonths.get(formatId)!;
+        const data = monthlyStatsByFormat.get(formatId)!;
         data.totals.push(total);
         data.months.push(month);
-      });
-      
-      formatMonths.forEach((data, formatId) => {
-        const avg = data.totals.reduce((a, b) => a + b, 0) / data.totals.length;
-        const lastMonthUsage = data.totals[0] || 0; // Most recent month
-        
-        // Calculate trend (is usage increasing or decreasing?)
-        let trend = 1;
-        if (data.totals.length >= 2) {
-          const recentAvg = data.totals.slice(0, Math.min(2, data.totals.length)).reduce((a, b) => a + b, 0) / Math.min(2, data.totals.length);
-          const olderAvg = data.totals.length > 2 
-            ? data.totals.slice(2).reduce((a, b) => a + b, 0) / (data.totals.length - 2)
-            : recentAvg;
-          trend = olderAvg > 0 ? recentAvg / olderAvg : 1;
-        }
-        
-        monthlyAvgByFormat.set(formatId, {
-          avg,
-          months: data.months.length,
-          lastMonthUsage,
-          trend: Math.max(0.5, Math.min(2, trend)) // Clamp between 0.5x and 2x
-        });
+        data.totalPlates += total;
       });
     }
 
     return plateFormats.map((format) => {
-      // Calculate total consumption for this format from inventory_history
-      const formatConsumption = entries.filter(
-        (c) => c.plate_format_id === format.id
-      );
-
-      const totalConsumed = formatConsumption.reduce(
-        (sum, c) => sum + Math.abs(c.change_amount),
-        0
-      );
-
-      // Daily average based on actual days with data
-      const rawAvgDaily = actualDays > 0 ? totalConsumed / actualDays : 0;
-      
       // Get monthly data for this format
-      const monthlyStats = monthlyAvgByFormat.get(format.id);
+      const monthlyStats = monthlyStatsByFormat.get(format.id);
       
-      // Calculate weighted daily average:
-      // - Use monthly average if we have good monthly data
-      // - Apply trend factor for growing/shrinking formats
-      let avgDaily = rawAvgDaily;
+      // Calculate from monthly data (file_entries) - this is the accurate source
       let monthlyAvg = 0;
       let activeMonths = 0;
       let lastMonthUsage = 0;
       let trend = 1;
+      let avgDaily = 0;
+      let totalConsumed = 0;
       
-      if (monthlyStats) {
-        monthlyAvg = monthlyStats.avg;
-        activeMonths = monthlyStats.months;
-        lastMonthUsage = monthlyStats.lastMonthUsage;
-        trend = monthlyStats.trend;
+      if (monthlyStats && monthlyStats.totals.length > 0) {
+        totalConsumed = monthlyStats.totalPlates;
+        activeMonths = monthlyStats.totals.length;
+        lastMonthUsage = monthlyStats.totals[0] || 0; // Most recent month (already sorted desc)
         
-        // Weight: 60% monthly average with trend, 40% raw daily calculation
-        const trendAdjustedMonthly = (monthlyAvg / 30) * trend;
-        avgDaily = (trendAdjustedMonthly * 0.6) + (rawAvgDaily * 0.4);
+        // Monthly average
+        monthlyAvg = totalConsumed / activeMonths;
+        
+        // Daily average from monthly data (more accurate than inventory_history)
+        avgDaily = monthlyAvg / 30;
+        
+        // Calculate trend (comparing recent 2 months vs older months)
+        if (monthlyStats.totals.length >= 2) {
+          const recentMonths = monthlyStats.totals.slice(0, 2);
+          const recentAvg = recentMonths.reduce((a, b) => a + b, 0) / recentMonths.length;
+          
+          if (monthlyStats.totals.length > 2) {
+            const olderMonths = monthlyStats.totals.slice(2);
+            const olderAvg = olderMonths.reduce((a, b) => a + b, 0) / olderMonths.length;
+            if (olderAvg > 0) {
+              trend = recentAvg / olderAvg;
+              // Clamp between 0.5x and 2x
+              trend = Math.max(0.5, Math.min(2, trend));
+            }
+          }
+        }
+      } else {
+        // Fallback to inventory_history if no file_entries data
+        if (consumptionData?.entries) {
+          const formatConsumption = consumptionData.entries.filter(
+            (c) => c.plate_format_id === format.id
+          );
+          totalConsumed = formatConsumption.reduce(
+            (sum, c) => sum + Math.abs(c.change_amount),
+            0
+          );
+          if (consumptionData.actualDays > 0 && totalConsumed > 0) {
+            avgDaily = totalConsumed / consumptionData.actualDays;
+            monthlyAvg = avgDaily * 30;
+            activeMonths = 1; // Estimate
+          }
+        }
       }
 
-      // Current stock
+      // Current stock (protect against negative display)
       const currentStock = format.current_stock || 0;
 
       // Plates on the way (from active orders)
@@ -198,10 +197,10 @@ export function ProcurementForecast({ plateFormats, orders }: ProcurementForecas
         }, 0);
 
       // Days until stockout (without pending orders)
-      const daysUntilStockout = avgDaily > 0 ? Math.floor(currentStock / avgDaily) : 999;
+      const daysUntilStockout = avgDaily > 0 ? Math.floor(Math.max(0, currentStock) / avgDaily) : 999;
 
-      // Total available (current + pending)
-      const totalAvailable = currentStock + pendingPlates;
+      // Total available (current + pending) - use max 0 for negative stock
+      const totalAvailable = Math.max(0, currentStock) + pendingPlates;
       const daysWithPending = avgDaily > 0 ? Math.floor(totalAvailable / avgDaily) : 999;
 
       // When to order: need stock for shipping time + buffer
@@ -210,8 +209,8 @@ export function ProcurementForecast({ plateFormats, orders }: ProcurementForecas
 
       // How much to order: cover shipping time + buffer + extra month
       // Adjust based on trend - if growing, order more
-      const daysToRecover = (SHIPPING_DAYS + SAFETY_BUFFER_DAYS + 30) * trend;
-      const recommendedOrder = Math.max(0, Math.ceil(avgDaily * daysToRecover) - currentStock - pendingPlates);
+      const daysToRecover = (SHIPPING_DAYS + SAFETY_BUFFER_DAYS + 30) * Math.max(1, trend);
+      const recommendedOrder = Math.max(0, Math.ceil(avgDaily * daysToRecover) - Math.max(0, currentStock) - pendingPlates);
 
       // Calculate estimated stockout date
       const stockoutDate = new Date();
@@ -222,7 +221,7 @@ export function ProcurementForecast({ plateFormats, orders }: ProcurementForecas
         currentStock,
         pendingPlates,
         totalConsumed,
-        actualDays,
+        actualDays: consumptionData?.actualDays || 0,
         avgDaily: avgDaily.toFixed(1),
         monthlyAvg: Math.round(monthlyAvg),
         activeMonths,
