@@ -1,0 +1,159 @@
+import { format } from "date-fns";
+
+// Minimax XML namespace
+const MINIMAX_NAMESPACE = "https://moj.minimax.rs/RS/CommonWeb/documents/schemas/miniMAXUvozKnjigovodstvo";
+
+// Types for work order items
+interface WorkOrderItem {
+  id: string;
+  label: string; // file name
+  qty: number;
+  unit: string;
+  total?: number;
+  details?: string;
+  note?: string;
+}
+
+interface ClientData {
+  name: string;
+  pib?: string | null;
+  adresa?: string | null;
+  grad?: string | null;
+  postanski_broj?: string | null;
+  email?: string | null;
+  telefon?: string | null;
+}
+
+interface WorkOrderData {
+  id: string;
+  display_order_number?: string;
+  order_number?: string;
+  order_type: string;
+  created_at: string;
+  closed_at?: string | null;
+  notes?: string | null;
+  clients: ClientData;
+  items: WorkOrderItem[];
+}
+
+// Helper to escape XML special characters
+function escapeXml(text: string | null | undefined): string {
+  if (!text) return "";
+  return text
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&apos;");
+}
+
+// Truncate string to max length
+function truncate(text: string | null | undefined, maxLength: number): string {
+  if (!text) return "";
+  return text.length > maxLength ? text.substring(0, maxLength) : text;
+}
+
+// Get artikal šifra based on order type
+function getArtikalSifra(orderType: string): string {
+  switch (orderType) {
+    case "ctp": return "CTP-PLOCE";
+    case "digital": return "DIG-STAMPA";
+    case "film": return "FILM-STAMPA";
+    default: return "USLUGA";
+  }
+}
+
+// Get merna jedinica
+function getMerskaEnota(orderType: string, unit: string): string {
+  switch (orderType) {
+    case "ctp": return "kom";
+    case "digital": return "tab";
+    case "film": return "m";
+    default: return unit || "kom";
+  }
+}
+
+// Generate Minimax XML for work order (as Narocilo - purchase/sales order)
+export function generateMinimaxOrderXml(workOrder: WorkOrderData): string {
+  const orderNumber = workOrder.display_order_number || workOrder.order_number || workOrder.id;
+  const orderDate = format(new Date(workOrder.created_at), "yyyy-MM-dd");
+  const client = workOrder.clients;
+
+  // Generate client šifra from PIB or first 30 chars of name
+  const clientSifra = client.pib 
+    ? truncate(client.pib.replace(/\D/g, ""), 30) 
+    : truncate(client.name.replace(/[^A-Za-z0-9]/g, "").toUpperCase(), 30);
+
+  // Build NarociloVrstice (order lines)
+  const vrsticeXml = workOrder.items.map((item, index) => {
+    const qty = item.total || item.qty || 1;
+    const artikalSifra = `${getArtikalSifra(workOrder.order_type)}-${(index + 1).toString().padStart(3, "0")}`;
+    
+    return `
+      <NarociloVrstica>
+        <SifraArtikla>${escapeXml(truncate(artikalSifra, 30))}</SifraArtikla>
+        <NazivArtikla>${escapeXml(truncate(item.label, 250))}</NazivArtikla>
+        <MerskaEnota>${escapeXml(getMerskaEnota(workOrder.order_type, item.unit))}</MerskaEnota>
+        <Kolicina>${qty.toFixed(6)}</Kolicina>
+        ${item.details ? `<Opis>${escapeXml(truncate(item.details + (item.note ? " | " + item.note : ""), 8000))}</Opis>` : ""}
+      </NarociloVrstica>`;
+  }).join("");
+
+  // Full XML structure
+  const xml = `<?xml version="1.0" encoding="UTF-8"?>
+<miniMAXUvozKnjigovodstvo xmlns="${MINIMAX_NAMESPACE}">
+  <Stranke>
+    <Stranka>
+      <Sifra>${escapeXml(clientSifra)}</Sifra>
+      <Naziv>${escapeXml(truncate(client.name, 250))}</Naziv>
+      ${client.adresa ? `<Naslov>${escapeXml(truncate(client.adresa, 250))}</Naslov>` : ""}
+      <KraticaDrzave>RS</KraticaDrzave>
+      <NazivDrzave>Srbija</NazivDrzave>
+      ${client.postanski_broj ? `<PostnaStevilka>${escapeXml(truncate(client.postanski_broj, 30))}</PostnaStevilka>` : ""}
+      ${client.grad ? `<NazivPoste>${escapeXml(truncate(client.grad, 250))}</NazivPoste>` : ""}
+      <DavcniZavezanec>D</DavcniZavezanec>
+      ${client.pib ? `<DavcnaStevilka>${escapeXml(truncate(client.pib, 30))}</DavcnaStevilka>` : ""}
+      ${client.telefon ? `<Telefon>${escapeXml(truncate(client.telefon, 30))}</Telefon>` : ""}
+      ${client.email ? `<EPosta>${escapeXml(truncate(client.email, 50))}</EPosta>` : ""}
+      <Uporaba>D</Uporaba>
+    </Stranka>
+  </Stranke>
+  <Narocila>
+    <Narocilo>
+      <NarociloGlava>
+        <PrejetoIzdano>I</PrejetoIzdano>
+        <Datum>${orderDate}</Datum>
+        <SifraStranke>${escapeXml(clientSifra)}</SifraStranke>
+        <NazivStranke>${escapeXml(truncate(client.name, 100))}</NazivStranke>
+        ${client.adresa ? `<NaslovStranke>${escapeXml(truncate(client.adresa, 50))}</NaslovStranke>` : ""}
+        ${client.postanski_broj ? `<PostnaStevilka>${escapeXml(truncate(client.postanski_broj, 30))}</PostnaStevilka>` : ""}
+        ${client.grad ? `<NazivPoste>${escapeXml(truncate(client.grad, 250))}</NazivPoste>` : ""}
+        <SifraDenarneEnote>RSD</SifraDenarneEnote>
+        <Veza>${escapeXml(truncate(orderNumber, 30))}</Veza>
+        ${workOrder.notes ? `<Opomba>${escapeXml(truncate(workOrder.notes, 1000))}</Opomba>` : ""}
+      </NarociloGlava>
+      <NarociloVrstice>${vrsticeXml}
+      </NarociloVrstice>
+    </Narocilo>
+  </Narocila>
+</miniMAXUvozKnjigovodstvo>`;
+
+  return xml;
+}
+
+// Download XML as file
+export function downloadMinimaxXml(workOrder: WorkOrderData): void {
+  const xml = generateMinimaxOrderXml(workOrder);
+  const orderNumber = workOrder.display_order_number || workOrder.order_number || workOrder.id;
+  const fileName = `Minimax_${orderNumber.replace(/[^A-Za-z0-9_-]/g, "_")}_${format(new Date(), "yyyyMMdd_HHmm")}.xml`;
+  
+  const blob = new Blob([xml], { type: "application/xml;charset=utf-8" });
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement("a");
+  link.href = url;
+  link.download = fileName;
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
+  URL.revokeObjectURL(url);
+}
