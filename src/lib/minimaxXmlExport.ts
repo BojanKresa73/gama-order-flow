@@ -174,6 +174,7 @@ export function generateMinimaxOrderXml(workOrder: WorkOrderData): string {
         ${client.grad ? `<NazivPoste>${escapeXml(truncate(client.grad, 250))}</NazivPoste>` : ""}
         <Veza>${escapeXml(truncate(orderNumber, 30))}</Veza>
         <SifraDenarneEnote>RSD</SifraDenarneEnote>
+        <DniValute>15</DniValute>
         ${workOrder.notes ? `<Opomba>${escapeXml(truncate(workOrder.notes, 1000))}</Opomba>` : ""}
       </NarociloGlava>
       <NarociloVrstice>${vrsticeXml}
