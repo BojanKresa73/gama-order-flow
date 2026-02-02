@@ -150,7 +150,7 @@ export function generateMinimaxOrderXml(workOrder: WorkOrderData): string {
   <Narocila>
     <Narocilo>
       <NarociloGlava>
-        <PrejetoIzdano>I</PrejetoIzdano>
+        <PrejetoIzdano>P</PrejetoIzdano>
         <Datum>${orderDate}</Datum>
         <SifraStranke>${escapeXml(clientSifra)}</SifraStranke>
         <NazivStranke>${escapeXml(truncate(client.name, 100))}</NazivStranke>
