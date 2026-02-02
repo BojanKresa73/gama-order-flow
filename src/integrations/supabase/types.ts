@@ -208,7 +208,7 @@ export type Database = {
           created_at: string
           id: string
           plate_format_id: string
-          price_rsd: number
+          price_eur: number
           updated_at: string
         }
         Insert: {
@@ -216,7 +216,7 @@ export type Database = {
           created_at?: string
           id?: string
           plate_format_id: string
-          price_rsd?: number
+          price_eur?: number
           updated_at?: string
         }
         Update: {
@@ -224,7 +224,7 @@ export type Database = {
           created_at?: string
           id?: string
           plate_format_id?: string
-          price_rsd?: number
+          price_eur?: number
           updated_at?: string
         }
         Relationships: [

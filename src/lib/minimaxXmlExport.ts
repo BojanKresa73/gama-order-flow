@@ -39,11 +39,11 @@ interface ClientData {
   telefon?: string | null;
 }
 
-// Cene po formatu za klijenta
+// Cene po formatu za klijenta (u EUR)
 interface ClientPlatePrice {
   plate_format_id: string;
   format_name: string;
-  price_rsd: number;
+  price_eur: number;
 }
 
 // Podaci o radnom nalogu
@@ -58,6 +58,7 @@ interface WorkOrderData {
   clients: ClientData;
   file_entries: FileEntry[];
   client_plate_prices?: ClientPlatePrice[];
+  nbs_rate?: number; // EUR to RSD exchange rate from NBS
 }
 
 // Pomoćna funkcija za escape XML specijalnih karaktera
@@ -83,20 +84,26 @@ function formatPrice(price: number | null | undefined): string {
   return price.toFixed(4);
 }
 
-// Dobavi cenu za format iz cenovnika klijenta
+// Dobavi cenu za format iz cenovnika klijenta (EUR) i konvertuj u RSD
 function getPriceForFormat(
   formatName: string | undefined, 
-  clientPrices: ClientPlatePrice[] | undefined
+  clientPrices: ClientPlatePrice[] | undefined,
+  nbsRate: number
 ): number {
   if (!formatName || !clientPrices || clientPrices.length === 0) return 0;
   
   const priceEntry = clientPrices.find(p => p.format_name === formatName);
-  return priceEntry?.price_rsd || 0;
+  const priceEur = priceEntry?.price_eur || 0;
+  
+  // Konvertuj EUR u RSD po kursu NBS
+  return priceEur * nbsRate;
 }
 
 // Generate Minimax XML for CTP work order
 // Format: Svaki fajl je posebna stavka sa "Posao:" opisom
+// Cene se konvertuju iz EUR u RSD po kursu NBS
 export function generateMinimaxOrderXml(workOrder: WorkOrderData): string {
+  const nbsRate = workOrder.nbs_rate || 117.0; // Fallback rate if not provided
   const orderNumber = workOrder.display_order_number || workOrder.order_number || workOrder.id;
   const orderDate = format(new Date(workOrder.created_at), "yyyy-MM-dd");
   const client = workOrder.clients;
@@ -122,8 +129,8 @@ export function generateMinimaxOrderXml(workOrder: WorkOrderData): string {
         return "";
       }
       
-      // Cena iz cenovnika klijenta
-      const priceRsd = getPriceForFormat(formatName, workOrder.client_plate_prices);
+      // Cena iz cenovnika klijenta (EUR -> RSD po kursu NBS)
+      const priceRsd = getPriceForFormat(formatName, workOrder.client_plate_prices, nbsRate);
       
       // Opis: "Posao: [naziv klijenta kraci] [format] [broj naloga] [naziv fajla]"
       // Primer: "Posao: dbox 1060x795 RN-0056-2025 FLAMMAT Kutije za hepo 21mm..."
