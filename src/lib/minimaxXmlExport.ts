@@ -15,10 +15,10 @@ import {
  */
 
 // Minimax XML namespace
-const MINIMAX_NAMESPACE = "https://moj.minimax.rs/RS/CommonWeb/documents/schemas/miniMAXUvozKnjigovodstvo";
+export const MINIMAX_NAMESPACE = "https://moj.minimax.rs/RS/CommonWeb/documents/schemas/miniMAXUvozKnjigovodstvo";
 
 // Tipovi za CTP stavke radnog naloga (file_entries)
-interface FileEntry {
+export interface FileEntry {
   id: string;
   filename: string;
   quantity: number;
@@ -29,7 +29,7 @@ interface FileEntry {
 }
 
 // Podaci o klijentu
-interface ClientData {
+export interface ClientData {
   name: string;
   pib?: string | null;
   adresa?: string | null;
@@ -40,14 +40,14 @@ interface ClientData {
 }
 
 // Cene po formatu za klijenta (u EUR)
-interface ClientPlatePrice {
+export interface ClientPlatePrice {
   plate_format_id: string;
   format_name: string;
   price_eur: number;
 }
 
 // Podaci o radnom nalogu
-interface WorkOrderData {
+export interface WorkOrderData {
   id: string;
   display_order_number?: string;
   order_number?: string;
