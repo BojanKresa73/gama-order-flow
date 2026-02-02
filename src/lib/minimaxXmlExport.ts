@@ -78,10 +78,11 @@ function truncate(text: string | null | undefined, maxLength: number): string {
   return text.length > maxLength ? text.substring(0, maxLength) : text;
 }
 
-// Formatiranje cene za XML (4 decimale)
+// Formatiranje cene za XML (4 decimale, zaokruženo)
 function formatPrice(price: number | null | undefined): string {
-  if (!price || price <= 0) return "0.0000";
-  return price.toFixed(4);
+  if (price === null || price === undefined || price <= 0) return "0.0000";
+  // Ensure exactly 4 decimal places
+  return Number(price).toFixed(4);
 }
 
 // Dobavi cenu za format iz cenovnika klijenta (EUR) i konvertuj u RSD
