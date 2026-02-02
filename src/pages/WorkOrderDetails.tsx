@@ -4,7 +4,8 @@ import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { ArrowLeft, FileText, Mail, Download, Receipt, ReceiptText } from "lucide-react";
+import { ArrowLeft, FileText, Mail, Download, Receipt, ReceiptText, FileCode } from "lucide-react";
+import { downloadMinimaxXml } from "@/lib/minimaxXmlExport";
 import { toast } from "sonner";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -325,6 +326,18 @@ const WorkOrderDetails = () => {
                 >
                   <Mail className="h-4 w-4 mr-2" />
                   {resending ? "Šalje se..." : "Ponovo pošalji"}
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => downloadMinimaxXml({
+                    ...workOrder,
+                    clients: workOrder.clients
+                  })}
+                  title="Eksportuj za Minimax"
+                >
+                  <FileCode className="h-4 w-4 mr-2" />
+                  Minimax XML
                 </Button>
               </>
             )}
