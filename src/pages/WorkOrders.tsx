@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
-import { ArrowLeft, Plus, FileText, Eye, Lock, CheckCircle2, AlertTriangle, Trash2, Pencil, Send, Download, Loader2, Receipt, FileCheck } from "lucide-react";
+import { ArrowLeft, Plus, FileText, Eye, Lock, CheckCircle2, AlertTriangle, Trash2, Pencil, Send, Download, Loader2, Receipt, FileCheck, FileCode } from "lucide-react";
 import { PriorityNotificationBell } from "@/components/priority/PriorityNotificationBell";
 import * as XLSX from "xlsx";
 import { format } from "date-fns";
@@ -26,6 +26,7 @@ import { Progress } from "@/components/ui/progress";
 import { prefixFor, displayOrderNumber } from "@/lib/orderLabel";
 import { useAuthz } from "@/hooks/useAuthz";
 import { InvoiceDialog } from "@/components/work-orders/InvoiceDialog";
+import { exportBatchToMinimax } from "@/lib/minimaxBatchExport";
 
 // Helper functions to serialize/deserialize filters to URL params
 const serializeFiltersToParams = (filters: WorkOrderFiltersState): URLSearchParams => {
@@ -94,6 +95,7 @@ const WorkOrders = () => {
   // Export selection state (separate from bulk close selection)
   const [exportSelectedOrders, setExportSelectedOrders] = useState<Set<string>>(new Set());
   const [isExporting, setIsExporting] = useState(false);
+  const [isExportingXml, setIsExportingXml] = useState(false);
   
   // Bulk invoice state
   const [bulkInvoiceDialogOpen, setBulkInvoiceDialogOpen] = useState(false);
@@ -850,6 +852,62 @@ const WorkOrders = () => {
     }
   };
 
+  // Batch Minimax XML export handler
+  const handleExportToMinimaxXml = async () => {
+    if (exportSelectedOrders.size === 0) {
+      toast({
+        title: "Upozorenje",
+        description: "Odaberite barem jedan nalog za izvoz u Minimax.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    // Filter to only include closed CTP orders
+    const selectedOrderIds = Array.from(exportSelectedOrders);
+    const validCtpOrders = workOrders.filter(
+      o => selectedOrderIds.includes(o.id) && 
+           o.order_type === 'ctp' && 
+           o.status === 'closed'
+    );
+
+    if (validCtpOrders.length === 0) {
+      toast({
+        title: "Upozorenje",
+        description: "Nema zatvorenih CTP naloga među odabranim za Minimax izvoz.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setIsExportingXml(true);
+    try {
+      const result = await exportBatchToMinimax(validCtpOrders.map(o => o.id));
+      
+      if (result.success) {
+        toast({
+          title: "Uspešno",
+          description: `Izvezeno ${result.exportedCount} naloga u Minimax XML.${result.skippedCount > 0 ? ` Preskočeno: ${result.skippedCount}` : ''}`,
+        });
+        setExportSelectedOrders(new Set());
+      } else {
+        toast({
+          title: "Greška",
+          description: result.errors.join(", ") || "Greška pri izvozu.",
+          variant: "destructive",
+        });
+      }
+    } catch (error: any) {
+      toast({
+        title: "Greška",
+        description: error.message || "Greška pri izvozu u Minimax XML.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsExportingXml(false);
+    }
+  };
+
   if (loading) {
     return <div className="flex items-center justify-center min-h-screen">Učitavanje...</div>;
   }
@@ -923,7 +981,20 @@ const WorkOrders = () => {
                       ) : (
                         <Download className="h-4 w-4 mr-2" />
                       )}
-                      Izvoz ({exportSelectedOrders.size})
+                      Excel ({exportSelectedOrders.size})
+                    </Button>
+                    <Button 
+                      onClick={handleExportToMinimaxXml} 
+                      variant="outline"
+                      disabled={isExportingXml}
+                      title="Izvoz zatvorenih CTP naloga u Minimax XML"
+                    >
+                      {isExportingXml ? (
+                        <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                      ) : (
+                        <FileCode className="h-4 w-4 mr-2" />
+                      )}
+                      Minimax XML
                     </Button>
                     <Button 
                       onClick={handleBulkInvoice} 
