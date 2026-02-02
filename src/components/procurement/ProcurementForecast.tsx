@@ -24,9 +24,10 @@ interface MonthlyData {
 }
 
 export function ProcurementForecast({ plateFormats, orders }: ProcurementForecastProps) {
-  // Fetch monthly consumption by format from file_entries for better analysis
+  // Fetch monthly consumption by format from file_entries
+  // IMPORTANT: Using limit(10000) to avoid Supabase's default 1000 row limit
   const { data: monthlyData, isLoading: loadingMonthly } = useQuery({
-    queryKey: ["monthly-consumption-by-format"],
+    queryKey: ["monthly-consumption-by-format-v3"],
     queryFn: async () => {
       const { data, error } = await supabase
         .from("file_entries")
@@ -39,7 +40,8 @@ export function ProcurementForecast({ plateFormats, orders }: ProcurementForecas
         .eq("work_orders.order_type", "ctp")
         .eq("work_orders.status", "closed")
         .is("work_orders.deleted_at", null)
-        .not("work_orders.closed_at", "is", null);
+        .not("work_orders.closed_at", "is", null)
+        .limit(10000); // Avoid default 1000 row limit
 
       if (error) throw error;
       
@@ -52,7 +54,6 @@ export function ProcurementForecast({ plateFormats, orders }: ProcurementForecas
         
         const date = new Date(closedAt);
         const monthKey = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
-        const formatName = row.plate_formats?.format_name || "Nepoznat";
         const formatId = row.plate_format_id;
         const qty = row.quantity || 0;
         
