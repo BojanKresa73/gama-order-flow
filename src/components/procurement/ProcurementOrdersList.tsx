@@ -93,8 +93,8 @@ export function ProcurementOrdersList({ orders, onUpdate }: ProcurementOrdersLis
     // Convert empty date strings to null for proper database handling
     const valuesToSave = {
       ...editValues,
-      expected_arrival_date: editValues.expected_arrival_date || null,
-      actual_arrival_date: editValues.actual_arrival_date || null,
+      expected_arrival_date: editValues.expected_arrival_date?.trim() || null,
+      actual_arrival_date: editValues.actual_arrival_date?.trim() || null,
     };
     
     updateMutation.mutate({ id: editingOrder, values: valuesToSave });
