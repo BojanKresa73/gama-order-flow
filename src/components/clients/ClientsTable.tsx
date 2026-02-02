@@ -1,6 +1,7 @@
 import { useState, useMemo } from "react";
 import { Client } from "@/hooks/useClients";
 import { ClientQuickView } from "./ClientQuickView";
+import { ClientPlatePricesDialog } from "./ClientPlatePricesDialog";
 import {
   Table,
   TableBody,
@@ -28,6 +29,7 @@ import {
   ChevronRight,
   Eye,
   FileSpreadsheet,
+  Receipt,
 } from "lucide-react";
 import * as XLSX from 'xlsx';
 
@@ -45,6 +47,7 @@ export const ClientsTable = ({ clients, onEdit }: ClientsTableProps) => {
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage, setItemsPerPage] = useState(25);
   const [quickViewClient, setQuickViewClient] = useState<Client | null>(null);
+  const [platePricesClient, setPlatePricesClient] = useState<Client | null>(null);
   const [columnVisibility, setColumnVisibility] = useState({
     name: true,
     pib: true,
@@ -561,8 +564,20 @@ export const ClientsTable = ({ clients, onEdit }: ClientsTableProps) => {
                           e.stopPropagation();
                           setQuickViewClient(client);
                         }}
+                        title="Pregled"
                       >
                         <Eye className="h-4 w-4" />
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setPlatePricesClient(client);
+                        }}
+                        title="Cene ploča"
+                      >
+                        <Receipt className="h-4 w-4" />
                       </Button>
                       <Button
                         variant="outline"
@@ -623,6 +638,14 @@ export const ClientsTable = ({ clients, onEdit }: ClientsTableProps) => {
         open={!!quickViewClient}
         onOpenChange={(open) => !open && setQuickViewClient(null)}
         onEdit={onEdit}
+      />
+
+      {/* Plate Prices Dialog */}
+      <ClientPlatePricesDialog
+        open={!!platePricesClient}
+        onOpenChange={(open) => !open && setPlatePricesClient(null)}
+        clientId={platePricesClient?.id || ""}
+        clientName={platePricesClient?.name || ""}
       />
     </div>
   );
