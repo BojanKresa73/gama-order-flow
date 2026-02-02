@@ -1,25 +1,31 @@
 import { format } from "date-fns";
+import { 
+  getMinimaxArtikalSifra, 
+  getMinimaxStrankaSifra, 
+  getMinimaxArtikalNaziv 
+} from "./minimaxMapping";
 
 /**
- * Minimax XML Export za radne naloge
+ * Minimax XML Export za CTP radne naloge
  * 
  * Generiše XML u formatu Minimax porudžbine (Naročilo) za uvoz u računovodstveni sistem.
- * NAPOMENA: XML elementi koriste slovenačke nazive (Narocilo, Stranka, itd.) jer je to
- * obavezan format Minimax XSD šeme - promena naziva bi onemogućila uvoz.
+ * Koristi postojeće šifre stranaka i artikala iz Minimax-a (mapirane po PIB-u i formatu ploče).
  */
 
 // Minimax XML namespace
 const MINIMAX_NAMESPACE = "https://moj.minimax.rs/RS/CommonWeb/documents/schemas/miniMAXUvozKnjigovodstvo";
 
-// Tipovi za stavke radnog naloga
-interface WorkOrderItem {
+// Tipovi za CTP stavke radnog naloga
+interface CtpItem {
   id: string;
-  label: string; // naziv fajla
-  qty: number;
-  unit: string;
-  total?: number;
-  details?: string;
+  label: string;      // naziv fajla
+  qty: number;        // količina
+  unit: string;       // jedinica mere
+  total?: number;     // ukupno
+  details?: string;   // detalji (format, količina)
   note?: string;
+  status?: string;
+  formatName?: string; // format ploče za mapiranje
 }
 
 // Podaci o klijentu
@@ -43,7 +49,7 @@ interface WorkOrderData {
   closed_at?: string | null;
   notes?: string | null;
   clients: ClientData;
-  items: WorkOrderItem[];
+  items: CtpItem[];
 }
 
 // Pomoćna funkcija za escape XML specijalnih karaktera
@@ -63,92 +69,84 @@ function truncate(text: string | null | undefined, maxLength: number): string {
   return text.length > maxLength ? text.substring(0, maxLength) : text;
 }
 
-// Dobijanje šifre artikla na osnovu tipa naloga
-function getArtikalSifra(orderType: string): string {
-  switch (orderType) {
-    case "ctp": return "CTP-PLOCE";
-    case "digital": return "DIG-STAMPA";
-    case "film": return "FILM-STAMPA";
-    default: return "USLUGA";
+// Ekstrakcija formata ploče iz details stringa (npr. "1030×790, 4 kom")
+function extractFormatFromDetails(details: string | undefined): string | null {
+  if (!details) return null;
+  
+  // Match format poput "1030×790" ili "745x605"
+  const match = details.match(/(\d+)[x×](\d+)/i);
+  if (match) {
+    return `${match[1]}x${match[2]}`;
   }
+  return null;
 }
 
-// Dobijanje merne jedinice
-function getMernaJedinica(orderType: string, unit: string): string {
-  switch (orderType) {
-    case "ctp": return "kom";
-    case "digital": return "tab";
-    case "film": return "m";
-    default: return unit || "kom";
+/**
+ * Grupiše stavke po formatu ploče i sumira količine
+ */
+function groupItemsByFormat(items: CtpItem[]): Map<string, { qty: number; formatName: string; minimaxSifra: string; minimaxNaziv: string }> {
+  const grouped = new Map<string, { qty: number; formatName: string; minimaxSifra: string; minimaxNaziv: string }>();
+  
+  for (const item of items) {
+    const formatName = item.formatName || extractFormatFromDetails(item.details);
+    if (!formatName) continue;
+    
+    const minimaxSifra = getMinimaxArtikalSifra(formatName);
+    const minimaxNaziv = getMinimaxArtikalNaziv(formatName);
+    
+    if (!minimaxSifra || !minimaxNaziv) {
+      console.warn(`Minimax mapping not found for format: ${formatName}`);
+      continue;
+    }
+    
+    const existing = grouped.get(minimaxSifra);
+    if (existing) {
+      existing.qty += item.qty || 0;
+    } else {
+      grouped.set(minimaxSifra, {
+        qty: item.qty || 0,
+        formatName,
+        minimaxSifra,
+        minimaxNaziv,
+      });
+    }
   }
+  
+  return grouped;
 }
 
-// Generate Minimax XML for work order (as Narocilo - purchase/sales order)
+// Generate Minimax XML for CTP work order
 export function generateMinimaxOrderXml(workOrder: WorkOrderData): string {
   const orderNumber = workOrder.display_order_number || workOrder.order_number || workOrder.id;
   const orderDate = format(new Date(workOrder.created_at), "yyyy-MM-dd");
   const client = workOrder.clients;
 
-  // Generate client šifra from PIB or first 30 chars of name
-  const clientSifra = client.pib 
-    ? truncate(client.pib.replace(/\D/g, ""), 30) 
-    : truncate(client.name.replace(/[^A-Za-z0-9]/g, "").toUpperCase(), 30);
+  // Dobij Minimax šifru stranke iz PIB-a
+  const minimaxStrankaSifra = getMinimaxStrankaSifra(client.pib);
+  
+  // Ako ne postoji mapiranje, koristi PIB kao šifru (za nove stranke)
+  const clientSifra = minimaxStrankaSifra || 
+    (client.pib ? truncate(client.pib.replace(/\D/g, ""), 30) : 
+     truncate(client.name.replace(/[^A-Za-z0-9]/g, "").toUpperCase(), 30));
 
-  // Build NarociloVrstice (order lines)
-  // Build articles and order lines
-  const artikliData = workOrder.items.map((item, index) => {
-    const artikalSifra = `${getArtikalSifra(workOrder.order_type)}-${(index + 1).toString().padStart(3, "0")}`;
-    const fullName = item.details 
-      ? `${item.label} (${item.details}${item.note ? " | " + item.note : ""})`
-      : item.label;
-    return {
-      sifra: artikalSifra,
-      naziv: truncate(fullName, 250),
-      enota: getMernaJedinica(workOrder.order_type, item.unit),
-      qty: item.total || item.qty || 1,
-    };
-  });
+  // Grupiši stavke po formatu ploče
+  const groupedItems = groupItemsByFormat(workOrder.items);
 
-  // Build Artikli section (per XSD: SifraArtikla, Naziv, MerskaEnota, Tip, Uporaba)
-  const artikliXml = artikliData.map(art => `
-    <Artikel>
-      <SifraArtikla>${escapeXml(art.sifra)}</SifraArtikla>
-      <Naziv>${escapeXml(art.naziv)}</Naziv>
-      <MerskaEnota>${escapeXml(art.enota)}</MerskaEnota>
-      <Tip>BL</Tip>
-      <Uporaba>D</Uporaba>
-    </Artikel>`).join("");
-
-  // Build NarociloVrstice
-  const vrsticeXml = artikliData.map(art => `
+  // Build NarociloVrstice - samo stavke koje imaju Minimax mapiranje
+  const vrsticeXml = Array.from(groupedItems.values()).map(item => `
       <NarociloVrstica>
-        <SifraArtikla>${escapeXml(art.sifra)}</SifraArtikla>
-        <NazivArtikla>${escapeXml(art.naziv)}</NazivArtikla>
-        <MerskaEnota>${escapeXml(art.enota)}</MerskaEnota>
-        <Kolicina>${art.qty.toFixed(6)}</Kolicina>
+        <SifraArtikla>${escapeXml(item.minimaxSifra)}</SifraArtikla>
+        <NazivArtikla>${escapeXml(item.minimaxNaziv)}</NazivArtikla>
+        <MerskaEnota>Kom</MerskaEnota>
+        <Kolicina>${item.qty.toFixed(6)}</Kolicina>
       </NarociloVrstica>`).join("");
 
-  // Full XML structure with Artikli section
+  // NE uključujemo Stranke sekciju - pretpostavljamo da stranka već postoji u Minimax-u
+  // NE uključujemo Artikli sekciju - koristimo postojeće šifre artikala iz Minimax-a
+  
+  // Full XML structure - samo Narocila sekcija
   const xml = `<?xml version="1.0" encoding="UTF-8"?>
 <miniMAXUvozKnjigovodstvo xmlns="${MINIMAX_NAMESPACE}">
-  <Stranke>
-    <Stranka>
-      <Sifra>${escapeXml(clientSifra)}</Sifra>
-      <Naziv>${escapeXml(truncate(client.name, 250))}</Naziv>
-      ${client.adresa ? `<Naslov>${escapeXml(truncate(client.adresa, 250))}</Naslov>` : ""}
-      <KraticaDrzave>RS</KraticaDrzave>
-      <NazivDrzave>Srbija</NazivDrzave>
-      ${client.postanski_broj ? `<PostnaStevilka>${escapeXml(truncate(client.postanski_broj, 30))}</PostnaStevilka>` : ""}
-      ${client.grad ? `<NazivPoste>${escapeXml(truncate(client.grad, 250))}</NazivPoste>` : ""}
-      <DavcniZavezanec>D</DavcniZavezanec>
-      ${client.pib ? `<DavcnaStevilka>${escapeXml(truncate(client.pib, 30))}</DavcnaStevilka>` : ""}
-      ${client.telefon ? `<Telefon>${escapeXml(truncate(client.telefon, 30))}</Telefon>` : ""}
-      ${client.email ? `<EPosta>${escapeXml(truncate(client.email, 50))}</EPosta>` : ""}
-      <Uporaba>D</Uporaba>
-    </Stranka>
-  </Stranke>
-  <Artikli>${artikliXml}
-  </Artikli>
   <Narocila>
     <Narocilo>
       <NarociloGlava>

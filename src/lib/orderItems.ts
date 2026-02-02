@@ -90,6 +90,7 @@ export async function getOrderItems(orderId: string): Promise<UiItem[]> {
       unit: 'kom',
       details: `${item.plate_formats?.format_name || 'N/A'}, ${item.quantity || 0} kom`,
       status: item.status,
+      formatName: item.plate_formats?.format_name || undefined,
     }));
   }
 
