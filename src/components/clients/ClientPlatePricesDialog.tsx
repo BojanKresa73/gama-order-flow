@@ -64,7 +64,7 @@ export function ClientPlatePricesDialog({
       // Fetch existing prices for this client
       const { data: existingPrices, error: pricesError } = await supabase
         .from("client_plate_prices")
-        .select("plate_format_id, price_rsd")
+        .select("plate_format_id, price_eur")
         .eq("client_id", clientId);
 
       if (pricesError) throw pricesError;
@@ -72,7 +72,7 @@ export function ClientPlatePricesDialog({
       // Map existing prices to the state
       const priceMap: Record<string, number> = {};
       (existingPrices || []).forEach((p) => {
-        priceMap[p.plate_format_id] = Number(p.price_rsd);
+        priceMap[p.plate_format_id] = Number(p.price_eur);
       });
       setPrices(priceMap);
     } catch (error: any) {
@@ -104,10 +104,10 @@ export function ClientPlatePricesDialog({
       // Insert new prices (only non-zero values)
       const insertData = Object.entries(prices)
         .filter(([_, price]) => price > 0)
-        .map(([plate_format_id, price_rsd]) => ({
+        .map(([plate_format_id, price_eur]) => ({
           client_id: clientId,
           plate_format_id,
-          price_rsd,
+          price_eur,
         }));
 
       if (insertData.length > 0) {
@@ -131,9 +131,9 @@ export function ClientPlatePricesDialog({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-md">
         <DialogHeader>
-          <DialogTitle>Cenovnik ploča</DialogTitle>
+          <DialogTitle>Cenovnik ploča (EUR)</DialogTitle>
           <DialogDescription>
-            Cene ploča za klijenta: <strong>{clientName}</strong>
+            Cene ploča za klijenta: <strong>{clientName}</strong> (u EUR, konvertuje se u RSD po kursu NBS pri eksportu)
           </DialogDescription>
         </DialogHeader>
 
@@ -162,7 +162,7 @@ export function ClientPlatePricesDialog({
                     placeholder="0.00"
                     className="text-right"
                   />
-                  <span className="text-muted-foreground text-sm">RSD</span>
+                  <span className="text-muted-foreground text-sm">EUR</span>
                 </div>
               </div>
             ))

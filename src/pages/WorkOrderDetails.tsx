@@ -5,13 +5,14 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ArrowLeft, FileText, Mail, Download, Receipt, ReceiptText, FileCode } from "lucide-react";
-import { downloadMinimaxXml } from "@/lib/minimaxXmlExport";
+import { generateMinimaxOrderXml } from "@/lib/minimaxXmlExport";
+import { fetchNbsEurRate } from "@/lib/nbsExchangeRate";
+import { format } from "date-fns";
 import { toast } from "sonner";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { WorkOrderChecklistTab } from "@/components/work-orders/WorkOrderChecklistTab";
 import { InvoiceDialog } from "@/components/work-orders/InvoiceDialog";
-import { format } from "date-fns";
 import { getOrderItems } from "@/lib/orderItems";
 import { displayOrderNumber } from "@/lib/orderLabel";
 import { DigitalPricingBreakdown } from "@/components/digital/DigitalPricingBreakdown";
@@ -31,6 +32,7 @@ const WorkOrderDetails = () => {
   const [downloading, setDownloading] = useState(false);
   const [invoiceDialogOpen, setInvoiceDialogOpen] = useState(false);
   const [markingInvoiced, setMarkingInvoiced] = useState(false);
+  const [exportingMinimax, setExportingMinimax] = useState(false);
   
   const canSeeDigitalSummary = isSuper || isAdmin || isAdminPlus;
 
@@ -98,7 +100,7 @@ const WorkOrderDetails = () => {
           setFileEntries(entries);
         }
 
-        // Fetch client plate prices for Minimax export
+        // Fetch client plate prices for Minimax export (now in EUR)
         const { data: pricesData } = await supabase
           .from('client_plate_prices')
           .select('*, plate_formats(format_name)')
@@ -108,7 +110,7 @@ const WorkOrderDetails = () => {
           const prices = pricesData.map(p => ({
             plate_format_id: p.plate_format_id,
             format_name: p.plate_formats?.format_name,
-            price_rsd: Number(p.price_rsd)
+            price_eur: Number(p.price_eur)
           }));
           setClientPlatePrices(prices);
         }
@@ -267,6 +269,45 @@ const WorkOrderDetails = () => {
     }
   };
 
+  const handleMinimaxExport = async () => {
+    if (!workOrder) return;
+    
+    setExportingMinimax(true);
+    try {
+      // Fetch current NBS EUR rate
+      const nbsRate = await fetchNbsEurRate();
+      
+      // Generate XML with the rate
+      const xml = generateMinimaxOrderXml({
+        ...workOrder,
+        clients: workOrder.clients,
+        file_entries: fileEntries,
+        client_plate_prices: clientPlatePrices,
+        nbs_rate: nbsRate
+      });
+      
+      // Download the file
+      const orderNumber = workOrder.display_order_number || workOrder.order_number || workOrder.id;
+      const fileName = `Minimax_${orderNumber.replace(/[^A-Za-z0-9_-]/g, "_")}_${format(new Date(), "yyyyMMdd_HHmm")}.xml`;
+      
+      const blob = new Blob([xml], { type: "application/xml;charset=utf-8" });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = fileName;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(url);
+      
+      toast.success(`Minimax XML eksportovan (kurs: ${nbsRate.toFixed(4)} RSD/EUR)`);
+    } catch (error: any) {
+      toast.error("Greška pri eksportu: " + error.message);
+    } finally {
+      setExportingMinimax(false);
+    }
+  };
+
   if (loading) {
     return (
       <div className="min-h-screen bg-background">
@@ -365,16 +406,12 @@ const WorkOrderDetails = () => {
                 <Button
                   variant="outline"
                   size="sm"
-                  onClick={() => downloadMinimaxXml({
-                    ...workOrder,
-                    clients: workOrder.clients,
-                    file_entries: fileEntries,
-                    client_plate_prices: clientPlatePrices
-                  })}
-                  title="Eksportuj za Minimax"
+                  onClick={handleMinimaxExport}
+                  disabled={exportingMinimax}
+                  title="Eksportuj za Minimax (konverzija EUR → RSD po kursu NBS)"
                 >
                   <FileCode className="h-4 w-4 mr-2" />
-                  Minimax XML
+                  {exportingMinimax ? "Eksportujem..." : "Minimax XML"}
                 </Button>
               </>
             )}
