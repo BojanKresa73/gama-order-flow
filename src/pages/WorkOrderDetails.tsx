@@ -23,6 +23,8 @@ const WorkOrderDetails = () => {
   const { isSuper, isAdmin, isAdminPlus } = useAuthz();
   const [workOrder, setWorkOrder] = useState<any>(null);
   const [digitalJobs, setDigitalJobs] = useState<LocalDigitalJob[]>([]);
+  const [fileEntries, setFileEntries] = useState<any[]>([]);
+  const [clientPlatePrices, setClientPlatePrices] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [emailStatus, setEmailStatus] = useState<any>(null);
   const [resending, setResending] = useState(false);
@@ -76,6 +78,39 @@ const WorkOrderDetails = () => {
         
         if (!digitalError && digitalJobsData) {
           setDigitalJobs(digitalJobsData as LocalDigitalJob[]);
+        }
+      }
+
+      // Fetch file_entries with plate format for CTP orders (for Minimax export)
+      if (data.order_type === 'ctp') {
+        const { data: fileEntriesData } = await supabase
+          .from('file_entries')
+          .select('*, plate_formats(format_name)')
+          .eq('work_order_id', id)
+          .order('created_at');
+        
+        if (fileEntriesData) {
+          // Flatten plate_formats join
+          const entries = fileEntriesData.map(fe => ({
+            ...fe,
+            format_name: fe.plate_formats?.format_name
+          }));
+          setFileEntries(entries);
+        }
+
+        // Fetch client plate prices for Minimax export
+        const { data: pricesData } = await supabase
+          .from('client_plate_prices')
+          .select('*, plate_formats(format_name)')
+          .eq('client_id', data.client_id);
+        
+        if (pricesData) {
+          const prices = pricesData.map(p => ({
+            plate_format_id: p.plate_format_id,
+            format_name: p.plate_formats?.format_name,
+            price_rsd: Number(p.price_rsd)
+          }));
+          setClientPlatePrices(prices);
         }
       }
 
@@ -332,7 +367,9 @@ const WorkOrderDetails = () => {
                   size="sm"
                   onClick={() => downloadMinimaxXml({
                     ...workOrder,
-                    clients: workOrder.clients
+                    clients: workOrder.clients,
+                    file_entries: fileEntries,
+                    client_plate_prices: clientPlatePrices
                   })}
                   title="Eksportuj za Minimax"
                 >
