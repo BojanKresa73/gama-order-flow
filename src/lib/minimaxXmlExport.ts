@@ -146,9 +146,10 @@ export function generateMinimaxOrderXml(workOrder: WorkOrderData): string {
         <SifraArtikla>${escapeXml(minimaxSifra)}</SifraArtikla>
         <NazivArtikla>${escapeXml(artikalDisplay)}</NazivArtikla>
         <MerskaEnota>Kom</MerskaEnota>
-        <Kolicina>${(entry.quantity || 1).toFixed(6)}</Kolicina>
-        <Cena>${formatPrice(priceRsd)}</Cena>
         <Opis>${escapeXml(posaoOpis)}</Opis>
+        <Kolicina>${(entry.quantity || 1).toFixed(6)}</Kolicina>
+        <OdstotekPopusta>0.00</OdstotekPopusta>
+        <Cena>${formatPrice(priceRsd)}</Cena>
       </NarociloVrstica>`;
     })
     .filter(xml => xml.length > 0)
