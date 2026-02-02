@@ -109,13 +109,13 @@ export function generateMinimaxOrderXml(workOrder: WorkOrderData): string {
     };
   });
 
-  // Build Artikli section
+  // Build Artikli section (per XSD: SifraArtikla, Naziv, MerskaEnota, Tip, Uporaba)
   const artikliXml = artikliData.map(art => `
     <Artikel>
       <SifraArtikla>${escapeXml(art.sifra)}</SifraArtikla>
-      <NazivArtikla>${escapeXml(art.naziv)}</NazivArtikla>
+      <Naziv>${escapeXml(art.naziv)}</Naziv>
       <MerskaEnota>${escapeXml(art.enota)}</MerskaEnota>
-      <VrstaArtikla>B</VrstaArtikla>
+      <Tip>BL</Tip>
       <Uporaba>D</Uporaba>
     </Artikel>`).join("");
 
