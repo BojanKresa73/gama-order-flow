@@ -6,6 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { ArrowLeft, Plus, FileText, Eye, Lock, CheckCircle2, AlertTriangle, Trash2, Pencil, Send, Download, Loader2, Receipt, FileCheck } from "lucide-react";
+import { PriorityNotificationBell } from "@/components/priority/PriorityNotificationBell";
 import * as XLSX from "xlsx";
 import { format } from "date-fns";
 import { useToast } from "@/hooks/use-toast";
@@ -870,6 +871,7 @@ const WorkOrders = () => {
             <h1 className="text-2xl font-bold">Radni nalozi</h1>
           </div>
           <div className="flex items-center gap-2">
+            <PriorityNotificationBell />
             <Button variant="outline" size="sm" onClick={() => navigate("/checklist")}>
               Checklist
             </Button>

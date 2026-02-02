@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ArrowLeft } from "lucide-react";
+import { PriorityNotificationBell } from "@/components/priority/PriorityNotificationBell";
 import ChecklistView from "@/components/checklist/ChecklistView";
 import SearchAndStats from "@/components/checklist/SearchAndStats";
 
@@ -47,6 +48,7 @@ const Checklist = () => {
             </Button>
             <h1 className="text-lg md:text-2xl font-bold">Checklist</h1>
           </div>
+          <PriorityNotificationBell />
         </div>
       </header>
 
