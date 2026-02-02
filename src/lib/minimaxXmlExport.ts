@@ -1,12 +1,20 @@
 import { format } from "date-fns";
 
+/**
+ * Minimax XML Export za radne naloge
+ * 
+ * Generiše XML u formatu Minimax porudžbine (Naročilo) za uvoz u računovodstveni sistem.
+ * NAPOMENA: XML elementi koriste slovenačke nazive (Narocilo, Stranka, itd.) jer je to
+ * obavezan format Minimax XSD šeme - promena naziva bi onemogućila uvoz.
+ */
+
 // Minimax XML namespace
 const MINIMAX_NAMESPACE = "https://moj.minimax.rs/RS/CommonWeb/documents/schemas/miniMAXUvozKnjigovodstvo";
 
-// Types for work order items
+// Tipovi za stavke radnog naloga
 interface WorkOrderItem {
   id: string;
-  label: string; // file name
+  label: string; // naziv fajla
   qty: number;
   unit: string;
   total?: number;
@@ -14,6 +22,7 @@ interface WorkOrderItem {
   note?: string;
 }
 
+// Podaci o klijentu
 interface ClientData {
   name: string;
   pib?: string | null;
@@ -24,6 +33,7 @@ interface ClientData {
   telefon?: string | null;
 }
 
+// Podaci o radnom nalogu
 interface WorkOrderData {
   id: string;
   display_order_number?: string;
@@ -36,7 +46,7 @@ interface WorkOrderData {
   items: WorkOrderItem[];
 }
 
-// Helper to escape XML special characters
+// Pomoćna funkcija za escape XML specijalnih karaktera
 function escapeXml(text: string | null | undefined): string {
   if (!text) return "";
   return text
@@ -47,13 +57,13 @@ function escapeXml(text: string | null | undefined): string {
     .replace(/'/g, "&apos;");
 }
 
-// Truncate string to max length
+// Skraćivanje stringa na maksimalnu dužinu
 function truncate(text: string | null | undefined, maxLength: number): string {
   if (!text) return "";
   return text.length > maxLength ? text.substring(0, maxLength) : text;
 }
 
-// Get artikal šifra based on order type
+// Dobijanje šifre artikla na osnovu tipa naloga
 function getArtikalSifra(orderType: string): string {
   switch (orderType) {
     case "ctp": return "CTP-PLOCE";
@@ -63,8 +73,8 @@ function getArtikalSifra(orderType: string): string {
   }
 }
 
-// Get merna jedinica
-function getMerskaEnota(orderType: string, unit: string): string {
+// Dobijanje merne jedinice
+function getMernaJedinica(orderType: string, unit: string): string {
   switch (orderType) {
     case "ctp": return "kom";
     case "digital": return "tab";
@@ -93,7 +103,7 @@ export function generateMinimaxOrderXml(workOrder: WorkOrderData): string {
       <NarociloVrstica>
         <SifraArtikla>${escapeXml(truncate(artikalSifra, 30))}</SifraArtikla>
         <NazivArtikla>${escapeXml(truncate(item.label, 250))}</NazivArtikla>
-        <MerskaEnota>${escapeXml(getMerskaEnota(workOrder.order_type, item.unit))}</MerskaEnota>
+        <MerskaEnota>${escapeXml(getMernaJedinica(workOrder.order_type, item.unit))}</MerskaEnota>
         <Kolicina>${qty.toFixed(6)}</Kolicina>
         ${item.details ? `<Opis>${escapeXml(truncate(item.details + (item.note ? " | " + item.note : ""), 8000))}</Opis>` : ""}
       </NarociloVrstica>`;
