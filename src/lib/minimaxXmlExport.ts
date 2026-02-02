@@ -95,26 +95,40 @@ export function generateMinimaxOrderXml(workOrder: WorkOrderData): string {
     : truncate(client.name.replace(/[^A-Za-z0-9]/g, "").toUpperCase(), 30);
 
   // Build NarociloVrstice (order lines)
-  // Build item description for article name (since Opis is not allowed in NarociloVrstica)
-  const vrsticeXml = workOrder.items.map((item, index) => {
-    const qty = item.total || item.qty || 1;
+  // Build articles and order lines
+  const artikliData = workOrder.items.map((item, index) => {
     const artikalSifra = `${getArtikalSifra(workOrder.order_type)}-${(index + 1).toString().padStart(3, "0")}`;
-    
-    // Combine label with details in NazivArtikla since Opis is not valid per Minimax schema
     const fullName = item.details 
       ? `${item.label} (${item.details}${item.note ? " | " + item.note : ""})`
       : item.label;
-    
-    return `
-      <NarociloVrstica>
-        <SifraArtikla>${escapeXml(truncate(artikalSifra, 30))}</SifraArtikla>
-        <NazivArtikla>${escapeXml(truncate(fullName, 250))}</NazivArtikla>
-        <MerskaEnota>${escapeXml(getMernaJedinica(workOrder.order_type, item.unit))}</MerskaEnota>
-        <Kolicina>${qty.toFixed(6)}</Kolicina>
-      </NarociloVrstica>`;
-  }).join("");
+    return {
+      sifra: artikalSifra,
+      naziv: truncate(fullName, 250),
+      enota: getMernaJedinica(workOrder.order_type, item.unit),
+      qty: item.total || item.qty || 1,
+    };
+  });
 
-  // Full XML structure
+  // Build Artikli section
+  const artikliXml = artikliData.map(art => `
+    <Artikel>
+      <Sifra>${escapeXml(art.sifra)}</Sifra>
+      <Naziv>${escapeXml(art.naziv)}</Naziv>
+      <MerskaEnota>${escapeXml(art.enota)}</MerskaEnota>
+      <VrstaArtikla>B</VrstaArtikla>
+      <Uporaba>D</Uporaba>
+    </Artikel>`).join("");
+
+  // Build NarociloVrstice
+  const vrsticeXml = artikliData.map(art => `
+      <NarociloVrstica>
+        <SifraArtikla>${escapeXml(art.sifra)}</SifraArtikla>
+        <NazivArtikla>${escapeXml(art.naziv)}</NazivArtikla>
+        <MerskaEnota>${escapeXml(art.enota)}</MerskaEnota>
+        <Kolicina>${art.qty.toFixed(6)}</Kolicina>
+      </NarociloVrstica>`).join("");
+
+  // Full XML structure with Artikli section
   const xml = `<?xml version="1.0" encoding="UTF-8"?>
 <miniMAXUvozKnjigovodstvo xmlns="${MINIMAX_NAMESPACE}">
   <Stranke>
@@ -133,6 +147,8 @@ export function generateMinimaxOrderXml(workOrder: WorkOrderData): string {
       <Uporaba>D</Uporaba>
     </Stranka>
   </Stranke>
+  <Artikli>${artikliXml}
+  </Artikli>
   <Narocila>
     <Narocilo>
       <NarociloGlava>
