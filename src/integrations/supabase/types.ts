@@ -202,6 +202,48 @@ export type Database = {
           },
         ]
       }
+      client_plate_prices: {
+        Row: {
+          client_id: string
+          created_at: string
+          id: string
+          plate_format_id: string
+          price_rsd: number
+          updated_at: string
+        }
+        Insert: {
+          client_id: string
+          created_at?: string
+          id?: string
+          plate_format_id: string
+          price_rsd?: number
+          updated_at?: string
+        }
+        Update: {
+          client_id?: string
+          created_at?: string
+          id?: string
+          plate_format_id?: string
+          price_rsd?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "client_plate_prices_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "client_plate_prices_plate_format_id_fkey"
+            columns: ["plate_format_id"]
+            isOneToOne: false
+            referencedRelation: "plate_formats"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       client_portal_users: {
         Row: {
           client_id: string
