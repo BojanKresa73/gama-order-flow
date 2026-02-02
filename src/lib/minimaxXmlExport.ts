@@ -138,8 +138,8 @@ export function generateMinimaxOrderXml(workOrder: WorkOrderData): string {
         ${client.adresa ? `<NaslovStranke>${escapeXml(truncate(client.adresa, 50))}</NaslovStranke>` : ""}
         ${client.postanski_broj ? `<PostnaStevilka>${escapeXml(truncate(client.postanski_broj, 30))}</PostnaStevilka>` : ""}
         ${client.grad ? `<NazivPoste>${escapeXml(truncate(client.grad, 250))}</NazivPoste>` : ""}
-        <SifraDenarneEnote>RSD</SifraDenarneEnote>
         <Veza>${escapeXml(truncate(orderNumber, 30))}</Veza>
+        <SifraDenarneEnote>RSD</SifraDenarneEnote>
         ${workOrder.notes ? `<Opomba>${escapeXml(truncate(workOrder.notes, 1000))}</Opomba>` : ""}
       </NarociloGlava>
       <NarociloVrstice>${vrsticeXml}
