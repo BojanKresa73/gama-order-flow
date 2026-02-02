@@ -437,36 +437,44 @@ export function ProcurementForecast({ plateFormats, orders }: ProcurementForecas
           </CardHeader>
           <CardContent>
             <div className="overflow-x-auto">
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Format</TableHead>
-                    {[...new Set(monthlyData.map(d => d.month))].slice(0, 6).map(month => (
-                      <TableHead key={month} className="text-right">
-                        {new Date(month + '-01').toLocaleDateString('sr-Latn', { month: 'short', year: '2-digit' })}
-                      </TableHead>
-                    ))}
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {plateFormats.filter(f => monthlyData.some(d => d.formatId === f.id)).map(format => {
-                    const months = [...new Set(monthlyData.map(d => d.month))].slice(0, 6);
-                    return (
-                      <TableRow key={format.id}>
-                        <TableCell className="font-medium">{format.format_name}</TableCell>
-                        {months.map(month => {
-                          const data = monthlyData.find(d => d.month === month && d.formatId === format.id);
-                          return (
-                            <TableCell key={month} className="text-right">
-                              {data ? data.total.toLocaleString('sr-RS') : '-'}
-                            </TableCell>
-                          );
-                        })}
+            {(() => {
+                // Get unique months in descending order (most recent first)
+                const uniqueMonths = monthlyData
+                  .map(d => d.month)
+                  .filter((month, index, self) => self.indexOf(month) === index)
+                  .sort((a, b) => b.localeCompare(a))
+                  .slice(0, 6);
+                
+                return (
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>Format</TableHead>
+                        {uniqueMonths.map(month => (
+                          <TableHead key={month} className="text-right">
+                            {new Date(month + '-01').toLocaleDateString('sr-Latn', { month: 'short', year: '2-digit' })}
+                          </TableHead>
+                        ))}
                       </TableRow>
-                    );
-                  })}
-                </TableBody>
-              </Table>
+                    </TableHeader>
+                    <TableBody>
+                      {plateFormats.filter(f => monthlyData.some(d => d.formatId === f.id)).map(format => (
+                        <TableRow key={format.id}>
+                          <TableCell className="font-medium">{format.format_name}</TableCell>
+                          {uniqueMonths.map(month => {
+                            const data = monthlyData.find(d => d.month === month && d.formatId === format.id);
+                            return (
+                              <TableCell key={month} className="text-right">
+                                {data ? data.total.toLocaleString('sr-RS') : '-'}
+                              </TableCell>
+                            );
+                          })}
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                );
+              })()}
             </div>
           </CardContent>
         </Card>
