@@ -132,10 +132,10 @@ export function generateMinimaxOrderXml(workOrder: WorkOrderData): string {
       // Cena iz cenovnika klijenta (EUR -> RSD po kursu NBS)
       const priceRsd = getPriceForFormat(formatName, workOrder.client_plate_prices, nbsRate);
       
-      // Opis: "Posao: [naziv klijenta kraci] [format] [broj naloga] [naziv fajla]"
-      // Primer: "Posao: dbox 1060x795 RN-0056-2025 FLAMMAT Kutije za hepo 21mm..."
+      // Opis: "Usluga: [naziv klijenta kraci] [format] [broj naloga] [naziv fajla]"
+      // Primer: "Usluga: dbox 1060x795 RN-0056-2025 FLAMMAT Kutije za hepo 21mm..."
       const clientShort = truncate(client.name.split(" ")[0].toLowerCase(), 10);
-      const posaoOpis = `Posao: ${clientShort} ${formatName} ${orderNumber} ${truncate(entry.filename, 60)}`;
+      const posaoOpis = `Usluga: ${clientShort} ${formatName} ${orderNumber} ${truncate(entry.filename, 60)}`;
       
       // Artikal naziv BEZ šifre - Minimax već prikazuje šifru iz SifraArtikla
       // Primer: "CTP: Ploča 1060x795"
