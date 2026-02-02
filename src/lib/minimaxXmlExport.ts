@@ -148,7 +148,6 @@ export function generateMinimaxOrderXml(workOrder: WorkOrderData): string {
         <MerskaEnota>Kom</MerskaEnota>
         <Kolicina>${(entry.quantity || 1).toFixed(6)}</Kolicina>
         <Cena>${formatPrice(priceRsd)}</Cena>
-        <Popust>0.00</Popust>
         <Opis>${escapeXml(posaoOpis)}</Opis>
       </NarociloVrstica>`;
     })
