@@ -1466,6 +1466,42 @@ export type Database = {
           },
         ]
       }
+      nbs_exchange_rates: {
+        Row: {
+          currency_code: string
+          fetched_at: string
+          id: string
+          list_date: string
+          list_number: number | null
+          middle_rate: number
+          source: string | null
+          valid_from: string
+          valid_to: string
+        }
+        Insert: {
+          currency_code: string
+          fetched_at?: string
+          id?: string
+          list_date: string
+          list_number?: number | null
+          middle_rate: number
+          source?: string | null
+          valid_from: string
+          valid_to: string
+        }
+        Update: {
+          currency_code?: string
+          fetched_at?: string
+          id?: string
+          list_date?: string
+          list_number?: number | null
+          middle_rate?: number
+          source?: string | null
+          valid_from?: string
+          valid_to?: string
+        }
+        Relationships: []
+      }
       plate_formats: {
         Row: {
           created_at: string
@@ -2970,6 +3006,7 @@ export type Database = {
         Returns: undefined
       }
       generate_order_number: { Args: never; Returns: string }
+      get_current_nbs_rate: { Args: { p_currency?: string }; Returns: number }
       get_unread_priority_notifications_count: { Args: never; Returns: number }
       get_work_order_full: { Args: { p_identifier: string }; Returns: Json }
       has_admin_access: { Args: { _user_id: string }; Returns: boolean }
