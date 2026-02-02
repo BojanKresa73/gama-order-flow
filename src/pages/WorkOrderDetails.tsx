@@ -285,6 +285,13 @@ const WorkOrderDetails = () => {
         client_plate_prices: clientPlatePrices,
         nbs_rate: nbsRate
       });
+
+       // Guard: Minimax rejects NarociloVrstica if it contains <Popust>
+       if (xml.includes("<Popust>") || xml.includes("</Popust>")) {
+         console.error("Minimax XML still contains <Popust> tag. Aborting export.");
+         toast.error("XML i dalje sadrži <Popust> (osvežite stranicu pa pokušajte ponovo).");
+         return;
+       }
       
       // Download the file
       const orderNumber = workOrder.display_order_number || workOrder.order_number || workOrder.id;
