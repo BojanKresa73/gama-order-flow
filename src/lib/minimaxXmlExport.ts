@@ -159,6 +159,10 @@ export function generateMinimaxOrderXml(workOrder: WorkOrderData): string {
   // NE uključujemo Stranke sekciju - pretpostavljamo da stranka već postoji u Minimax-u
   // NE uključujemo Artikli sekciju - koristimo postojeće šifre artikala iz Minimax-a
   
+  // Ako imamo PIB mapiranje, Minimax već ima klijenta - ne šaljemo naziv/adresu
+  // Minimax će koristiti svoje podatke za tog klijenta
+  const hasMinimaxClient = minimaxStrankaSifra !== null;
+  
   // Full XML structure - samo Narocila sekcija
   // PrejetoIzdano: P = Primljeno (od klijenta)
   const xml = `<?xml version="1.0" encoding="UTF-8"?>
@@ -168,11 +172,11 @@ export function generateMinimaxOrderXml(workOrder: WorkOrderData): string {
       <NarociloGlava>
         <PrejetoIzdano>P</PrejetoIzdano>
         <Datum>${orderDate}</Datum>
-        <SifraStranke>${escapeXml(clientSifra)}</SifraStranke>
-        <NazivStranke>${escapeXml(truncate(client.name, 100))}</NazivStranke>
-        ${client.adresa ? `<NaslovStranke>${escapeXml(truncate(client.adresa, 50))}</NaslovStranke>` : ""}
-        ${client.postanski_broj ? `<PostnaStevilka>${escapeXml(truncate(client.postanski_broj, 30))}</PostnaStevilka>` : ""}
-        ${client.grad ? `<NazivPoste>${escapeXml(truncate(client.grad, 250))}</NazivPoste>` : ""}
+        <SifraStranke>${escapeXml(clientSifra)}</SifraStranke>${hasMinimaxClient ? "" : `
+        <NazivStranke>${escapeXml(truncate(client.name, 100))}</NazivStranke>${client.adresa ? `
+        <NaslovStranke>${escapeXml(truncate(client.adresa, 50))}</NaslovStranke>` : ""}${client.postanski_broj ? `
+        <PostnaStevilka>${escapeXml(truncate(client.postanski_broj, 30))}</PostnaStevilka>` : ""}${client.grad ? `
+        <NazivPoste>${escapeXml(truncate(client.grad, 250))}</NazivPoste>` : ""}`}
         <Veza>${escapeXml(truncate(orderNumber, 30))}</Veza>
         <SifraDenarneEnote>RSD</SifraDenarneEnote>
         ${workOrder.notes ? `<Opomba>${escapeXml(truncate(workOrder.notes, 1000))}</Opomba>` : ""}
