@@ -6,6 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ArrowLeft, FileText, Mail, Download, Receipt, ReceiptText, FileCode } from "lucide-react";
 import { generateMinimaxOrderXml } from "@/lib/minimaxXmlExport";
+import { generateMinimaxFilmXml, type FilmJobEntry } from "@/lib/minimaxFilmExport";
 import { fetchNbsEurRate } from "@/lib/nbsExchangeRate";
 import { format } from "date-fns";
 import { toast } from "sonner";
@@ -25,6 +26,7 @@ const WorkOrderDetails = () => {
   const [workOrder, setWorkOrder] = useState<any>(null);
   const [digitalJobs, setDigitalJobs] = useState<LocalDigitalJob[]>([]);
   const [fileEntries, setFileEntries] = useState<any[]>([]);
+  const [filmJobs, setFilmJobs] = useState<FilmJobEntry[]>([]);
   const [clientPlatePrices, setClientPlatePrices] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [emailStatus, setEmailStatus] = useState<any>(null);
@@ -113,6 +115,19 @@ const WorkOrderDetails = () => {
             price_eur: Number(p.price_eur)
           }));
           setClientPlatePrices(prices);
+        }
+      }
+
+      // Fetch film_jobs for film orders (for Minimax export)
+      if (data.order_type === 'film') {
+        const { data: filmJobsData } = await supabase
+          .from('film_jobs')
+          .select('id, file_name, width_mm, height_mm, qty, computed_total_m, note')
+          .eq('work_order_id', id)
+          .order('created_at');
+        
+        if (filmJobsData) {
+          setFilmJobs(filmJobsData as FilmJobEntry[]);
         }
       }
 
@@ -277,25 +292,38 @@ const WorkOrderDetails = () => {
       // Fetch current NBS EUR rate
       const nbsRate = await fetchNbsEurRate();
       
-      // Generate XML with the rate
-      const xml = generateMinimaxOrderXml({
-        ...workOrder,
-        clients: workOrder.clients,
-        file_entries: fileEntries,
-        client_plate_prices: clientPlatePrices,
-        nbs_rate: nbsRate
-      });
+      let xml: string;
+      
+      if (workOrder.order_type === 'film') {
+        // Generate Film XML
+        xml = generateMinimaxFilmXml({
+          ...workOrder,
+          clients: workOrder.clients,
+          film_jobs: filmJobs,
+          nbs_rate: nbsRate
+        });
+      } else {
+        // Generate CTP XML
+        xml = generateMinimaxOrderXml({
+          ...workOrder,
+          clients: workOrder.clients,
+          file_entries: fileEntries,
+          client_plate_prices: clientPlatePrices,
+          nbs_rate: nbsRate
+        });
 
-       // Guard: Minimax rejects NarociloVrstica if it contains <Popust>
-       if (xml.includes("<Popust>") || xml.includes("</Popust>")) {
-         console.error("Minimax XML still contains <Popust> tag. Aborting export.");
-         toast.error("XML i dalje sadrži <Popust> (osvežite stranicu pa pokušajte ponovo).");
-         return;
-       }
+        // Guard: Minimax rejects NarociloVrstica if it contains <Popust>
+        if (xml.includes("<Popust>") || xml.includes("</Popust>")) {
+          console.error("Minimax XML still contains <Popust> tag. Aborting export.");
+          toast.error("XML i dalje sadrži <Popust> (osvežite stranicu pa pokušajte ponovo).");
+          return;
+        }
+      }
       
       // Download the file
       const orderNumber = workOrder.display_order_number || workOrder.order_number || workOrder.id;
-      const fileName = `Minimax_${orderNumber.replace(/[^A-Za-z0-9_-]/g, "_")}_${format(new Date(), "yyyyMMdd_HHmm")}.xml`;
+      const typePrefix = workOrder.order_type === 'film' ? 'Film' : '';
+      const fileName = `Minimax_${typePrefix}${orderNumber.replace(/[^A-Za-z0-9_-]/g, "_")}_${format(new Date(), "yyyyMMdd_HHmm")}.xml`;
       
       const blob = new Blob([xml], { type: "application/xml;charset=utf-8" });
       const url = URL.createObjectURL(blob);
@@ -410,7 +438,7 @@ const WorkOrderDetails = () => {
                   <Mail className="h-4 w-4 mr-2" />
                   {resending ? "Šalje se..." : "Ponovo pošalji"}
                 </Button>
-                {(isSuper || isAdminPlus) && (
+                {(isSuper || isAdminPlus) && (workOrder.order_type === 'ctp' || workOrder.order_type === 'film') && (
                   <Button
                     variant="outline"
                     size="sm"
