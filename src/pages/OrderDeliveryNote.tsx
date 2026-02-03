@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
@@ -13,14 +13,61 @@ const OrderDeliveryNote = () => {
   const [loading, setLoading] = useState(true);
   const [pdfLoading, setPdfLoading] = useState(false);
   const [workOrder, setWorkOrder] = useState<any>(null);
-  const [deliveryNote, setDeliveryNote] = useState<any>(null);
-  const [pdfUrl, setPdfUrl] = useState<string | null>(null);
+  const [pdfBlobUrl, setPdfBlobUrl] = useState<string | null>(null);
+
+  const fetchPDF = useCallback(async () => {
+    if (!orderId) return;
+    
+    setPdfLoading(true);
+    try {
+      const { data: session } = await supabase.auth.getSession();
+      if (!session.session) throw new Error("Niste prijavljeni");
+
+      const response = await fetch(
+        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/get-delivery-note-pdf?work_order_id=${orderId}`,
+        {
+          headers: {
+            'Authorization': `Bearer ${session.session.access_token}`,
+            'apikey': import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY,
+          },
+        }
+      );
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.error || 'Greška pri generisanju PDF-a');
+      }
+
+      const blob = await response.blob();
+      const url = URL.createObjectURL(blob);
+      
+      setPdfBlobUrl((prevUrl) => {
+        if (prevUrl) URL.revokeObjectURL(prevUrl);
+        return url;
+      });
+    } catch (error: any) {
+      console.error("PDF fetch error:", error);
+      toast({
+        title: "Greška",
+        description: error.message,
+        variant: "destructive",
+      });
+    } finally {
+      setPdfLoading(false);
+    }
+  }, [orderId, toast]);
 
   useEffect(() => {
     checkAuth();
     if (orderId) {
       fetchOrderDetails();
     }
+    
+    return () => {
+      if (pdfBlobUrl) {
+        URL.revokeObjectURL(pdfBlobUrl);
+      }
+    };
   }, [orderId]);
 
   const checkAuth = async () => {
@@ -49,27 +96,10 @@ const OrderDeliveryNote = () => {
 
       if (orderError) throw orderError;
       setWorkOrder(orderData);
-
-      // Fetch delivery note if exists
-      const { data: deliveryNoteData, error: dnError } = await supabase
-        .from("delivery_notes")
-        .select("*")
-        .eq("work_order_id", orderId)
-        .maybeSingle();
-
-      if (dnError) {
-        console.error("Error fetching delivery note:", dnError);
-      } else {
-        setDeliveryNote(deliveryNoteData);
-        
-        // If PDF exists, get public URL for iframe
-        if (deliveryNoteData?.pdf_path) {
-          const pdfPath = deliveryNoteData.pdf_path.replace("delivery-notes/", "");
-          const { data } = supabase.storage
-            .from("delivery-notes")
-            .getPublicUrl(pdfPath);
-          setPdfUrl(data.publicUrl);
-        }
+      
+      // Auto-fetch PDF after loading order details
+      if (orderData) {
+        setTimeout(() => fetchPDF(), 100);
       }
     } catch (error: any) {
       toast({
@@ -82,88 +112,27 @@ const OrderDeliveryNote = () => {
     }
   };
 
-  const handleGeneratePDF = async () => {
-    if (!orderId) return;
-    
-    setPdfLoading(true);
-    try {
-      const { data, error } = await supabase.functions.invoke('get-delivery-note-pdf', {
-        body: { work_order_id: orderId }
-      });
-
-      if (error) throw error;
-      
-      if (data?.pdf_path) {
-        // Refresh delivery note data
-        const { data: dnData } = await supabase
-          .from("delivery_notes")
-          .select("*")
-          .eq("work_order_id", orderId)
-          .maybeSingle();
-        
-        if (dnData) {
-          setDeliveryNote(dnData);
-          const pdfPath = dnData.pdf_path.replace("delivery-notes/", "");
-          const { data: urlData } = supabase.storage
-            .from("delivery-notes")
-            .getPublicUrl(pdfPath);
-          setPdfUrl(urlData.publicUrl);
-        }
-        
-        toast({
-          title: "Uspešno",
-          description: "PDF je generisan",
-        });
-      }
-    } catch (error: any) {
+  const handleDownloadPDF = () => {
+    if (!pdfBlobUrl) {
       toast({
         title: "Greška",
-        description: error.message,
-        variant: "destructive",
-      });
-    } finally {
-      setPdfLoading(false);
-    }
-  };
-
-  const handleDownloadPDF = async () => {
-    if (!deliveryNote?.pdf_path) {
-      toast({
-        title: "Greška",
-        description: "PDF još nije generisan",
+        description: "PDF još nije učitan",
         variant: "destructive",
       });
       return;
     }
 
-    try {
-      const pdfPath = deliveryNote.pdf_path.replace("delivery-notes/", "");
-      const { data, error } = await supabase.storage
-        .from("delivery-notes")
-        .download(pdfPath);
-
-      if (error) throw error;
-
-      const url = URL.createObjectURL(data);
-      const a = document.createElement("a");
-      a.href = url;
-      a.download = `${workOrder.order_number}.pdf`;
-      document.body.appendChild(a);
-      a.click();
-      document.body.removeChild(a);
-      URL.revokeObjectURL(url);
-    } catch (error: any) {
-      toast({
-        title: "Greška",
-        description: error.message,
-        variant: "destructive",
-      });
-    }
+    const a = document.createElement("a");
+    a.href = pdfBlobUrl;
+    a.download = `Otpremnica-${workOrder?.order_number || orderId}.pdf`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
   };
 
   const handleOpenPDF = () => {
-    if (pdfUrl) {
-      window.open(pdfUrl, "_blank");
+    if (pdfBlobUrl) {
+      window.open(pdfBlobUrl, "_blank");
     }
   };
 
@@ -194,19 +163,7 @@ const OrderDeliveryNote = () => {
             <h1 className="text-2xl font-bold">Otpremnica - {workOrder.order_number}</h1>
           </div>
           <div className="flex gap-2">
-            {!pdfUrl && (
-              <Button onClick={handleGeneratePDF} disabled={pdfLoading}>
-                {pdfLoading ? (
-                  <>
-                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                    Generiše se...
-                  </>
-                ) : (
-                  "Generiši PDF"
-                )}
-              </Button>
-            )}
-            {pdfUrl && (
+            {pdfBlobUrl && (
               <>
                 <Button variant="outline" onClick={handleDownloadPDF}>
                   <Download className="h-4 w-4 mr-2" />
@@ -217,6 +174,11 @@ const OrderDeliveryNote = () => {
                   Otvori u novom tabu
                 </Button>
               </>
+            )}
+            {!pdfBlobUrl && !pdfLoading && (
+              <Button onClick={fetchPDF}>
+                Učitaj PDF
+              </Button>
             )}
           </div>
         </div>
@@ -241,24 +203,22 @@ const OrderDeliveryNote = () => {
 
         {/* PDF Preview */}
         <div className="flex-1 bg-muted rounded-lg overflow-hidden min-h-[600px]">
-          {pdfUrl ? (
+          {pdfLoading ? (
+            <div className="flex flex-col items-center justify-center h-full min-h-[600px] text-muted-foreground">
+              <Loader2 className="h-8 w-8 animate-spin mb-4" />
+              <p className="text-lg">Učitavanje PDF-a...</p>
+            </div>
+          ) : pdfBlobUrl ? (
             <iframe
-              src={`${pdfUrl}#toolbar=1&navpanes=0`}
+              src={`${pdfBlobUrl}#toolbar=1&navpanes=0`}
               className="w-full h-full min-h-[600px]"
               title="Otpremnica PDF"
             />
           ) : (
             <div className="flex flex-col items-center justify-center h-full min-h-[600px] text-muted-foreground">
-              <p className="text-lg mb-4">PDF još nije generisan</p>
-              <Button onClick={handleGeneratePDF} disabled={pdfLoading}>
-                {pdfLoading ? (
-                  <>
-                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                    Generiše se...
-                  </>
-                ) : (
-                  "Generiši PDF"
-                )}
+              <p className="text-lg mb-4">PDF nije učitan</p>
+              <Button onClick={fetchPDF}>
+                Učitaj PDF
               </Button>
             </div>
           )}
