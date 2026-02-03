@@ -21,11 +21,15 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { CheckCircle, XCircle, Search, FileText, Calendar, User, Eye, FolderOpen } from "lucide-react";
+import {
+  Collapsible,
+  CollapsibleContent,
+  CollapsibleTrigger,
+} from "@/components/ui/collapsible";
+import { CheckCircle, XCircle, Search, FileText, Calendar, User, Eye, ChevronRight, ChevronDown } from "lucide-react";
 import { PriorityBadge } from "@/components/priority/PriorityBadge";
 import { format, subDays } from "date-fns";
 import { displayOrderNumber } from "@/lib/orderLabel";
-import { OrderFilesDialog } from "@/components/work-orders/OrderFilesDialog";
 
 interface WorkOrder {
   id: string;
@@ -64,16 +68,21 @@ const ChecklistView = ({ orderType, onNavigateToSearch }: ChecklistViewProps) =>
   const [workOrders, setWorkOrders] = useState<WorkOrder[]>([]);
   const [loading, setLoading] = useState(true);
   const [statusFilter, setStatusFilter] = useState<StatusFilter>("open");
-  const [filesDialogOpen, setFilesDialogOpen] = useState(false);
-  const [selectedOrderId, setSelectedOrderId] = useState<string>("");
+  const [expandedOrderIds, setExpandedOrderIds] = useState<Set<string>>(new Set());
   const { toast } = useToast();
   const isMobile = useIsMobile();
   const navigate = useNavigate();
 
-  const handleShowFiles = (orderId: string, e: React.MouseEvent) => {
-    e.stopPropagation();
-    setSelectedOrderId(orderId);
-    setFilesDialogOpen(true);
+  const toggleExpanded = (orderId: string) => {
+    setExpandedOrderIds(prev => {
+      const newSet = new Set(prev);
+      if (newSet.has(orderId)) {
+        newSet.delete(orderId);
+      } else {
+        newSet.add(orderId);
+      }
+      return newSet;
+    });
   };
 
   useEffect(() => {
@@ -420,73 +429,224 @@ const ChecklistView = ({ orderType, onNavigateToSearch }: ChecklistViewProps) =>
   }
 
   // Mobile card component for work orders
-  const MobileOrderCard = ({ order }: { order: WorkOrder }) => (
-    <Card className="mb-3">
-      <CardContent className="p-4">
-        <div className="flex justify-between items-start mb-2">
-          <div className="flex-1 min-w-0">
-            <div className="flex items-center gap-2">
-              <PriorityBadge priority={order.priority} size="sm" />
-              <p className="font-semibold text-sm truncate">
-                {displayOrderNumber(order)}
-              </p>
-            </div>
-            <p className="text-sm text-muted-foreground truncate">{order.client_name}</p>
-          </div>
-          <div className="flex items-center gap-2 flex-shrink-0">
-            {getStatusBadge(order.status)}
-            {getTypeBadge(order.type, order.kind)}
-          </div>
-        </div>
-        
-        <div className="grid grid-cols-2 gap-2 text-xs text-muted-foreground mb-3">
-          <div className="flex items-center gap-1">
-            <Calendar className="h-3 w-3" />
-            {format(new Date(order.created_at), "dd.MM.yyyy")}
-          </div>
-          <div className="flex items-center gap-1">
-            <User className="h-3 w-3" />
-            {order.created_by_name || "-"}
-          </div>
-          {orderType === "ctp" && (
-            <div className="col-span-2">
-              <span className="font-medium text-foreground">Ploče: {order.total_plates}</span>
-            </div>
-          )}
-        </div>
+  const MobileOrderCard = ({ order }: { order: WorkOrder }) => {
+    const isExpanded = expandedOrderIds.has(order.id);
+    const hasFiles = order.file_entries && order.file_entries.length > 0;
 
-        <div className="flex gap-2 flex-wrap">
-          <Button 
-            size="sm" 
-            variant="outline" 
-            onClick={() => navigate(`/work-orders/${order.id}`)}
-            title="Pogledaj nalog"
-          >
-            <Eye className="h-4 w-4" />
-          </Button>
-          <Button 
-            size="sm" 
-            variant="outline" 
-            onClick={(e) => handleShowFiles(order.id, e)}
-            title="Pogledaj fajlove"
-          >
-            <FolderOpen className="h-4 w-4" />
-          </Button>
-          {order.status === "open" && (
-            <Button size="sm" className="flex-1" onClick={() => closeWorkOrder(order.id)}>
-              Zatvori
-            </Button>
+    return (
+      <Card className="mb-3">
+        <CardContent className="p-4">
+          <div className="flex justify-between items-start mb-2">
+            <div className="flex-1 min-w-0">
+              <div className="flex items-center gap-2">
+                {hasFiles && (
+                  <button
+                    onClick={() => toggleExpanded(order.id)}
+                    className="p-1 hover:bg-muted rounded"
+                  >
+                    {isExpanded ? (
+                      <ChevronDown className="h-4 w-4" />
+                    ) : (
+                      <ChevronRight className="h-4 w-4" />
+                    )}
+                  </button>
+                )}
+                <PriorityBadge priority={order.priority} size="sm" />
+                <p className="font-semibold text-sm truncate">
+                  {displayOrderNumber(order)}
+                </p>
+              </div>
+              <p className="text-sm text-muted-foreground truncate">{order.client_name}</p>
+            </div>
+            <div className="flex items-center gap-2 flex-shrink-0">
+              {getStatusBadge(order.status)}
+              {getTypeBadge(order.type, order.kind)}
+            </div>
+          </div>
+          
+          <div className="grid grid-cols-2 gap-2 text-xs text-muted-foreground mb-3">
+            <div className="flex items-center gap-1">
+              <Calendar className="h-3 w-3" />
+              {format(new Date(order.created_at), "dd.MM.yyyy")}
+            </div>
+            <div className="flex items-center gap-1">
+              <User className="h-3 w-3" />
+              {order.created_by_name || "-"}
+            </div>
+            {orderType === "ctp" && (
+              <div className="col-span-2">
+                <span className="font-medium text-foreground">Ploče: {order.total_plates}</span>
+              </div>
+            )}
+          </div>
+
+          {/* Expanded file entries */}
+          {isExpanded && hasFiles && (
+            <div className="mb-3 space-y-2 bg-muted/30 rounded-lg p-2">
+              {order.file_entries!.map((file) => (
+                <div key={file.id} className="flex items-center justify-between gap-2 p-2 bg-background rounded border">
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-medium truncate">{file.filename}</p>
+                    <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                      {file.plate_format_name && (
+                        <span>Format: {file.plate_format_name}</span>
+                      )}
+                      <span>Količina: {file.quantity}</span>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    {getStatusBadge(file.status)}
+                    {file.status === "open" && (
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={() => closeFileEntry(file.id, order.id)}
+                      >
+                        Zatvori Fajl
+                      </Button>
+                    )}
+                  </div>
+                </div>
+              ))}
+            </div>
           )}
-          {order.status === "closed" && (
-            <Button size="sm" variant="outline" className="flex-1" onClick={() => sendDeliveryNote(order.id)}>
-              <FileText className="h-3 w-3 mr-1" />
-              Otpremnica
+
+          <div className="flex gap-2 flex-wrap">
+            <Button 
+              size="sm" 
+              variant="outline" 
+              onClick={() => navigate(`/work-orders/${order.id}`)}
+              title="Pogledaj nalog"
+            >
+              <Eye className="h-4 w-4" />
             </Button>
+            {order.status === "open" && (
+              <Button size="sm" className="flex-1" onClick={() => closeWorkOrder(order.id)}>
+                Zatvori Nalog
+              </Button>
+            )}
+            {order.status === "closed" && (
+              <Button size="sm" variant="outline" className="flex-1" onClick={() => sendDeliveryNote(order.id)}>
+                <FileText className="h-3 w-3 mr-1" />
+                Otpremnica
+              </Button>
+            )}
+          </div>
+        </CardContent>
+      </Card>
+    );
+  };
+
+  // Desktop table row with expandable files
+  const DesktopOrderRow = ({ order }: { order: WorkOrder }) => {
+    const isExpanded = expandedOrderIds.has(order.id);
+    const hasFiles = order.file_entries && order.file_entries.length > 0;
+    const columnCount = orderType === "ctp" ? 10 : 9;
+
+    return (
+      <>
+        <TableRow className="hover:bg-muted/50">
+          <TableCell className="w-8">
+            {hasFiles ? (
+              <button
+                onClick={() => toggleExpanded(order.id)}
+                className="p-1 hover:bg-muted rounded"
+              >
+                {isExpanded ? (
+                  <ChevronDown className="h-4 w-4" />
+                ) : (
+                  <ChevronRight className="h-4 w-4" />
+                )}
+              </button>
+            ) : (
+              <span className="w-6 inline-block" />
+            )}
+          </TableCell>
+          <TableCell className="font-medium">
+            {displayOrderNumber(order)}
+          </TableCell>
+          <TableCell>{order.client_name}</TableCell>
+          <TableCell className="text-muted-foreground">{order.created_by_name || "-"}</TableCell>
+          <TableCell>{getTypeBadge(order.type, order.kind)}</TableCell>
+          <TableCell>
+            {format(new Date(order.created_at), "dd.MM.yyyy HH:mm")}
+          </TableCell>
+          <TableCell>
+            {order.closed_at
+              ? format(new Date(order.closed_at), "dd.MM.yyyy HH:mm")
+              : "-"}
+          </TableCell>
+          <TableCell>{getStatusBadge(order.status)}</TableCell>
+          {orderType === "ctp" && (
+            <TableCell className="font-semibold">{order.total_plates}</TableCell>
           )}
-        </div>
-      </CardContent>
-    </Card>
-  );
+          <TableCell className="text-right">
+            <div className="flex gap-2 justify-end">
+              <Button
+                size="sm"
+                variant="ghost"
+                onClick={() => navigate(`/work-orders/${order.id}`)}
+                title="Pogledaj nalog"
+              >
+                <Eye className="h-4 w-4" />
+              </Button>
+              {order.status === "open" && (
+                <Button
+                  size="sm"
+                  onClick={() => closeWorkOrder(order.id)}
+                >
+                  Zatvori Nalog
+                </Button>
+              )}
+              {order.status === "closed" && (
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={() => sendDeliveryNote(order.id)}
+                >
+                  <FileText className="h-4 w-4 mr-2" />
+                  Pošalji Otpremnicu
+                </Button>
+              )}
+            </div>
+          </TableCell>
+        </TableRow>
+        
+        {/* Expanded file entries row */}
+        {isExpanded && hasFiles && order.file_entries!.map((file) => (
+          <TableRow key={file.id} className="bg-muted/30">
+            <TableCell></TableCell>
+            <TableCell colSpan={2} className="pl-8">
+              <div className="flex items-center gap-2">
+                <FileText className="h-4 w-4 text-muted-foreground" />
+                <span className="font-medium">{file.filename}</span>
+              </div>
+            </TableCell>
+            <TableCell>
+              {file.plate_format_name ? `Format: ${file.plate_format_name}` : "-"}
+            </TableCell>
+            <TableCell>
+              Količina: {file.quantity}
+            </TableCell>
+            <TableCell colSpan={2}></TableCell>
+            <TableCell>{getStatusBadge(file.status)}</TableCell>
+            {orderType === "ctp" && <TableCell></TableCell>}
+            <TableCell className="text-right">
+              {file.status === "open" && (
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={() => closeFileEntry(file.id, order.id)}
+                >
+                  Zatvori Fajl
+                </Button>
+              )}
+            </TableCell>
+          </TableRow>
+        ))}
+      </>
+    );
+  };
 
   return (
     <div className="mt-4">
@@ -523,11 +683,11 @@ const ChecklistView = ({ orderType, onNavigateToSearch }: ChecklistViewProps) =>
           ))}
         </div>
       ) : (
-        // Desktop: Table layout
+        // Desktop: Table layout with expandable rows
         <Table>
           <TableHeader>
             <TableRow>
-              <TableHead className="w-16">P</TableHead>
+              <TableHead className="w-8"></TableHead>
               <TableHead>Broj Naloga</TableHead>
               <TableHead>Klijent</TableHead>
               <TableHead>Kreirao</TableHead>
@@ -541,77 +701,11 @@ const ChecklistView = ({ orderType, onNavigateToSearch }: ChecklistViewProps) =>
           </TableHeader>
           <TableBody>
             {workOrders.map((order) => (
-              <TableRow key={order.id} className="hover:bg-muted/50">
-                <TableCell>
-                  <PriorityBadge priority={order.priority} size="sm" />
-                </TableCell>
-                <TableCell className="font-medium">
-                  {displayOrderNumber(order)}
-                </TableCell>
-                <TableCell>{order.client_name}</TableCell>
-                <TableCell className="text-muted-foreground">{order.created_by_name || "-"}</TableCell>
-                <TableCell>{getTypeBadge(order.type, order.kind)}</TableCell>
-                <TableCell>
-                  {format(new Date(order.created_at), "dd.MM.yyyy HH:mm")}
-                </TableCell>
-                <TableCell>
-                  {order.closed_at
-                    ? format(new Date(order.closed_at), "dd.MM.yyyy HH:mm")
-                    : "-"}
-                </TableCell>
-                <TableCell>{getStatusBadge(order.status)}</TableCell>
-                {orderType === "ctp" && (
-                  <TableCell className="font-semibold">{order.total_plates}</TableCell>
-                )}
-                <TableCell className="text-right">
-                  <div className="flex gap-2 justify-end">
-                    <Button
-                      size="sm"
-                      variant="ghost"
-                      onClick={() => navigate(`/work-orders/${order.id}`)}
-                      title="Pogledaj nalog"
-                    >
-                      <Eye className="h-4 w-4" />
-                    </Button>
-                    <Button
-                      size="sm"
-                      variant="ghost"
-                      onClick={(e) => handleShowFiles(order.id, e)}
-                      title="Pogledaj fajlove"
-                    >
-                      <FolderOpen className="h-4 w-4" />
-                    </Button>
-                    {order.status === "open" && (
-                      <Button
-                        size="sm"
-                        onClick={() => closeWorkOrder(order.id)}
-                      >
-                        Zatvori Nalog
-                      </Button>
-                    )}
-                    {order.status === "closed" && (
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        onClick={() => sendDeliveryNote(order.id)}
-                      >
-                        <FileText className="h-4 w-4 mr-2" />
-                        Pošalji Otpremnicu
-                      </Button>
-                    )}
-                  </div>
-                </TableCell>
-              </TableRow>
+              <DesktopOrderRow key={order.id} order={order} />
             ))}
           </TableBody>
         </Table>
       )}
-
-      <OrderFilesDialog
-        orderId={selectedOrderId}
-        open={filesDialogOpen}
-        onOpenChange={setFilesDialogOpen}
-      />
     </div>
   );
 };
