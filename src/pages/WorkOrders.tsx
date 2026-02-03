@@ -108,7 +108,7 @@ const WorkOrders = () => {
   
   const navigate = useNavigate();
   const { toast } = useToast();
-  const { isSuper, isAdmin } = useAuthz();
+  const { isSuper, isAdmin, isAdminPlus } = useAuthz();
 
   // Update URL when filters change
   const handleFiltersChange = useCallback((newFilters: WorkOrderFiltersState) => {
@@ -983,19 +983,21 @@ const WorkOrders = () => {
                       )}
                       Excel ({exportSelectedOrders.size})
                     </Button>
-                    <Button 
-                      onClick={handleExportToMinimaxXml} 
-                      variant="outline"
-                      disabled={isExportingXml}
-                      title="Izvoz zatvorenih CTP naloga u Minimax XML"
-                    >
-                      {isExportingXml ? (
-                        <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                      ) : (
-                        <FileCode className="h-4 w-4 mr-2" />
-                      )}
-                      Minimax XML
-                    </Button>
+                    {(isSuper || isAdminPlus) && (
+                      <Button 
+                        onClick={handleExportToMinimaxXml} 
+                        variant="outline"
+                        disabled={isExportingXml}
+                        title="Izvoz zatvorenih CTP naloga u Minimax XML"
+                      >
+                        {isExportingXml ? (
+                          <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                        ) : (
+                          <FileCode className="h-4 w-4 mr-2" />
+                        )}
+                        Minimax XML
+                      </Button>
+                    )}
                     <Button 
                       onClick={handleBulkInvoice} 
                       variant="outline"

@@ -410,16 +410,18 @@ const WorkOrderDetails = () => {
                   <Mail className="h-4 w-4 mr-2" />
                   {resending ? "Šalje se..." : "Ponovo pošalji"}
                 </Button>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={handleMinimaxExport}
-                  disabled={exportingMinimax}
-                  title="Eksportuj za Minimax (konverzija EUR → RSD po kursu NBS)"
-                >
-                  <FileCode className="h-4 w-4 mr-2" />
-                  {exportingMinimax ? "Eksportujem..." : "Minimax XML"}
-                </Button>
+                {(isSuper || isAdminPlus) && (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={handleMinimaxExport}
+                    disabled={exportingMinimax}
+                    title="Eksportuj za Minimax (konverzija EUR → RSD po kursu NBS)"
+                  >
+                    <FileCode className="h-4 w-4 mr-2" />
+                    {exportingMinimax ? "Eksportujem..." : "Minimax XML"}
+                  </Button>
+                )}
               </>
             )}
           </div>
