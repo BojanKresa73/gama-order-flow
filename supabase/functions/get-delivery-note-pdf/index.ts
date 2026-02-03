@@ -24,8 +24,20 @@ const handler = async (req: Request): Promise<Response> => {
     const { data: { user }, error: authError } = await supabase.auth.getUser(token);
     if (authError || !user) throw new Error('Niste autentifikovani');
 
+    // Support both query params and body
+    let workOrderId: string | null = null;
+    
     const url = new URL(req.url);
-    const workOrderId = url.searchParams.get('work_order_id');
+    workOrderId = url.searchParams.get('work_order_id');
+    
+    if (!workOrderId && req.method === 'POST') {
+      try {
+        const body = await req.json();
+        workOrderId = body.work_order_id;
+      } catch {
+        // Body parsing failed, continue with null
+      }
+    }
     
     if (!workOrderId) {
       throw new Error('work_order_id je obavezan');
