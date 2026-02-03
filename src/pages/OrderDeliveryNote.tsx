@@ -3,7 +3,7 @@ import { useNavigate, useParams } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { ArrowLeft, Info, Download, ExternalLink, Loader2 } from "lucide-react";
+import { ArrowLeft, Info, Download, Loader2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 
 const OrderDeliveryNote = () => {
@@ -130,12 +130,6 @@ const OrderDeliveryNote = () => {
     URL.revokeObjectURL(url);
   };
 
-  const handleOpenPDF = () => {
-    if (pdfBlob) {
-      const url = URL.createObjectURL(pdfBlob);
-      window.open(url, "_blank");
-    }
-  };
 
   if (loading) {
     return <div className="flex items-center justify-center min-h-screen">Učitavanje...</div>;
@@ -165,16 +159,10 @@ const OrderDeliveryNote = () => {
           </div>
           <div className="flex gap-2">
             {pdfDataUrl && (
-              <>
-                <Button variant="outline" onClick={handleDownloadPDF}>
-                  <Download className="h-4 w-4 mr-2" />
-                  Preuzmi PDF
-                </Button>
-                <Button variant="outline" onClick={handleOpenPDF}>
-                  <ExternalLink className="h-4 w-4 mr-2" />
-                  Otvori u novom tabu
-                </Button>
-              </>
+              <Button variant="outline" onClick={handleDownloadPDF}>
+                <Download className="h-4 w-4 mr-2" />
+                Preuzmi PDF
+              </Button>
             )}
             {!pdfDataUrl && !pdfLoading && (
               <Button onClick={fetchPDF}>
@@ -217,16 +205,10 @@ const OrderDeliveryNote = () => {
             >
               <div className="flex flex-col items-center justify-center h-full min-h-[600px] text-muted-foreground">
                 <p className="text-lg mb-4">PDF se ne može prikazati u pregledaču</p>
-                <div className="flex gap-2">
-                  <Button onClick={handleDownloadPDF}>
-                    <Download className="h-4 w-4 mr-2" />
-                    Preuzmi PDF
-                  </Button>
-                  <Button variant="outline" onClick={handleOpenPDF}>
-                    <ExternalLink className="h-4 w-4 mr-2" />
-                    Otvori u novom tabu
-                  </Button>
-                </div>
+                <Button onClick={handleDownloadPDF}>
+                  <Download className="h-4 w-4 mr-2" />
+                  Preuzmi PDF
+                </Button>
               </div>
             </object>
           ) : (
