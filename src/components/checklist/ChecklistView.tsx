@@ -21,10 +21,12 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { CheckCircle, XCircle, Search, FileText, Calendar, User, Eye } from "lucide-react";
+import { CheckCircle, XCircle, Search, FileText, Calendar, User, Eye, FolderOpen } from "lucide-react";
 import { PriorityBadge } from "@/components/priority/PriorityBadge";
 import { format, subDays } from "date-fns";
 import { displayOrderNumber } from "@/lib/orderLabel";
+import { OrderFilesDialog } from "@/components/work-orders/OrderFilesDialog";
+
 interface WorkOrder {
   id: string;
   order_number: string;
@@ -62,9 +64,17 @@ const ChecklistView = ({ orderType, onNavigateToSearch }: ChecklistViewProps) =>
   const [workOrders, setWorkOrders] = useState<WorkOrder[]>([]);
   const [loading, setLoading] = useState(true);
   const [statusFilter, setStatusFilter] = useState<StatusFilter>("open");
+  const [filesDialogOpen, setFilesDialogOpen] = useState(false);
+  const [selectedOrderId, setSelectedOrderId] = useState<string>("");
   const { toast } = useToast();
   const isMobile = useIsMobile();
   const navigate = useNavigate();
+
+  const handleShowFiles = (orderId: string, e: React.MouseEvent) => {
+    e.stopPropagation();
+    setSelectedOrderId(orderId);
+    setFilesDialogOpen(true);
+  };
 
   useEffect(() => {
     fetchWorkOrders();
@@ -454,6 +464,14 @@ const ChecklistView = ({ orderType, onNavigateToSearch }: ChecklistViewProps) =>
           >
             <Eye className="h-4 w-4" />
           </Button>
+          <Button 
+            size="sm" 
+            variant="outline" 
+            onClick={(e) => handleShowFiles(order.id, e)}
+            title="Pogledaj fajlove"
+          >
+            <FolderOpen className="h-4 w-4" />
+          </Button>
           {order.status === "open" && (
             <Button size="sm" className="flex-1" onClick={() => closeWorkOrder(order.id)}>
               Zatvori
@@ -555,6 +573,14 @@ const ChecklistView = ({ orderType, onNavigateToSearch }: ChecklistViewProps) =>
                     >
                       <Eye className="h-4 w-4" />
                     </Button>
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      onClick={(e) => handleShowFiles(order.id, e)}
+                      title="Pogledaj fajlove"
+                    >
+                      <FolderOpen className="h-4 w-4" />
+                    </Button>
                     {order.status === "open" && (
                       <Button
                         size="sm"
@@ -580,6 +606,12 @@ const ChecklistView = ({ orderType, onNavigateToSearch }: ChecklistViewProps) =>
           </TableBody>
         </Table>
       )}
+
+      <OrderFilesDialog
+        orderId={selectedOrderId}
+        open={filesDialogOpen}
+        onOpenChange={setFilesDialogOpen}
+      />
     </div>
   );
 };
