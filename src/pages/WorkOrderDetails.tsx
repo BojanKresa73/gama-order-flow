@@ -473,8 +473,8 @@ const WorkOrderDetails = () => {
                 <CardContent className="space-y-4">
                   <div className="grid grid-cols-2 gap-4">
                     <div>
-                      <p className="text-sm text-muted-foreground">Broj naloga</p>
-                      <p className="font-medium">{workOrder.order_number}</p>
+                    <p className="text-sm text-muted-foreground">Broj naloga</p>
+                      <p className="font-medium">{displayOrderNumber(workOrder)}</p>
                     </div>
                     <div>
                       <p className="text-sm text-muted-foreground">Tip naloga</p>
