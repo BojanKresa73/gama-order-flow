@@ -236,6 +236,7 @@ export const PIB_TO_MINIMAX_STRANKA: Record<string, string> = {
   "101393608": "18",
   "104730685": "84",
   "101393246": "16",
+  "103998719": "3", // Publik DOO Valjevo
   "100069085": "11",
   "100068679": "10",
   "100069454": "12",
