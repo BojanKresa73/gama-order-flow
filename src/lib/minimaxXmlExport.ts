@@ -138,9 +138,9 @@ export function generateMinimaxOrderXml(workOrder: WorkOrderData): string {
       const clientShort = truncate(client.name.split(" ")[0].toLowerCase(), 10);
       const posaoOpis = `Usluga: ${clientShort} ${formatName} ${orderNumber} ${truncate(entry.filename, 60)}`;
       
-      // Artikal naziv BEZ šifre - Minimax već prikazuje šifru iz SifraArtikla
-      // Primer: "CTP: Ploča 1060x795"
-      const artikalDisplay = `CTP: Ploča ${formatName}`;
+      // Koristi pun Minimax naziv artikla (CTcP QUANTUM PREMIUM PLATE...)
+      // Minimax će prikazati i šifru i ovaj naziv
+      const artikalDisplay = minimaxNaziv;
       
       return `
       <NarociloVrstica>
