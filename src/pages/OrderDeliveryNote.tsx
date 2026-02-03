@@ -13,7 +13,8 @@ const OrderDeliveryNote = () => {
   const [loading, setLoading] = useState(true);
   const [pdfLoading, setPdfLoading] = useState(false);
   const [workOrder, setWorkOrder] = useState<any>(null);
-  const [pdfBlobUrl, setPdfBlobUrl] = useState<string | null>(null);
+  const [pdfDataUrl, setPdfDataUrl] = useState<string | null>(null);
+  const [pdfBlob, setPdfBlob] = useState<Blob | null>(null);
 
   const fetchPDF = useCallback(async () => {
     if (!orderId) return;
@@ -39,12 +40,15 @@ const OrderDeliveryNote = () => {
       }
 
       const blob = await response.blob();
-      const url = URL.createObjectURL(blob);
+      setPdfBlob(blob);
       
-      setPdfBlobUrl((prevUrl) => {
-        if (prevUrl) URL.revokeObjectURL(prevUrl);
-        return url;
-      });
+      // Convert blob to base64 data URL for iframe display
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        const base64data = reader.result as string;
+        setPdfDataUrl(base64data);
+      };
+      reader.readAsDataURL(blob);
     } catch (error: any) {
       console.error("PDF fetch error:", error);
       toast({
@@ -62,12 +66,6 @@ const OrderDeliveryNote = () => {
     if (orderId) {
       fetchOrderDetails();
     }
-    
-    return () => {
-      if (pdfBlobUrl) {
-        URL.revokeObjectURL(pdfBlobUrl);
-      }
-    };
   }, [orderId]);
 
   const checkAuth = async () => {
@@ -113,7 +111,7 @@ const OrderDeliveryNote = () => {
   };
 
   const handleDownloadPDF = () => {
-    if (!pdfBlobUrl) {
+    if (!pdfBlob) {
       toast({
         title: "Greška",
         description: "PDF još nije učitan",
@@ -122,17 +120,20 @@ const OrderDeliveryNote = () => {
       return;
     }
 
+    const url = URL.createObjectURL(pdfBlob);
     const a = document.createElement("a");
-    a.href = pdfBlobUrl;
+    a.href = url;
     a.download = `Otpremnica-${workOrder?.order_number || orderId}.pdf`;
     document.body.appendChild(a);
     a.click();
     document.body.removeChild(a);
+    URL.revokeObjectURL(url);
   };
 
   const handleOpenPDF = () => {
-    if (pdfBlobUrl) {
-      window.open(pdfBlobUrl, "_blank");
+    if (pdfBlob) {
+      const url = URL.createObjectURL(pdfBlob);
+      window.open(url, "_blank");
     }
   };
 
@@ -163,7 +164,7 @@ const OrderDeliveryNote = () => {
             <h1 className="text-2xl font-bold">Otpremnica - {workOrder.order_number}</h1>
           </div>
           <div className="flex gap-2">
-            {pdfBlobUrl && (
+            {pdfDataUrl && (
               <>
                 <Button variant="outline" onClick={handleDownloadPDF}>
                   <Download className="h-4 w-4 mr-2" />
@@ -175,7 +176,7 @@ const OrderDeliveryNote = () => {
                 </Button>
               </>
             )}
-            {!pdfBlobUrl && !pdfLoading && (
+            {!pdfDataUrl && !pdfLoading && (
               <Button onClick={fetchPDF}>
                 Učitaj PDF
               </Button>
@@ -208,12 +209,26 @@ const OrderDeliveryNote = () => {
               <Loader2 className="h-8 w-8 animate-spin mb-4" />
               <p className="text-lg">Učitavanje PDF-a...</p>
             </div>
-          ) : pdfBlobUrl ? (
-            <iframe
-              src={`${pdfBlobUrl}#toolbar=1&navpanes=0`}
+          ) : pdfDataUrl ? (
+            <object
+              data={pdfDataUrl}
+              type="application/pdf"
               className="w-full h-full min-h-[600px]"
-              title="Otpremnica PDF"
-            />
+            >
+              <div className="flex flex-col items-center justify-center h-full min-h-[600px] text-muted-foreground">
+                <p className="text-lg mb-4">PDF se ne može prikazati u pregledaču</p>
+                <div className="flex gap-2">
+                  <Button onClick={handleDownloadPDF}>
+                    <Download className="h-4 w-4 mr-2" />
+                    Preuzmi PDF
+                  </Button>
+                  <Button variant="outline" onClick={handleOpenPDF}>
+                    <ExternalLink className="h-4 w-4 mr-2" />
+                    Otvori u novom tabu
+                  </Button>
+                </div>
+              </div>
+            </object>
           ) : (
             <div className="flex flex-col items-center justify-center h-full min-h-[600px] text-muted-foreground">
               <p className="text-lg mb-4">PDF nije učitan</p>
