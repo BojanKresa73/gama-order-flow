@@ -14,9 +14,10 @@ export const CtpStatsCards = ({ filters }: CtpStatsCardsProps) => {
   const { data: rawData, isLoading } = useQuery({
     queryKey: ["ctp-stats", filters],
     queryFn: async () => {
+      // Build filter conditions for RPC or fetch all with proper limit
       let query = supabase
         .from("v_ctp_items" as any)
-        .select("work_order_id, client_id, plates_qty");
+        .select("work_order_id, client_id, plates_qty", { count: "exact" });
 
       // Apply date range filter
       if (filters.dateRange.from) {
@@ -36,7 +37,8 @@ export const CtpStatsCards = ({ filters }: CtpStatsCardsProps) => {
         query = query.in("plate_format_id", filters.plateFormatIds);
       }
 
-      const { data, error } = await query;
+      // IMPORTANT: Override default 1000 row limit to get ALL data for accurate stats
+      const { data, error, count } = await query.range(0, 49999);
 
       if (error) throw error;
 

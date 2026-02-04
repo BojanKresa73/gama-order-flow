@@ -42,7 +42,8 @@ export const CtpTopClientsTable = ({ filters }: CtpTopClientsTableProps) => {
         query = query.in("plate_format_id", filters.plateFormatIds);
       }
 
-      const { data, error } = await query;
+      // IMPORTANT: Override default 1000 row limit to get ALL data
+      const { data, error } = await query.range(0, 49999);
 
       if (error) throw error;
 
