@@ -23,7 +23,7 @@ export const useClientStats = (clientId: string) => {
       const closedOrders = orders?.filter((o) => o.status === "closed").length || 0;
       const lastOrder = orders?.[0];
 
-      // Fetch file entries for CTP statistics
+      // Fetch file entries for CTP statistics - override 1000 row limit
       const { data: fileEntries, error: fileError } = await supabase
         .from("file_entries")
         .select(`
@@ -37,7 +37,8 @@ export const useClientStats = (clientId: string) => {
           )
         `)
         .eq("work_order.client_id", clientId)
-        .eq("work_order.order_type", "ctp");
+        .eq("work_order.order_type", "ctp")
+        .range(0, 49999);
 
       if (fileError) throw fileError;
 
