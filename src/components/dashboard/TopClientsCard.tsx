@@ -22,7 +22,7 @@ export const TopClientsCard = () => {
           clients!inner(id, name),
           file_entries(quantity)
         `)
-        .eq("kind", "CTP")
+        .eq("order_type", "ctp")
         .gte("closed_at", startOfMonth)
         .is("deleted_at", null)
         .is("invalidated_at", null);
