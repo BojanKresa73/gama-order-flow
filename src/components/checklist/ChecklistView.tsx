@@ -28,8 +28,22 @@ import {
 } from "@/components/ui/collapsible";
 import { CheckCircle, XCircle, Search, FileText, Calendar, User, Eye, ChevronRight, ChevronDown } from "lucide-react";
 import { PriorityBadge } from "@/components/priority/PriorityBadge";
+import { InProgressIndicator } from "@/components/checklist/InProgressIndicator";
 import { format, subDays } from "date-fns";
 import { displayOrderNumber } from "@/lib/orderLabel";
+
+/**
+ * Check if work order is "in progress" - has at least one closed file while others remain open
+ */
+const isOrderInProgress = (order: WorkOrder): boolean => {
+  if (!order.file_entries || order.file_entries.length === 0) return false;
+  if (order.status === "closed") return false;
+  
+  const hasClosedFiles = order.file_entries.some(f => f.status === "closed");
+  const hasOpenFiles = order.file_entries.some(f => f.status === "open");
+  
+  return hasClosedFiles && hasOpenFiles;
+};
 
 interface WorkOrder {
   id: string;
@@ -511,7 +525,10 @@ const ChecklistView = ({ orderType, onNavigateToSearch }: ChecklistViewProps) =>
             </div>
           )}
 
-          <div className="flex gap-2 flex-wrap">
+          <div className="flex gap-2 flex-wrap items-center">
+            {isOrderInProgress(order) && (
+              <InProgressIndicator className="mr-1" />
+            )}
             <Button 
               size="sm" 
               variant="outline" 
@@ -581,7 +598,10 @@ const ChecklistView = ({ orderType, onNavigateToSearch }: ChecklistViewProps) =>
             <TableCell className="font-semibold">{order.total_plates}</TableCell>
           )}
           <TableCell className="text-right">
-            <div className="flex gap-2 justify-end">
+            <div className="flex gap-2 justify-end items-center">
+              {isOrderInProgress(order) && (
+                <InProgressIndicator className="mr-1" />
+              )}
               <Button
                 size="sm"
                 variant="ghost"
