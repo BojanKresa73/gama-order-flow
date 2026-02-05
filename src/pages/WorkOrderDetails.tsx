@@ -19,6 +19,7 @@ import { displayOrderNumber } from "@/lib/orderLabel";
 import { DigitalPricingBreakdown } from "@/components/digital/DigitalPricingBreakdown";
 import { useAuthz } from "@/hooks/useAuthz";
 import type { LocalDigitalJob } from "@/components/digital/LocalDigitalJobsTable";
+ import { CtpPricingSummary } from "@/components/ctp/CtpPricingSummary";
 const WorkOrderDetails = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
@@ -28,6 +29,7 @@ const WorkOrderDetails = () => {
   const [fileEntries, setFileEntries] = useState<any[]>([]);
   const [filmJobs, setFilmJobs] = useState<FilmJobEntry[]>([]);
   const [clientPlatePrices, setClientPlatePrices] = useState<any[]>([]);
+   const [clientHasMonoPricing, setClientHasMonoPricing] = useState(false);
   const [loading, setLoading] = useState(true);
   const [emailStatus, setEmailStatus] = useState<any>(null);
   const [resending, setResending] = useState(false);
@@ -102,7 +104,7 @@ const WorkOrderDetails = () => {
           setFileEntries(entries);
         }
 
-        // Fetch client plate prices for Minimax export (now in EUR)
+         // Fetch client plate prices for Minimax export and pricing summary
         const { data: pricesData } = await supabase
           .from('client_plate_prices')
           .select('*, plate_formats(format_name)')
@@ -112,10 +114,22 @@ const WorkOrderDetails = () => {
           const prices = pricesData.map(p => ({
             plate_format_id: p.plate_format_id,
             format_name: p.plate_formats?.format_name,
-            price_eur: Number(p.price_eur)
+             price_eur: Number(p.price_eur),
+             price_eur_mono: p.price_eur_mono ? Number(p.price_eur_mono) : null,
           }));
           setClientPlatePrices(prices);
         }
+         
+         // Fetch client's mono pricing flag
+         const { data: clientData } = await supabase
+           .from('clients')
+           .select('has_mono_pricing')
+           .eq('id', data.client_id)
+           .single();
+         
+         if (clientData) {
+           setClientHasMonoPricing(clientData.has_mono_pricing || false);
+         }
       }
 
       // Fetch film_jobs for film orders (for Minimax export)
@@ -557,6 +571,15 @@ const WorkOrderDetails = () => {
                 </div>
               )}
 
+               {/* CTP Pricing Summary - for superuser and admin_plus only */}
+               {workOrder.order_type === 'ctp' && fileEntries.length > 0 && (isSuper || isAdminPlus) && (
+                 <CtpPricingSummary
+                   fileEntries={fileEntries}
+                   clientPlatePrices={clientPlatePrices}
+                   hasMonoPricing={clientHasMonoPricing}
+                 />
+               )}
+ 
               {/* Items Summary */}
               {workOrder.items && workOrder.items.length > 0 && (
                 <Card>
