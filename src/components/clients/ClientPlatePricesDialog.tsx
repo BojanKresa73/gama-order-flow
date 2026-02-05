@@ -13,16 +13,12 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Switch } from "@/components/ui/switch";
+import { AlertTriangle } from "lucide-react";
 
 interface PlateFormat {
   id: string;
   format_name: string;
-}
-
-interface ClientPlatePrice {
-  id?: string;
-  plate_format_id: string;
-  price_rsd: number;
 }
 
 interface ClientPlatePricesDialogProps {
@@ -30,6 +26,8 @@ interface ClientPlatePricesDialogProps {
   onOpenChange: (open: boolean) => void;
   clientId: string;
   clientName: string;
+  hasMonoPricing: boolean;
+  onMonoPricingChange: (enabled: boolean) => void;
 }
 
 export function ClientPlatePricesDialog({
@@ -37,11 +35,20 @@ export function ClientPlatePricesDialog({
   onOpenChange,
   clientId,
   clientName,
+  hasMonoPricing,
+  onMonoPricingChange,
 }: ClientPlatePricesDialogProps) {
   const [plateFormats, setPlateFormats] = useState<PlateFormat[]>([]);
   const [prices, setPrices] = useState<Record<string, number>>({});
+  const [monoPrices, setMonoPrices] = useState<Record<string, number>>({});
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [localMonoPricing, setLocalMonoPricing] = useState(hasMonoPricing);
+
+  // Sync local state with prop
+  useEffect(() => {
+    setLocalMonoPricing(hasMonoPricing);
+  }, [hasMonoPricing]);
 
   useEffect(() => {
     if (open && clientId) {
@@ -64,17 +71,22 @@ export function ClientPlatePricesDialog({
       // Fetch existing prices for this client
       const { data: existingPrices, error: pricesError } = await supabase
         .from("client_plate_prices")
-        .select("plate_format_id, price_eur")
+        .select("plate_format_id, price_eur, price_eur_mono")
         .eq("client_id", clientId);
 
       if (pricesError) throw pricesError;
 
-      // Map existing prices to the state
+      // Map existing prices to the states
       const priceMap: Record<string, number> = {};
+      const monoMap: Record<string, number> = {};
       (existingPrices || []).forEach((p) => {
         priceMap[p.plate_format_id] = Number(p.price_eur);
+        if (p.price_eur_mono !== null) {
+          monoMap[p.plate_format_id] = Number(p.price_eur_mono);
+        }
       });
       setPrices(priceMap);
+      setMonoPrices(monoMap);
     } catch (error: any) {
       toast.error("Greška pri učitavanju: " + error.message);
     } finally {
@@ -90,9 +102,43 @@ export function ClientPlatePricesDialog({
     }));
   };
 
+  const handleMonoPriceChange = (formatId: string, value: string) => {
+    const numValue = parseFloat(value) || 0;
+    setMonoPrices((prev) => ({
+      ...prev,
+      [formatId]: numValue,
+    }));
+  };
+
+  // Check if mono pricing is enabled but some formats with prices don't have mono prices
+  const getMissingMonoPrices = () => {
+    if (!localMonoPricing) return [];
+    return plateFormats.filter(
+      (format) => prices[format.id] > 0 && (!monoPrices[format.id] || monoPrices[format.id] <= 0)
+    );
+  };
+
   const handleSave = async () => {
+    // Validate mono prices if enabled
+    const missing = getMissingMonoPrices();
+    if (missing.length > 0) {
+      toast.error(`Nedostaju CB cene za: ${missing.map(f => f.format_name).join(", ")}`);
+      return;
+    }
+
     setSaving(true);
     try {
+      // Update client's mono pricing flag
+      if (localMonoPricing !== hasMonoPricing) {
+        const { error: clientError } = await supabase
+          .from("clients")
+          .update({ has_mono_pricing: localMonoPricing })
+          .eq("id", clientId);
+        
+        if (clientError) throw clientError;
+        onMonoPricingChange(localMonoPricing);
+      }
+
       // Delete existing prices for this client
       const { error: deleteError } = await supabase
         .from("client_plate_prices")
@@ -101,14 +147,20 @@ export function ClientPlatePricesDialog({
 
       if (deleteError) throw deleteError;
 
-      // Insert new prices (only non-zero values)
+      // Insert new prices (only non-zero values for color, include mono if enabled)
       const insertData = Object.entries(prices)
         .filter(([_, price]) => price > 0)
-        .map(([plate_format_id, price_eur]) => ({
+        .map(([plate_format_id, price_eur]) => {
+          const row: any = {
           client_id: clientId,
           plate_format_id,
           price_eur,
-        }));
+          };
+          if (localMonoPricing && monoPrices[plate_format_id]) {
+            row.price_eur_mono = monoPrices[plate_format_id];
+          }
+          return row;
+        });
 
       if (insertData.length > 0) {
         const { error: insertError } = await supabase
@@ -127,15 +179,41 @@ export function ClientPlatePricesDialog({
     }
   };
 
+  const missingMonoPrices = getMissingMonoPrices();
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-md">
+      <DialogContent className="max-w-lg">
         <DialogHeader>
           <DialogTitle>Cenovnik ploča (EUR)</DialogTitle>
           <DialogDescription>
             Cene ploča za klijenta: <strong>{clientName}</strong> (u EUR, konvertuje se u RSD po kursu NBS pri eksportu)
           </DialogDescription>
         </DialogHeader>
+
+        {/* Mono pricing toggle */}
+        <div className="flex items-center justify-between py-3 px-3 bg-muted/50 rounded-lg">
+          <div className="space-y-0.5">
+            <Label className="text-sm font-medium">Crno-bele ploče (CB)</Label>
+            <p className="text-xs text-muted-foreground">
+              Posebne cene za fajlove sa 1 pločom
+            </p>
+          </div>
+          <Switch
+            checked={localMonoPricing}
+            onCheckedChange={setLocalMonoPricing}
+          />
+        </div>
+
+        {/* Warning for missing mono prices */}
+        {localMonoPricing && missingMonoPrices.length > 0 && (
+          <div className="flex items-start gap-2 p-3 bg-destructive/10 text-destructive rounded-lg">
+            <AlertTriangle className="h-4 w-4 mt-0.5 shrink-0" />
+            <p className="text-xs">
+              Nedostaju CB cene za: {missingMonoPrices.map(f => f.format_name).join(", ")}
+            </p>
+          </div>
+        )}
 
         <div className="space-y-4 py-4 max-h-[60vh] overflow-y-auto">
           {loading ? (
@@ -150,9 +228,11 @@ export function ClientPlatePricesDialog({
             </p>
           ) : (
             plateFormats.map((format) => (
-              <div key={format.id} className="flex items-center gap-4">
-                <Label className="w-32 shrink-0">{format.format_name}</Label>
-                <div className="flex items-center gap-2 flex-1">
+              <div key={format.id} className="space-y-2">
+                <Label className="text-sm font-medium">{format.format_name}</Label>
+                <div className="flex items-center gap-3">
+                  <div className="flex items-center gap-2 flex-1">
+                    <span className="text-xs text-muted-foreground w-12">Kolor:</span>
                   <Input
                     type="number"
                     step="0.01"
@@ -163,6 +243,22 @@ export function ClientPlatePricesDialog({
                     className="text-right"
                   />
                   <span className="text-muted-foreground text-sm">EUR</span>
+                  </div>
+                  {localMonoPricing && (
+                    <div className="flex items-center gap-2 flex-1">
+                      <span className="text-xs text-muted-foreground w-6">CB:</span>
+                      <Input
+                        type="number"
+                        step="0.01"
+                        min="0"
+                        value={monoPrices[format.id] || ""}
+                        onChange={(e) => handleMonoPriceChange(format.id, e.target.value)}
+                        placeholder="0.00"
+                        className="text-right"
+                      />
+                      <span className="text-muted-foreground text-sm">EUR</span>
+                    </div>
+                  )}
                 </div>
               </div>
             ))

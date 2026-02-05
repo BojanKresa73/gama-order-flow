@@ -21,6 +21,7 @@ export interface Client {
   napomena: string | null;
   is_vip: boolean;
   is_blocked: boolean;
+  has_mono_pricing: boolean;
   segment: 'novi' | 'redovan' | 'premium';
   last_activity_at: string | null;
   last_contacted_at: string | null;

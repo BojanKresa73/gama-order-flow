@@ -209,6 +209,7 @@ export type Database = {
           id: string
           plate_format_id: string
           price_eur: number
+          price_eur_mono: number | null
           updated_at: string
         }
         Insert: {
@@ -217,6 +218,7 @@ export type Database = {
           id?: string
           plate_format_id: string
           price_eur?: number
+          price_eur_mono?: number | null
           updated_at?: string
         }
         Update: {
@@ -225,6 +227,7 @@ export type Database = {
           id?: string
           plate_format_id?: string
           price_eur?: number
+          price_eur_mono?: number | null
           updated_at?: string
         }
         Relationships: [
@@ -292,6 +295,7 @@ export type Database = {
           drzava: string | null
           email: string | null
           grad: string | null
+          has_mono_pricing: boolean
           id: string
           is_blocked: boolean
           is_vip: boolean
@@ -319,6 +323,7 @@ export type Database = {
           drzava?: string | null
           email?: string | null
           grad?: string | null
+          has_mono_pricing?: boolean
           id?: string
           is_blocked?: boolean
           is_vip?: boolean
@@ -346,6 +351,7 @@ export type Database = {
           drzava?: string | null
           email?: string | null
           grad?: string | null
+          has_mono_pricing?: boolean
           id?: string
           is_blocked?: boolean
           is_vip?: boolean
