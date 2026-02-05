@@ -27,6 +27,7 @@ import { prefixFor, displayOrderNumber } from "@/lib/orderLabel";
 import { useAuthz } from "@/hooks/useAuthz";
 import { InvoiceDialog } from "@/components/work-orders/InvoiceDialog";
 import { exportBatchToMinimax } from "@/lib/minimaxBatchExport";
+import { exportFilmBatchToMinimax } from "@/lib/minimaxFilmBatchExport";
 
 // Helper functions to serialize/deserialize filters to URL params
 const serializeFiltersToParams = (filters: WorkOrderFiltersState): URLSearchParams => {
@@ -863,18 +864,26 @@ const WorkOrders = () => {
       return;
     }
 
-    // Filter to only include closed CTP orders
     const selectedOrderIds = Array.from(exportSelectedOrders);
+    
+    // Check what types of closed orders we have
     const validCtpOrders = workOrders.filter(
       o => selectedOrderIds.includes(o.id) && 
            o.order_type === 'ctp' && 
            o.status === 'closed'
     );
+    
+    const validFilmOrders = workOrders.filter(
+      o => selectedOrderIds.includes(o.id) && 
+           o.order_type === 'film' && 
+           o.status === 'closed'
+    );
 
-    if (validCtpOrders.length === 0) {
+    // If no valid orders of either type
+    if (validCtpOrders.length === 0 && validFilmOrders.length === 0) {
       toast({
         title: "Upozorenje",
-        description: "Nema zatvorenih CTP naloga među odabranim za Minimax izvoz.",
+        description: "Nema zatvorenih CTP ili Film naloga među odabranim za Minimax izvoz.",
         variant: "destructive",
       });
       return;
@@ -882,18 +891,46 @@ const WorkOrders = () => {
 
     setIsExportingXml(true);
     try {
-      const result = await exportBatchToMinimax(validCtpOrders.map(o => o.id));
-      
-      if (result.success) {
+      let totalExported = 0;
+      let totalSkipped = 0;
+      const allErrors: string[] = [];
+
+      // Export CTP orders if any
+      if (validCtpOrders.length > 0) {
+        const ctpResult = await exportBatchToMinimax(validCtpOrders.map(o => o.id));
+        if (ctpResult.success) {
+          totalExported += ctpResult.exportedCount;
+          totalSkipped += ctpResult.skippedCount;
+        } else {
+          allErrors.push(...ctpResult.errors);
+        }
+      }
+
+      // Export Film orders if any
+      if (validFilmOrders.length > 0) {
+        const filmResult = await exportFilmBatchToMinimax(validFilmOrders.map(o => o.id));
+        if (filmResult.success) {
+          totalExported += filmResult.exportedCount;
+          totalSkipped += filmResult.skippedCount;
+        } else {
+          allErrors.push(...filmResult.errors);
+        }
+      }
+
+      if (totalExported > 0) {
+        const types: string[] = [];
+        if (validCtpOrders.length > 0) types.push(`${validCtpOrders.length} CTP`);
+        if (validFilmOrders.length > 0) types.push(`${validFilmOrders.length} Film`);
+        
         toast({
           title: "Uspešno",
-          description: `Izvezeno ${result.exportedCount} naloga u Minimax XML.${result.skippedCount > 0 ? ` Preskočeno: ${result.skippedCount}` : ''}`,
+          description: `Izvezeno ${types.join(" i ")} naloga u Minimax XML.${totalSkipped > 0 ? ` Preskočeno: ${totalSkipped}` : ''}`,
         });
         setExportSelectedOrders(new Set());
       } else {
         toast({
           title: "Greška",
-          description: result.errors.join(", ") || "Greška pri izvozu.",
+          description: allErrors.join(", ") || "Greška pri izvozu.",
           variant: "destructive",
         });
       }
