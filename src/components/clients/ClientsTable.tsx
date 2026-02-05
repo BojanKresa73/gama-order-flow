@@ -1,7 +1,9 @@
 import { useState, useMemo } from "react";
-import { Client } from "@/hooks/useClients";
+import { Client, useClients } from "@/hooks/useClients";
 import { ClientQuickView } from "./ClientQuickView";
 import { ClientPlatePricesDialog } from "./ClientPlatePricesDialog";
+import { supabase } from "@/integrations/supabase/client";
+import { useQueryClient } from "@tanstack/react-query";
 import {
   Table,
   TableBody,
@@ -48,6 +50,7 @@ export const ClientsTable = ({ clients, onEdit }: ClientsTableProps) => {
   const [itemsPerPage, setItemsPerPage] = useState(25);
   const [quickViewClient, setQuickViewClient] = useState<Client | null>(null);
   const [platePricesClient, setPlatePricesClient] = useState<Client | null>(null);
+  const queryClient = useQueryClient();
   const [columnVisibility, setColumnVisibility] = useState({
     name: true,
     pib: true,
@@ -646,6 +649,14 @@ export const ClientsTable = ({ clients, onEdit }: ClientsTableProps) => {
         onOpenChange={(open) => !open && setPlatePricesClient(null)}
         clientId={platePricesClient?.id || ""}
         clientName={platePricesClient?.name || ""}
+        hasMonoPricing={platePricesClient?.has_mono_pricing || false}
+        onMonoPricingChange={(enabled) => {
+          // Update local state and invalidate query to refetch
+          if (platePricesClient) {
+            setPlatePricesClient({ ...platePricesClient, has_mono_pricing: enabled });
+            queryClient.invalidateQueries({ queryKey: ["clients"] });
+          }
+        }}
       />
     </div>
   );
