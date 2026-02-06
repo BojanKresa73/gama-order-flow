@@ -92,9 +92,9 @@ const handler = async (req: Request): Promise<Response> => {
       console.error("Error counting portal users:", countError);
     }
 
-    if (count !== null && count >= 2) {
+    if (count !== null && count >= 3) {
       return new Response(
-        JSON.stringify({ error: "Klijent već ima maksimalan broj korisnika portala (2)" }),
+        JSON.stringify({ error: "Klijent već ima maksimalan broj korisnika portala (3)" }),
         { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
