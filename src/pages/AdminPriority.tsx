@@ -100,6 +100,8 @@ const getFunctionErrorMessage = (err: any): string | null => {
   return null;
 };
 
+const MAX_PORTAL_USERS_PER_CLIENT = 3;
+
 const AdminPriority = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
@@ -382,7 +384,7 @@ const AdminPriority = () => {
                         <DialogTitle>Novi korisnik portala</DialogTitle>
                         <DialogDescription>
                           Kreirajte korisnika koji će moći da menja prioritete naloga za odabranog klijenta.
-                          Maksimalno 2 korisnika po klijentu.
+                          Maksimalno {MAX_PORTAL_USERS_PER_CLIENT} korisnika po klijentu.
                         </DialogDescription>
                       </DialogHeader>
 
@@ -399,7 +401,7 @@ const AdminPriority = () => {
                             <SelectContent>
                               {clients.map((client) => {
                                 const count = getUserCountForClient(client.id);
-                                const disabled = count >= 2;
+                                const disabled = count >= MAX_PORTAL_USERS_PER_CLIENT;
                                 return (
                                   <SelectItem
                                     key={client.id}
@@ -411,7 +413,7 @@ const AdminPriority = () => {
                                       {client.name}
                                       {count > 0 && (
                                         <Badge variant="secondary" className="ml-2">
-                                          {count}/2
+                                          {count}/{MAX_PORTAL_USERS_PER_CLIENT}
                                         </Badge>
                                       )}
                                     </div>
@@ -657,7 +659,7 @@ const AdminPriority = () => {
                           </TableCell>
                           <TableCell className="text-center">
                             <Badge variant={client.portalUserCount > 0 ? "default" : "secondary"}>
-                              {client.portalUserCount}/2
+                              {client.portalUserCount}/{MAX_PORTAL_USERS_PER_CLIENT}
                             </Badge>
                           </TableCell>
                           <TableCell className="text-center">
@@ -668,7 +670,7 @@ const AdminPriority = () => {
                             )}
                           </TableCell>
                           <TableCell>
-                            {client.portalUserCount < 2 && (
+                            {client.portalUserCount < MAX_PORTAL_USERS_PER_CLIENT && (
                               <Button
                                 variant="outline"
                                 size="sm"
