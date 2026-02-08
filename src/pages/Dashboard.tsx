@@ -4,7 +4,17 @@ import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
 import { useAuthz } from "@/hooks/useAuthz";
-import { FileText, BarChart3, ChevronDown } from "lucide-react";
+import { 
+  FileText, 
+  BarChart3, 
+  ChevronDown, 
+  Plus, 
+  Users, 
+  Package, 
+  ClipboardList,
+  Printer,
+  LayoutGrid
+} from "lucide-react";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -58,80 +68,97 @@ const Dashboard = () => {
 
   if (loading) {
     return (
-      <div className="flex min-h-screen items-center justify-center">
-        <p>Učitavanje...</p>
+      <div className="flex min-h-screen items-center justify-center bg-background">
+        <div className="flex flex-col items-center gap-3">
+          <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent" />
+          <p className="text-sm text-muted-foreground">Učitavanje...</p>
+        </div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen bg-slate-50/50">
       <AppHeader userName={profile?.full_name} />
 
-      <main className="max-w-[1400px] mx-auto px-3 md:px-6 py-4 md:py-6">
-        {/* Welcome & Quick Actions */}
-        <div className="flex flex-col gap-4 mb-6">
-          <h2 className="text-lg md:text-2xl font-semibold">
-            Dobrodošli, {profile?.full_name}!
-          </h2>
-          
-          {/* Mobile Quick Actions - Grid layout that wraps */}
-          <div className="grid grid-cols-2 md:hidden gap-2">
-            <Button size="sm" className="w-full" onClick={() => navigate("/work-orders/new")}>
-              + Novi nalog
-            </Button>
-            <Button size="sm" variant="secondary" className="w-full" onClick={() => navigate("/work-orders")}>
-              <FileText className="h-4 w-4 mr-1" />
-              Nalozi
-            </Button>
-            <Button size="sm" variant="outline" className="w-full border-orange-300 text-orange-700" onClick={() => navigate("/large-format/new?type=roll")}>
-              + Rolna
-            </Button>
-            <Button size="sm" variant="outline" className="w-full border-teal-300 text-teal-700" onClick={() => navigate("/large-format/new?type=rigid")}>
-              + Ploča
-            </Button>
-            <Button size="sm" variant="outline" className="w-full col-span-2" onClick={() => navigate("/nabavka")}>
-              Nabavka
-            </Button>
+      <main className="max-w-[1600px] mx-auto px-4 md:px-8 py-6 md:py-10">
+        {/* Welcome Section */}
+        <div className="mb-8 md:mb-12">
+          <h1 className="text-2xl md:text-3xl font-semibold tracking-tight text-foreground">
+            Dobrodošli, {profile?.full_name?.split(' ')[0]}
+          </h1>
+          <p className="mt-1 text-muted-foreground">
+            Upravljajte nalogama i pratite statistiku
+          </p>
+        </div>
+
+        {/* Quick Actions - Minimal Grid */}
+        <div className="mb-10 md:mb-14">
+          <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-3">
+            <QuickAction
+              icon={Plus}
+              label="Novi nalog"
+              onClick={() => navigate("/work-orders/new")}
+              primary
+            />
+            <QuickAction
+              icon={FileText}
+              label="Svi nalozi"
+              onClick={() => navigate("/work-orders")}
+            />
+            <QuickAction
+              icon={Printer}
+              label="Rolna"
+              onClick={() => navigate("/large-format/new?type=roll")}
+              className="text-orange-600"
+            />
+            <QuickAction
+              icon={LayoutGrid}
+              label="Ploča"
+              onClick={() => navigate("/large-format/new?type=rigid")}
+              className="text-teal-600"
+            />
+            <QuickAction
+              icon={Users}
+              label="Klijenti"
+              onClick={() => navigate("/clients")}
+            />
+            <QuickAction
+              icon={Package}
+              label="Inventar"
+              onClick={() => navigate("/inventory")}
+            />
           </div>
           
-          {/* Desktop Quick Actions */}
-          <div className="hidden md:flex items-center gap-3 flex-wrap">
-            <Button onClick={() => navigate("/work-orders/new")}>
-              + Novi nalog
-            </Button>
-            <Button variant="outline" onClick={() => navigate("/large-format/new?type=roll")} className="border-orange-300 text-orange-700 hover:bg-orange-50">
-              + Rolna
-            </Button>
-            <Button variant="outline" onClick={() => navigate("/large-format/new?type=rigid")} className="border-teal-300 text-teal-700 hover:bg-teal-50">
-              + Ploča
-            </Button>
-            <Button variant="secondary" onClick={() => navigate("/work-orders")}>
-              <FileText className="h-4 w-4 mr-2" />
-              Svi nalozi
-            </Button>
-            <Button variant="outline" onClick={() => navigate("/clients")}>
-              Klijenti
-            </Button>
-            <Button variant="outline" onClick={() => navigate("/inventory")}>
-              Inventar
-            </Button>
-            <Button variant="outline" onClick={() => navigate("/nabavka")}>
+          {/* Secondary Actions */}
+          <div className="flex flex-wrap items-center gap-2 mt-4">
+            <Button 
+              variant="ghost" 
+              size="sm"
+              className="text-muted-foreground hover:text-foreground"
+              onClick={() => navigate("/nabavka")}
+            >
               Nabavka
             </Button>
-            <Button variant="outline" onClick={() => navigate("/checklist")}>
+            <Button 
+              variant="ghost" 
+              size="sm"
+              className="text-muted-foreground hover:text-foreground"
+              onClick={() => navigate("/checklist")}
+            >
+              <ClipboardList className="h-4 w-4 mr-1.5" />
               Checklist
             </Button>
             {canViewStats && (
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
-                  <Button variant="outline">
-                    <BarChart3 className="h-4 w-4 mr-2" />
+                  <Button variant="ghost" size="sm" className="text-muted-foreground hover:text-foreground">
+                    <BarChart3 className="h-4 w-4 mr-1.5" />
                     Statistika
-                    <ChevronDown className="h-4 w-4 ml-2" />
+                    <ChevronDown className="h-3.5 w-3.5 ml-1" />
                   </Button>
                 </DropdownMenuTrigger>
-                <DropdownMenuContent align="end" className="bg-background">
+                <DropdownMenuContent align="start" className="bg-background">
                   <DropdownMenuItem onClick={() => navigate("/stats/ctp")}>
                     CTP statistika
                   </DropdownMenuItem>
@@ -144,72 +171,115 @@ const Dashboard = () => {
           </div>
         </div>
 
-        {/* Dashboard Grid */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-12 gap-3 md:gap-6 items-start">
-          {/* Stats Cards - only for admin/superuser */}
-          {canViewStats && <StatsCards />}
-
-          {/* Admin Section - already has its own visibility logic */}
-          <div className="col-span-1 sm:col-span-2 md:col-span-12 xl:col-span-4 min-w-0">
-            <AdminSection />
-          </div>
-
-          {/* Charts and Stats - only for admin/superuser */}
-          {canViewStats && (
-            <>
-              <div className="col-span-1 sm:col-span-2 md:col-span-6 xl:col-span-4 min-w-0">
-                <TopClientsCard />
-              </div>
-
-              <div className="col-span-1 sm:col-span-2 md:col-span-6 xl:col-span-4 min-w-0">
-                <MonthlyPlateUsageChart />
-              </div>
-
-              <div className="col-span-1 sm:col-span-2 md:col-span-6 xl:col-span-4 min-w-0">
-                <OrdersByTypeChart />
-              </div>
-
-              <div className="col-span-1 sm:col-span-2 md:col-span-6 xl:col-span-4 min-w-0">
-                <ClosedOrdersChart />
-              </div>
-
-              <div className="col-span-1 sm:col-span-2 md:col-span-6 xl:col-span-4 min-w-0">
-                <DailyPlateStats />
-              </div>
-
-              <div className="col-span-1 sm:col-span-2 md:col-span-6 xl:col-span-4 min-w-0">
-                <InvoiceStatsCard />
-              </div>
-            </>
-          )}
-
-          {/* Recent Orders - visible to all */}
-          <div
-            className={`col-span-1 sm:col-span-2 md:col-span-12 min-w-0 ${
-              canViewStats ? "xl:col-span-8" : ""
-            }`}
-          >
-            <RecentOrders />
-          </div>
-
-          {/* Online Users - visible to all */}
-          <div className="col-span-1 sm:col-span-2 md:col-span-6 xl:col-span-4 min-w-0">
-            <OnlineUsersCard />
-          </div>
-
-          {/* Online Portal Users - only for admin/superuser */}
-          {canViewStats && (
-            <div className="col-span-1 sm:col-span-2 md:col-span-6 xl:col-span-4 min-w-0">
-              <OnlinePortalUsersCard />
+        {/* Stats Cards Row */}
+        {canViewStats && (
+          <div className="mb-10">
+            <SectionHeader title="Pregled" />
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+              <StatsCards />
             </div>
-          )}
+          </div>
+        )}
 
-          {/* Digital Stats Section - only for admin/superuser */}
-          {canViewStats && <DigitalStatsSection />}
+        {/* Main Grid */}
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 md:gap-8">
+          {/* Left Column - Main Content */}
+          <div className="lg:col-span-8 space-y-6 md:space-y-8">
+            {/* Recent Orders */}
+            <section>
+              <SectionHeader title="Poslednji nalozi" />
+              <RecentOrders />
+            </section>
+
+            {canViewStats && (
+              <>
+                {/* Charts Row */}
+                <section>
+                  <SectionHeader title="Analitika" />
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-6">
+                    <MonthlyPlateUsageChart />
+                    <ClosedOrdersChart />
+                  </div>
+                </section>
+
+                <section>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-6">
+                    <OrdersByTypeChart />
+                    <DailyPlateStats />
+                  </div>
+                </section>
+
+                {/* Digital Stats */}
+                <section>
+                  <SectionHeader title="Digitala" />
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-6">
+                    <DigitalStatsSection />
+                  </div>
+                </section>
+              </>
+            )}
+          </div>
+
+          {/* Right Column - Sidebar */}
+          <div className="lg:col-span-4 space-y-6">
+            {/* Admin Section */}
+            <AdminSection />
+
+            {canViewStats && (
+              <>
+                <TopClientsCard />
+                <InvoiceStatsCard />
+              </>
+            )}
+
+            {/* Online Users */}
+            <OnlineUsersCard />
+
+            {canViewStats && <OnlinePortalUsersCard />}
+          </div>
         </div>
       </main>
     </div>
   );
 };
+
+// Minimal Quick Action Button
+const QuickAction = ({ 
+  icon: Icon, 
+  label, 
+  onClick, 
+  primary = false,
+  className = ""
+}: { 
+  icon: React.ElementType; 
+  label: string; 
+  onClick: () => void; 
+  primary?: boolean;
+  className?: string;
+}) => (
+  <button
+    onClick={onClick}
+    className={`
+      group flex flex-col items-center justify-center gap-2 p-4 md:p-5
+      rounded-xl border transition-all duration-200
+      ${primary 
+        ? "bg-primary text-primary-foreground border-primary hover:bg-primary/90 shadow-sm" 
+        : "bg-white border-slate-200 hover:border-slate-300 hover:shadow-sm"
+      }
+    `}
+  >
+    <Icon className={`h-5 w-5 ${primary ? "" : className || "text-slate-600 group-hover:text-foreground"}`} />
+    <span className={`text-xs md:text-sm font-medium ${primary ? "" : "text-slate-700"}`}>
+      {label}
+    </span>
+  </button>
+);
+
+// Section Header Component
+const SectionHeader = ({ title }: { title: string }) => (
+  <h2 className="text-sm font-medium text-muted-foreground uppercase tracking-wider mb-4">
+    {title}
+  </h2>
+);
 
 export default Dashboard;
