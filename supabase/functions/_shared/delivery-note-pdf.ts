@@ -333,8 +333,8 @@ export async function generateDeliveryNotePDF(
         color: COLORS.gradientStart,
       });
 
-      // Document number below badge - use order_number which is the correct work order number
-      const deliveryNumber = workOrder.order_number;
+      // Document number below badge - prefer display_order_number (e.g. CTP-2026-000772), fall back to order_code then order_number
+      const deliveryNumber = workOrder.display_order_number || workOrder.order_code || workOrder.order_number;
       const numWidth = notoBold.widthOfTextAtSize(deliveryNumber, 16);
       page.drawText(deliveryNumber, {
         x: rightX - numWidth,
