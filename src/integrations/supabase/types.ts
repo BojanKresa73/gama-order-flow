@@ -308,6 +308,7 @@ export type Database = {
           next_follow_up_at: string | null
           notification_email: string | null
           notification_email_2: string | null
+          notification_email_3: string | null
           owner_user_id: string | null
           pib: string | null
           postanski_broj: string | null
@@ -336,6 +337,7 @@ export type Database = {
           next_follow_up_at?: string | null
           notification_email?: string | null
           notification_email_2?: string | null
+          notification_email_3?: string | null
           owner_user_id?: string | null
           pib?: string | null
           postanski_broj?: string | null
@@ -364,6 +366,7 @@ export type Database = {
           next_follow_up_at?: string | null
           notification_email?: string | null
           notification_email_2?: string | null
+          notification_email_3?: string | null
           owner_user_id?: string | null
           pib?: string | null
           postanski_broj?: string | null
