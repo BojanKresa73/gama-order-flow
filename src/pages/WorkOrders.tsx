@@ -121,8 +121,12 @@ const WorkOrders = () => {
 
   useEffect(() => {
     checkAuth();
-    fetchWorkOrders();
   }, []);
+
+  // Re-fetch when filters change
+  useEffect(() => {
+    fetchWorkOrders();
+  }, [filters]);
 
   const checkAuth = async () => {
     const { data: { user } } = await supabase.auth.getUser();
@@ -133,7 +137,7 @@ const WorkOrders = () => {
 
   const fetchWorkOrders = async () => {
     try {
-      const { data, error } = await supabase
+      let query = supabase
         .from("work_orders")
         .select(`
           *,
@@ -146,9 +150,42 @@ const WorkOrders = () => {
           file_entries (quantity, closed_by),
           film_jobs (computed_total_m)
         `)
-        .is("deleted_at", null)
+        .is("deleted_at", null);
+
+      // Push date filters to DB
+      if (filters.dateRange.from) {
+        query = query.gte("created_at", filters.dateRange.from.toISOString());
+      }
+      if (filters.dateRange.to) {
+        const endOfDay = new Date(filters.dateRange.to);
+        endOfDay.setHours(23, 59, 59, 999);
+        query = query.lte("created_at", endOfDay.toISOString());
+      }
+
+      // Push client filter to DB
+      if (filters.clientIds.length > 0) {
+        query = query.in("client_id", filters.clientIds);
+      }
+
+      // Push order type filter to DB
+      if (filters.orderType !== "all") {
+        query = query.eq("order_type", filters.orderType as any);
+      }
+
+      // Push status filter to DB
+      if (filters.status !== "all") {
+        if (filters.status === "invoiced") {
+          query = query.not("invoiced_at", "is", null);
+        } else if (filters.status === "not_invoiced") {
+          query = query.is("invoiced_at", null);
+        } else {
+          query = query.eq("status", filters.status as any);
+        }
+      }
+
+      const { data, error } = await query
         .order("created_at", { ascending: false })
-        .limit(500);
+        .limit(2000);
 
       if (error) throw error;
       
