@@ -188,7 +188,7 @@ const WorkOrderDetails = () => {
     try {
       // Call the edge function to resend delivery note
       const { data, error } = await supabase.functions.invoke('send-delivery-note', {
-        body: { workOrderId: id }
+        body: { workOrderId: id, resend: true }
       });
 
       if (error) throw error;
