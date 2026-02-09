@@ -188,6 +188,16 @@ const WorkOrders = () => {
         .limit(2000);
 
       if (error) throw error;
+
+      // Warn user if results hit the limit
+      if (data && data.length >= 2000) {
+        toast({
+          title: "Upozorenje: Prikazano je maksimalnih 2000 naloga",
+          description: "Vaš filter vraća više od 2000 rezultata. Suzite filter (kraći period, specifičan klijent ili tip naloga) da biste videli sve naloge.",
+          variant: "destructive",
+          duration: 10000,
+        });
+      }
       
       // Get unique closed_by IDs to fetch their names in one query
       const closedByIds = new Set<string>();
