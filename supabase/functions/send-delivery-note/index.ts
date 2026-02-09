@@ -126,7 +126,8 @@ const handler = async (req: Request): Promise<Response> => {
           name,
           pib,
           notification_email,
-          notification_email_2
+          notification_email_2,
+          notification_email_3
         )
       `)
       .eq("id", workOrderId)
@@ -361,6 +362,9 @@ const handler = async (req: Request): Promise<Response> => {
     }
     if (workOrder.client.notification_email_2) {
       notificationEmails.push(workOrder.client.notification_email_2);
+    }
+    if (workOrder.client.notification_email_3) {
+      notificationEmails.push(workOrder.client.notification_email_3);
     }
 
     // Send email if notification email(s) exist
