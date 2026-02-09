@@ -854,7 +854,7 @@ const WorkOrders = () => {
     }
   };
 
-  // Batch PDF download handler
+  // Batch PDF download handler — chunks into groups of 10 to avoid edge function CPU limits
   const handleBatchPdfDownload = async () => {
     if (exportSelectedOrders.size === 0) {
       toast({ title: "Upozorenje", description: "Odaberite barem jedan nalog.", variant: "destructive" });
@@ -866,38 +866,70 @@ const WorkOrders = () => {
       const { data: { session } } = await supabase.auth.getSession();
       if (!session) throw new Error("Niste prijavljeni");
 
-      const response = await fetch(
-        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/batch-delivery-notes-pdf`,
-        {
-          method: "POST",
-          headers: {
-            "Authorization": `Bearer ${session.access_token}`,
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({ work_order_ids: Array.from(exportSelectedOrders) }),
-        }
-      );
-
-      if (!response.ok) {
-        const errorData = await response.json().catch(() => ({}));
-        throw new Error(errorData.error || `Greška: ${response.status}`);
+      const allIds = Array.from(exportSelectedOrders);
+      const CHUNK_SIZE = 10;
+      const chunks: string[][] = [];
+      for (let i = 0; i < allIds.length; i += CHUNK_SIZE) {
+        chunks.push(allIds.slice(i, i + CHUNK_SIZE));
       }
 
-      const blob = await response.blob();
+      const { PDFDocument } = await import("pdf-lib");
+      const mergedPdf = await PDFDocument.create();
+      let totalSuccess = 0;
+      let totalErrors = 0;
+
+      for (let ci = 0; ci < chunks.length; ci++) {
+        const chunk = chunks[ci];
+        toast({
+          title: "Generisanje PDF-a",
+          description: `Obrađujem grupu ${ci + 1}/${chunks.length} (${chunk.length} naloga)...`,
+        });
+
+        const response = await fetch(
+          `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/batch-delivery-notes-pdf`,
+          {
+            method: "POST",
+            headers: {
+              "Authorization": `Bearer ${session.access_token}`,
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify({ work_order_ids: chunk }),
+          }
+        );
+
+        if (!response.ok) {
+          const errorData = await response.json().catch(() => ({}));
+          console.error(`Chunk ${ci + 1} failed:`, errorData);
+          totalErrors += chunk.length;
+          continue;
+        }
+
+        const pdfBytes = new Uint8Array(await response.arrayBuffer());
+        const chunkPdf = await PDFDocument.load(pdfBytes);
+        const pages = await mergedPdf.copyPages(chunkPdf, chunkPdf.getPageIndices());
+        pages.forEach(page => mergedPdf.addPage(page));
+        totalSuccess += Number(response.headers.get('X-Success-Count') || chunk.length);
+        totalErrors += Number(response.headers.get('X-Error-Count') || 0);
+      }
+
+      if (mergedPdf.getPageCount() === 0) {
+        throw new Error("Nijedna otpremnica nije generisana.");
+      }
+
+      const finalBytes = await mergedPdf.save() as unknown as ArrayBuffer;
+      const blob = new Blob([finalBytes], { type: 'application/pdf' });
       const url = URL.createObjectURL(blob);
       const link = document.createElement('a');
       link.href = url;
-      link.download = `Otpremnice-${exportSelectedOrders.size}-naloga.pdf`;
+      link.download = `Otpremnice-${allIds.length}-naloga.pdf`;
       document.body.appendChild(link);
       link.click();
       document.body.removeChild(link);
       URL.revokeObjectURL(url);
 
-      const successCount = response.headers.get('X-Success-Count');
-      const errorCount = response.headers.get('X-Error-Count');
       toast({
         title: "PDF preuzet",
-        description: `Generisano ${successCount || exportSelectedOrders.size} otpremnica.${errorCount && Number(errorCount) > 0 ? ` ${errorCount} grešaka.` : ''}`,
+        description: `Generisano ${totalSuccess} otpremnica.${totalErrors > 0 ? ` ${totalErrors} grešaka.` : ''}`,
       });
     } catch (error: any) {
       console.error("Batch PDF error:", error);
