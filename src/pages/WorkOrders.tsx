@@ -97,6 +97,7 @@ const WorkOrders = () => {
   const [exportSelectedOrders, setExportSelectedOrders] = useState<Set<string>>(new Set());
   const [isExporting, setIsExporting] = useState(false);
   const [isExportingXml, setIsExportingXml] = useState(false);
+  const [isExportingPdf, setIsExportingPdf] = useState(false);
   
   // Bulk invoice state
   const [bulkInvoiceDialogOpen, setBulkInvoiceDialogOpen] = useState(false);
@@ -853,6 +854,59 @@ const WorkOrders = () => {
     }
   };
 
+  // Batch PDF download handler
+  const handleBatchPdfDownload = async () => {
+    if (exportSelectedOrders.size === 0) {
+      toast({ title: "Upozorenje", description: "Odaberite barem jedan nalog.", variant: "destructive" });
+      return;
+    }
+
+    setIsExportingPdf(true);
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) throw new Error("Niste prijavljeni");
+
+      const response = await fetch(
+        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/batch-delivery-notes-pdf`,
+        {
+          method: "POST",
+          headers: {
+            "Authorization": `Bearer ${session.access_token}`,
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({ work_order_ids: Array.from(exportSelectedOrders) }),
+        }
+      );
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.error || `Greška: ${response.status}`);
+      }
+
+      const blob = await response.blob();
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = `Otpremnice-${exportSelectedOrders.size}-naloga.pdf`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(url);
+
+      const successCount = response.headers.get('X-Success-Count');
+      const errorCount = response.headers.get('X-Error-Count');
+      toast({
+        title: "PDF preuzet",
+        description: `Generisano ${successCount || exportSelectedOrders.size} otpremnica.${errorCount && Number(errorCount) > 0 ? ` ${errorCount} grešaka.` : ''}`,
+      });
+    } catch (error: any) {
+      console.error("Batch PDF error:", error);
+      toast({ title: "Greška", description: error.message, variant: "destructive" });
+    } finally {
+      setIsExportingPdf(false);
+    }
+  };
+
   // Batch Minimax XML export handler
   const handleExportToMinimaxXml = async () => {
     if (exportSelectedOrders.size === 0) {
@@ -1046,6 +1100,19 @@ const WorkOrders = () => {
                         <Receipt className="h-4 w-4 mr-2" />
                       )}
                       Fakturisano ({exportSelectedOrders.size})
+                    </Button>
+                    <Button 
+                      onClick={handleBatchPdfDownload} 
+                      variant="outline"
+                      disabled={isExportingPdf}
+                      title="Preuzmi sve otpremnice kao jedan PDF"
+                    >
+                      {isExportingPdf ? (
+                        <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                      ) : (
+                        <FileText className="h-4 w-4 mr-2" />
+                      )}
+                      PDF otpremnice ({exportSelectedOrders.size})
                     </Button>
                   </>
                 )}
