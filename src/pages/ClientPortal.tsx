@@ -29,12 +29,20 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
-import { LogOut, Search } from "lucide-react";
+import { LogOut, Search, Package } from "lucide-react";
 import { PriorityBadge } from "@/components/priority/PriorityBadge";
 import { PrioritySelect } from "@/components/priority/PrioritySelect";
 import { ClientOrderRow } from "@/components/portal/ClientOrderRow";
 import { ClientOrderCard } from "@/components/portal/ClientOrderCard";
 import { useIsMobile } from "@/hooks/use-mobile";
+import { Badge } from "@/components/ui/badge";
+
+// Publik client IDs that should see stock info
+const PUBLIK_CLIENT_IDS = [
+  "b48adbce-868e-4564-9c56-27e372af5724", // Publik d.o.o.
+  "a996f28a-bbaa-4dd7-9b7e-2febc691fa86", // Publik Praktikum d.o.o.
+];
+const PUBLIK_PLATE_FORMAT_ID = "833c26e8-cf70-4130-8a5c-56b1eb6022d1"; // 1040x800
 
 interface ClientPortalUser {
   id: string;
@@ -224,6 +232,24 @@ const ClientPortal = () => {
     enabled: !!portalUser?.client_id,
   });
 
+  // Fetch stock for Publik clients (1040x800 format)
+  const isPublikClient = portalUser?.client_id && PUBLIK_CLIENT_IDS.includes(portalUser.client_id);
+  const { data: publikStock } = useQuery({
+    queryKey: ["publik-plate-stock"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("plate_formats")
+        .select("current_stock, format_name")
+        .eq("id", PUBLIK_PLATE_FORMAT_ID)
+        .single();
+      
+      if (error) return null;
+      return data;
+    },
+    enabled: isPublikClient,
+    refetchInterval: 60000, // Refresh every minute
+  });
+
   // Fetch all files for search
   const { data: allFiles = [] } = useQuery({
     queryKey: ["client-portal-files", portalUser?.client_id],
@@ -385,11 +411,37 @@ const ClientPortal = () => {
                 {portalUser?.clients?.name} - {portalUser?.full_name}
               </p>
             </div>
-            <Button variant="outline" onClick={handleLogout}>
-              <LogOut className="h-4 w-4 mr-2" />
-              Odjava
-            </Button>
+            <div className="flex items-center gap-4">
+              {/* Stock display for Publik clients */}
+              {isPublikClient && publikStock && (
+                <div className="hidden sm:flex items-center gap-2 px-3 py-2 bg-muted/50 rounded-lg border">
+                  <Package className="h-4 w-4 text-muted-foreground" />
+                  <span className="text-sm">
+                    <span className="text-muted-foreground">Lager {publikStock.format_name}:</span>
+                    <Badge variant="secondary" className="ml-2 font-semibold">
+                      {publikStock.current_stock} ploča
+                    </Badge>
+                  </span>
+                </div>
+              )}
+              <Button variant="outline" onClick={handleLogout}>
+                <LogOut className="h-4 w-4 mr-2" />
+                Odjava
+              </Button>
+            </div>
           </div>
+          {/* Mobile stock display for Publik */}
+          {isPublikClient && publikStock && (
+            <div className="sm:hidden mt-3 flex items-center gap-2 px-3 py-2 bg-muted/50 rounded-lg border">
+              <Package className="h-4 w-4 text-muted-foreground" />
+              <span className="text-sm">
+                Lager {publikStock.format_name}:
+                <Badge variant="secondary" className="ml-2 font-semibold">
+                  {publikStock.current_stock} ploča
+                </Badge>
+              </span>
+            </div>
+          )}
         </div>
       </header>
 
