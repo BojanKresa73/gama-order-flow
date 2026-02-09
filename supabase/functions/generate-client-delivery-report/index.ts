@@ -45,14 +45,15 @@ serve(async (req) => {
     const supabaseKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
     const supabase = createClient(supabaseUrl, supabaseKey);
 
-    // Fetch delivery notes
+    // Fetch delivery notes — use range to bypass default 1000-row limit
     const { data: deliveryNotes, error } = await supabase
       .from("delivery_notes")
       .select("*")
       .ilike("client_name", `%${clientName}%`)
-      .gte("sent_at", dateFrom)
-      .lte("sent_at", dateTo + "T23:59:59")
-      .order("sent_at", { ascending: true });
+      .gte("closed_at", dateFrom)
+      .lte("closed_at", dateTo + "T23:59:59")
+      .order("closed_at", { ascending: true })
+      .range(0, 9999);
 
     if (error) {
       console.error("Database error:", error);
