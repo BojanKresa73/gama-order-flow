@@ -139,7 +139,7 @@ const OrderDeliveryNote = () => {
     return (
       <div className="flex flex-col items-center justify-center min-h-screen gap-4">
         <p className="text-muted-foreground">Nalog nije pronađen</p>
-        <Button onClick={() => navigate("/work-orders")}>
+        <Button onClick={() => window.history.length > 1 ? navigate(-1) : navigate("/work-orders")}>
           <ArrowLeft className="h-4 w-4 mr-2" />
           Nazad
         </Button>
@@ -152,7 +152,7 @@ const OrderDeliveryNote = () => {
       <header className="border-b bg-card">
         <div className="container mx-auto px-4 py-4 flex items-center justify-between">
           <div className="flex items-center gap-4">
-            <Button variant="ghost" size="icon" onClick={() => navigate("/work-orders")}>
+            <Button variant="ghost" size="icon" onClick={() => window.history.length > 1 ? navigate(-1) : navigate("/work-orders")}>
               <ArrowLeft className="h-5 w-5" />
             </Button>
             <h1 className="text-2xl font-bold">Otpremnica - {workOrder.order_number}</h1>
