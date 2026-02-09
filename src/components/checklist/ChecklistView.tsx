@@ -380,7 +380,7 @@ const ChecklistView = ({ orderType, onNavigateToSearch }: ChecklistViewProps) =>
   const sendDeliveryNote = async (workOrderId: string) => {
     try {
       const { error } = await supabase.functions.invoke("send-delivery-note", {
-        body: { workOrderId },
+        body: { workOrderId, resend: true },
       });
 
       if (error) throw error;

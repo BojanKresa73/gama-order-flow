@@ -16,6 +16,7 @@ const corsHeaders = {
 
 interface DeliveryNoteRequest {
   workOrderId: string;
+  resend?: boolean;
 }
 
 // Helper functions for order labeling (matching src/lib/orderLabel.ts)
@@ -111,7 +112,7 @@ const handler = async (req: Request): Promise<Response> => {
     const { data: { user }, error: authError } = await supabaseClient.auth.getUser(token);
     if (authError || !user) throw new Error("Niste autentifikovani");
 
-    const { workOrderId }: DeliveryNoteRequest = await req.json();
+    const { workOrderId, resend }: DeliveryNoteRequest = await req.json();
 
     console.log("Fetching work order:", workOrderId);
 
@@ -262,7 +263,7 @@ const handler = async (req: Request): Promise<Response> => {
       .eq("work_order_id", workOrderId)
       .single();
 
-    if (existingNote) {
+    if (existingNote && !resend) {
       console.log("Delivery note already exists for work order:", workOrderId);
       return new Response(
         JSON.stringify({ 
@@ -275,6 +276,15 @@ const handler = async (req: Request): Promise<Response> => {
           headers: { ...corsHeaders, "Content-Type": "application/json" },
         }
       );
+    }
+
+    // If resending, delete the old delivery note so we create a fresh one
+    if (existingNote && resend) {
+      console.log("Resending delivery note, deleting existing:", existingNote.id);
+      await supabaseClient
+        .from("delivery_notes")
+        .delete()
+        .eq("id", existingNote.id);
     }
 
     // Use work order number as delivery number (order_number is the correct format)
