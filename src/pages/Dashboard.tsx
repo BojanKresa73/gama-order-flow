@@ -127,6 +127,10 @@ const Dashboard = () => {
             <Button variant="outline" onClick={() => navigate("/checklist")}>
               Checklist
             </Button>
+            <Button variant="outline" onClick={() => navigate("/reports/delivery-notes")}>
+              <FileText className="h-4 w-4 mr-2" />
+              Izveštaj otpremnica
+            </Button>
             {canViewStats && (
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
