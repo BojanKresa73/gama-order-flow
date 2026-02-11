@@ -5,12 +5,17 @@ import { useWorkOrderChecklist, ChecklistItem } from "@/hooks/useWorkOrderCheckl
 import { Skeleton } from "@/components/ui/skeleton";
 import { formatDistanceToNow } from "date-fns";
 import { sr } from "date-fns/locale";
+import { CtpMachineSelector } from "./CtpMachineSelector";
 
 interface WorkOrderChecklistTabProps {
   workOrderId: string;
+  orderType?: string;
+  totalPlates?: number;
+  formatGroup?: string | null;
+  isOrderOpen?: boolean;
 }
 
-export const WorkOrderChecklistTab = ({ workOrderId }: WorkOrderChecklistTabProps) => {
+export const WorkOrderChecklistTab = ({ workOrderId, orderType, totalPlates = 0, formatGroup, isOrderOpen = true }: WorkOrderChecklistTabProps) => {
   const { checklistItems, isLoading, updateStatus } = useWorkOrderChecklist(workOrderId);
 
   const getStatusBadge = (status: ChecklistItem["status"]) => {
@@ -52,7 +57,16 @@ export const WorkOrderChecklistTab = ({ workOrderId }: WorkOrderChecklistTabProp
   }
 
   return (
-    <div className="border rounded-lg">
+    <div className="space-y-4">
+      {orderType === "ctp" && totalPlates > 0 && (
+        <CtpMachineSelector
+          workOrderId={workOrderId}
+          totalPlates={totalPlates}
+          formatGroup={formatGroup || null}
+          isOrderOpen={isOrderOpen}
+        />
+      )}
+      <div className="border rounded-lg">
       <Table>
         <TableHeader>
           <TableRow>
@@ -105,6 +119,7 @@ export const WorkOrderChecklistTab = ({ workOrderId }: WorkOrderChecklistTabProp
           ))}
         </TableBody>
       </Table>
+    </div>
     </div>
   );
 };
