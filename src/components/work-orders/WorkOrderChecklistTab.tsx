@@ -6,6 +6,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { formatDistanceToNow } from "date-fns";
 import { sr } from "date-fns/locale";
 import { CtpMachineSelector } from "./CtpMachineSelector";
+import { CtpPlateProgress } from "./CtpPlateProgress";
 import { useAuthz } from "@/hooks/useAuthz";
 import { useCtpPrediction } from "@/hooks/useCtpPrediction";
 import { useCallback } from "react";
@@ -22,7 +23,6 @@ export const WorkOrderChecklistTab = ({ workOrderId, orderType, totalPlates = 0,
   const { checklistItems, isLoading, updateStatus } = useWorkOrderChecklist(workOrderId);
   const { isSuper } = useAuthz();
 
-  // Use CTP prediction hook for auto-start (runs for all roles but UI is hidden)
   const isCtp = orderType === "ctp" && totalPlates > 0;
   const {
     selectedMachineId,
@@ -94,8 +94,15 @@ export const WorkOrderChecklistTab = ({ workOrderId, orderType, totalPlates = 0,
 
   return (
     <div className="space-y-4">
-      {/* CTP Predikcija - visible to all for CTP orders */}
+      {/* Plate progress - visible to ALL users */}
       {isCtp && (
+        <div className="p-4 border rounded-lg bg-muted/30">
+          <CtpPlateProgress workOrderId={workOrderId} totalPlates={totalPlates} />
+        </div>
+      )}
+
+      {/* CTP admin panel - superuser only */}
+      {isSuper && isCtp && (
         <CtpMachineSelector
           workOrderId={workOrderId}
           totalPlates={totalPlates}
@@ -103,6 +110,7 @@ export const WorkOrderChecklistTab = ({ workOrderId, orderType, totalPlates = 0,
           isOrderOpen={isOrderOpen}
         />
       )}
+
       <div className="border rounded-lg">
       <Table>
         <TableHeader>

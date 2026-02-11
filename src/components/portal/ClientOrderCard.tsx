@@ -8,6 +8,7 @@ import { PriorityBadge } from "@/components/priority/PriorityBadge";
 import { Calendar, ChevronDown, ChevronUp, FileText } from "lucide-react";
 import { format } from "date-fns";
 import { sr } from "date-fns/locale";
+import { CtpPlateProgress } from "@/components/work-orders/CtpPlateProgress";
 
 interface WorkOrder {
   id: string;
@@ -137,6 +138,13 @@ export function ClientOrderCard({ order, index, onChangePriority, searchQuery }:
             {order.status === "open" ? "Otvoren" : "Zatvoren"}
           </Badge>
         </div>
+
+        {/* CTP plate progress for open orders */}
+        {order.order_type === "ctp" && order.status === "open" && order.total_plates > 0 && (
+          <div className="mb-3">
+            <CtpPlateProgress workOrderId={order.id} totalPlates={order.total_plates} compact />
+          </div>
+        )}
 
         {/* Priority and date row */}
         <div className="flex items-center justify-between gap-2 mb-3">
