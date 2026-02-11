@@ -1128,7 +1128,28 @@ const NewWorkOrder = () => {
                       />
                     )}
 
-                    <LocalFilmJobsTable jobs={filmJobs} onChange={setFilmJobs} />
+                    <LocalFilmJobsTable jobs={filmJobs} onChange={(newJobs) => {
+                      if (!isEditMode) {
+                        setFilmJobs(newJobs as typeof filmJobs);
+                        return;
+                      }
+                      // Track deletions
+                      const existingIds = new Set(newJobs.filter(j => j.id).map(j => j.id));
+                      const deletedItems = filmJobs.filter(j => j.id && !existingIds.has(j.id))
+                        .map(j => ({ ...j, __status: 'deleted' as const }));
+                      // Mark status for diff tracking
+                      const tracked = newJobs.map(job => {
+                        const j = job as typeof filmJobs[0];
+                        if (j.id && j.__status !== 'deleted') {
+                          return { ...j, __status: 'updated' as const };
+                        }
+                        if (!j.id && !j.tempId) {
+                          return { ...j, tempId: `temp-${Date.now()}-${Math.random()}`, __status: 'created' as const };
+                        }
+                        return j;
+                      });
+                      setFilmJobs([...tracked, ...deletedItems] as typeof filmJobs);
+                    }} />
                   </div>
                 </TabsContent>
               </Tabs>

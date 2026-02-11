@@ -46,8 +46,9 @@ function fitOnRoll(
     const usable = roll_mm - 2 * margin_mm;
     if (pieceW > usable) return null;
 
-    const across = Math.max(1, Math.floor((usable + gap_mm) / (pieceW + gap_mm)));
-    const rows = Math.ceil(qty / across);
+    // No nesting - each piece goes one after another (across = 1)
+    const across = 1;
+    const rows = qty;
     const m_per_piece = pieceH / 1000;
     const total_m_raw = rows * m_per_piece;
     const total_m = total_m_raw * (1 + waste_pct / 100);
