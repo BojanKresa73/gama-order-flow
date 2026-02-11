@@ -49,7 +49,8 @@ export const OrdersByTypeChart = () => {
       const { data } = await supabase
         .from("work_orders")
         .select("order_type")
-        .is("deleted_at", null);
+        .is("deleted_at", null)
+        .range(0, 49999);
       return data || [];
     },
   });
