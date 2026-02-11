@@ -276,13 +276,6 @@ export default React.memo(function FilmItemRow({ row, index, onCommit, onDelete,
         />
       </td>
       <td className="p-2">
-        {row.across_count ? (
-          <span className="text-sm font-medium">{row.across_count}</span>
-        ) : (
-          <span className="text-sm text-muted-foreground">-</span>
-        )}
-      </td>
-      <td className="p-2">
         {row.computed_rotation_deg !== undefined ? (
           <span className="text-sm font-medium">{row.computed_rotation_deg}°</span>
         ) : (
