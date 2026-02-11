@@ -1,10 +1,12 @@
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 import { useCtpPrediction } from "@/hooks/useCtpPrediction";
-import { Play, Clock, CheckCircle, Timer } from "lucide-react";
+import { Clock, CheckCircle, Timer, Users } from "lucide-react";
 import { useEffect, useState } from "react";
+
+const RECEPTION_OPERATORS = ["Boris", "Marko"];
+const PLATE_OPERATORS = ["Petar", "Dario"];
 
 interface CtpMachineSelectorProps {
   workOrderId: string;
@@ -18,14 +20,24 @@ export const CtpMachineSelector = ({ workOrderId, totalPlates, formatGroup, isOr
     machines,
     selectedMachineId,
     setMachine,
-    startTiming,
     getEta,
     isTimingStarted,
     isTimingComplete,
     timingLog,
+    updateOperators,
   } = useCtpPrediction(workOrderId);
 
   const [elapsed, setElapsed] = useState(0);
+  const [receptionOp, setReceptionOp] = useState<string>("");
+  const [plateOp, setPlateOp] = useState<string>("");
+
+  // Sync operator state from timing log
+  useEffect(() => {
+    if (timingLog) {
+      setReceptionOp(timingLog.reception_operator || "");
+      setPlateOp(timingLog.plate_operator || "");
+    }
+  }, [timingLog]);
 
   // Live elapsed timer
   useEffect(() => {
@@ -58,6 +70,20 @@ export const CtpMachineSelector = ({ workOrderId, totalPlates, formatGroup, isOr
 
   const progressPercent = eta ? Math.min(100, (elapsed / eta.totalSeconds) * 100) : 0;
 
+  const handleReceptionChange = (val: string) => {
+    setReceptionOp(val);
+    if (timingLog) {
+      updateOperators({ receptionOperator: val });
+    }
+  };
+
+  const handlePlateOpChange = (val: string) => {
+    setPlateOp(val);
+    if (timingLog) {
+      updateOperators({ plateOperator: val });
+    }
+  };
+
   return (
     <div className="space-y-3 p-4 border rounded-lg bg-muted/30">
       <div className="flex items-center gap-2 text-sm font-medium">
@@ -85,23 +111,42 @@ export const CtpMachineSelector = ({ workOrderId, totalPlates, formatGroup, isOr
             </SelectContent>
           </Select>
         </div>
+      </div>
 
-        {/* Start button */}
-        {selectedMachineId && !isTimingStarted && !isTimingComplete && isOrderOpen && (
-          <Button
-            size="sm"
-            onClick={() =>
-              startTiming({
-                machineId: selectedMachineId,
-                formatGroup: formatGroup!,
-                totalPlates,
-              })
-            }
-          >
-            <Play className="h-4 w-4 mr-1" />
-            Počinjem
-          </Button>
-        )}
+      {/* Operator selectors */}
+      <div className="grid grid-cols-2 gap-3">
+        <div>
+          <div className="flex items-center gap-1 text-xs text-muted-foreground mb-1">
+            <Users className="h-3 w-3" />
+            Prijem
+          </div>
+          <Select value={receptionOp} onValueChange={handleReceptionChange}>
+            <SelectTrigger className="w-full">
+              <SelectValue placeholder="Operater prijema..." />
+            </SelectTrigger>
+            <SelectContent>
+              {RECEPTION_OPERATORS.map((op) => (
+                <SelectItem key={op} value={op}>{op}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+        <div>
+          <div className="flex items-center gap-1 text-xs text-muted-foreground mb-1">
+            <Users className="h-3 w-3" />
+            Ploče
+          </div>
+          <Select value={plateOp} onValueChange={handlePlateOpChange}>
+            <SelectTrigger className="w-full">
+              <SelectValue placeholder="Operater ploča..." />
+            </SelectTrigger>
+            <SelectContent>
+              {PLATE_OPERATORS.map((op) => (
+                <SelectItem key={op} value={op}>{op}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
       </div>
 
       {/* ETA display */}

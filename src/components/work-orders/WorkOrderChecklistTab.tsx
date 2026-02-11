@@ -6,6 +6,9 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { formatDistanceToNow } from "date-fns";
 import { sr } from "date-fns/locale";
 import { CtpMachineSelector } from "./CtpMachineSelector";
+import { useAuthz } from "@/hooks/useAuthz";
+import { useCtpPrediction } from "@/hooks/useCtpPrediction";
+import { useCallback } from "react";
 
 interface WorkOrderChecklistTabProps {
   workOrderId: string;
@@ -17,6 +20,39 @@ interface WorkOrderChecklistTabProps {
 
 export const WorkOrderChecklistTab = ({ workOrderId, orderType, totalPlates = 0, formatGroup, isOrderOpen = true }: WorkOrderChecklistTabProps) => {
   const { checklistItems, isLoading, updateStatus } = useWorkOrderChecklist(workOrderId);
+  const { isSuper } = useAuthz();
+
+  // Use CTP prediction hook for auto-start (runs for all roles but UI is hidden)
+  const isCtp = orderType === "ctp" && totalPlates > 0;
+  const {
+    selectedMachineId,
+    startTiming,
+    isTimingStarted,
+    isTimingComplete,
+  } = useCtpPrediction(isCtp ? workOrderId : "");
+
+  const handleStatusUpdate = useCallback((itemId: string, newStatus: ChecklistItem["status"]) => {
+    updateStatus({ itemId, newStatus });
+
+    // Auto-start timing when "CTP izlaz" goes to "In Progress"
+    if (
+      isCtp &&
+      newStatus === "In Progress" &&
+      !isTimingStarted &&
+      !isTimingComplete &&
+      selectedMachineId &&
+      formatGroup
+    ) {
+      const item = checklistItems.find(i => i.id === itemId);
+      if (item?.title === "CTP izlaz") {
+        startTiming({
+          machineId: selectedMachineId,
+          formatGroup: formatGroup,
+          totalPlates,
+        });
+      }
+    }
+  }, [isCtp, isTimingStarted, isTimingComplete, selectedMachineId, formatGroup, totalPlates, checklistItems, updateStatus, startTiming]);
 
   const getStatusBadge = (status: ChecklistItem["status"]) => {
     const variants: Record<ChecklistItem["status"], { variant: any; label: string }> = {
@@ -58,7 +94,8 @@ export const WorkOrderChecklistTab = ({ workOrderId, orderType, totalPlates = 0,
 
   return (
     <div className="space-y-4">
-      {orderType === "ctp" && totalPlates > 0 && (
+      {/* CTP Predikcija - visible only to superuser */}
+      {isSuper && isCtp && (
         <CtpMachineSelector
           workOrderId={workOrderId}
           totalPlates={totalPlates}
@@ -98,10 +135,7 @@ export const WorkOrderChecklistTab = ({ workOrderId, orderType, totalPlates = 0,
                 <Select
                   value={item.status}
                   onValueChange={(value) =>
-                    updateStatus({
-                      itemId: item.id,
-                      newStatus: value as ChecklistItem["status"],
-                    })
+                    handleStatusUpdate(item.id, value as ChecklistItem["status"])
                   }
                 >
                   <SelectTrigger className="w-[160px]">
