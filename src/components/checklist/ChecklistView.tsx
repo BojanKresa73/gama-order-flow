@@ -69,7 +69,16 @@ interface FileEntry {
   quantity: number;
   plate_format_id: string | null;
   plate_format_name: string | null;
+  format_group: string | null;
   status: string;
+}
+
+interface MachineSpeed {
+  machine_id: string;
+  format_group: string;
+  base_seconds_per_plate: number;
+  avg_seconds_per_plate: number | null;
+  sample_count: number;
 }
 
 interface ChecklistViewProps {
@@ -84,9 +93,22 @@ const ChecklistView = ({ orderType, onNavigateToSearch }: ChecklistViewProps) =>
   const [loading, setLoading] = useState(true);
   const [statusFilter, setStatusFilter] = useState<StatusFilter>("open");
   const [expandedOrderIds, setExpandedOrderIds] = useState<Set<string>>(new Set());
+  const [machineSpeeds, setMachineSpeeds] = useState<MachineSpeed[]>([]);
   const { toast } = useToast();
   const isMobile = useIsMobile();
   const navigate = useNavigate();
+
+  // Fetch machine speeds once
+  useEffect(() => {
+    if (orderType === "ctp") {
+      supabase
+        .from("ctp_machine_speeds")
+        .select("machine_id, format_group, base_seconds_per_plate, avg_seconds_per_plate, sample_count")
+        .then(({ data }) => {
+          if (data) setMachineSpeeds(data as MachineSpeed[]);
+        });
+    }
+  }, [orderType]);
 
   const toggleExpanded = (orderId: string) => {
     setExpandedOrderIds(prev => {
@@ -158,7 +180,7 @@ const ChecklistView = ({ orderType, onNavigateToSearch }: ChecklistViewProps) =>
               file_type,
               status,
               plate_format_id,
-              plate_formats(format_name)
+              plate_formats(format_name, format_group)
             `)
             .eq("work_order_id", order.id);
 
@@ -187,6 +209,7 @@ const ChecklistView = ({ orderType, onNavigateToSearch }: ChecklistViewProps) =>
           const fileEntries = (files || []).map((file) => {
             const pf = (file as any).plate_formats;
             const pfName = Array.isArray(pf) ? pf[0]?.format_name : pf?.format_name;
+            const pfGroup = Array.isArray(pf) ? pf[0]?.format_group : pf?.format_group;
 
             return {
               id: file.id,
@@ -194,6 +217,7 @@ const ChecklistView = ({ orderType, onNavigateToSearch }: ChecklistViewProps) =>
               quantity: file.quantity ?? (orderType === "ctp" ? 4 : 0),
               plate_format_id: (file as any).plate_format_id ?? null,
               plate_format_name: pfName || null,
+              format_group: pfGroup || null,
               status: file.status || "open",
             } as FileEntry;
           });
@@ -420,6 +444,37 @@ const ChecklistView = ({ orderType, onNavigateToSearch }: ChecklistViewProps) =>
     }
   };
 
+  const calculateEta = (order: WorkOrder): { totalSeconds: number; breakdown: { group: string; plates: number; spp: number }[] } | null => {
+    if (!order.machine_id || !order.file_entries || order.file_entries.length === 0) return null;
+
+    // Group plates by format_group
+    const groupedPlates: Record<string, number> = {};
+    for (const file of order.file_entries) {
+      const fg = file.format_group || "unknown";
+      groupedPlates[fg] = (groupedPlates[fg] || 0) + file.quantity;
+    }
+
+    let totalSeconds = 0;
+    const breakdown: { group: string; plates: number; spp: number }[] = [];
+
+    for (const [fg, plates] of Object.entries(groupedPlates)) {
+      const speed = machineSpeeds.find(s => s.machine_id === order.machine_id && s.format_group === fg);
+      if (!speed) continue;
+      const spp = speed.avg_seconds_per_plate ?? speed.base_seconds_per_plate;
+      totalSeconds += spp * plates;
+      breakdown.push({ group: fg, plates, spp });
+    }
+
+    return totalSeconds > 0 ? { totalSeconds, breakdown } : null;
+  };
+
+  const formatEta = (seconds: number): string => {
+    const h = Math.floor(seconds / 3600);
+    const m = Math.floor((seconds % 3600) / 60);
+    if (h > 0) return `~${h}h ${m}min`;
+    return `~${m}min`;
+  };
+
   const getStatusBadge = (status: string) => {
     if (status === "closed") {
       return (
@@ -527,6 +582,15 @@ const ChecklistView = ({ orderType, onNavigateToSearch }: ChecklistViewProps) =>
                     <SelectItem value="ctp_2">CTP 2</SelectItem>
                   </SelectContent>
                 </Select>
+                {(() => {
+                  const eta = calculateEta(order);
+                  if (!eta) return null;
+                  return (
+                    <span className="text-[10px] text-muted-foreground ml-1 font-medium">
+                      {formatEta(eta.totalSeconds)}
+                    </span>
+                  );
+                })()}
               </div>
             )}
           </div>
@@ -636,18 +700,34 @@ const ChecklistView = ({ orderType, onNavigateToSearch }: ChecklistViewProps) =>
           )}
           {orderType === "ctp" && (
             <TableCell>
-              <Select
-                value={order.machine_id || ""}
-                onValueChange={(val) => updateMachine(order.id, val)}
-              >
-                <SelectTrigger className="w-[110px] h-8 text-xs">
-                  <SelectValue placeholder="—" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="ctp_1">CTP 1</SelectItem>
-                  <SelectItem value="ctp_2">CTP 2</SelectItem>
-                </SelectContent>
-              </Select>
+              <div className="space-y-1">
+                <Select
+                  value={order.machine_id || ""}
+                  onValueChange={(val) => updateMachine(order.id, val)}
+                >
+                  <SelectTrigger className="w-[110px] h-8 text-xs">
+                    <SelectValue placeholder="—" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="ctp_1">CTP 1</SelectItem>
+                    <SelectItem value="ctp_2">CTP 2</SelectItem>
+                  </SelectContent>
+                </Select>
+                {(() => {
+                  const eta = calculateEta(order);
+                  if (!eta) return null;
+                  return (
+                    <div className="text-xs text-muted-foreground">
+                      <span className="font-medium text-foreground">{formatEta(eta.totalSeconds)}</span>
+                      {eta.breakdown.length > 1 && (
+                        <div className="text-[10px] leading-tight mt-0.5">
+                          {eta.breakdown.map(b => `${b.group}: ${b.plates}pl`).join(", ")}
+                        </div>
+                      )}
+                    </div>
+                  );
+                })()}
+              </div>
             </TableCell>
           )}
           <TableCell className="text-right">
