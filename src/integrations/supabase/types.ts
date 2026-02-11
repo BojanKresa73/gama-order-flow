@@ -378,6 +378,121 @@ export type Database = {
         }
         Relationships: []
       }
+      ctp_job_timing_log: {
+        Row: {
+          actual_seconds_per_plate: number | null
+          completed_at: string | null
+          created_at: string
+          format_group: string
+          id: string
+          machine_id: string
+          started_at: string
+          total_plates: number
+          work_order_id: string
+        }
+        Insert: {
+          actual_seconds_per_plate?: number | null
+          completed_at?: string | null
+          created_at?: string
+          format_group: string
+          id?: string
+          machine_id: string
+          started_at: string
+          total_plates: number
+          work_order_id: string
+        }
+        Update: {
+          actual_seconds_per_plate?: number | null
+          completed_at?: string | null
+          created_at?: string
+          format_group?: string
+          id?: string
+          machine_id?: string
+          started_at?: string
+          total_plates?: number
+          work_order_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ctp_job_timing_log_work_order_id_fkey"
+            columns: ["work_order_id"]
+            isOneToOne: false
+            referencedRelation: "v_ctp_items"
+            referencedColumns: ["work_order_id"]
+          },
+          {
+            foreignKeyName: "ctp_job_timing_log_work_order_id_fkey"
+            columns: ["work_order_id"]
+            isOneToOne: false
+            referencedRelation: "work_orders"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ctp_job_timing_log_work_order_id_fkey"
+            columns: ["work_order_id"]
+            isOneToOne: false
+            referencedRelation: "work_orders_ctp"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ctp_job_timing_log_work_order_id_fkey"
+            columns: ["work_order_id"]
+            isOneToOne: false
+            referencedRelation: "work_orders_digitala"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ctp_job_timing_log_work_order_id_fkey"
+            columns: ["work_order_id"]
+            isOneToOne: false
+            referencedRelation: "work_orders_filmovanje"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ctp_job_timing_log_work_order_id_fkey"
+            columns: ["work_order_id"]
+            isOneToOne: false
+            referencedRelation: "work_orders_razno"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      ctp_machine_speeds: {
+        Row: {
+          avg_seconds_per_plate: number | null
+          base_seconds_per_plate: number
+          created_at: string
+          format_group: string
+          id: string
+          machine_id: string
+          machine_name: string
+          sample_count: number
+          updated_at: string
+        }
+        Insert: {
+          avg_seconds_per_plate?: number | null
+          base_seconds_per_plate: number
+          created_at?: string
+          format_group: string
+          id?: string
+          machine_id: string
+          machine_name: string
+          sample_count?: number
+          updated_at?: string
+        }
+        Update: {
+          avg_seconds_per_plate?: number | null
+          base_seconds_per_plate?: number
+          created_at?: string
+          format_group?: string
+          id?: string
+          machine_id?: string
+          machine_name?: string
+          sample_count?: number
+          updated_at?: string
+        }
+        Relationships: []
+      }
       delivery_notes: {
         Row: {
           client_name: string
@@ -1515,6 +1630,7 @@ export type Database = {
         Row: {
           created_at: string
           current_stock: number
+          format_group: string | null
           format_name: string
           id: string
           low_stock: boolean | null
@@ -1524,6 +1640,7 @@ export type Database = {
         Insert: {
           created_at?: string
           current_stock?: number
+          format_group?: string | null
           format_name: string
           id?: string
           low_stock?: boolean | null
@@ -1533,6 +1650,7 @@ export type Database = {
         Update: {
           created_at?: string
           current_stock?: number
+          format_group?: string | null
           format_name?: string
           id?: string
           low_stock?: boolean | null
@@ -2252,6 +2370,7 @@ export type Database = {
           closed_by: string | null
           created_at: string
           created_by: string
+          ctp_machine_id: string | null
           deleted_at: string | null
           display_order_number: string | null
           film_note: string | null
@@ -2295,6 +2414,7 @@ export type Database = {
           closed_by?: string | null
           created_at?: string
           created_by: string
+          ctp_machine_id?: string | null
           deleted_at?: string | null
           display_order_number?: string | null
           film_note?: string | null
@@ -2338,6 +2458,7 @@ export type Database = {
           closed_by?: string | null
           created_at?: string
           created_by?: string
+          ctp_machine_id?: string | null
           deleted_at?: string | null
           display_order_number?: string | null
           film_note?: string | null

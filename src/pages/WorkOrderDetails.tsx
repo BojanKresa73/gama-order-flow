@@ -673,7 +673,28 @@ const WorkOrderDetails = () => {
                 <CardTitle>Checklist</CardTitle>
               </CardHeader>
               <CardContent>
-                <WorkOrderChecklistTab workOrderId={id!} />
+                <WorkOrderChecklistTab
+                  workOrderId={id!}
+                  orderType={workOrder.order_type}
+                  totalPlates={fileEntries.reduce((sum, fe) => sum + (fe.quantity || 0), 0)}
+                  formatGroup={(() => {
+                    // Determine dominant format group from file entries
+                    const formats = fileEntries.map(fe => {
+                      const name = fe.format_name || "";
+                      const w = parseInt(name);
+                      if (w >= 1000) return "B1";
+                      if (w >= 700) return "B2";
+                      if (w >= 400) return "B3";
+                      return null;
+                    }).filter(Boolean);
+                    // Use the most common format group
+                    if (formats.length === 0) return null;
+                    const counts: Record<string, number> = {};
+                    formats.forEach(f => { counts[f!] = (counts[f!] || 0) + 1; });
+                    return Object.entries(counts).sort((a, b) => b[1] - a[1])[0][0];
+                  })()}
+                  isOrderOpen={workOrder.status === "open"}
+                />
               </CardContent>
             </Card>
           </TabsContent>
