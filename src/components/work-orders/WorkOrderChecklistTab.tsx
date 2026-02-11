@@ -94,8 +94,8 @@ export const WorkOrderChecklistTab = ({ workOrderId, orderType, totalPlates = 0,
 
   return (
     <div className="space-y-4">
-      {/* CTP Predikcija - visible only to superuser */}
-      {isSuper && isCtp && (
+      {/* CTP Predikcija - visible to all for CTP orders */}
+      {isCtp && (
         <CtpMachineSelector
           workOrderId={workOrderId}
           totalPlates={totalPlates}
