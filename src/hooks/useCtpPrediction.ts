@@ -39,11 +39,30 @@ export const useCtpMachineSpeeds = () => {
   });
 };
 
+export const useCtpPlateProgress = (workOrderId: string) => {
+  return useQuery({
+    queryKey: ["ctp-plate-progress", workOrderId],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("file_entries")
+        .select("status, quantity")
+        .eq("work_order_id", workOrderId);
+      if (error) throw error;
+      const total = data?.reduce((sum, f) => sum + (f.quantity || 0), 0) || 0;
+      const closed = data?.filter(f => f.status === "closed").reduce((sum, f) => sum + (f.quantity || 0), 0) || 0;
+      return { total, closed, remaining: total - closed, percent: total > 0 ? Math.round((closed / total) * 100) : 0 };
+    },
+    enabled: !!workOrderId,
+    refetchInterval: 15000, // Auto-refresh every 15s for live progress
+  });
+};
+
 export const useCtpPrediction = (workOrderId: string) => {
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
   const { data: machines = [] } = useCtpMachineSpeeds();
+  const { data: plateProgress } = useCtpPlateProgress(workOrderId);
 
   const { data: timingLog } = useQuery({
     queryKey: ["ctp-timing-log", workOrderId],
@@ -200,6 +219,7 @@ export const useCtpPrediction = (workOrderId: string) => {
     machines: uniqueMachines,
     allSpeeds: machines,
     timingLog,
+    plateProgress,
     selectedMachineId: workOrderMachine,
     setMachine: setMachine.mutate,
     startTiming: startTiming.mutate,
