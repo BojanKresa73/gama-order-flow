@@ -386,6 +386,8 @@ export type Database = {
           format_group: string
           id: string
           machine_id: string
+          plate_operator: string | null
+          reception_operator: string | null
           started_at: string
           total_plates: number
           work_order_id: string
@@ -397,6 +399,8 @@ export type Database = {
           format_group: string
           id?: string
           machine_id: string
+          plate_operator?: string | null
+          reception_operator?: string | null
           started_at: string
           total_plates: number
           work_order_id: string
@@ -408,6 +412,8 @@ export type Database = {
           format_group?: string
           id?: string
           machine_id?: string
+          plate_operator?: string | null
+          reception_operator?: string | null
           started_at?: string
           total_plates?: number
           work_order_id?: string

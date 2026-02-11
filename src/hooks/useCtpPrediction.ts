@@ -21,6 +21,8 @@ export interface CtpTimingLog {
   started_at: string;
   completed_at: string | null;
   actual_seconds_per_plate: number | null;
+  reception_operator: string | null;
+  plate_operator: string | null;
 }
 
 export const useCtpMachineSpeeds = () => {
@@ -43,7 +45,6 @@ export const useCtpPrediction = (workOrderId: string) => {
 
   const { data: machines = [] } = useCtpMachineSpeeds();
 
-  // Get timing log for this work order
   const { data: timingLog } = useQuery({
     queryKey: ["ctp-timing-log", workOrderId],
     queryFn: async () => {
@@ -58,7 +59,6 @@ export const useCtpPrediction = (workOrderId: string) => {
     enabled: !!workOrderId,
   });
 
-  // Get the selected machine from work_orders
   const { data: workOrderMachine } = useQuery({
     queryKey: ["work-order-machine", workOrderId],
     queryFn: async () => {
@@ -73,7 +73,6 @@ export const useCtpPrediction = (workOrderId: string) => {
     enabled: !!workOrderId,
   });
 
-  // Set machine on work order
   const setMachine = useMutation({
     mutationFn: async (machineId: string) => {
       const { error } = await supabase
@@ -91,9 +90,20 @@ export const useCtpPrediction = (workOrderId: string) => {
     },
   });
 
-  // Start timing
   const startTiming = useMutation({
-    mutationFn: async ({ machineId, formatGroup, totalPlates }: { machineId: string; formatGroup: string; totalPlates: number }) => {
+    mutationFn: async ({
+      machineId,
+      formatGroup,
+      totalPlates,
+      receptionOperator,
+      plateOperator,
+    }: {
+      machineId: string;
+      formatGroup: string;
+      totalPlates: number;
+      receptionOperator?: string;
+      plateOperator?: string;
+    }) => {
       const { error } = await supabase
         .from("ctp_job_timing_log")
         .insert({
@@ -102,19 +112,45 @@ export const useCtpPrediction = (workOrderId: string) => {
           format_group: formatGroup,
           total_plates: totalPlates,
           started_at: new Date().toISOString(),
-        });
+          reception_operator: receptionOperator || null,
+          plate_operator: plateOperator || null,
+        } as any);
       if (error) throw error;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["ctp-timing-log", workOrderId] });
-      toast({ title: "Počinjem", description: "Merenje vremena pokrenuto" });
     },
     onError: (err: any) => {
       toast({ title: "Greška", description: err.message, variant: "destructive" });
     },
   });
 
-  // Complete timing (called when order is closed)
+  const updateOperators = useMutation({
+    mutationFn: async ({
+      receptionOperator,
+      plateOperator,
+    }: {
+      receptionOperator?: string;
+      plateOperator?: string;
+    }) => {
+      if (!timingLog) throw new Error("No timing log found");
+      const updateData: any = {};
+      if (receptionOperator !== undefined) updateData.reception_operator = receptionOperator || null;
+      if (plateOperator !== undefined) updateData.plate_operator = plateOperator || null;
+      const { error } = await supabase
+        .from("ctp_job_timing_log")
+        .update(updateData)
+        .eq("id", timingLog.id);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["ctp-timing-log", workOrderId] });
+    },
+    onError: (err: any) => {
+      toast({ title: "Greška", description: err.message, variant: "destructive" });
+    },
+  });
+
   const completeTiming = useMutation({
     mutationFn: async () => {
       if (!timingLog) throw new Error("No timing log found");
@@ -137,7 +173,6 @@ export const useCtpPrediction = (workOrderId: string) => {
     },
   });
 
-  // Calculate ETA
   const getEta = (machineId: string, formatGroup: string, remainingPlates: number) => {
     const speed = machines.find(m => m.machine_id === machineId && m.format_group === formatGroup);
     if (!speed) return null;
@@ -154,7 +189,6 @@ export const useCtpPrediction = (workOrderId: string) => {
     };
   };
 
-  // Get unique machine list
   const uniqueMachines = machines.reduce((acc, m) => {
     if (!acc.find(x => x.machine_id === m.machine_id)) {
       acc.push({ machine_id: m.machine_id, machine_name: m.machine_name });
@@ -170,6 +204,7 @@ export const useCtpPrediction = (workOrderId: string) => {
     setMachine: setMachine.mutate,
     startTiming: startTiming.mutate,
     completeTiming: completeTiming.mutate,
+    updateOperators: updateOperators.mutate,
     getEta,
     isTimingStarted: !!timingLog?.started_at && !timingLog?.completed_at,
     isTimingComplete: !!timingLog?.completed_at,
