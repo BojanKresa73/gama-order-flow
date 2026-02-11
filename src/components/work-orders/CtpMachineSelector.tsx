@@ -4,7 +4,7 @@ import { Progress } from "@/components/ui/progress";
 import { useCtpPrediction } from "@/hooks/useCtpPrediction";
 import { Clock, CheckCircle, Timer, Users } from "lucide-react";
 import { useEffect, useState } from "react";
-
+import { useAuthz } from "@/hooks/useAuthz";
 const RECEPTION_OPERATORS = ["Boris", "Marko"];
 const PLATE_OPERATORS = ["Petar", "Dario"];
 
@@ -27,10 +27,10 @@ export const CtpMachineSelector = ({ workOrderId, totalPlates, formatGroup, isOr
     updateOperators,
   } = useCtpPrediction(workOrderId);
 
+  const { isSuper } = useAuthz();
   const [elapsed, setElapsed] = useState(0);
   const [receptionOp, setReceptionOp] = useState<string>("");
   const [plateOp, setPlateOp] = useState<string>("");
-
   // Sync operator state from timing log
   useEffect(() => {
     if (timingLog) {
@@ -91,30 +91,32 @@ export const CtpMachineSelector = ({ workOrderId, totalPlates, formatGroup, isOr
         CTP Predikcija
       </div>
 
-      {/* Machine selector */}
-      <div className="flex items-center gap-3">
-        <div className="flex-1">
-          <Select
-            value={selectedMachineId || ""}
-            onValueChange={(val) => setMachine(val)}
-            disabled={!isOrderOpen || isTimingStarted}
-          >
-            <SelectTrigger className="w-full">
-              <SelectValue placeholder="Izaberi mašinu..." />
-            </SelectTrigger>
-            <SelectContent>
-              {machines.map((m) => (
-                <SelectItem key={m.machine_id} value={m.machine_id}>
-                  {m.machine_name}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+      {/* Machine selector - only superuser can change */}
+      {isSuper && (
+        <div className="flex items-center gap-3">
+          <div className="flex-1">
+            <Select
+              value={selectedMachineId || ""}
+              onValueChange={(val) => setMachine(val)}
+              disabled={!isOrderOpen || isTimingStarted}
+            >
+              <SelectTrigger className="w-full">
+                <SelectValue placeholder="Izaberi mašinu..." />
+              </SelectTrigger>
+              <SelectContent>
+                {machines.map((m) => (
+                  <SelectItem key={m.machine_id} value={m.machine_id}>
+                    {m.machine_name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
         </div>
-      </div>
+      )}
 
-      {/* Operator selectors */}
-      <div className="grid grid-cols-2 gap-3">
+      {/* Operator selectors - only superuser */}
+      {isSuper && <div className="grid grid-cols-2 gap-3">
         <div>
           <div className="flex items-center gap-1 text-xs text-muted-foreground mb-1">
             <Users className="h-3 w-3" />
@@ -147,7 +149,7 @@ export const CtpMachineSelector = ({ workOrderId, totalPlates, formatGroup, isOr
             </SelectContent>
           </Select>
         </div>
-      </div>
+      </div>}
 
       {/* ETA display */}
       {eta && selectedMachineId && (
