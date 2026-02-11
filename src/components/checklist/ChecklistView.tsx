@@ -420,7 +420,7 @@ const ChecklistView = ({ orderType, onNavigateToSearch }: ChecklistViewProps) =>
     }
   };
 
-
+  const getStatusBadge = (status: string) => {
     if (status === "closed") {
       return (
         <Badge variant="secondary" className="gap-1">
