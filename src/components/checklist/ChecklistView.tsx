@@ -26,7 +26,8 @@ import {
   CollapsibleContent,
   CollapsibleTrigger,
 } from "@/components/ui/collapsible";
-import { CheckCircle, XCircle, Search, FileText, Calendar, User, Eye, ChevronRight, ChevronDown } from "lucide-react";
+import { CheckCircle, XCircle, Search, FileText, Calendar, User, Eye, ChevronRight, ChevronDown, Play, Pause, Square } from "lucide-react";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { PriorityBadge } from "@/components/priority/PriorityBadge";
 import { InProgressIndicator } from "@/components/checklist/InProgressIndicator";
 import { format, subDays } from "date-fns";
@@ -81,6 +82,16 @@ interface MachineSpeed {
   sample_count: number;
 }
 
+interface JobSession {
+  id: string;
+  work_order_id: string;
+  machine_id: string;
+  status: "running" | "paused" | "stopped";
+  started_at: string;
+  paused_at: string | null;
+  total_active_seconds: number;
+}
+
 interface ChecklistViewProps {
   orderType: "ctp" | "digital" | "other" | "film" | "large_format";
   onNavigateToSearch?: () => void;
@@ -94,6 +105,7 @@ const ChecklistView = ({ orderType, onNavigateToSearch }: ChecklistViewProps) =>
   const [statusFilter, setStatusFilter] = useState<StatusFilter>("open");
   const [expandedOrderIds, setExpandedOrderIds] = useState<Set<string>>(new Set());
   const [machineSpeeds, setMachineSpeeds] = useState<MachineSpeed[]>([]);
+  const [jobSessions, setJobSessions] = useState<JobSession[]>([]);
   const { toast } = useToast();
   const isMobile = useIsMobile();
   const navigate = useNavigate();
@@ -109,6 +121,97 @@ const ChecklistView = ({ orderType, onNavigateToSearch }: ChecklistViewProps) =>
         });
     }
   }, [orderType]);
+
+  // Fetch active job sessions for CTP
+  const fetchJobSessions = async () => {
+    if (orderType !== "ctp") return;
+    const { data } = await supabase
+      .from("ctp_job_sessions")
+      .select("*")
+      .in("status", ["running", "paused"]);
+    if (data) setJobSessions(data as JobSession[]);
+  };
+
+  useEffect(() => {
+    fetchJobSessions();
+
+    // Subscribe to realtime changes
+    if (orderType === "ctp") {
+      const channel = supabase
+        .channel("ctp-job-sessions")
+        .on(
+          "postgres_changes",
+          { event: "*", schema: "public", table: "ctp_job_sessions" },
+          () => fetchJobSessions()
+        )
+        .subscribe();
+      return () => { supabase.removeChannel(channel); };
+    }
+  }, [orderType]);
+
+  const getSessionForOrder = (orderId: string): JobSession | undefined => {
+    return jobSessions.find(s => s.work_order_id === orderId && (s.status === "running" || s.status === "paused"));
+  };
+
+  const toggleJobSession = async (order: WorkOrder) => {
+    if (!order.machine_id) {
+      toast({ title: "Greška", description: "Prvo izaberi mašinu", variant: "destructive" });
+      return;
+    }
+
+    const existingSession = getSessionForOrder(order.id);
+
+    if (!existingSession) {
+      // START: first auto-pause any running job on the same machine
+      const runningOnMachine = jobSessions.find(s => s.machine_id === order.machine_id && s.status === "running");
+      if (runningOnMachine) {
+        const elapsed = (Date.now() - new Date(runningOnMachine.started_at).getTime()) / 1000;
+        const newActive = Number(runningOnMachine.total_active_seconds) + elapsed;
+        await supabase
+          .from("ctp_job_sessions")
+          .update({ status: "paused", paused_at: new Date().toISOString(), total_active_seconds: newActive, updated_at: new Date().toISOString() } as any)
+          .eq("id", runningOnMachine.id);
+      }
+
+      // Create new running session
+      await supabase.from("ctp_job_sessions").insert({
+        work_order_id: order.id,
+        machine_id: order.machine_id,
+        status: "running",
+        started_at: new Date().toISOString(),
+      } as any);
+
+      toast({ title: "▶ Posao pokrenut", description: `${displayOrderNumber(order)} na ${order.machine_id === "ctp_1" ? "CTP 1" : "CTP 2"}` });
+    } else if (existingSession.status === "running") {
+      // PAUSE
+      const elapsed = (Date.now() - new Date(existingSession.started_at).getTime()) / 1000;
+      const newActive = Number(existingSession.total_active_seconds) + elapsed;
+      await supabase
+        .from("ctp_job_sessions")
+        .update({ status: "paused", paused_at: new Date().toISOString(), total_active_seconds: newActive, updated_at: new Date().toISOString() } as any)
+        .eq("id", existingSession.id);
+
+      toast({ title: "⏸ Posao pauziran", description: displayOrderNumber(order) });
+    } else if (existingSession.status === "paused") {
+      // RESUME: auto-pause any running job on same machine
+      const runningOnMachine = jobSessions.find(s => s.machine_id === existingSession.machine_id && s.status === "running");
+      if (runningOnMachine) {
+        const elapsed = (Date.now() - new Date(runningOnMachine.started_at).getTime()) / 1000;
+        const newActive = Number(runningOnMachine.total_active_seconds) + elapsed;
+        await supabase
+          .from("ctp_job_sessions")
+          .update({ status: "paused", paused_at: new Date().toISOString(), total_active_seconds: newActive, updated_at: new Date().toISOString() } as any)
+          .eq("id", runningOnMachine.id);
+      }
+
+      await supabase
+        .from("ctp_job_sessions")
+        .update({ status: "running", started_at: new Date().toISOString(), paused_at: null, updated_at: new Date().toISOString() } as any)
+        .eq("id", existingSession.id);
+
+      toast({ title: "▶ Posao nastavljen", description: displayOrderNumber(order) });
+    }
+  };
 
   const toggleExpanded = (orderId: string) => {
     setExpandedOrderIds(prev => {
@@ -570,18 +673,39 @@ const ChecklistView = ({ orderType, onNavigateToSearch }: ChecklistViewProps) =>
             )}
             {orderType === "ctp" && (
               <div>
-                <Select
-                  value={order.machine_id || ""}
-                  onValueChange={(val) => updateMachine(order.id, val)}
-                >
-                  <SelectTrigger className="w-[100px] h-7 text-xs">
-                    <SelectValue placeholder="Mašina" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="ctp_1">CTP 1</SelectItem>
-                    <SelectItem value="ctp_2">CTP 2</SelectItem>
-                  </SelectContent>
-                </Select>
+                <div className="flex items-center gap-1">
+                  <Select
+                    value={order.machine_id || ""}
+                    onValueChange={(val) => updateMachine(order.id, val)}
+                  >
+                    <SelectTrigger className="w-[90px] h-7 text-xs">
+                      <SelectValue placeholder="Mašina" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="ctp_1">CTP 1</SelectItem>
+                      <SelectItem value="ctp_2">CTP 2</SelectItem>
+                    </SelectContent>
+                  </Select>
+                  {order.machine_id && order.status === "open" && (() => {
+                    const session = getSessionForOrder(order.id);
+                    const isRunning = session?.status === "running";
+                    const isPaused = session?.status === "paused";
+                    return (
+                      <button
+                        onClick={() => toggleJobSession(order)}
+                        className={`p-1 rounded-full transition-all ${
+                          isRunning
+                            ? "bg-green-500/20 text-green-600 animate-pulse"
+                            : isPaused
+                            ? "bg-yellow-500/20 text-yellow-600"
+                            : "bg-muted text-muted-foreground"
+                        }`}
+                      >
+                        {isRunning ? <Pause className="h-3 w-3" /> : <Play className="h-3 w-3" />}
+                      </button>
+                    );
+                  })()}
+                </div>
                 {(() => {
                   const eta = calculateEta(order);
                   if (!eta) return null;
@@ -701,25 +825,63 @@ const ChecklistView = ({ orderType, onNavigateToSearch }: ChecklistViewProps) =>
           {orderType === "ctp" && (
             <TableCell>
               <div className="space-y-1">
-                <Select
-                  value={order.machine_id || ""}
-                  onValueChange={(val) => updateMachine(order.id, val)}
-                >
-                  <SelectTrigger className="w-[110px] h-8 text-xs">
-                    <SelectValue placeholder="—" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="ctp_1">CTP 1</SelectItem>
-                    <SelectItem value="ctp_2">CTP 2</SelectItem>
-                  </SelectContent>
-                </Select>
+                <div className="flex items-center gap-1">
+                  <Select
+                    value={order.machine_id || ""}
+                    onValueChange={(val) => updateMachine(order.id, val)}
+                  >
+                    <SelectTrigger className="w-[110px] h-8 text-xs">
+                      <SelectValue placeholder="—" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="ctp_1">CTP 1</SelectItem>
+                      <SelectItem value="ctp_2">CTP 2</SelectItem>
+                    </SelectContent>
+                  </Select>
+                  {order.machine_id && order.status === "open" && (() => {
+                    const session = getSessionForOrder(order.id);
+                    const isRunning = session?.status === "running";
+                    const isPaused = session?.status === "paused";
+                    return (
+                      <TooltipProvider>
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <button
+                              onClick={() => toggleJobSession(order)}
+                              className={`p-1.5 rounded-full transition-all ${
+                                isRunning
+                                  ? "bg-green-500/20 text-green-600 hover:bg-green-500/30 ring-2 ring-green-500/40 animate-pulse"
+                                  : isPaused
+                                  ? "bg-yellow-500/20 text-yellow-600 hover:bg-yellow-500/30 ring-2 ring-yellow-500/40"
+                                  : "bg-muted text-muted-foreground hover:bg-muted/80"
+                              }`}
+                            >
+                              {isRunning ? <Pause className="h-3.5 w-3.5" /> : <Play className="h-3.5 w-3.5" />}
+                            </button>
+                          </TooltipTrigger>
+                          <TooltipContent>
+                            {isRunning ? "Pauziraj posao" : isPaused ? "Nastavi posao" : "Pokreni posao"}
+                          </TooltipContent>
+                        </Tooltip>
+                      </TooltipProvider>
+                    );
+                  })()}
+                </div>
                 {(() => {
                   const eta = calculateEta(order);
-                  if (!eta) return null;
+                  const session = getSessionForOrder(order.id);
+                  if (!eta && !session) return null;
                   return (
                     <div className="text-xs text-muted-foreground">
-                      <span className="font-medium text-foreground">{formatEta(eta.totalSeconds)}</span>
-                      {eta.breakdown.length > 1 && (
+                      {eta && (
+                        <span className="font-medium text-foreground">{formatEta(eta.totalSeconds)}</span>
+                      )}
+                      {session && (
+                        <span className={`ml-1 text-[10px] ${session.status === "running" ? "text-green-600" : "text-yellow-600"}`}>
+                          ({session.status === "running" ? "radi" : "pauz."} {Math.round(Number(session.total_active_seconds) / 60)}m)
+                        </span>
+                      )}
+                      {eta && eta.breakdown.length > 1 && (
                         <div className="text-[10px] leading-tight mt-0.5">
                           {eta.breakdown.map(b => `${b.group}: ${b.plates}pl`).join(", ")}
                         </div>

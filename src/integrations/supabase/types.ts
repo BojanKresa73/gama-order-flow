@@ -378,6 +378,85 @@ export type Database = {
         }
         Relationships: []
       }
+      ctp_job_sessions: {
+        Row: {
+          created_at: string
+          id: string
+          machine_id: string
+          paused_at: string | null
+          started_at: string
+          status: string
+          total_active_seconds: number
+          updated_at: string
+          work_order_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          machine_id: string
+          paused_at?: string | null
+          started_at?: string
+          status?: string
+          total_active_seconds?: number
+          updated_at?: string
+          work_order_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          machine_id?: string
+          paused_at?: string | null
+          started_at?: string
+          status?: string
+          total_active_seconds?: number
+          updated_at?: string
+          work_order_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ctp_job_sessions_work_order_id_fkey"
+            columns: ["work_order_id"]
+            isOneToOne: false
+            referencedRelation: "v_ctp_items"
+            referencedColumns: ["work_order_id"]
+          },
+          {
+            foreignKeyName: "ctp_job_sessions_work_order_id_fkey"
+            columns: ["work_order_id"]
+            isOneToOne: false
+            referencedRelation: "work_orders"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ctp_job_sessions_work_order_id_fkey"
+            columns: ["work_order_id"]
+            isOneToOne: false
+            referencedRelation: "work_orders_ctp"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ctp_job_sessions_work_order_id_fkey"
+            columns: ["work_order_id"]
+            isOneToOne: false
+            referencedRelation: "work_orders_digitala"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ctp_job_sessions_work_order_id_fkey"
+            columns: ["work_order_id"]
+            isOneToOne: false
+            referencedRelation: "work_orders_filmovanje"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ctp_job_sessions_work_order_id_fkey"
+            columns: ["work_order_id"]
+            isOneToOne: false
+            referencedRelation: "work_orders_razno"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       ctp_job_timing_log: {
         Row: {
           actual_seconds_per_plate: number | null
