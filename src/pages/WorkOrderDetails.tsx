@@ -395,7 +395,9 @@ const WorkOrderDetails = () => {
         <div className="container mx-auto px-4 py-4 flex items-center justify-between">
           <div className="flex items-center gap-4">
             <Button variant="ghost" onClick={() => {
-              if (window.history.length > 1) {
+              const navEntries = performance?.getEntriesByType?.('navigation') as PerformanceNavigationTiming[] | undefined;
+              const isDirectNav = navEntries?.[0]?.type === 'navigate';
+              if (window.history.length > 2 && !isDirectNav) {
                 navigate(-1);
               } else {
                 navigate('/work-orders');
