@@ -2390,6 +2390,7 @@ export type Database = {
           job_name: string | null
           kind: Database["public"]["Enums"]["work_order_kind"]
           lamination: string | null
+          machine_id: string | null
           notes: string | null
           order_code: string | null
           order_number: string
@@ -2434,6 +2435,7 @@ export type Database = {
           job_name?: string | null
           kind?: Database["public"]["Enums"]["work_order_kind"]
           lamination?: string | null
+          machine_id?: string | null
           notes?: string | null
           order_code?: string | null
           order_number: string
@@ -2478,6 +2480,7 @@ export type Database = {
           job_name?: string | null
           kind?: Database["public"]["Enums"]["work_order_kind"]
           lamination?: string | null
+          machine_id?: string | null
           notes?: string | null
           order_code?: string | null
           order_number?: string
