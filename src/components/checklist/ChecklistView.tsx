@@ -60,6 +60,7 @@ interface WorkOrder {
   created_by_name: string | null;
   file_entries?: FileEntry[];
   priority: number;
+  machine_id?: string | null;
 }
 
 interface FileEntry {
@@ -123,6 +124,7 @@ const ChecklistView = ({ orderType, onNavigateToSearch }: ChecklistViewProps) =>
           order_type,
           created_by,
           priority,
+          machine_id,
           clients!inner(name),
           profiles!work_orders_created_by_fkey(full_name)
         `)
@@ -177,6 +179,7 @@ const ChecklistView = ({ orderType, onNavigateToSearch }: ChecklistViewProps) =>
               created_by_name: (order.profiles as any)?.full_name || null,
               file_entries: [],
               priority: (order as any).priority ?? 5,
+              machine_id: (order as any).machine_id || null,
             };
           }
 
@@ -212,6 +215,7 @@ const ChecklistView = ({ orderType, onNavigateToSearch }: ChecklistViewProps) =>
             created_by_name: (order.profiles as any)?.full_name || null,
             file_entries: fileEntries,
             priority: (order as any).priority ?? 5,
+            machine_id: (order as any).machine_id || null,
           };
         })
       );
@@ -399,7 +403,24 @@ const ChecklistView = ({ orderType, onNavigateToSearch }: ChecklistViewProps) =>
     }
   };
 
-  const getStatusBadge = (status: string) => {
+  const updateMachine = async (workOrderId: string, machineId: string) => {
+    try {
+      const { error } = await supabase
+        .from("work_orders")
+        .update({ machine_id: machineId } as any)
+        .eq("id", workOrderId);
+
+      if (error) throw error;
+
+      setWorkOrders(prev => prev.map(o => o.id === workOrderId ? { ...o, machine_id: machineId } : o));
+      toast({ title: "Uspešno", description: `Mašina postavljena na ${machineId === "ctp_1" ? "CTP 1" : "CTP 2"}` });
+    } catch (error) {
+      console.error("Error updating machine:", error);
+      toast({ title: "Greška", description: "Greška pri postavljanju mašine", variant: "destructive" });
+    }
+  };
+
+
     if (status === "closed") {
       return (
         <Badge variant="secondary" className="gap-1">
@@ -488,8 +509,24 @@ const ChecklistView = ({ orderType, onNavigateToSearch }: ChecklistViewProps) =>
               {order.created_by_name || "-"}
             </div>
             {orderType === "ctp" && (
-              <div className="col-span-2">
+              <div className="flex items-center gap-2">
                 <span className="font-medium text-foreground">Ploče: {order.total_plates}</span>
+              </div>
+            )}
+            {orderType === "ctp" && (
+              <div>
+                <Select
+                  value={order.machine_id || ""}
+                  onValueChange={(val) => updateMachine(order.id, val)}
+                >
+                  <SelectTrigger className="w-[100px] h-7 text-xs">
+                    <SelectValue placeholder="Mašina" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="ctp_1">CTP 1</SelectItem>
+                    <SelectItem value="ctp_2">CTP 2</SelectItem>
+                  </SelectContent>
+                </Select>
               </div>
             )}
           </div>
@@ -558,7 +595,7 @@ const ChecklistView = ({ orderType, onNavigateToSearch }: ChecklistViewProps) =>
   const DesktopOrderRow = ({ order }: { order: WorkOrder }) => {
     const isExpanded = expandedOrderIds.has(order.id);
     const hasFiles = order.file_entries && order.file_entries.length > 0;
-    const columnCount = orderType === "ctp" ? 10 : 9;
+    const columnCount = orderType === "ctp" ? 12 : 9;
 
     return (
       <>
@@ -596,6 +633,22 @@ const ChecklistView = ({ orderType, onNavigateToSearch }: ChecklistViewProps) =>
           <TableCell>{getStatusBadge(order.status)}</TableCell>
           {orderType === "ctp" && (
             <TableCell className="font-semibold">{order.total_plates}</TableCell>
+          )}
+          {orderType === "ctp" && (
+            <TableCell>
+              <Select
+                value={order.machine_id || ""}
+                onValueChange={(val) => updateMachine(order.id, val)}
+              >
+                <SelectTrigger className="w-[110px] h-8 text-xs">
+                  <SelectValue placeholder="—" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="ctp_1">CTP 1</SelectItem>
+                  <SelectItem value="ctp_2">CTP 2</SelectItem>
+                </SelectContent>
+              </Select>
+            </TableCell>
           )}
           <TableCell className="text-right">
             <div className="flex gap-2 justify-end items-center">
@@ -650,6 +703,7 @@ const ChecklistView = ({ orderType, onNavigateToSearch }: ChecklistViewProps) =>
             </TableCell>
             <TableCell colSpan={2}></TableCell>
             <TableCell>{getStatusBadge(file.status)}</TableCell>
+            {orderType === "ctp" && <TableCell></TableCell>}
             {orderType === "ctp" && <TableCell></TableCell>}
             <TableCell className="text-right">
               {file.status === "open" && (
@@ -716,6 +770,7 @@ const ChecklistView = ({ orderType, onNavigateToSearch }: ChecklistViewProps) =>
               <TableHead>Datum Zatvaranja</TableHead>
               <TableHead>Status</TableHead>
               {orderType === "ctp" && <TableHead>Broj Ploča</TableHead>}
+              {orderType === "ctp" && <TableHead>Mašina</TableHead>}
               <TableHead className="text-right">Akcije</TableHead>
             </TableRow>
           </TableHeader>
