@@ -109,7 +109,7 @@ export const LocalFilmJobsTable = ({ jobs, onChange }: LocalFilmJobsTableProps) 
               <TableHead>Širina (mm)</TableHead>
               <TableHead>Visina (mm)</TableHead>
               <TableHead>Količina</TableHead>
-              <TableHead>Staje po širini</TableHead>
+              <TableHead>Kom. po širini</TableHead>
               <TableHead>Orijentacija</TableHead>
               <TableHead>m/kom</TableHead>
               <TableHead>Ukupno m</TableHead>

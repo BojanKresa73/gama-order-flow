@@ -7,14 +7,18 @@ export function computeFilmUsage(params: {
 }) {
   const { widthMm, heightMm, qty } = params;
 
-  const fit0  = Math.floor(ROLL_WIDTH_MM / widthMm);
-  const fit90 = Math.floor(ROLL_WIDTH_MM / heightMm);
+  // No nesting - machine processes one piece at a time
+  // Choose orientation so that one dimension fits in roll width,
+  // and the other goes along the length
+  const fit0  = widthMm <= ROLL_WIDTH_MM;
+  const fit90 = heightMm <= ROLL_WIDTH_MM;
 
-  const use90   = fit90 > fit0;
-  const across  = Math.max(fit0, fit90, 1);
-  const pieceM  = (use90 ? widthMm : heightMm) / 1000; // dužina po komadu u metrima
-  const rows    = Math.ceil(qty / across);
-  const totalM  = rows * pieceM;
+  // Pick orientation that minimizes total material usage
+  const use90 = fit90 && (!fit0 || widthMm < heightMm);
+  const across = 1;
+  const pieceM = (use90 ? widthMm : heightMm) / 1000; // length per piece in meters
+  const rows = qty;
+  const totalM = rows * pieceM;
 
   return {
     orientation: use90 ? 90 : 0,
