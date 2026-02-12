@@ -115,6 +115,33 @@ export function ProcurementOrdersList({ orders, onUpdate }: ProcurementOrdersLis
     return items.reduce((sum: number, item: any) => sum + (item.quantity || 0), 0);
   };
 
+  const calculateFinalPricePerM2 = (order: any) => {
+    const items = order.procurement_order_items || [];
+    const totalAreaM2 = items.reduce((sum: number, item: any) => {
+      return sum + (item.width_mm * item.height_mm * item.quantity) / 1_000_000;
+    }, 0);
+    if (totalAreaM2 === 0) return null;
+    const totalCost = calculateOrderTotal(order);
+    return totalCost / totalAreaM2;
+  };
+
+  const calculateTransitDuration = (order: any) => {
+    const startDate = new Date(order.order_date);
+    const endDate = order.actual_arrival_date
+      ? new Date(order.actual_arrival_date)
+      : order.expected_arrival_date
+        ? new Date(order.expected_arrival_date)
+        : null;
+    if (!endDate) return null;
+    const diffMs = endDate.getTime() - startDate.getTime();
+    const totalDays = Math.round(diffMs / (1000 * 60 * 60 * 24));
+    const months = Math.floor(totalDays / 30);
+    const days = totalDays % 30;
+    if (months > 0 && days > 0) return `${months} mes. ${days} dana`;
+    if (months > 0) return `${months} mes.`;
+    return `${totalDays} dana`;
+  };
+
   if (orders.length === 0) {
     return (
       <Card>
@@ -232,7 +259,7 @@ export function ProcurementOrdersList({ orders, onUpdate }: ProcurementOrdersLis
                     </div>
                   </div>
                 ) : (
-                  <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
+                  <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4 text-sm">
                     <div>
                       <span className="text-muted-foreground">Očekivani dolazak:</span>
                       <p className="font-medium">
@@ -256,6 +283,18 @@ export function ProcurementOrdersList({ orders, onUpdate }: ProcurementOrdersLis
                     <div>
                       <span className="text-muted-foreground">Ostali troškovi:</span>
                       <p className="font-medium">{order.other_costs?.toFixed(2) || 0} €</p>
+                    </div>
+                    <div>
+                      <span className="text-muted-foreground">Krajnja cena/m²:</span>
+                      <p className="font-bold text-primary">
+                        {calculateFinalPricePerM2(order)?.toFixed(4) ?? "-"} €
+                      </p>
+                    </div>
+                    <div>
+                      <span className="text-muted-foreground">Trajanje puta:</span>
+                      <p className="font-medium">
+                        {calculateTransitDuration(order) ?? "-"}
+                      </p>
                     </div>
                   </div>
                 )}
