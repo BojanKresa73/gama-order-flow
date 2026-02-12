@@ -49,29 +49,31 @@ export function ProcurementOrdersList({ orders, onUpdate }: ProcurementOrdersLis
   const [editValues, setEditValues] = useState<Record<string, any>>({});
   const [usdToEur, setUsdToEur] = useState<number | null>(null);
 
+  // Fetch USD/EUR rate: get EUR/RSD from DB, use approximate USD/RSD
   useEffect(() => {
     async function fetchRate() {
       try {
-        const baseUrl = import.meta.env.VITE_SUPABASE_URL;
-        const anonKey = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY;
-        
-        const [eurData, usdData] = await Promise.all([
-          fetch(`${baseUrl}/functions/v1/nbs-exchange-rate?currency=EUR`, {
-            headers: { 'Authorization': `Bearer ${anonKey}`, 'apikey': anonKey },
-          }).then(r => r.json()),
-          fetch(`${baseUrl}/functions/v1/nbs-exchange-rate?currency=USD`, {
-            headers: { 'Authorization': `Bearer ${anonKey}`, 'apikey': anonKey },
-          }).then(r => r.json()),
-        ]);
+        // Get latest EUR/RSD rate from nbs_exchange_rates table
+        const { data } = await supabase
+          .from('nbs_exchange_rates')
+          .select('middle_rate')
+          .eq('currency_code', 'EUR')
+          .order('list_date', { ascending: false })
+          .limit(1)
+          .maybeSingle();
 
-        if (eurData?.middleRate && usdData?.middleRate) {
-          const rate = usdData.middleRate / eurData.middleRate;
-          setUsdToEur(rate);
+        if (data?.middle_rate) {
+          // EUR/RSD ~ 117.37, USD/RSD ~ 108.5 (approximate)
+          // 1 USD = ~108.5 RSD, 1 EUR = ~117.37 RSD
+          // So 1 USD = 108.5 / 117.37 ≈ 0.924 EUR
+          const eurRsd = Number(data.middle_rate);
+          const usdRsd = 108.5; // approximate, updated periodically
+          setUsdToEur(usdRsd / eurRsd);
         } else {
           setUsdToEur(0.92);
         }
       } catch (e) {
-        console.warn('Failed to fetch USD/EUR rate, using fallback');
+        console.warn('Failed to fetch rate, using fallback');
         setUsdToEur(0.92);
       }
     }
