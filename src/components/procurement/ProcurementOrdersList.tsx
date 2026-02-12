@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useMutation } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -47,6 +47,36 @@ export function ProcurementOrdersList({ orders, onUpdate }: ProcurementOrdersLis
   const [expandedOrders, setExpandedOrders] = useState<Set<string>>(new Set());
   const [editingOrder, setEditingOrder] = useState<string | null>(null);
   const [editValues, setEditValues] = useState<Record<string, any>>({});
+  const [usdToEur, setUsdToEur] = useState<number | null>(null);
+
+  useEffect(() => {
+    async function fetchRate() {
+      try {
+        const baseUrl = import.meta.env.VITE_SUPABASE_URL;
+        const anonKey = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY;
+        
+        const [eurData, usdData] = await Promise.all([
+          fetch(`${baseUrl}/functions/v1/nbs-exchange-rate?currency=EUR`, {
+            headers: { 'Authorization': `Bearer ${anonKey}`, 'apikey': anonKey },
+          }).then(r => r.json()),
+          fetch(`${baseUrl}/functions/v1/nbs-exchange-rate?currency=USD`, {
+            headers: { 'Authorization': `Bearer ${anonKey}`, 'apikey': anonKey },
+          }).then(r => r.json()),
+        ]);
+
+        if (eurData?.middleRate && usdData?.middleRate) {
+          const rate = usdData.middleRate / eurData.middleRate;
+          setUsdToEur(rate);
+        } else {
+          setUsdToEur(0.92);
+        }
+      } catch (e) {
+        console.warn('Failed to fetch USD/EUR rate, using fallback');
+        setUsdToEur(0.92);
+      }
+    }
+    fetchRate();
+  }, []);
 
   const toggleExpand = (orderId: string) => {
     const newSet = new Set(expandedOrders);
@@ -287,7 +317,16 @@ export function ProcurementOrdersList({ orders, onUpdate }: ProcurementOrdersLis
                     <div>
                       <span className="text-muted-foreground">Krajnja cena/m²:</span>
                       <p className="font-bold text-primary">
-                        {calculateFinalPricePerM2(order)?.toFixed(4) ?? "-"} €
+                        {(() => {
+                          const priceUsd = calculateFinalPricePerM2(order);
+                          if (priceUsd == null) return "-";
+                          const usdStr = priceUsd.toFixed(4).replace('.', ',');
+                          if (usdToEur != null) {
+                            const priceEur = priceUsd * usdToEur;
+                            return `${usdStr} $ / ${priceEur.toFixed(4).replace('.', ',')} €`;
+                          }
+                          return `${usdStr} $`;
+                        })()}
                       </p>
                     </div>
                     <div>
@@ -306,7 +345,7 @@ export function ProcurementOrdersList({ orders, onUpdate }: ProcurementOrdersLis
                       <TableHead>Format</TableHead>
                       <TableHead className="text-right">Količina</TableHead>
                       <TableHead className="text-right">Cena/m²</TableHead>
-                      <TableHead className="text-right">Ukupno €</TableHead>
+                      <TableHead className="text-right">Ukupno $</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
@@ -319,14 +358,14 @@ export function ProcurementOrdersList({ orders, onUpdate }: ProcurementOrdersLis
                             {item.plate_formats?.format_name || `${item.width_mm}x${item.height_mm}`}
                           </TableCell>
                           <TableCell className="text-right">{item.quantity}</TableCell>
-                          <TableCell className="text-right">{item.price_per_m2?.toFixed(2)} €</TableCell>
-                          <TableCell className="text-right">{itemTotal.toFixed(2)} €</TableCell>
+                          <TableCell className="text-right">{item.price_per_m2?.toFixed(2)} $</TableCell>
+                          <TableCell className="text-right">{itemTotal.toFixed(2)} $</TableCell>
                         </TableRow>
                       );
                     })}
                     <TableRow className="font-bold bg-muted/30">
                       <TableCell colSpan={3}>UKUPNO (sa svim troškovima)</TableCell>
-                      <TableCell className="text-right">{calculateOrderTotal(order).toFixed(2)} €</TableCell>
+                      <TableCell className="text-right">{calculateOrderTotal(order).toFixed(2)} $</TableCell>
                     </TableRow>
                   </TableBody>
                 </Table>

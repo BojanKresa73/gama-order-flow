@@ -100,7 +100,9 @@ serve(async (req) => {
   const supabase = createClient(supabaseUrl, supabaseKey);
 
   try {
-    const currency = 'EUR';
+    // Support currency query param (default EUR)
+    const url = new URL(req.url);
+    const currency = url.searchParams.get('currency')?.toUpperCase() || 'EUR';
     const now = new Date();
     
     console.log('Checking for cached NBS rate...');
@@ -232,7 +234,7 @@ serve(async (req) => {
     }
 
     // 4. Ako smo dobili podatke, sačuvaj u bazu
-    if (nbsData && nbsData.middleRate > 100 && nbsData.middleRate < 130) {
+    if (nbsData && nbsData.middleRate > 50 && nbsData.middleRate < 200) {
       console.log('Got valid NBS rate:', nbsData.middleRate);
       
       // Upsert u bazu (update ako postoji za taj dan)
@@ -301,11 +303,12 @@ serve(async (req) => {
     }
 
     // 6. Krajnji fallback - hardcoded rate (samo ako nema ničega u bazi)
-    console.warn('No cached rates available, using hardcoded fallback');
+    console.warn('No cached rates available, using hardcoded fallback for', currency);
+    const fallbackRates: Record<string, number> = { EUR: 117.12, USD: 108.50 };
     
     return new Response(JSON.stringify({
-      currency: 'EUR',
-      middleRate: 117.1200,
+      currency,
+      middleRate: fallbackRates[currency] || 117.12,
       date: new Date().toISOString().split('T')[0],
       source: 'hardcoded_fallback',
       cached: false,
@@ -320,7 +323,7 @@ serve(async (req) => {
     
     return new Response(JSON.stringify({
       currency: 'EUR',
-      middleRate: 117.1200,
+      middleRate: 117.12,
       date: new Date().toISOString().split('T')[0],
       source: 'error_fallback',
       error: errorMessage,
