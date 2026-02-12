@@ -47,38 +47,8 @@ export function ProcurementOrdersList({ orders, onUpdate }: ProcurementOrdersLis
   const [expandedOrders, setExpandedOrders] = useState<Set<string>>(new Set());
   const [editingOrder, setEditingOrder] = useState<string | null>(null);
   const [editValues, setEditValues] = useState<Record<string, any>>({});
-  const [usdToEur, setUsdToEur] = useState<number | null>(null);
-
-  // Fetch USD/EUR rate: get EUR/RSD from DB, use approximate USD/RSD
-  useEffect(() => {
-    async function fetchRate() {
-      try {
-        // Get latest EUR/RSD rate from nbs_exchange_rates table
-        const { data } = await supabase
-          .from('nbs_exchange_rates')
-          .select('middle_rate')
-          .eq('currency_code', 'EUR')
-          .order('list_date', { ascending: false })
-          .limit(1)
-          .maybeSingle();
-
-        if (data?.middle_rate) {
-          // EUR/RSD ~ 117.37, USD/RSD ~ 108.5 (approximate)
-          // 1 USD = ~108.5 RSD, 1 EUR = ~117.37 RSD
-          // So 1 USD = 108.5 / 117.37 ≈ 0.924 EUR
-          const eurRsd = Number(data.middle_rate);
-          const usdRsd = 108.5; // approximate, updated periodically
-          setUsdToEur(usdRsd / eurRsd);
-        } else {
-          setUsdToEur(0.92);
-        }
-      } catch (e) {
-        console.warn('Failed to fetch rate, using fallback');
-        setUsdToEur(0.92);
-      }
-    }
-    fetchRate();
-  }, []);
+  // Fixed USD to EUR rate (Google: 1 USD ≈ 0.84 EUR)
+  const usdToEur = 0.84;
 
   const toggleExpand = (orderId: string) => {
     const newSet = new Set(expandedOrders);
@@ -323,11 +293,8 @@ export function ProcurementOrdersList({ orders, onUpdate }: ProcurementOrdersLis
                           const priceUsd = calculateFinalPricePerM2(order);
                           if (priceUsd == null) return "-";
                           const usdStr = priceUsd.toFixed(4).replace('.', ',');
-                          if (usdToEur != null) {
-                            const priceEur = priceUsd * usdToEur;
-                            return `${usdStr} $ / ${priceEur.toFixed(4).replace('.', ',')} €`;
-                          }
-                          return `${usdStr} $`;
+                          const priceEur = priceUsd * usdToEur;
+                          return `${usdStr} $ / ${priceEur.toFixed(4).replace('.', ',')} €`;
                         })()}
                       </p>
                     </div>
