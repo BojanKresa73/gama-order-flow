@@ -32,6 +32,7 @@ import LargeFormatNew from "./pages/LargeFormatNew";
 import ClientDeliveryReport from "./pages/ClientDeliveryReport";
 import ClientPortal from "./pages/ClientPortal";
 import ClientPortalLogin from "./pages/ClientPortalLogin";
+import SretenjeNewsletter from "./pages/SretenjeNewsletter";
 import NotFound from "./pages/NotFound";
 import AdminGuard from "./components/guards/AdminGuard";
 import InternalUserGuard from "./components/guards/InternalUserGuard";
@@ -52,6 +53,8 @@ const App = () => {
               <Route path="/" element={<Index />} />
               <Route path="/register" element={<Register />} />
               <Route path="/reset-password" element={<ResetPassword />} />
+              
+              <Route path="/sretenje" element={<SretenjeNewsletter />} />
               
               {/* Client Portal routes (separate from internal app) */}
               <Route path="/portal" element={<ClientPortal />} />
