@@ -218,7 +218,7 @@ const Dashboard = () => {
         </div>
         {/* App Version */}
         <div className="mt-8 mb-2 text-center text-xs text-muted-foreground/60">
-          v1.9.0 · Poslednja izmena: 13. feb 2026.
+          v1.9.1 · Poslednja izmena: 13. feb 2026.
         </div>
       </main>
     </div>
