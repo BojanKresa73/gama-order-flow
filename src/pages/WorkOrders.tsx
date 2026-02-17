@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
-import { ArrowLeft, Plus, FileText, Eye, Lock, CheckCircle2, AlertTriangle, Trash2, Pencil, Send, Download, Loader2, Receipt, FileCheck, FileCode } from "lucide-react";
+import { ArrowLeft, Plus, FileText, Eye, Lock, CheckCircle2, AlertTriangle, Trash2, Pencil, Send, Download, Loader2, Receipt, FileCheck, FileCode, ArrowUpDown, ArrowUp, ArrowDown } from "lucide-react";
 import { PriorityNotificationBell } from "@/components/priority/PriorityNotificationBell";
 import * as XLSX from "xlsx";
 import { format } from "date-fns";
@@ -73,6 +73,37 @@ const parseFiltersFromParams = (params: URLSearchParams): WorkOrderFiltersState 
   };
 };
 
+type SortField = 'order_number' | 'client' | 'order_type' | 'quantity' | 'status' | 'created_by' | 'closed_by' | 'created_at';
+type SortDirection = 'asc' | 'desc';
+
+// Sortable table header component
+const SortableHead = ({ field, label, sortField, sortDirection, onSort, className = '' }: {
+  field: SortField;
+  label: string;
+  sortField: SortField;
+  sortDirection: SortDirection;
+  onSort: (field: SortField) => void;
+  className?: string;
+}) => {
+  const isActive = sortField === field;
+  return (
+    <TableHead className={className}>
+      <button
+        type="button"
+        onClick={() => onSort(field)}
+        className="flex items-center gap-1 hover:text-foreground transition-colors w-full"
+      >
+        {label}
+        {isActive ? (
+          sortDirection === 'asc' ? <ArrowUp className="h-3.5 w-3.5" /> : <ArrowDown className="h-3.5 w-3.5" />
+        ) : (
+          <ArrowUpDown className="h-3.5 w-3.5 opacity-30" />
+        )}
+      </button>
+    </TableHead>
+  );
+};
+
 const WorkOrders = () => {
   const [searchParams, setSearchParams] = useSearchParams();
   const [workOrders, setWorkOrders] = useState<any[]>([]);
@@ -93,6 +124,10 @@ const WorkOrders = () => {
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [orderToDelete, setOrderToDelete] = useState<any>(null);
   
+  // Sort state
+  const [sortField, setSortField] = useState<SortField>('created_at');
+  const [sortDirection, setSortDirection] = useState<SortDirection>('desc');
+  
   // Export selection state (separate from bulk close selection)
   const [exportSelectedOrders, setExportSelectedOrders] = useState<Set<string>>(new Set());
   const [isExporting, setIsExporting] = useState(false);
@@ -111,6 +146,18 @@ const WorkOrders = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
   const { isSuper, isAdmin, isAdminPlus } = useAuthz();
+
+  // Sort handler
+  const handleSort = useCallback((field: SortField) => {
+    setSortField((prev) => {
+      if (prev === field) {
+        setSortDirection((d) => (d === 'asc' ? 'desc' : 'asc'));
+        return prev;
+      }
+      setSortDirection(field === 'created_at' ? 'desc' : 'asc');
+      return field;
+    });
+  }, []);
 
   // Update URL when filters change
   const handleFiltersChange = useCallback((newFilters: WorkOrderFiltersState) => {
@@ -257,7 +304,7 @@ const WorkOrders = () => {
 
   // Apply filters to work orders
   const filteredWorkOrders = useMemo(() => {
-    return workOrders.filter((order) => {
+    const filtered = workOrders.filter((order) => {
       // Date range filter
       if (filters.dateRange.from) {
         const orderDate = new Date(order.created_at);
@@ -283,10 +330,8 @@ const WorkOrders = () => {
       // Status filter
       if (filters.status !== "all") {
         if (filters.status === "invoiced") {
-          // Filter for invoiced orders only
           if (!order.invoiced_at) return false;
         } else if (filters.status === "not_invoiced") {
-          // Filter for not invoiced orders only
           if (order.invoiced_at) return false;
         } else if (order.status !== filters.status) {
           return false;
@@ -295,7 +340,50 @@ const WorkOrders = () => {
 
       return true;
     });
-  }, [workOrders, filters]);
+
+    // Sort
+    const getSortValue = (order: any): string | number => {
+      switch (sortField) {
+        case 'order_number':
+          return order.order_number || order.display_order_number || '';
+        case 'client':
+          return (order.clients?.name || '').toLowerCase();
+        case 'order_type':
+          return order.order_type || '';
+        case 'quantity': {
+          if (order.order_type === 'ctp') {
+            return (order.file_entries || []).reduce((sum: number, e: any) => sum + (e.quantity || 0), 0);
+          }
+          if (order.order_type === 'film') {
+            return (order.film_jobs || []).reduce((sum: number, j: any) => sum + (j.computed_total_m || 0), 0);
+          }
+          return 0;
+        }
+        case 'status':
+          return order.status || '';
+        case 'created_by':
+          return (order.profiles?.full_name || '').toLowerCase();
+        case 'closed_by':
+          return (order._closedByName || '').toLowerCase();
+        case 'created_at':
+          return new Date(order.created_at).getTime();
+        default:
+          return '';
+      }
+    };
+
+    filtered.sort((a, b) => {
+      const valA = getSortValue(a);
+      const valB = getSortValue(b);
+      const dir = sortDirection === 'asc' ? 1 : -1;
+      if (typeof valA === 'number' && typeof valB === 'number') {
+        return (valA - valB) * dir;
+      }
+      return String(valA).localeCompare(String(valB), 'sr') * dir;
+    });
+
+    return filtered;
+  }, [workOrders, filters, sortField, sortDirection]);
 
   // Get film order IDs for stats summary
   const filmOrderIds = useMemo(() => {
@@ -1231,14 +1319,14 @@ const WorkOrders = () => {
                         />
                       </TableHead>
                     )}
-                    <TableHead>Broj naloga</TableHead>
-                    <TableHead>Klijent</TableHead>
-                    <TableHead>Tip</TableHead>
-                    <TableHead className="text-right">Količina</TableHead>
-                    <TableHead>Status</TableHead>
-                    <TableHead>Kreirao</TableHead>
-                    <TableHead>Zatvorio</TableHead>
-                    <TableHead>Datum</TableHead>
+                    <SortableHead field="order_number" label="Broj naloga" sortField={sortField} sortDirection={sortDirection} onSort={handleSort} />
+                    <SortableHead field="client" label="Klijent" sortField={sortField} sortDirection={sortDirection} onSort={handleSort} />
+                    <SortableHead field="order_type" label="Tip" sortField={sortField} sortDirection={sortDirection} onSort={handleSort} />
+                    <SortableHead field="quantity" label="Količina" sortField={sortField} sortDirection={sortDirection} onSort={handleSort} className="text-right" />
+                    <SortableHead field="status" label="Status" sortField={sortField} sortDirection={sortDirection} onSort={handleSort} />
+                    <SortableHead field="created_by" label="Kreirao" sortField={sortField} sortDirection={sortDirection} onSort={handleSort} />
+                    <SortableHead field="closed_by" label="Zatvorio" sortField={sortField} sortDirection={sortDirection} onSort={handleSort} />
+                    <SortableHead field="created_at" label="Datum" sortField={sortField} sortDirection={sortDirection} onSort={handleSort} />
                     <TableHead className="text-right">Akcije</TableHead>
                     {(isSuper || isAdmin) && <TableHead className="text-center">Zatvori</TableHead>}
                   </TableRow>
