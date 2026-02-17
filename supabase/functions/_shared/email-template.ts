@@ -153,7 +153,7 @@ export function generateDeliveryNoteEmailHtml(data: EmailTemplateData): string {
                             <tr>
                               <td style="padding-right: 14px; vertical-align: top;">
                                 <div style="width: 44px; height: 44px; background: linear-gradient(135deg, #3182ce 0%, #4299e1 100%); border-radius: 12px; text-align: center; line-height: 44px;">
-                                  <span style="color: #ffffff; font-size: 20px;">📦</span>
+                                  <span style="color: #ffffff; font-size: 18px; font-weight: 800;">TIP</span>
                                 </div>
                               </td>
                               <td style="vertical-align: top;">
@@ -175,7 +175,7 @@ export function generateDeliveryNoteEmailHtml(data: EmailTemplateData): string {
                             <tr>
                               <td style="padding-right: 14px; vertical-align: top;">
                                 <div style="width: 44px; height: 44px; background: linear-gradient(135deg, #38a169 0%, #48bb78 100%); border-radius: 12px; text-align: center; line-height: 44px;">
-                                  <span style="color: #ffffff; font-size: 20px;">📄</span>
+                                  <span style="color: #ffffff; font-size: 18px; font-weight: 800;">#</span>
                                 </div>
                               </td>
                               <td style="vertical-align: top;">
@@ -207,7 +207,7 @@ export function generateDeliveryNoteEmailHtml(data: EmailTemplateData): string {
                             <tr>
                               <td style="padding-right: 14px; vertical-align: top;">
                                 <div style="width: 44px; height: 44px; background: linear-gradient(135deg, #805ad5 0%, #9f7aea 100%); border-radius: 12px; text-align: center; line-height: 44px;">
-                                  <span style="color: #ffffff; font-size: 20px;">📅</span>
+                                  <span style="color: #ffffff; font-size: 18px; font-weight: 800;">&#9650;</span>
                                 </div>
                               </td>
                               <td style="vertical-align: top;">
@@ -229,7 +229,7 @@ export function generateDeliveryNoteEmailHtml(data: EmailTemplateData): string {
                             <tr>
                               <td style="padding-right: 14px; vertical-align: top;">
                                 <div style="width: 44px; height: 44px; background: linear-gradient(135deg, #dd6b20 0%, #ed8936 100%); border-radius: 12px; text-align: center; line-height: 44px;">
-                                  <span style="color: #ffffff; font-size: 20px;">✅</span>
+                                  <span style="color: #ffffff; font-size: 18px; font-weight: 800;">&#10003;</span>
                                 </div>
                               </td>
                               <td style="vertical-align: top;">
@@ -253,7 +253,7 @@ export function generateDeliveryNoteEmailHtml(data: EmailTemplateData): string {
               <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="background: #ffffff; border-radius: 16px; border: 1px solid #e2e8f0; overflow: hidden;">
                 <tr>
                   <td style="background: linear-gradient(135deg, #1a365d 0%, #2c5282 100%); padding: 16px 20px;">
-                    <span style="color: #ffffff; font-size: 14px; font-weight: 700; text-transform: uppercase; letter-spacing: 1px;">📋 Pregled stavki</span>
+                    <span style="color: #ffffff; font-size: 14px; font-weight: 700; text-transform: uppercase; letter-spacing: 1px;">Pregled stavki</span>
                   </td>
                 </tr>
                 <tr>
@@ -300,7 +300,7 @@ export function generateDeliveryNoteEmailHtml(data: EmailTemplateData): string {
                       <tr>
                         <td style="padding-right: 18px; vertical-align: top;">
                           <div style="width: 56px; height: 56px; background: linear-gradient(135deg, #3182ce 0%, #4299e1 100%); border-radius: 16px; text-align: center; line-height: 56px; box-shadow: 0 4px 12px rgba(66, 153, 225, 0.3);">
-                            <span style="color: #ffffff; font-size: 28px;">📎</span>
+                            <span style="color: #ffffff; font-size: 22px; font-weight: 800;">PDF</span>
                           </div>
                         </td>
                         <td style="vertical-align: top;">
@@ -341,22 +341,22 @@ export function generateDeliveryNoteEmailHtml(data: EmailTemplateData): string {
                     <table role="presentation" cellspacing="0" cellpadding="0" border="0">
                       <tr>
                         <td style="padding: 6px 0;">
-                          <span style="color: #4a5568; font-size: 14px;">📍 ${companyAddress}</span>
+                          <span style="color: #4a5568; font-size: 14px;">&#9679; ${companyAddress}</span>
                         </td>
                       </tr>
                       <tr>
                         <td style="padding: 6px 0;">
-                          <span style="color: #4a5568; font-size: 14px;">📞 ${companyPhone}</span>
+                          <span style="color: #4a5568; font-size: 14px;">Tel: ${companyPhone}</span>
                         </td>
                       </tr>
                       <tr>
                         <td style="padding: 6px 0;">
-                          <span style="color: #4a5568; font-size: 14px;">✉️ ${companyEmail}</span>
+                          <span style="color: #4a5568; font-size: 14px;">Email: ${companyEmail}</span>
                         </td>
                       </tr>
                       <tr>
                         <td style="padding: 6px 0;">
-                          <span style="color: #4a5568; font-size: 14px;">🏢 PIB: ${companyPib}</span>
+                          <span style="color: #4a5568; font-size: 14px;">PIB: ${companyPib}</span>
                         </td>
                       </tr>
                     </table>
@@ -370,7 +370,7 @@ export function generateDeliveryNoteEmailHtml(data: EmailTemplateData): string {
           <tr>
             <td style="background: linear-gradient(135deg, #1a365d 0%, #2c5282 100%); padding: 24px 48px; text-align: center;">
               <p style="margin: 0 0 8px 0; color: rgba(255, 255, 255, 0.9); font-size: 14px; font-weight: 500;">
-                Hvala vam na poverenju! 🙏
+                Hvala vam na poverenju!
               </p>
               <p style="margin: 0; color: rgba(255, 255, 255, 0.6); font-size: 12px;">
                 © ${new Date().getFullYear()} ${companyName}. Sva prava zadržana.
