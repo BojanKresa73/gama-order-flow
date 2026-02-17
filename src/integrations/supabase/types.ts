@@ -3225,6 +3225,13 @@ export type Database = {
       }
       generate_order_number: { Args: never; Returns: string }
       get_current_nbs_rate: { Args: { p_currency?: string }; Returns: number }
+      get_orders_by_type: {
+        Args: never
+        Returns: {
+          count: number
+          order_type: string
+        }[]
+      }
       get_unread_priority_notifications_count: { Args: never; Returns: number }
       get_work_order_full: { Args: { p_identifier: string }; Returns: Json }
       has_admin_access: { Args: { _user_id: string }; Returns: boolean }
