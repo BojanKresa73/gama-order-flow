@@ -46,12 +46,29 @@ export const OrdersByTypeChart = () => {
     queryKey: ["orders-by-type"],
     staleTime: 60_000,
     queryFn: async () => {
-      const { data } = await supabase
-        .from("work_orders")
-        .select("order_type")
-        .is("deleted_at", null)
-        .range(0, 49999);
-      return data || [];
+      // Fetch in batches to avoid the 1000-row default limit
+      let allData: { order_type: string }[] = [];
+      let from = 0;
+      const batchSize = 5000;
+      let hasMore = true;
+
+      while (hasMore) {
+        const { data } = await supabase
+          .from("work_orders")
+          .select("order_type")
+          .is("deleted_at", null)
+          .range(from, from + batchSize - 1);
+
+        if (data && data.length > 0) {
+          allData = allData.concat(data);
+          from += batchSize;
+          hasMore = data.length === batchSize;
+        } else {
+          hasMore = false;
+        }
+      }
+
+      return allData;
     },
   });
 
