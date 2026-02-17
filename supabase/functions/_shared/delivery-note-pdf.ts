@@ -397,11 +397,11 @@ export async function generateDeliveryNotePDF(
         height: 36,
         color: COLORS.accent,
       });
-      page.drawText('📦', {
-        x: margin + 24,
-        y: startY - cardHeight + 30,
-        size: 16,
-        font: notoFont,
+      page.drawText('TIP', {
+        x: margin + 22,
+        y: startY - cardHeight + 33,
+        size: 12,
+        font: notoBold,
         color: COLORS.white,
       });
       
@@ -431,11 +431,11 @@ export async function generateDeliveryNotePDF(
         height: 36,
         color: COLORS.success,
       });
-      page.drawText('📄', {
-        x: rightCardX + 24,
-        y: startY - cardHeight + 30,
+      page.drawText('#', {
+        x: rightCardX + 28,
+        y: startY - cardHeight + 33,
         size: 16,
-        font: notoFont,
+        font: notoBold,
         color: COLORS.white,
       });
       
@@ -467,11 +467,11 @@ export async function generateDeliveryNotePDF(
         height: 36,
         color: COLORS.purple,
       });
-      page.drawText('📅', {
-        x: margin + 24,
-        y: secondRowY - cardHeight + 30,
-        size: 16,
-        font: notoFont,
+      page.drawText('DAT', {
+        x: margin + 21,
+        y: secondRowY - cardHeight + 33,
+        size: 12,
+        font: notoBold,
         color: COLORS.white,
       });
       
@@ -500,11 +500,11 @@ export async function generateDeliveryNotePDF(
         height: 36,
         color: COLORS.orange,
       });
-      page.drawText('✅', {
+      page.drawText('OK', {
         x: rightCardX + 24,
-        y: secondRowY - cardHeight + 30,
-        size: 16,
-        font: notoFont,
+        y: secondRowY - cardHeight + 33,
+        size: 14,
+        font: notoBold,
         color: COLORS.white,
       });
       
@@ -564,7 +564,7 @@ export async function generateDeliveryNotePDF(
     // Draw items section header
     const drawItemsHeader = (page: any, startY: number): number => {
       // Section title with badge
-      page.drawText('📋 PREGLED STAVKI', {
+      page.drawText('PREGLED STAVKI', {
         x: margin,
         y: startY,
         size: 12,
