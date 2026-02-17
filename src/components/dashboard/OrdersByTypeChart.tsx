@@ -4,6 +4,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { PieChart, Pie, Cell, ResponsiveContainer, Legend, Tooltip, Label } from "recharts";
 import { useMemo } from "react";
+
 import { useIsMobile } from "@/hooks/use-mobile";
 
 const COLORS = {
@@ -42,50 +43,19 @@ const CustomLabel = ({ viewBox, totalOrders }: any) => {
 export const OrdersByTypeChart = () => {
   const isMobile = useIsMobile();
 
-  const { data: rawData, isLoading } = useQuery({
+  const { data: ordersByType = [], isLoading } = useQuery({
     queryKey: ["orders-by-type"],
     staleTime: 60_000,
     queryFn: async () => {
-      // Fetch in batches to avoid the 1000-row default limit
-      let allData: { order_type: string }[] = [];
-      let from = 0;
-      const batchSize = 5000;
-      let hasMore = true;
-
-      while (hasMore) {
-        const { data } = await supabase
-          .from("work_orders")
-          .select("order_type")
-          .is("deleted_at", null)
-          .range(from, from + batchSize - 1);
-
-        if (data && data.length > 0) {
-          allData = allData.concat(data);
-          from += batchSize;
-          hasMore = data.length === batchSize;
-        } else {
-          hasMore = false;
-        }
-      }
-
-      return allData;
+      const { data, error } = await supabase.rpc("get_orders_by_type");
+      if (error) throw error;
+      return (data || []).map((row: any) => ({
+        name: row.order_type,
+        value: Number(row.count),
+        color: COLORS[row.order_type as keyof typeof COLORS] || COLORS.other,
+      }));
     },
   });
-
-  const ordersByType = useMemo(() => {
-    if (!rawData) return [];
-
-    const counts = rawData.reduce((acc, order) => {
-      acc[order.order_type] = (acc[order.order_type] || 0) + 1;
-      return acc;
-    }, {} as Record<string, number>);
-
-    return Object.entries(counts).map(([name, value]) => ({
-      name,
-      value,
-      color: COLORS[name as keyof typeof COLORS] || COLORS.other,
-    }));
-  }, [rawData]);
 
   const totalOrders = useMemo(
     () => ordersByType.reduce((sum, item) => sum + item.value, 0),
