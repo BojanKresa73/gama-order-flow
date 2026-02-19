@@ -666,11 +666,22 @@ const ChecklistView = ({ orderType, onNavigateToSearch }: ChecklistViewProps) =>
               <User className="h-3 w-3" />
               {order.created_by_name || "-"}
             </div>
-            {orderType === "ctp" && (
-              <div className="flex items-center gap-2">
-                <span className="font-medium text-foreground">Ploče: {order.total_plates}</span>
-              </div>
-            )}
+            {orderType === "ctp" && (() => {
+              const remaining = (order.file_entries || [])
+                .filter(f => f.status === "open")
+                .reduce((sum, f) => sum + f.quantity, 0);
+              const total = order.total_plates;
+              return (
+                <div className="flex items-center gap-2">
+                  <span className="font-medium text-foreground">
+                    Ploče: {total}
+                    {order.status === "open" && remaining < total && (
+                      <span className="text-muted-foreground font-normal">/{remaining}</span>
+                    )}
+                  </span>
+                </div>
+              );
+            })()}
             {orderType === "ctp" && (
               <div>
                 <div className="flex items-center gap-1">
@@ -819,9 +830,22 @@ const ChecklistView = ({ orderType, onNavigateToSearch }: ChecklistViewProps) =>
               : "-"}
           </TableCell>
           <TableCell>{getStatusBadge(order.status)}</TableCell>
-          {orderType === "ctp" && (
-            <TableCell className="font-semibold">{order.total_plates}</TableCell>
-          )}
+          {orderType === "ctp" && (() => {
+            const remaining = (order.file_entries || [])
+              .filter(f => f.status === "open")
+              .reduce((sum, f) => sum + f.quantity, 0);
+            const total = order.total_plates;
+            return (
+              <TableCell className="font-semibold">
+                <span>{total}</span>
+                {order.status === "open" && remaining < total && (
+                  <span className="text-muted-foreground font-normal">
+                    /{remaining}
+                  </span>
+                )}
+              </TableCell>
+            );
+          })()}
           {orderType === "ctp" && (
             <TableCell>
               <div className="space-y-1">
