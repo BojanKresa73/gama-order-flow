@@ -790,6 +790,7 @@ const NewWorkOrder = () => {
                                   ...item,
                                   plate_format_id: bulkFormat,
                                   quantity: bulkQuantity,
+                                  __status: item.id ? 'updated' as const : item.__status,
                                 }))
                               );
                               toast({
@@ -825,7 +826,7 @@ const NewWorkOrder = () => {
                     {ctpItems.length > 0 && (
                       <div className="space-y-2">
                         {ctpItems.map((item, index) => (
-                          <div key={index} className="grid grid-cols-12 gap-2 items-center p-2 border rounded">
+                          <div key={item.id || item.tempId || `ctp-${index}`} className="grid grid-cols-12 gap-2 items-center p-2 border rounded">
                             <div className="col-span-6">
                               <p className="text-sm truncate" title={item.file_name}>
                                 {item.file_name || "Naziv fajla"}
