@@ -1,9 +1,10 @@
-import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
+import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
 import { useAuthz } from "@/hooks/useAuthz";
+import { Loader2 } from "lucide-react";
 import { FileText, BarChart3, ChevronDown } from "lucide-react";
 import {
   DropdownMenu,
@@ -26,40 +27,35 @@ import { OnlinePortalUsersCard } from "@/components/dashboard/OnlinePortalUsersC
 import { AppHeader } from "@/components/layout/AppHeader";
 
 const Dashboard = () => {
-  const [loading, setLoading] = useState(true);
-  const [profile, setProfile] = useState<any>(null);
   const navigate = useNavigate();
   const { toast } = useToast();
   const { isSuper, isAdmin } = useAuthz();
 
   const canViewStats = isSuper || isAdmin;
 
-  useEffect(() => {
-    checkUser();
-  }, []);
-
-  const checkUser = async () => {
-    const { data: { user } } = await supabase.auth.getUser();
-    
-    if (!user) {
-      navigate("/");
-      return;
-    }
-
-    const { data } = await supabase
-      .from("profiles")
-      .select("*")
-      .eq("id", user.id)
-      .single();
-
-    setProfile(data);
-    setLoading(false);
-  };
+  // Fetch profile using react-query (auth is already handled by InternalUserGuard)
+  const { data: profile, isLoading: loading } = useQuery({
+    queryKey: ["current-user-profile"],
+    queryFn: async () => {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) {
+        navigate("/");
+        return null;
+      }
+      const { data } = await supabase
+        .from("profiles")
+        .select("*")
+        .eq("id", user.id)
+        .single();
+      return data;
+    },
+    staleTime: 300_000,
+  });
 
   if (loading) {
     return (
       <div className="flex min-h-screen items-center justify-center">
-        <p>Učitavanje...</p>
+        <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
       </div>
     );
   }
@@ -89,10 +85,10 @@ const Dashboard = () => {
               <FileText className="h-4 w-4 mr-1" />
               Nalozi
             </Button>
-            <Button size="sm" variant="outline" className="w-full border-orange-300 text-orange-700" onClick={() => navigate("/large-format/new?type=roll")}>
+            <Button size="sm" variant="outline" className="w-full" onClick={() => navigate("/large-format/new?type=roll")}>
               + Rolna
             </Button>
-            <Button size="sm" variant="outline" className="w-full border-teal-300 text-teal-700" onClick={() => navigate("/large-format/new?type=rigid")}>
+            <Button size="sm" variant="outline" className="w-full" onClick={() => navigate("/large-format/new?type=rigid")}>
               + Ploča
             </Button>
             <Button size="sm" variant="outline" className="w-full col-span-2" onClick={() => navigate("/nabavka")}>
@@ -105,10 +101,10 @@ const Dashboard = () => {
             <Button onClick={() => navigate("/work-orders/new")}>
               + Novi nalog
             </Button>
-            <Button variant="outline" onClick={() => navigate("/large-format/new?type=roll")} className="border-orange-300 text-orange-700 hover:bg-orange-50">
+            <Button variant="outline" onClick={() => navigate("/large-format/new?type=roll")}>
               + Rolna
             </Button>
-            <Button variant="outline" onClick={() => navigate("/large-format/new?type=rigid")} className="border-teal-300 text-teal-700 hover:bg-teal-50">
+            <Button variant="outline" onClick={() => navigate("/large-format/new?type=rigid")}>
               + Ploča
             </Button>
             <Button variant="secondary" onClick={() => navigate("/work-orders")}>
