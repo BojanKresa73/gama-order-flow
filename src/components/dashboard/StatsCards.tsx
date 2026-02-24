@@ -1,6 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { FileText, CheckCircle, Users, AlertTriangle } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
 
@@ -9,28 +8,36 @@ export const StatsCards = () => {
     queryKey: ["dashboard-stats"],
     staleTime: 60_000,
     queryFn: async () => {
-      const [ordersRes, clientsRes, formatsRes] = await Promise.all([
-        supabase.from("work_orders").select("status, created_at").is("deleted_at", null).range(0, 49999),
-        supabase.from("clients").select("id", { count: "exact" }),
-        supabase.from("plate_formats").select("id, current_stock, low_stock_threshold"),
-      ]);
-
       const now = new Date();
-      const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+      const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1).toISOString();
 
-      const openOrders = ordersRes.data?.filter((o) => o.status === "open").length || 0;
-      const closedThisMonth =
-        ordersRes.data?.filter((o) => {
-          return o.status === "closed" && new Date(o.created_at) >= startOfMonth;
-        }).length || 0;
+      const [openRes, closedRes, clientsRes, formatsRes] = await Promise.all([
+        supabase
+          .from("work_orders")
+          .select("id", { count: "exact", head: true })
+          .is("deleted_at", null)
+          .eq("status", "open"),
+        supabase
+          .from("work_orders")
+          .select("id", { count: "exact", head: true })
+          .is("deleted_at", null)
+          .eq("status", "closed")
+          .gte("created_at", startOfMonth),
+        supabase
+          .from("clients")
+          .select("id", { count: "exact", head: true }),
+        supabase
+          .from("plate_formats")
+          .select("id, current_stock, low_stock_threshold"),
+      ]);
 
       const lowStockCount = formatsRes.data?.filter(
         (f) => f.current_stock < f.low_stock_threshold
       ).length || 0;
 
       return {
-        openOrders,
-        closedThisMonth,
+        openOrders: openRes.count || 0,
+        closedThisMonth: closedRes.count || 0,
         totalClients: clientsRes.count || 0,
         lowStockCount,
       };
