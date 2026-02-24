@@ -52,7 +52,8 @@ export const DailyPlateStats = () => {
         `)
         .eq("status", "open")
         .eq("work_orders.status", "open")
-        .eq("work_orders.order_type", "ctp");
+        .eq("work_orders.order_type", "ctp")
+        .range(0, 49999);
 
       // Aggregate usage per format
       const usageMap: Record<string, number> = {};

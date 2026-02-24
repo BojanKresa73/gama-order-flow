@@ -29,7 +29,8 @@ export function DigitalTopClientsTable({ filters }: DigitalTopClientsTableProps)
         `)
         .gte("work_order.created_at", filters.dateRange.from.toISOString())
         .lte("work_order.created_at", filters.dateRange.to.toISOString())
-        .is("work_order.deleted_at", null);
+        .is("work_order.deleted_at", null)
+        .range(0, 49999);
 
       if (error) throw error;
 

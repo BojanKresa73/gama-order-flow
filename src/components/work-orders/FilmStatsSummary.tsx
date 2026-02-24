@@ -44,7 +44,8 @@ export function FilmStatsSummary({ workOrderIds }: FilmStatsSummaryProps) {
       const { data: filmJobs, error } = await supabase
         .from("film_jobs")
         .select("work_order_id, computed_total_m")
-        .in("work_order_id", workOrderIds);
+        .in("work_order_id", workOrderIds)
+        .range(0, 49999);
 
       if (error) throw error;
 
