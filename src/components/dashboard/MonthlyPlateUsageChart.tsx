@@ -26,7 +26,8 @@ export const MonthlyPlateUsageChart = () => {
         .eq("work_orders.order_type", "ctp")
         .is("work_orders.deleted_at", null)
         .gte("work_orders.created_at", startOfMonth)
-        .lte("work_orders.created_at", endOfMonth);
+        .lte("work_orders.created_at", endOfMonth)
+        .range(0, 49999);
 
       if (error) throw error;
       if (!allEntries || allEntries.length === 0) {
