@@ -41,6 +41,7 @@ const NotFound = lazy(() => import("./pages/NotFound"));
 // Guards are small - keep synchronous
 import AdminGuard from "./components/guards/AdminGuard";
 import InternalUserGuard from "./components/guards/InternalUserGuard";
+import { ErrorBoundary } from "./components/ErrorBoundary";
 
 const PageLoader = () => (
   <div className="flex items-center justify-center min-h-screen">
@@ -52,6 +53,7 @@ const queryClient = new QueryClient();
 
 const App = () => {
   return (
+    <ErrorBoundary>
     <QueryClientProvider client={queryClient}>
       <OnlineUsersProvider>
         <OnlinePortalUsersProvider>
@@ -108,6 +110,7 @@ const App = () => {
         </OnlinePortalUsersProvider>
       </OnlineUsersProvider>
     </QueryClientProvider>
+    </ErrorBoundary>
   );
 };
 
