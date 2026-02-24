@@ -30,7 +30,7 @@ export function DigitalStatsCards({ filters }: DigitalStatsCardsProps) {
         .lte("work_order.created_at", filters.dateRange.to.toISOString())
         .is("work_order.deleted_at", null);
 
-      const { data: digitalJobs, error } = await query;
+      const { data: digitalJobs, error } = await query.range(0, 49999);
 
       if (error) throw error;
 

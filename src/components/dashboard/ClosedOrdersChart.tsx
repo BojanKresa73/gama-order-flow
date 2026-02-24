@@ -32,7 +32,8 @@ export const ClosedOrdersChart = () => {
         .select("closed_at")
         .eq("status", "closed")
         .is("deleted_at", null)
-        .gte("closed_at", sevenDaysAgo.toISOString());
+        .gte("closed_at", sevenDaysAgo.toISOString())
+        .range(0, 49999);
 
       return data || [];
     },

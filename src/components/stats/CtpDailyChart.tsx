@@ -28,7 +28,7 @@ export const CtpDailyChart = ({ filters }: CtpDailyChartProps) => {
         query = query.lte("closed_on", filters.dateRange.to.toISOString().split("T")[0]);
       }
 
-      const { data, error } = await query;
+      const { data, error } = await query.range(0, 49999);
 
       if (error) throw error;
 
