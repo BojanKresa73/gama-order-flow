@@ -3,9 +3,9 @@ import { useNavigate, useSearchParams } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { Table, TableBody, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
-import { ArrowLeft, Plus, FileText, Eye, Lock, CheckCircle2, AlertTriangle, Trash2, Pencil, Send, Download, Loader2, Receipt, FileCheck, FileCode, ArrowUpDown, ArrowUp, ArrowDown } from "lucide-react";
+import { ArrowLeft, Plus, FileText, CheckCircle2, Loader2 } from "lucide-react";
 import { PriorityNotificationBell } from "@/components/priority/PriorityNotificationBell";
 import * as XLSX from "xlsx";
 import { format } from "date-fns";
@@ -16,93 +16,17 @@ import { DeleteOrderDialog } from "@/components/work-orders/DeleteOrderDialog";
 import { WorkOrderFilters, WorkOrderFiltersState } from "@/components/work-orders/WorkOrderFilters";
 import { FilmStatsSummary } from "@/components/work-orders/FilmStatsSummary";
 import { CtpStatsSummary } from "@/components/work-orders/CtpStatsSummary";
-
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
-import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
-import { Textarea } from "@/components/ui/textarea";
-import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Progress } from "@/components/ui/progress";
-import { prefixFor, displayOrderNumber } from "@/lib/orderLabel";
 import { useAuthz } from "@/hooks/useAuthz";
 import { InvoiceDialog } from "@/components/work-orders/InvoiceDialog";
 import { exportBatchToMinimax } from "@/lib/minimaxBatchExport";
 import { exportFilmBatchToMinimax } from "@/lib/minimaxFilmBatchExport";
-
-// Helper functions to serialize/deserialize filters to URL params
-const serializeFiltersToParams = (filters: WorkOrderFiltersState): URLSearchParams => {
-  const params = new URLSearchParams();
-  if (filters.dateRange.from) {
-    params.set("dateFrom", filters.dateRange.from.toISOString());
-  }
-  if (filters.dateRange.to) {
-    params.set("dateTo", filters.dateRange.to.toISOString());
-  }
-  if (filters.clientIds.length > 0) {
-    params.set("clients", filters.clientIds.join(","));
-  }
-  if (filters.orderType !== "all") {
-    params.set("type", filters.orderType);
-  }
-  if (filters.status !== "all") {
-    params.set("status", filters.status);
-  }
-  if (filters.searchText) {
-    params.set("search", filters.searchText);
-  }
-  return params;
-};
-
-const parseFiltersFromParams = (params: URLSearchParams): WorkOrderFiltersState => {
-  const dateFrom = params.get("dateFrom");
-  const dateTo = params.get("dateTo");
-  const clients = params.get("clients");
-  const type = params.get("type");
-  const status = params.get("status");
-  const search = params.get("search");
-
-  return {
-    dateRange: {
-      from: dateFrom ? new Date(dateFrom) : undefined,
-      to: dateTo ? new Date(dateTo) : undefined,
-    },
-    clientIds: clients ? clients.split(",").filter(Boolean) : [],
-    orderType: type || "all",
-    status: status || "all",
-    searchText: search || "",
-  };
-};
-
-type SortField = 'order_number' | 'client' | 'order_type' | 'quantity' | 'status' | 'created_by' | 'closed_by' | 'created_at';
-type SortDirection = 'asc' | 'desc';
-
-// Sortable table header component
-const SortableHead = ({ field, label, sortField, sortDirection, onSort, className = '' }: {
-  field: SortField;
-  label: string;
-  sortField: SortField;
-  sortDirection: SortDirection;
-  onSort: (field: SortField) => void;
-  className?: string;
-}) => {
-  const isActive = sortField === field;
-  return (
-    <TableHead className={className}>
-      <button
-        type="button"
-        onClick={() => onSort(field)}
-        className="flex items-center gap-1 hover:text-foreground transition-colors w-full"
-      >
-        {label}
-        {isActive ? (
-          sortDirection === 'asc' ? <ArrowUp className="h-3.5 w-3.5" /> : <ArrowDown className="h-3.5 w-3.5" />
-        ) : (
-          <ArrowUpDown className="h-3.5 w-3.5 opacity-30" />
-        )}
-      </button>
-    </TableHead>
-  );
-};
+import { serializeFiltersToParams, parseFiltersFromParams } from "@/lib/workOrderFilters";
+import { SortableHead, type SortField, type SortDirection } from "@/components/work-orders/SortableHead";
+import { WorkOrderTableRow, getOrderTypeLabel } from "@/components/work-orders/WorkOrderTableRow";
+import { WorkOrderExportActions } from "@/components/work-orders/WorkOrderExportActions";
+import { CloseOrderDialog } from "@/components/work-orders/CloseOrderDialog";
+import { BulkCloseDialog } from "@/components/work-orders/BulkCloseDialog";
 
 const WorkOrders = () => {
   const [searchParams, setSearchParams] = useSearchParams();
@@ -123,31 +47,20 @@ const WorkOrders = () => {
   const [orderToInvalidate, setOrderToInvalidate] = useState<any>(null);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [orderToDelete, setOrderToDelete] = useState<any>(null);
-  
-  // Sort state
   const [sortField, setSortField] = useState<SortField>('created_at');
   const [sortDirection, setSortDirection] = useState<SortDirection>('desc');
-  
-  // Export selection state (separate from bulk close selection)
   const [exportSelectedOrders, setExportSelectedOrders] = useState<Set<string>>(new Set());
   const [isExporting, setIsExporting] = useState(false);
   const [isExportingXml, setIsExportingXml] = useState(false);
   const [isExportingPdf, setIsExportingPdf] = useState(false);
-  
-  // Bulk invoice state
   const [bulkInvoiceDialogOpen, setBulkInvoiceDialogOpen] = useState(false);
   const [isInvoicing, setIsInvoicing] = useState(false);
-  
-  // Initialize filters from URL params
-  const [filters, setFilters] = useState<WorkOrderFiltersState>(() => 
-    parseFiltersFromParams(searchParams)
-  );
-  
+  const [filters, setFilters] = useState<WorkOrderFiltersState>(() => parseFiltersFromParams(searchParams));
+
   const navigate = useNavigate();
   const { toast } = useToast();
   const { isSuper, isAdmin, isAdminPlus } = useAuthz();
 
-  // Sort handler
   const handleSort = useCallback((field: SortField) => {
     setSortField((prev) => {
       if (prev === field) {
@@ -159,14 +72,11 @@ const WorkOrders = () => {
     });
   }, []);
 
-  // Update URL when filters change
   const handleFiltersChange = useCallback((newFilters: WorkOrderFiltersState) => {
     setFilters(newFilters);
-    const params = serializeFiltersToParams(newFilters);
-    setSearchParams(params, { replace: true });
+    setSearchParams(serializeFiltersToParams(newFilters), { replace: true });
   }, [setSearchParams]);
 
-  // Re-fetch when filters change (auth is handled by InternalUserGuard)
   useEffect(() => {
     fetchWorkOrders();
   }, [filters]);
@@ -175,372 +85,134 @@ const WorkOrders = () => {
     try {
       let query = supabase
         .from("work_orders")
-        .select(`
-          *,
-          clients (name),
-          profiles!work_orders_created_by_fkey (full_name),
-          email_job_latest_status (
-            status,
-            error_msg
-          ),
-          file_entries (quantity, closed_by),
-          film_jobs (computed_total_m)
-        `)
+        .select(`*, clients (name), profiles!work_orders_created_by_fkey (full_name), email_job_latest_status (status, error_msg), file_entries (quantity, closed_by), film_jobs (computed_total_m)`)
         .is("deleted_at", null);
 
-      // Push date filters to DB
-      if (filters.dateRange.from) {
-        query = query.gte("created_at", filters.dateRange.from.toISOString());
-      }
+      if (filters.dateRange.from) query = query.gte("created_at", filters.dateRange.from.toISOString());
       if (filters.dateRange.to) {
         const endOfDay = new Date(filters.dateRange.to);
         endOfDay.setHours(23, 59, 59, 999);
         query = query.lte("created_at", endOfDay.toISOString());
       }
-
-      // Push client filter to DB
-      if (filters.clientIds.length > 0) {
-        query = query.in("client_id", filters.clientIds);
-      }
-
-      // Push order type filter to DB
-      if (filters.orderType !== "all") {
-        query = query.eq("order_type", filters.orderType as any);
-      }
-
-      // Push status filter to DB
+      if (filters.clientIds.length > 0) query = query.in("client_id", filters.clientIds);
+      if (filters.orderType !== "all") query = query.eq("order_type", filters.orderType as any);
       if (filters.status !== "all") {
-        if (filters.status === "invoiced") {
-          query = query.not("invoiced_at", "is", null);
-        } else if (filters.status === "not_invoiced") {
-          query = query.is("invoiced_at", null);
-        } else {
-          query = query.eq("status", filters.status as any);
-        }
+        if (filters.status === "invoiced") query = query.not("invoiced_at", "is", null);
+        else if (filters.status === "not_invoiced") query = query.is("invoiced_at", null);
+        else query = query.eq("status", filters.status as any);
       }
 
-      const { data, error } = await query
-        .order("created_at", { ascending: false })
-        .limit(2000);
-
+      const { data, error } = await query.order("created_at", { ascending: false }).limit(2000);
       if (error) throw error;
 
-      // Warn user if results hit the limit
       if (data && data.length >= 2000) {
-        toast({
-          title: "Upozorenje: Prikazano je maksimalnih 2000 naloga",
-          description: "Vaš filter vraća više od 2000 rezultata. Suzite filter (kraći period, specifičan klijent ili tip naloga) da biste videli sve naloge.",
-          variant: "destructive",
-          duration: 10000,
-        });
+        toast({ title: "Upozorenje: Prikazano je maksimalnih 2000 naloga", description: "Suzite filter da biste videli sve naloge.", variant: "destructive", duration: 10000 });
       }
-      
-      // Get unique closed_by IDs to fetch their names in one query
+
       const closedByIds = new Set<string>();
-      (data || []).forEach((order) => {
-        if (order.closed_by) closedByIds.add(order.closed_by);
-      });
-      
-      // Fetch all closer profiles in one query
+      (data || []).forEach((o) => { if (o.closed_by) closedByIds.add(o.closed_by); });
+
       let closerProfiles: Record<string, string> = {};
       if (closedByIds.size > 0) {
-        const { data: profiles } = await supabase
-          .from("profiles")
-          .select("id, full_name")
-          .in("id", Array.from(closedByIds));
-        if (profiles) {
-          closerProfiles = Object.fromEntries(profiles.map(p => [p.id, p.full_name || '']));
-        }
+        const { data: profiles } = await supabase.from("profiles").select("id, full_name").in("id", Array.from(closedByIds));
+        if (profiles) closerProfiles = Object.fromEntries(profiles.map(p => [p.id, p.full_name || '']));
       }
-      
-      // Process orders to add _closedByName without additional per-order queries
+
       const ordersWithClosers = (data || []).map((order) => {
-        if (order.status !== 'closed') {
-          return order;
-        }
-        
-        // Get closed_by name from the batch-fetched profiles
+        if (order.status !== 'closed') return order;
         const closedByName = order.closed_by ? closerProfiles[order.closed_by] || null : null;
-        
-        // For film and digital orders, just use the work order closer
-        if (order.order_type === 'film' || order.order_type === 'digital') {
-          return { ...order, _closedByName: closedByName };
-        }
-        
-        // Check file_entries for different closers (CTP and other orders)
+        if (order.order_type === 'film' || order.order_type === 'digital') return { ...order, _closedByName: closedByName };
         const files = order.file_entries || [];
         if (files.length > 0) {
           const uniqueClosers = new Set(files.map((f: any) => f.closed_by).filter(Boolean));
-          if (uniqueClosers.size > 1) {
-            return { ...order, _closedByMix: true };
-          }
+          if (uniqueClosers.size > 1) return { ...order, _closedByMix: true };
         }
-        
         return { ...order, _closedByName: closedByName };
       });
-      
+
       setWorkOrders(ordersWithClosers);
     } catch (error: any) {
-      toast({
-        title: "Greška",
-        description: error.message,
-        variant: "destructive",
-      });
+      toast({ title: "Greška", description: error.message, variant: "destructive" });
     } finally {
       setLoading(false);
     }
   };
 
-  // Apply filters to work orders
-  // Sort work orders (filtering is done server-side in fetchWorkOrders)
   const filteredWorkOrders = useMemo(() => {
     const sorted = [...workOrders];
-
     const getSortValue = (order: any): string | number => {
       switch (sortField) {
-        case 'order_number':
-          return order.order_number || order.display_order_number || '';
-        case 'client':
-          return (order.clients?.name || '').toLowerCase();
-        case 'order_type':
-          return order.order_type || '';
+        case 'order_number': return order.order_number || order.display_order_number || '';
+        case 'client': return (order.clients?.name || '').toLowerCase();
+        case 'order_type': return order.order_type || '';
         case 'quantity': {
-          if (order.order_type === 'ctp') {
-            return (order.file_entries || []).reduce((sum: number, e: any) => sum + (e.quantity || 0), 0);
-          }
-          if (order.order_type === 'film') {
-            return (order.film_jobs || []).reduce((sum: number, j: any) => sum + (j.computed_total_m || 0), 0);
-          }
+          if (order.order_type === 'ctp') return (order.file_entries || []).reduce((s: number, e: any) => s + (e.quantity || 0), 0);
+          if (order.order_type === 'film') return (order.film_jobs || []).reduce((s: number, j: any) => s + (j.computed_total_m || 0), 0);
           return 0;
         }
-        case 'status':
-          return order.status || '';
-        case 'created_by':
-          return (order.profiles?.full_name || '').toLowerCase();
-        case 'closed_by':
-          return (order._closedByName || '').toLowerCase();
-        case 'created_at':
-          return new Date(order.created_at).getTime();
-        default:
-          return '';
+        case 'status': return order.status || '';
+        case 'created_by': return (order.profiles?.full_name || '').toLowerCase();
+        case 'closed_by': return (order._closedByName || '').toLowerCase();
+        case 'created_at': return new Date(order.created_at).getTime();
+        default: return '';
       }
     };
-
     sorted.sort((a, b) => {
       const valA = getSortValue(a);
       const valB = getSortValue(b);
       const dir = sortDirection === 'asc' ? 1 : -1;
-      if (typeof valA === 'number' && typeof valB === 'number') {
-        return (valA - valB) * dir;
-      }
+      if (typeof valA === 'number' && typeof valB === 'number') return (valA - valB) * dir;
       return String(valA).localeCompare(String(valB), 'sr') * dir;
     });
-
     return sorted;
   }, [workOrders, sortField, sortDirection]);
 
-  // Get film order IDs for stats summary
-  const filmOrderIds = useMemo(() => {
-    return filteredWorkOrders
-      .filter((order) => order.order_type === "film")
-      .map((order) => order.id);
-  }, [filteredWorkOrders]);
+  const filmOrderIds = useMemo(() => filteredWorkOrders.filter(o => o.order_type === "film").map(o => o.id), [filteredWorkOrders]);
+  const ctpOrderIds = useMemo(() => filteredWorkOrders.filter(o => o.order_type === "ctp").map(o => o.id), [filteredWorkOrders]);
 
-  // Get CTP order IDs for stats summary
-  const ctpOrderIds = useMemo(() => {
-    return filteredWorkOrders
-      .filter((order) => order.order_type === "ctp")
-      .map((order) => order.id);
-  }, [filteredWorkOrders]);
-
-  const getOrderTypeLabel = (type: string) => {
-    switch (type) {
-      case "ctp": return "CTP";
-      case "digital": return "Digital";
-      case "film": return "Filmovanje";
-      case "other": return "Ostalo";
-      default: return type;
-    }
-  };
-
-  const getStatusBadge = (status: string, invalidatedAt?: string, deletedAt?: string) => {
-    if (deletedAt) {
-      return <Badge variant="destructive">Obrisan</Badge>;
-    }
-    if (invalidatedAt) {
-      return <Badge variant="outline" className="border-destructive/50 text-destructive">Nevažeći</Badge>;
-    }
-    return status === "open" ? (
-      <Badge variant="default">Otvoren</Badge>
-    ) : (
-      <Badge variant="secondary">Zatvoren</Badge>
-    );
-  };
-
-  const getClosedByDisplay = (order: any) => {
-    if (order.status !== 'closed') return '-';
-    if (order._closedByMix) return 'Mix';
-    if (order._closedByName) return order._closedByName;
-    return '-';
-  };
-
-  // Get quantity display for order (plates for CTP, meters for film)
-  const getOrderQuantity = (order: any) => {
-    if (order.order_type === 'ctp') {
-      // Sum all plate quantities from file_entries
-      const totalPlates = (order.file_entries || []).reduce(
-        (sum: number, entry: any) => sum + (entry.quantity || 0),
-        0
-      );
-      return totalPlates > 0 ? `${totalPlates} ploča` : '-';
-    }
-    if (order.order_type === 'film') {
-      // Sum all meters from film_jobs
-      const totalMeters = (order.film_jobs || []).reduce(
-        (sum: number, job: any) => sum + (job.computed_total_m || 0),
-        0
-      );
-      return totalMeters > 0 ? `${totalMeters.toFixed(2)} m` : '-';
-    }
-    return '-';
-  };
-
-  const getEmailStatusBadge = (emailStatus: any) => {
-    if (!emailStatus) return null;
-    
-    if (emailStatus.status === "sent") {
-      return <span title="Email poslat">📧 poslato</span>;
-    } else if (emailStatus.status === "error") {
-      return (
-        <TooltipProvider>
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <span className="text-destructive cursor-help">📧 greška</span>
-            </TooltipTrigger>
-            <TooltipContent>
-              <p className="max-w-xs">{emailStatus.error_msg || "Greška pri slanju"}</p>
-            </TooltipContent>
-          </Tooltip>
-        </TooltipProvider>
-      );
-    }
-    return null;
-  };
-
-  const handleSendDeliveryNote = async (workOrderId: string, e: React.MouseEvent) => {
-    e.stopPropagation();
-    navigate(`/work-orders/${workOrderId}/delivery-note`);
-  };
-
-  const handleShowFiles = (orderId: string, e: React.MouseEvent) => {
-    e.stopPropagation();
-    setSelectedOrderId(orderId);
-    setFilesDialogOpen(true);
-  };
-
+  // --- Validation ---
   const validateOrderBeforeClose = async (order: any): Promise<{ valid: boolean; error?: string }> => {
-    // Check if client exists
-    if (!order.client_id) {
-      return { valid: false, error: "Izaberi klijenta pre zatvaranja naloga." };
-    }
-
-    // For film orders, validate film jobs
+    if (!order.client_id) return { valid: false, error: "Izaberi klijenta pre zatvaranja naloga." };
     if (order.order_type === 'film') {
-      const { data: filmJobs, error: filmError } = await supabase
-        .from('film_jobs')
-        .select('id, width_mm, height_mm, qty, computed_total_m, file_name')
-        .eq('work_order_id', order.id);
-
-      if (filmError) {
-        return { valid: false, error: "Greška pri učitavanju stavki filmovanja." };
-      }
-
-      if (!filmJobs || filmJobs.length === 0) {
-        return { valid: false, error: "Nalog mora da ima bar jednu stavku filmovanja." };
-      }
-
-      // Check each film job
+      const { data: filmJobs, error: filmError } = await supabase.from('film_jobs').select('id, width_mm, height_mm, qty, computed_total_m, file_name').eq('work_order_id', order.id);
+      if (filmError) return { valid: false, error: "Greška pri učitavanju stavki filmovanja." };
+      if (!filmJobs?.length) return { valid: false, error: "Nalog mora da ima bar jednu stavku filmovanja." };
       for (const job of filmJobs) {
-        if (job.width_mm < 10) {
-          return { valid: false, error: `Stavka "${job.file_name}" ima širinu manju od 10mm (${job.width_mm}mm).` };
-        }
-        if (job.height_mm < 10) {
-          return { valid: false, error: `Stavka "${job.file_name}" ima visinu manju od 10mm (${job.height_mm}mm).` };
-        }
-        if (job.qty < 1) {
-          return { valid: false, error: `Stavka "${job.file_name}" ima količinu manju od 1 (${job.qty}).` };
-        }
-        if (!job.computed_total_m || job.computed_total_m <= 0) {
-          return { valid: false, error: `Stavka "${job.file_name}" nema izračunatu dužinu (m). Izračunaj pre zatvaranja.` };
-        }
+        if (job.width_mm < 10) return { valid: false, error: `Stavka "${job.file_name}" ima širinu manju od 10mm.` };
+        if (job.height_mm < 10) return { valid: false, error: `Stavka "${job.file_name}" ima visinu manju od 10mm.` };
+        if (job.qty < 1) return { valid: false, error: `Stavka "${job.file_name}" ima količinu manju od 1.` };
+        if (!job.computed_total_m || job.computed_total_m <= 0) return { valid: false, error: `Stavka "${job.file_name}" nema izračunatu dužinu (m).` };
       }
     }
-
-    // For digital orders, validate digital jobs
     if (order.order_type === 'digital') {
-      const { data: digitalJobs, error: digitalError } = await supabase
-        .from('digital_jobs')
-        .select('id, file_name, computed_total_sheets')
-        .eq('work_order_id', order.id);
-
-      if (digitalError) {
-        return { valid: false, error: "Greška pri učitavanju digitalnih stavki." };
-      }
-
-      if (!digitalJobs || digitalJobs.length === 0) {
-        return { valid: false, error: "Nalog mora da ima bar jednu digitalnu stavku." };
-      }
-
-      // Check each digital job
+      const { data: digitalJobs, error: digitalError } = await supabase.from('digital_jobs').select('id, file_name, computed_total_sheets').eq('work_order_id', order.id);
+      if (digitalError) return { valid: false, error: "Greška pri učitavanju digitalnih stavki." };
+      if (!digitalJobs?.length) return { valid: false, error: "Nalog mora da ima bar jednu digitalnu stavku." };
       for (const job of digitalJobs) {
-        if (!job.computed_total_sheets || job.computed_total_sheets <= 0) {
-          return { valid: false, error: `Stavka "${job.file_name}" nema izračunat broj tabaka. Popuni sve podatke.` };
-        }
+        if (!job.computed_total_sheets || job.computed_total_sheets <= 0) return { valid: false, error: `Stavka "${job.file_name}" nema izračunat broj tabaka.` };
       }
     }
-
-    // For CTP orders, check file entries
     if (order.order_type === 'ctp') {
-      const { data: fileEntries, error: fileError } = await supabase
-        .from('file_entries')
-        .select('id')
-        .eq('work_order_id', order.id);
-
-      if (fileError) {
-        return { valid: false, error: "Greška pri učitavanju fajlova." };
-      }
-
-      if (!fileEntries || fileEntries.length === 0) {
-        return { valid: false, error: "Nalog mora da ima bar jedan fajl." };
-      }
+      const { data: fileEntries, error: fileError } = await supabase.from('file_entries').select('id').eq('work_order_id', order.id);
+      if (fileError) return { valid: false, error: "Greška pri učitavanju fajlova." };
+      if (!fileEntries?.length) return { valid: false, error: "Nalog mora da ima bar jedan fajl." };
     }
-
     return { valid: true };
   };
 
+  // --- Close handlers ---
   const handleCloseOrder = async (order: any, e: React.MouseEvent) => {
     e.stopPropagation();
     if (order.status === 'closed') return;
     if (order.invalidated_at) {
-      toast({
-        title: "Zabranjena akcija",
-        description: "Ne može se zatvoriti nalog koji je proglašen nevažećim.",
-        variant: "destructive",
-      });
+      toast({ title: "Zabranjena akcija", description: "Ne može se zatvoriti nalog koji je proglašen nevažećim.", variant: "destructive" });
       return;
     }
-    
-    // Validate order before opening dialog
     const validation = await validateOrderBeforeClose(order);
     if (!validation.valid) {
-      toast({
-        title: "Validaciona greška",
-        description: validation.error,
-        variant: "destructive",
-      });
+      toast({ title: "Validaciona greška", description: validation.error, variant: "destructive" });
       return;
     }
-    
     setOrderToClose(order);
     setClosingNote("");
     setCloseDialogOpen(true);
@@ -548,363 +220,133 @@ const WorkOrders = () => {
 
   const confirmCloseOrder = async () => {
     if (!orderToClose) return;
-
     setIsClosing(true);
     try {
-      const { data, error } = await supabase.functions.invoke('close-work-order', {
-        body: {
-          work_order_id: orderToClose.id,
-          note: closingNote.trim() || undefined
-        }
-      });
+      const { data, error } = await supabase.functions.invoke('close-work-order', { body: { work_order_id: orderToClose.id, note: closingNote.trim() || undefined } });
       if (error) throw error;
-
-      const result = data as { 
-        ok?: boolean;
-        success?: boolean; 
-        error?: string;
-        code?: string;
-        message?: string;
-        delivery_note_sent?: boolean;
-      };
-      
-      // Handle both ok and success fields (backend uses ok)
-      const isSuccess = result?.ok || result?.success;
-      
-      if (!isSuccess) {
-        // Map error codes to Serbian messages
-        const errorMessages: Record<string, string> = {
-          'CLIENT_REQUIRED': 'Izaberi klijenta pre zatvaranja naloga.',
-          'FILM_COMPUTE_MISSING': 'Neka stavka nema izračunatu dužinu (m).',
-          'NO_ITEMS': 'Nalog mora da ima bar jednu stavku.',
-          'INVALID_DIMENSIONS': 'Neka stavka ima neispravne dimenzije.',
-          'PDF_GENERATION_FAILED': 'Greška pri generisanju PDF-a.',
-          'EMAIL_SEND_FAILED': 'Greška pri slanju email-a.',
-        };
-        
-        const errorMsg = result.code 
-          ? errorMessages[result.code] || `Greška pri zatvaranju naloga (kod: ${result.code})`
-          : result.error || "Greška pri zatvaranju naloga";
-        
-        throw new Error(errorMsg);
+      const result = data as { ok?: boolean; success?: boolean; error?: string; code?: string; delivery_note_sent?: boolean };
+      if (!(result?.ok || result?.success)) {
+        const errorMessages: Record<string, string> = { 'CLIENT_REQUIRED': 'Izaberi klijenta pre zatvaranja naloga.', 'FILM_COMPUTE_MISSING': 'Neka stavka nema izračunatu dužinu (m).', 'NO_ITEMS': 'Nalog mora da ima bar jednu stavku.', 'INVALID_DIMENSIONS': 'Neka stavka ima neispravne dimenzije.', 'PDF_GENERATION_FAILED': 'Greška pri generisanju PDF-a.', 'EMAIL_SEND_FAILED': 'Greška pri slanju email-a.' };
+        throw new Error(result.code ? errorMessages[result.code] || `Greška (kod: ${result.code})` : result.error || "Greška pri zatvaranju naloga");
       }
-
-      // Show appropriate toast based on delivery note status
-      if (result.delivery_note_sent) {
-        toast({
-          title: "Uspeh",
-          description: "Radni nalog je zatvoren i otpremnica je poslata.",
-        });
-      } else {
-        toast({
-          title: "Upozorenje",
-          description: "Nalog zatvoren, ali slanje otpremnice nije uspelo – pokušajte ponovo iz pregleda otpremnice.",
-          variant: "destructive",
-        });
-      }
-
+      toast({ title: result.delivery_note_sent ? "Uspeh" : "Upozorenje", description: result.delivery_note_sent ? "Radni nalog je zatvoren i otpremnica je poslata." : "Nalog zatvoren, ali slanje otpremnice nije uspelo.", variant: result.delivery_note_sent ? "default" : "destructive" });
       setCloseDialogOpen(false);
       setOrderToClose(null);
       setClosingNote("");
       fetchWorkOrders();
     } catch (error: any) {
-      toast({
-        title: "Greška",
-        description: error.message,
-        variant: "destructive",
-      });
+      toast({ title: "Greška", description: error.message, variant: "destructive" });
     } finally {
       setIsClosing(false);
     }
   };
 
+  // --- Selection handlers ---
   const toggleOrderSelection = (orderId: string, isOpen: boolean) => {
-    if (!isOpen) return; // Only allow selecting open orders
-    
-    setSelectedOrders(prev => {
-      const newSet = new Set(prev);
-      if (newSet.has(orderId)) {
-        newSet.delete(orderId);
-      } else {
-        newSet.add(orderId);
-      }
-      return newSet;
-    });
+    if (!isOpen) return;
+    setSelectedOrders(prev => { const n = new Set(prev); n.has(orderId) ? n.delete(orderId) : n.add(orderId); return n; });
   };
-
   const toggleAllOrders = () => {
-    const openOrders = filteredWorkOrders.filter(order => order.status === 'open');
-    if (selectedOrders.size === openOrders.length) {
-      setSelectedOrders(new Set());
-    } else {
-      setSelectedOrders(new Set(openOrders.map(order => order.id)));
-    }
+    const openOrders = filteredWorkOrders.filter(o => o.status === 'open');
+    setSelectedOrders(selectedOrders.size === openOrders.length ? new Set() : new Set(openOrders.map(o => o.id)));
   };
-
-  // Export selection functions
   const toggleExportOrderSelection = (orderId: string) => {
-    setExportSelectedOrders(prev => {
-      const newSet = new Set(prev);
-      if (newSet.has(orderId)) {
-        newSet.delete(orderId);
-      } else {
-        newSet.add(orderId);
-      }
-      return newSet;
-    });
+    setExportSelectedOrders(prev => { const n = new Set(prev); n.has(orderId) ? n.delete(orderId) : n.add(orderId); return n; });
   };
-
   const toggleAllExportOrders = () => {
-    if (exportSelectedOrders.size === filteredWorkOrders.length) {
-      setExportSelectedOrders(new Set());
-    } else {
-      setExportSelectedOrders(new Set(filteredWorkOrders.map(order => order.id)));
-    }
+    setExportSelectedOrders(exportSelectedOrders.size === filteredWorkOrders.length ? new Set() : new Set(filteredWorkOrders.map(o => o.id)));
   };
 
-  const handleExportToExcel = async () => {
-    if (exportSelectedOrders.size === 0) {
-      toast({
-        title: "Upozorenje",
-        description: "Odaberite barem jedan nalog za izvoz.",
-        variant: "destructive",
-      });
-      return;
-    }
-
-    setIsExporting(true);
-    try {
-      // Get selected orders from filtered list
-      const ordersToExport = filteredWorkOrders.filter(order => 
-        exportSelectedOrders.has(order.id)
-      );
-
-      // Fetch client PIBs first
-      const clientIds = [...new Set(ordersToExport.map(o => o.client_id).filter(Boolean))];
-      const { data: clients } = await supabase
-        .from('clients')
-        .select('id, pib')
-        .in('id', clientIds);
-      
-      const clientPibMap = new Map(clients?.map(c => [c.id, c.pib]) || []);
-
-      // Build export rows - each file/item gets its own row
-      const exportRows: any[] = [];
-
-      for (const order of ordersToExport) {
-        const baseRowData = {
-          "Broj naloga": order.display_order_number || order.order_number,
-          "Klijent": order.clients?.name || '',
-          "PIB klijenta": clientPibMap.get(order.client_id) || '',
-          "Tip": getOrderTypeLabel(order.order_type),
-          "Posao": order.job_name || '',
-          "Status": order.status === 'open' ? 'Otvoren' : 'Zatvoren',
-          "Datum kreiranja": format(new Date(order.created_at), 'dd.MM.yyyy'),
-          "Datum zatvaranja": order.closed_at ? format(new Date(order.closed_at), 'dd.MM.yyyy') : '',
-          "Napomena": order.notes || '',
-        };
-
-        if (order.order_type === 'ctp') {
-          const { data: files } = await supabase
-            .from('file_entries')
-            .select('filename, quantity, plate_formats(format_name)')
-            .eq('work_order_id', order.id);
-          
-          if (files && files.length > 0) {
-            for (const file of files) {
-              const formatName = (file.plate_formats as any)?.format_name || '';
-              exportRows.push({
-                ...baseRowData,
-                "Format": formatName,
-                "Fajl": file.filename,
-                "Količina": file.quantity || 0,
-                "Jedinica": 'ploča',
-              });
-            }
-          } else {
-            exportRows.push({
-              ...baseRowData,
-              "Format": '',
-              "Fajl": '',
-              "Količina": '',
-              "Jedinica": '',
-            });
-          }
-        } else if (order.order_type === 'film') {
-          const { data: films } = await supabase
-            .from('film_jobs')
-            .select('file_name, qty, computed_total_m')
-            .eq('work_order_id', order.id);
-          
-          if (films && films.length > 0) {
-            for (const film of films) {
-              exportRows.push({
-                ...baseRowData,
-                "Format": '',
-                "Fajl": film.file_name,
-                "Količina": (film.computed_total_m || 0).toFixed(2),
-                "Jedinica": 'm',
-              });
-            }
-          } else {
-            exportRows.push({
-              ...baseRowData,
-              "Format": '',
-              "Fajl": '',
-              "Količina": '',
-              "Jedinica": '',
-            });
-          }
-        } else if (order.order_type === 'digital') {
-          const { data: digitals } = await supabase
-            .from('digital_jobs')
-            .select('file_name, qty, computed_total_sheets, computed_color_clicks, computed_mono_clicks')
-            .eq('work_order_id', order.id);
-          
-          if (digitals && digitals.length > 0) {
-            for (const digital of digitals) {
-              const clicks = (digital.computed_color_clicks || 0) + (digital.computed_mono_clicks || 0);
-              exportRows.push({
-                ...baseRowData,
-                "Format": '',
-                "Fajl": digital.file_name,
-                "Količina": clicks,
-                "Jedinica": 'klikova',
-              });
-            }
-          } else {
-            exportRows.push({
-              ...baseRowData,
-              "Format": '',
-              "Fajl": '',
-              "Količina": '',
-              "Jedinica": '',
-            });
-          }
-        } else {
-          // Other order types
-          exportRows.push({
-            ...baseRowData,
-            "Format": '',
-            "Fajl": '',
-            "Količina": '',
-            "Jedinica": '',
-          });
-        }
-      }
-
-      // Create workbook
-      const wb = XLSX.utils.book_new();
-      const ws = XLSX.utils.json_to_sheet(exportRows);
-      
-      // Set column widths
-      ws['!cols'] = [
-        { wch: 15 },  // Broj naloga
-        { wch: 25 },  // Klijent
-        { wch: 12 },  // PIB
-        { wch: 10 },  // Tip
-        { wch: 20 },  // Posao
-        { wch: 10 },  // Status
-        { wch: 12 },  // Datum kreiranja
-        { wch: 12 },  // Datum zatvaranja
-        { wch: 30 },  // Napomena
-        { wch: 12 },  // Format
-        { wch: 40 },  // Fajl
-        { wch: 12 },  // Količina
-        { wch: 10 },  // Jedinica
-      ];
-      
-      XLSX.utils.book_append_sheet(wb, ws, "Nalozi");
-      
-      // Generate filename
-      const firstClientName = ordersToExport[0]?.clients?.name || 'Nalozi';
-      const exportDate = format(new Date(), 'dd.MM.yyyy');
-      const sanitizedClientName = firstClientName.replace(/[\\/:*?"<>|]/g, '_');
-      const filename = `${sanitizedClientName}_${exportDate}`;
-      
-      XLSX.writeFile(wb, `${filename}.xlsx`);
-      
-      toast({
-        title: "Uspešno",
-        description: `Izvezeno ${exportRows.length} stavki u Excel.`,
-      });
-      
-      // Clear selection after export
-      setExportSelectedOrders(new Set());
-    } catch (error: any) {
-      console.error("Export error:", error);
-      toast({
-        title: "Greška",
-        description: "Greška pri izvozu u Excel.",
-        variant: "destructive",
-      });
-    } finally {
-      setIsExporting(false);
-    }
-  };
-
-  const handleBulkClose = () => {
-    if (selectedOrders.size === 0) return;
-    setBulkResults(null);
-    setBulkCloseDialogOpen(true);
-  };
-
+  // --- Bulk close ---
+  const handleBulkClose = () => { if (selectedOrders.size === 0) return; setBulkResults(null); setBulkCloseDialogOpen(true); };
   const confirmBulkClose = async () => {
     const orderIds = Array.from(selectedOrders);
     setBulkClosingTotal(orderIds.length);
     setBulkClosingProgress(0);
-
-    let closed = 0;
-    let alreadyClosed = 0;
-    let errors = 0;
-
+    let closed = 0, alreadyClosed = 0, errors = 0;
     for (let i = 0; i < orderIds.length; i++) {
       try {
-        const { data, error } = await supabase.functions.invoke('close-work-order', {
-          body: {
-            work_order_id: orderIds[i],
-            note: closingNote.trim() || undefined
-          }
-        });
-
+        const { data, error } = await supabase.functions.invoke('close-work-order', { body: { work_order_id: orderIds[i], note: closingNote.trim() || undefined } });
         if (error) throw error;
-
         const result = data as { success: boolean; error?: string };
-        
-        if (result?.success) {
-          closed++;
-        } else if (result?.error?.includes('već zatvoren')) {
-          alreadyClosed++;
-        } else {
-          errors++;
-        }
-      } catch (error: any) {
-        if (error.message?.includes('već zatvoren')) {
-          alreadyClosed++;
-        } else {
-          errors++;
-        }
-      }
-
+        if (result?.success) closed++; else if (result?.error?.includes('već zatvoren')) alreadyClosed++; else errors++;
+      } catch (error: any) { error.message?.includes('već zatvoren') ? alreadyClosed++ : errors++; }
       setBulkClosingProgress(i + 1);
     }
-
     setBulkResults({ closed, alreadyClosed, errors });
     setSelectedOrders(new Set());
     setClosingNote("");
     fetchWorkOrders();
   };
 
-  // Bulk invoice handlers
+  // --- Export handlers ---
+  const handleExportToExcel = async () => {
+    if (exportSelectedOrders.size === 0) { toast({ title: "Upozorenje", description: "Odaberite barem jedan nalog za izvoz.", variant: "destructive" }); return; }
+    setIsExporting(true);
+    try {
+      const ordersToExport = filteredWorkOrders.filter(o => exportSelectedOrders.has(o.id));
+      const clientIds = [...new Set(ordersToExport.map(o => o.client_id).filter(Boolean))];
+      const { data: clients } = await supabase.from('clients').select('id, pib').in('id', clientIds);
+      const clientPibMap = new Map(clients?.map(c => [c.id, c.pib]) || []);
+      const exportRows: any[] = [];
+      for (const order of ordersToExport) {
+        const base = {
+          "Broj naloga": order.display_order_number || order.order_number, "Klijent": order.clients?.name || '', "PIB klijenta": clientPibMap.get(order.client_id) || '',
+          "Tip": getOrderTypeLabel(order.order_type), "Posao": order.job_name || '', "Status": order.status === 'open' ? 'Otvoren' : 'Zatvoren',
+          "Datum kreiranja": format(new Date(order.created_at), 'dd.MM.yyyy'), "Datum zatvaranja": order.closed_at ? format(new Date(order.closed_at), 'dd.MM.yyyy') : '', "Napomena": order.notes || '',
+        };
+        if (order.order_type === 'ctp') {
+          const { data: files } = await supabase.from('file_entries').select('filename, quantity, plate_formats(format_name)').eq('work_order_id', order.id);
+          if (files?.length) { for (const f of files) exportRows.push({ ...base, "Format": (f.plate_formats as any)?.format_name || '', "Fajl": f.filename, "Količina": f.quantity || 0, "Jedinica": 'ploča' }); }
+          else exportRows.push({ ...base, "Format": '', "Fajl": '', "Količina": '', "Jedinica": '' });
+        } else if (order.order_type === 'film') {
+          const { data: films } = await supabase.from('film_jobs').select('file_name, qty, computed_total_m').eq('work_order_id', order.id);
+          if (films?.length) { for (const f of films) exportRows.push({ ...base, "Format": '', "Fajl": f.file_name, "Količina": (f.computed_total_m || 0).toFixed(2), "Jedinica": 'm' }); }
+          else exportRows.push({ ...base, "Format": '', "Fajl": '', "Količina": '', "Jedinica": '' });
+        } else if (order.order_type === 'digital') {
+          const { data: digitals } = await supabase.from('digital_jobs').select('file_name, qty, computed_total_sheets, computed_color_clicks, computed_mono_clicks').eq('work_order_id', order.id);
+          if (digitals?.length) { for (const d of digitals) exportRows.push({ ...base, "Format": '', "Fajl": d.file_name, "Količina": (d.computed_color_clicks || 0) + (d.computed_mono_clicks || 0), "Jedinica": 'klikova' }); }
+          else exportRows.push({ ...base, "Format": '', "Fajl": '', "Količina": '', "Jedinica": '' });
+        } else { exportRows.push({ ...base, "Format": '', "Fajl": '', "Količina": '', "Jedinica": '' }); }
+      }
+      const wb = XLSX.utils.book_new();
+      const ws = XLSX.utils.json_to_sheet(exportRows);
+      ws['!cols'] = [{ wch: 15 }, { wch: 25 }, { wch: 12 }, { wch: 10 }, { wch: 20 }, { wch: 10 }, { wch: 12 }, { wch: 12 }, { wch: 30 }, { wch: 12 }, { wch: 40 }, { wch: 12 }, { wch: 10 }];
+      XLSX.utils.book_append_sheet(wb, ws, "Nalozi");
+      const firstClientName = ordersToExport[0]?.clients?.name || 'Nalozi';
+      XLSX.writeFile(wb, `${firstClientName.replace(/[\\/:*?"<>|]/g, '_')}_${format(new Date(), 'dd.MM.yyyy')}.xlsx`);
+      toast({ title: "Uspešno", description: `Izvezeno ${exportRows.length} stavki u Excel.` });
+      setExportSelectedOrders(new Set());
+    } catch (error: any) {
+      toast({ title: "Greška", description: "Greška pri izvozu u Excel.", variant: "destructive" });
+    } finally { setIsExporting(false); }
+  };
+
+  const handleExportToMinimaxXml = async () => {
+    if (exportSelectedOrders.size === 0) { toast({ title: "Upozorenje", description: "Odaberite barem jedan nalog za izvoz u Minimax.", variant: "destructive" }); return; }
+    const selectedOrderIds = Array.from(exportSelectedOrders);
+    const validCtpOrders = workOrders.filter(o => selectedOrderIds.includes(o.id) && o.order_type === 'ctp' && o.status === 'closed');
+    const validFilmOrders = workOrders.filter(o => selectedOrderIds.includes(o.id) && o.order_type === 'film' && o.status === 'closed');
+    if (validCtpOrders.length === 0 && validFilmOrders.length === 0) { toast({ title: "Upozorenje", description: "Nema zatvorenih CTP ili Film naloga za Minimax izvoz.", variant: "destructive" }); return; }
+    setIsExportingXml(true);
+    try {
+      let totalExported = 0, totalSkipped = 0;
+      const allErrors: string[] = [];
+      if (validCtpOrders.length > 0) { const r = await exportBatchToMinimax(validCtpOrders.map(o => o.id)); if (r.success) { totalExported += r.exportedCount; totalSkipped += r.skippedCount; } else allErrors.push(...r.errors); }
+      if (validFilmOrders.length > 0) { const r = await exportFilmBatchToMinimax(validFilmOrders.map(o => o.id)); if (r.success) { totalExported += r.exportedCount; totalSkipped += r.skippedCount; } else allErrors.push(...r.errors); }
+      if (totalExported > 0) {
+        const types: string[] = [];
+        if (validCtpOrders.length > 0) types.push(`${validCtpOrders.length} CTP`);
+        if (validFilmOrders.length > 0) types.push(`${validFilmOrders.length} Film`);
+        toast({ title: "Uspešno", description: `Izvezeno ${types.join(" i ")} naloga u Minimax XML.${totalSkipped > 0 ? ` Preskočeno: ${totalSkipped}` : ''}` });
+        setExportSelectedOrders(new Set());
+      } else { toast({ title: "Greška", description: allErrors.join(", ") || "Greška pri izvozu.", variant: "destructive" }); }
+    } catch (error: any) { toast({ title: "Greška", description: error.message || "Greška pri izvozu u Minimax XML.", variant: "destructive" }); }
+    finally { setIsExportingXml(false); }
+  };
+
   const handleBulkInvoice = () => {
-    if (exportSelectedOrders.size === 0) {
-      toast({
-        title: "Upozorenje",
-        description: "Odaberite barem jedan nalog za fakturisanje.",
-        variant: "destructive",
-      });
-      return;
-    }
+    if (exportSelectedOrders.size === 0) { toast({ title: "Upozorenje", description: "Odaberite barem jedan nalog za fakturisanje.", variant: "destructive" }); return; }
     setBulkInvoiceDialogOpen(true);
   };
 
@@ -912,87 +354,34 @@ const WorkOrders = () => {
     setIsInvoicing(true);
     try {
       const orderIds = Array.from(exportSelectedOrders);
-      const now = new Date().toISOString();
-      
-      const { error } = await supabase
-        .from('work_orders')
-        .update({
-          invoiced_at: now,
-          invoice_number: invoiceNumber || null,
-        })
-        .in('id', orderIds);
-
+      const { error } = await supabase.from('work_orders').update({ invoiced_at: new Date().toISOString(), invoice_number: invoiceNumber || null }).in('id', orderIds);
       if (error) throw error;
-
-      toast({
-        title: "Uspešno",
-        description: `${orderIds.length} ${orderIds.length === 1 ? 'nalog označen' : 'naloga označeno'} kao fakturisano.`,
-      });
-
+      toast({ title: "Uspešno", description: `${orderIds.length} ${orderIds.length === 1 ? 'nalog označen' : 'naloga označeno'} kao fakturisano.` });
       setBulkInvoiceDialogOpen(false);
       setExportSelectedOrders(new Set());
       fetchWorkOrders();
-    } catch (error: any) {
-      toast({
-        title: "Greška",
-        description: error.message,
-        variant: "destructive",
-      });
-    } finally {
-      setIsInvoicing(false);
-    }
+    } catch (error: any) { toast({ title: "Greška", description: error.message, variant: "destructive" }); }
+    finally { setIsInvoicing(false); }
   };
 
-  // Batch PDF download handler — chunks into groups of 10 to avoid edge function CPU limits
   const handleBatchPdfDownload = async () => {
-    if (exportSelectedOrders.size === 0) {
-      toast({ title: "Upozorenje", description: "Odaberite barem jedan nalog.", variant: "destructive" });
-      return;
-    }
-
+    if (exportSelectedOrders.size === 0) { toast({ title: "Upozorenje", description: "Odaberite barem jedan nalog.", variant: "destructive" }); return; }
     setIsExportingPdf(true);
     try {
       const { data: { session } } = await supabase.auth.getSession();
       if (!session) throw new Error("Niste prijavljeni");
-
       const allIds = Array.from(exportSelectedOrders);
       const CHUNK_SIZE = 10;
       const chunks: string[][] = [];
-      for (let i = 0; i < allIds.length; i += CHUNK_SIZE) {
-        chunks.push(allIds.slice(i, i + CHUNK_SIZE));
-      }
-
+      for (let i = 0; i < allIds.length; i += CHUNK_SIZE) chunks.push(allIds.slice(i, i + CHUNK_SIZE));
       const { PDFDocument } = await import("pdf-lib");
       const mergedPdf = await PDFDocument.create();
-      let totalSuccess = 0;
-      let totalErrors = 0;
-
+      let totalSuccess = 0, totalErrors = 0;
       for (let ci = 0; ci < chunks.length; ci++) {
         const chunk = chunks[ci];
-        toast({
-          title: "Generisanje PDF-a",
-          description: `Obrađujem grupu ${ci + 1}/${chunks.length} (${chunk.length} naloga)...`,
-        });
-
-        const response = await fetch(
-          `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/batch-delivery-notes-pdf`,
-          {
-            method: "POST",
-            headers: {
-              "Authorization": `Bearer ${session.access_token}`,
-              "Content-Type": "application/json",
-            },
-            body: JSON.stringify({ work_order_ids: chunk }),
-          }
-        );
-
-        if (!response.ok) {
-          const errorData = await response.json().catch(() => ({}));
-          console.error(`Chunk ${ci + 1} failed:`, errorData);
-          totalErrors += chunk.length;
-          continue;
-        }
-
+        toast({ title: "Generisanje PDF-a", description: `Obrađujem grupu ${ci + 1}/${chunks.length} (${chunk.length} naloga)...` });
+        const response = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/batch-delivery-notes-pdf`, { method: "POST", headers: { "Authorization": `Bearer ${session.access_token}`, "Content-Type": "application/json" }, body: JSON.stringify({ work_order_ids: chunk }) });
+        if (!response.ok) { totalErrors += chunk.length; continue; }
         const pdfBytes = new Uint8Array(await response.arrayBuffer());
         const chunkPdf = await PDFDocument.load(pdfBytes);
         const pages = await mergedPdf.copyPages(chunkPdf, chunkPdf.getPageIndices());
@@ -1000,169 +389,41 @@ const WorkOrders = () => {
         totalSuccess += Number(response.headers.get('X-Success-Count') || chunk.length);
         totalErrors += Number(response.headers.get('X-Error-Count') || 0);
       }
-
-      if (mergedPdf.getPageCount() === 0) {
-        throw new Error("Nijedna otpremnica nije generisana.");
-      }
-
+      if (mergedPdf.getPageCount() === 0) throw new Error("Nijedna otpremnica nije generisana.");
       const finalBytes = await mergedPdf.save() as unknown as ArrayBuffer;
       const blob = new Blob([finalBytes], { type: 'application/pdf' });
       const url = URL.createObjectURL(blob);
       const link = document.createElement('a');
-      link.href = url;
-      link.download = `Otpremnice-${allIds.length}-naloga.pdf`;
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
-      URL.revokeObjectURL(url);
-
-      toast({
-        title: "PDF preuzet",
-        description: `Generisano ${totalSuccess} otpremnica.${totalErrors > 0 ? ` ${totalErrors} grešaka.` : ''}`,
-      });
-    } catch (error: any) {
-      console.error("Batch PDF error:", error);
-      toast({ title: "Greška", description: error.message, variant: "destructive" });
-    } finally {
-      setIsExportingPdf(false);
-    }
+      link.href = url; link.download = `Otpremnice-${allIds.length}-naloga.pdf`;
+      document.body.appendChild(link); link.click(); document.body.removeChild(link); URL.revokeObjectURL(url);
+      toast({ title: "PDF preuzet", description: `Generisano ${totalSuccess} otpremnica.${totalErrors > 0 ? ` ${totalErrors} grešaka.` : ''}` });
+    } catch (error: any) { toast({ title: "Greška", description: error.message, variant: "destructive" }); }
+    finally { setIsExportingPdf(false); }
   };
 
-  // Batch Minimax XML export handler
-  const handleExportToMinimaxXml = async () => {
-    if (exportSelectedOrders.size === 0) {
-      toast({
-        title: "Upozorenje",
-        description: "Odaberite barem jedan nalog za izvoz u Minimax.",
-        variant: "destructive",
-      });
-      return;
-    }
-
-    const selectedOrderIds = Array.from(exportSelectedOrders);
-    
-    // Check what types of closed orders we have
-    const validCtpOrders = workOrders.filter(
-      o => selectedOrderIds.includes(o.id) && 
-           o.order_type === 'ctp' && 
-           o.status === 'closed'
-    );
-    
-    const validFilmOrders = workOrders.filter(
-      o => selectedOrderIds.includes(o.id) && 
-           o.order_type === 'film' && 
-           o.status === 'closed'
-    );
-
-    // If no valid orders of either type
-    if (validCtpOrders.length === 0 && validFilmOrders.length === 0) {
-      toast({
-        title: "Upozorenje",
-        description: "Nema zatvorenih CTP ili Film naloga među odabranim za Minimax izvoz.",
-        variant: "destructive",
-      });
-      return;
-    }
-
-    setIsExportingXml(true);
-    try {
-      let totalExported = 0;
-      let totalSkipped = 0;
-      const allErrors: string[] = [];
-
-      // Export CTP orders if any
-      if (validCtpOrders.length > 0) {
-        const ctpResult = await exportBatchToMinimax(validCtpOrders.map(o => o.id));
-        if (ctpResult.success) {
-          totalExported += ctpResult.exportedCount;
-          totalSkipped += ctpResult.skippedCount;
-        } else {
-          allErrors.push(...ctpResult.errors);
-        }
-      }
-
-      // Export Film orders if any
-      if (validFilmOrders.length > 0) {
-        const filmResult = await exportFilmBatchToMinimax(validFilmOrders.map(o => o.id));
-        if (filmResult.success) {
-          totalExported += filmResult.exportedCount;
-          totalSkipped += filmResult.skippedCount;
-        } else {
-          allErrors.push(...filmResult.errors);
-        }
-      }
-
-      if (totalExported > 0) {
-        const types: string[] = [];
-        if (validCtpOrders.length > 0) types.push(`${validCtpOrders.length} CTP`);
-        if (validFilmOrders.length > 0) types.push(`${validFilmOrders.length} Film`);
-        
-        toast({
-          title: "Uspešno",
-          description: `Izvezeno ${types.join(" i ")} naloga u Minimax XML.${totalSkipped > 0 ? ` Preskočeno: ${totalSkipped}` : ''}`,
-        });
-        setExportSelectedOrders(new Set());
-      } else {
-        toast({
-          title: "Greška",
-          description: allErrors.join(", ") || "Greška pri izvozu.",
-          variant: "destructive",
-        });
-      }
-    } catch (error: any) {
-      toast({
-        title: "Greška",
-        description: error.message || "Greška pri izvozu u Minimax XML.",
-        variant: "destructive",
-      });
-    } finally {
-      setIsExportingXml(false);
-    }
-  };
-
-  if (loading) {
-    return <div className="flex items-center justify-center min-h-screen">Učitavanje...</div>;
-  }
+  if (loading) return <div className="flex items-center justify-center min-h-screen"><Loader2 className="h-8 w-8 animate-spin text-muted-foreground" /></div>;
 
   return (
     <div className="min-h-screen bg-background">
       <header className="border-b bg-card sticky top-0 z-50">
         <div className="container mx-auto px-4 py-4 flex justify-between items-center">
           <div className="flex items-center gap-4">
-            <Button variant="ghost" size="icon" onClick={() => navigate("/dashboard")}>
-              <ArrowLeft className="h-5 w-5" />
-            </Button>
-            <img 
-              src="/gama-united-logo.svg" 
-              alt="Gama United" 
-              className="h-10 md:h-14 cursor-pointer hidden sm:block" 
-              onClick={() => navigate("/dashboard")}
-            />
+            <Button variant="ghost" size="icon" onClick={() => navigate("/dashboard")}><ArrowLeft className="h-5 w-5" /></Button>
+            <img src="/gama-united-logo.svg" alt="Gama United" className="h-10 md:h-14 cursor-pointer hidden sm:block" onClick={() => navigate("/dashboard")} />
             <h1 className="text-2xl font-bold">Radni nalozi</h1>
           </div>
           <div className="flex items-center gap-2">
             <PriorityNotificationBell />
-            <Button variant="outline" size="sm" onClick={() => navigate("/checklist")}>
-              Checklist
-            </Button>
-            <Button variant="outline" size="sm" onClick={() => navigate("/checklist?tab=pretraga")}>
-              Pretraga i statistika
-            </Button>
-            <Button onClick={() => navigate("/work-orders/new")}>
-              <Plus className="h-4 w-4 mr-2" />
-              Novi nalog
-            </Button>
+            <Button variant="outline" size="sm" onClick={() => navigate("/checklist")}>Checklist</Button>
+            <Button variant="outline" size="sm" onClick={() => navigate("/checklist?tab=pretraga")}>Pretraga i statistika</Button>
+            <Button onClick={() => navigate("/work-orders/new")}><Plus className="h-4 w-4 mr-2" />Novi nalog</Button>
           </div>
         </div>
       </header>
 
       <main className="mx-auto px-4 py-8 max-w-[1600px] space-y-4">
         <WorkOrderFilters filters={filters} onFiltersChange={handleFiltersChange} />
-        
-        {/* Film Stats Summary - shows when there are film orders in filtered results (admin/superuser only) */}
         {(isSuper || isAdmin) && <FilmStatsSummary workOrderIds={filmOrderIds} />}
-
-        {/* CTP Stats Summary - shows when there are CTP orders in filtered results (admin/superuser only) */}
         {(isSuper || isAdmin) && <CtpStatsSummary workOrderIds={ctpOrderIds} />}
 
         <Card>
@@ -1171,77 +432,18 @@ const WorkOrders = () => {
               <div className="flex items-center gap-2">
                 <FileText className="h-5 w-5" />
                 Radni nalozi
-                <Badge variant="outline" className="ml-2">
-                  {filteredWorkOrders.length} {filteredWorkOrders.length === 1 ? "nalog" : "naloga"}
-                </Badge>
-                {exportSelectedOrders.size > 0 && (
-                  <Badge variant="secondary" className="ml-1">
-                    {exportSelectedOrders.size} odabrano za izvoz
-                  </Badge>
-                )}
+                <Badge variant="outline" className="ml-2">{filteredWorkOrders.length} {filteredWorkOrders.length === 1 ? "nalog" : "naloga"}</Badge>
+                {exportSelectedOrders.size > 0 && <Badge variant="secondary" className="ml-1">{exportSelectedOrders.size} odabrano za izvoz</Badge>}
               </div>
               <div className="flex items-center gap-2">
-                {exportSelectedOrders.size > 0 && (
-                  <>
-                    <Button 
-                      onClick={handleExportToExcel} 
-                      variant="outline"
-                      disabled={isExporting}
-                    >
-                      {isExporting ? (
-                        <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                      ) : (
-                        <Download className="h-4 w-4 mr-2" />
-                      )}
-                      Excel ({exportSelectedOrders.size})
-                    </Button>
-                    {(isSuper || isAdminPlus) && (
-                      <Button 
-                        onClick={handleExportToMinimaxXml} 
-                        variant="outline"
-                        disabled={isExportingXml}
-                        title="Izvoz zatvorenih CTP naloga u Minimax XML"
-                      >
-                        {isExportingXml ? (
-                          <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                        ) : (
-                          <FileCode className="h-4 w-4 mr-2" />
-                        )}
-                        Minimax XML
-                      </Button>
-                    )}
-                    <Button 
-                      onClick={handleBulkInvoice} 
-                      variant="outline"
-                      disabled={isInvoicing}
-                    >
-                      {isInvoicing ? (
-                        <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                      ) : (
-                        <Receipt className="h-4 w-4 mr-2" />
-                      )}
-                      Fakturisano ({exportSelectedOrders.size})
-                    </Button>
-                    <Button 
-                      onClick={handleBatchPdfDownload} 
-                      variant="outline"
-                      disabled={isExportingPdf}
-                      title="Preuzmi sve otpremnice kao jedan PDF"
-                    >
-                      {isExportingPdf ? (
-                        <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                      ) : (
-                        <FileText className="h-4 w-4 mr-2" />
-                      )}
-                      PDF otpremnice ({exportSelectedOrders.size})
-                    </Button>
-                  </>
-                )}
+                <WorkOrderExportActions
+                  selectedCount={exportSelectedOrders.size}
+                  isExporting={isExporting} isExportingXml={isExportingXml} isExportingPdf={isExportingPdf} isInvoicing={isInvoicing}
+                  isSuper={isSuper} isAdminPlus={isAdminPlus}
+                  onExportExcel={handleExportToExcel} onExportMinimaxXml={handleExportToMinimaxXml} onBulkInvoice={handleBulkInvoice} onBatchPdf={handleBatchPdfDownload}
+                />
                 {(isSuper || isAdmin) && selectedOrders.size > 0 && (
-                  <Button onClick={handleBulkClose} variant="default">
-                    <CheckCircle2 className="h-4 w-4 mr-2" />
-                    Zatvori odabrane ({selectedOrders.size})
-                  </Button>
+                  <Button onClick={handleBulkClose} variant="default"><CheckCircle2 className="h-4 w-4 mr-2" />Zatvori odabrane ({selectedOrders.size})</Button>
                 )}
               </div>
             </CardTitle>
@@ -1257,20 +459,11 @@ const WorkOrders = () => {
                 <TableHeader>
                   <TableRow>
                     <TableHead className="w-12">
-                      <Checkbox
-                        checked={exportSelectedOrders.size > 0 && exportSelectedOrders.size === filteredWorkOrders.length}
-                        onCheckedChange={toggleAllExportOrders}
-                        title="Odaberi sve za izvoz"
-                      />
+                      <Checkbox checked={exportSelectedOrders.size > 0 && exportSelectedOrders.size === filteredWorkOrders.length} onCheckedChange={toggleAllExportOrders} title="Odaberi sve za izvoz" />
                     </TableHead>
                     {(isSuper || isAdmin) && (
                       <TableHead className="w-12">
-                        <Checkbox
-                          checked={selectedOrders.size > 0 && selectedOrders.size === filteredWorkOrders.filter(o => o.status === 'open').length}
-                          onCheckedChange={toggleAllOrders}
-                          disabled={filteredWorkOrders.filter(o => o.status === 'open').length === 0}
-                          title="Odaberi sve za zatvaranje"
-                        />
+                        <Checkbox checked={selectedOrders.size > 0 && selectedOrders.size === filteredWorkOrders.filter(o => o.status === 'open').length} onCheckedChange={toggleAllOrders} disabled={filteredWorkOrders.filter(o => o.status === 'open').length === 0} title="Odaberi sve za zatvaranje" />
                       </TableHead>
                     )}
                     <SortableHead field="order_number" label="Broj naloga" sortField={sortField} sortDirection={sortDirection} onSort={handleSort} />
@@ -1287,186 +480,18 @@ const WorkOrders = () => {
                 </TableHeader>
                 <TableBody>
                   {filteredWorkOrders.map((order) => (
-                    <TableRow
+                    <WorkOrderTableRow
                       key={order.id}
-                      className="cursor-pointer hover:bg-muted/50"
-                      onClick={() => navigate(`/work-orders/${order.id}`)}
-                    >
-                      <TableCell onClick={(e) => e.stopPropagation()}>
-                        <Checkbox
-                          checked={exportSelectedOrders.has(order.id)}
-                          onCheckedChange={() => toggleExportOrderSelection(order.id)}
-                          title="Odaberi za izvoz"
-                        />
-                      </TableCell>
-                      {(isSuper || isAdmin) && (
-                        <TableCell onClick={(e) => e.stopPropagation()}>
-                          <Checkbox
-                            checked={selectedOrders.has(order.id)}
-                            onCheckedChange={() => toggleOrderSelection(order.id, order.status === 'open')}
-                            disabled={order.status === 'closed'}
-                            title="Odaberi za zatvaranje"
-                          />
-                        </TableCell>
-                      )}
-                      <TableCell className="font-medium">
-                        <div className="flex items-center gap-2">
-                          <span>{displayOrderNumber(order)}</span>
-                          {order.invoiced_at && (
-                            <TooltipProvider>
-                              <Tooltip>
-                                <TooltipTrigger asChild>
-                                  <FileCheck className="h-4 w-4 text-primary" />
-                                </TooltipTrigger>
-                                <TooltipContent>
-                                  Fakturisano: {order.invoice_number || 'Da'}
-                                </TooltipContent>
-                              </Tooltip>
-                            </TooltipProvider>
-                          )}
-                        </div>
-                        {order.invalid_reason && (
-                          <span className="text-xs text-destructive block mt-1">
-                            Razlog: {order.invalid_reason}
-                          </span>
-                        )}
-                      </TableCell>
-                      <TableCell>{order.clients?.name}</TableCell>
-                      <TableCell>{getOrderTypeLabel(order.order_type)}</TableCell>
-                      <TableCell className="text-right font-medium">
-                        {getOrderQuantity(order)}
-                      </TableCell>
-                      <TableCell>{getStatusBadge(order.status, order.invalidated_at, order.deleted_at)}</TableCell>
-                      <TableCell>{order.profiles?.full_name || '-'}</TableCell>
-                      <TableCell>{getClosedByDisplay(order)}</TableCell>
-                      <TableCell>{new Date(order.created_at).toLocaleDateString('sr-RS')}</TableCell>
-                      <TableCell>
-                        <div className="flex justify-end gap-1">
-                          <TooltipProvider>
-                            <Tooltip>
-                              <TooltipTrigger asChild>
-                                <Button
-                                  variant="ghost"
-                                  size="icon"
-                                  onClick={(e) => {
-                                    e.stopPropagation();
-                                    window.open(`/work-orders/${order.id}/print`, '_blank');
-                                  }}
-                                >
-                                  <Eye className="h-4 w-4" />
-                                </Button>
-                              </TooltipTrigger>
-                              <TooltipContent>Prikaz</TooltipContent>
-                            </Tooltip>
-                          </TooltipProvider>
-                          
-                          <TooltipProvider>
-                            <Tooltip>
-                              <TooltipTrigger asChild>
-                                <Button
-                                  variant="ghost"
-                                  size="icon"
-                                  onClick={(e) => handleSendDeliveryNote(order.id, e)}
-                                >
-                                  <Send className="h-4 w-4" />
-                                </Button>
-                              </TooltipTrigger>
-                              <TooltipContent>Otpremnica</TooltipContent>
-                            </Tooltip>
-                          </TooltipProvider>
-                          
-                          {order.status === 'open' && !order.invalidated_at && (
-                            <TooltipProvider>
-                              <Tooltip>
-                                <TooltipTrigger asChild>
-                                  <Button
-                                    variant="ghost"
-                                    size="icon"
-                                    onClick={(e) => {
-                                      e.stopPropagation();
-                                      navigate(`/work-orders/${order.id}/edit`);
-                                    }}
-                                  >
-                                    <Pencil className="h-4 w-4" />
-                                  </Button>
-                                </TooltipTrigger>
-                                <TooltipContent>Izmeni</TooltipContent>
-                              </Tooltip>
-                            </TooltipProvider>
-                          )}
-                          
-                          {(isAdmin || isSuper) && !order.invalidated_at && !order.deleted_at && (
-                            <TooltipProvider>
-                              <Tooltip>
-                                <TooltipTrigger asChild>
-                                  <Button
-                                    variant="ghost"
-                                    size="icon"
-                                    onClick={(e) => {
-                                      e.stopPropagation();
-                                      setOrderToInvalidate(order);
-                                      setInvalidateDialogOpen(true);
-                                    }}
-                                  >
-                                    <AlertTriangle className="h-4 w-4" />
-                                  </Button>
-                                </TooltipTrigger>
-                                <TooltipContent>Nevažeći</TooltipContent>
-                              </Tooltip>
-                            </TooltipProvider>
-                          )}
-                          
-                          {isSuper && !order.deleted_at && (
-                            <TooltipProvider>
-                              <Tooltip>
-                                <TooltipTrigger asChild>
-                                  <Button
-                                    variant="ghost"
-                                    size="icon"
-                                    onClick={(e) => {
-                                      e.stopPropagation();
-                                      setOrderToDelete(order);
-                                      setDeleteDialogOpen(true);
-                                    }}
-                                    className="text-destructive hover:text-destructive"
-                                  >
-                                    <Trash2 className="h-4 w-4" />
-                                  </Button>
-                                </TooltipTrigger>
-                                <TooltipContent>Obriši</TooltipContent>
-                              </Tooltip>
-                            </TooltipProvider>
-                          )}
-                        </div>
-                      </TableCell>
-                      {(isSuper || isAdmin) && (
-                        <TableCell className="text-center">
-                          <TooltipProvider>
-                            <Tooltip>
-                              <TooltipTrigger asChild>
-                                <div className="inline-block">
-                                  <Button
-                                    variant="default"
-                                    size="sm"
-                                    disabled={order.status === 'closed' || order.invalidated_at}
-                                    onClick={(e) => handleCloseOrder(order, e)}
-                                  >
-                                    {order.status === 'closed' && <Lock className="h-4 w-4 mr-2" />}
-                                    {order.invalidated_at && <AlertTriangle className="h-4 w-4 mr-2" />}
-                                    Zatvori
-                                  </Button>
-                                </div>
-                              </TooltipTrigger>
-                              {(order.status === 'closed' || order.invalidated_at) && (
-                                <TooltipContent>
-                                  <p>{order.status === 'closed' ? 'Nalog je već zatvoren' : 'Nalog je nevažeći'}</p>
-                                </TooltipContent>
-                              )}
-                            </Tooltip>
-                          </TooltipProvider>
-                        </TableCell>
-                      )}
-                    </TableRow>
+                      order={order}
+                      isSuper={isSuper} isAdmin={isAdmin}
+                      exportSelected={exportSelectedOrders.has(order.id)}
+                      closeSelected={selectedOrders.has(order.id)}
+                      onToggleExport={toggleExportOrderSelection}
+                      onToggleClose={toggleOrderSelection}
+                      onCloseOrder={handleCloseOrder}
+                      onInvalidate={(o) => { setOrderToInvalidate(o); setInvalidateDialogOpen(true); }}
+                      onDelete={(o) => { setOrderToDelete(o); setDeleteDialogOpen(true); }}
+                    />
                   ))}
                 </TableBody>
               </Table>
@@ -1475,141 +500,17 @@ const WorkOrders = () => {
         </Card>
       </main>
 
-      <OrderFilesDialog
-        orderId={selectedOrderId}
-        open={filesDialogOpen}
-        onOpenChange={setFilesDialogOpen}
+      <OrderFilesDialog orderId={selectedOrderId} open={filesDialogOpen} onOpenChange={setFilesDialogOpen} />
+      <InvalidateOrderDialog open={invalidateDialogOpen} onOpenChange={setInvalidateDialogOpen} order={orderToInvalidate} onSuccess={fetchWorkOrders} />
+      <DeleteOrderDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen} order={orderToDelete} onSuccess={fetchWorkOrders} />
+      <CloseOrderDialog open={closeDialogOpen} onOpenChange={setCloseDialogOpen} orderNumber={orderToClose?.order_number} closingNote={closingNote} onClosingNoteChange={setClosingNote} onConfirm={confirmCloseOrder} isClosing={isClosing} />
+      <BulkCloseDialog
+        open={bulkCloseDialogOpen} onOpenChange={setBulkCloseDialogOpen}
+        selectedCount={selectedOrders.size} closingNote={closingNote} onClosingNoteChange={setClosingNote}
+        onConfirm={confirmBulkClose} progress={bulkClosingProgress} total={bulkClosingTotal} results={bulkResults}
+        onDismissResults={() => { setBulkCloseDialogOpen(false); setBulkResults(null); setBulkClosingTotal(0); setBulkClosingProgress(0); }}
       />
-
-      <InvalidateOrderDialog
-        open={invalidateDialogOpen}
-        onOpenChange={setInvalidateDialogOpen}
-        order={orderToInvalidate}
-        onSuccess={fetchWorkOrders}
-      />
-
-      <DeleteOrderDialog
-        open={deleteDialogOpen}
-        onOpenChange={setDeleteDialogOpen}
-        order={orderToDelete}
-        onSuccess={fetchWorkOrders}
-      />
-
-      <AlertDialog open={closeDialogOpen} onOpenChange={setCloseDialogOpen}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>
-              Zatvori radni nalog {orderToClose?.order_number}?
-            </AlertDialogTitle>
-            <AlertDialogDescription>
-              Po zatvaranju biće generisana i automatski poslata otpremnica klijentu.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <div className="space-y-2 py-4">
-            <Label htmlFor="closing-note">Napomena za zatvaranje (opciono)</Label>
-            <Textarea
-              id="closing-note"
-              placeholder="Dodajte napomenu..."
-              value={closingNote}
-              onChange={(e) => setClosingNote(e.target.value)}
-              rows={3}
-            />
-          </div>
-          <AlertDialogFooter>
-            <AlertDialogCancel disabled={isClosing}>Otkaži</AlertDialogCancel>
-            <AlertDialogAction onClick={confirmCloseOrder} disabled={isClosing}>
-              {isClosing ? "Zatvaranje..." : "Zatvori nalog"}
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
-
-      <AlertDialog open={bulkCloseDialogOpen} onOpenChange={setBulkCloseDialogOpen}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>
-              Zatvori {selectedOrders.size} {selectedOrders.size === 1 ? 'nalog' : 'naloga'}?
-            </AlertDialogTitle>
-            <AlertDialogDescription>
-              Po zatvaranju biće generisane i automatski poslate otpremnice klijentima.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          
-          {bulkClosingTotal > 0 && !bulkResults && (
-            <div className="space-y-2 py-4">
-              <div className="flex justify-between text-sm">
-                <span>Zatvaranje naloga...</span>
-                <span>{bulkClosingProgress} / {bulkClosingTotal}</span>
-              </div>
-              <Progress value={(bulkClosingProgress / bulkClosingTotal) * 100} />
-            </div>
-          )}
-
-          {bulkResults && (
-            <div className="space-y-2 py-4">
-              <div className="rounded-md bg-muted p-4 space-y-1">
-                <p className="text-sm">
-                  ✅ Zatvoreno: <strong>{bulkResults.closed}</strong>
-                </p>
-                {bulkResults.alreadyClosed > 0 && (
-                  <p className="text-sm text-muted-foreground">
-                    ℹ️ Već zatvoreno: {bulkResults.alreadyClosed}
-                  </p>
-                )}
-                {bulkResults.errors > 0 && (
-                  <p className="text-sm text-destructive">
-                    ❌ Greške: {bulkResults.errors}
-                  </p>
-                )}
-              </div>
-            </div>
-          )}
-
-          {!bulkResults && (
-            <div className="space-y-2 py-4">
-              <Label htmlFor="bulk-closing-note">Napomena za zatvaranje (opciono)</Label>
-              <Textarea
-                id="bulk-closing-note"
-                placeholder="Dodajte napomenu..."
-                value={closingNote}
-                onChange={(e) => setClosingNote(e.target.value)}
-                rows={3}
-                disabled={bulkClosingTotal > 0}
-              />
-            </div>
-          )}
-
-          <AlertDialogFooter>
-            {bulkResults ? (
-              <AlertDialogCancel onClick={() => {
-                setBulkCloseDialogOpen(false);
-                setBulkResults(null);
-                setBulkClosingTotal(0);
-                setBulkClosingProgress(0);
-              }}>
-                Zatvori
-              </AlertDialogCancel>
-            ) : (
-              <>
-                <AlertDialogCancel disabled={bulkClosingTotal > 0}>Otkaži</AlertDialogCancel>
-                <AlertDialogAction 
-                  onClick={confirmBulkClose} 
-                  disabled={bulkClosingTotal > 0}
-                >
-                  {bulkClosingTotal > 0 ? "Zatvaranje..." : "Zatvori naloge"}
-                </AlertDialogAction>
-              </>
-            )}
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
-
-      <InvoiceDialog
-        open={bulkInvoiceDialogOpen}
-        onOpenChange={setBulkInvoiceDialogOpen}
-        onConfirm={confirmBulkInvoice}
-        isLoading={isInvoicing}
-      />
+      <InvoiceDialog open={bulkInvoiceDialogOpen} onOpenChange={setBulkInvoiceDialogOpen} onConfirm={confirmBulkInvoice} isLoading={isInvoicing} />
     </div>
   );
 };
