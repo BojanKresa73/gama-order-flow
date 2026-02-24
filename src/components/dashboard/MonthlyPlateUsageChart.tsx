@@ -7,7 +7,7 @@ import { Package, CheckCircle, Clock } from "lucide-react";
 
 export const MonthlyPlateUsageChart = () => {
   const { data, isLoading } = useQuery({
-    queryKey: ["monthly-plate-usage-chart-v5-rpc"],
+    queryKey: ["monthly-plate-usage-chart-v6-rpc"],
     staleTime: 300_000, // 5 minutes
     queryFn: async () => {
       const now = new Date();
