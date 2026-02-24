@@ -5,7 +5,10 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
-import { ArrowLeft, Plus, FileText, CheckCircle2, Loader2 } from "lucide-react";
+import { ArrowLeft, Plus, FileText, CheckCircle2 } from "lucide-react";
+import { useIsMobile } from "@/hooks/use-mobile";
+import { MobileOrderCard } from "@/components/work-orders/MobileOrderCard";
+import { PageSkeleton } from "@/components/ui/page-skeleton";
 import { PriorityNotificationBell } from "@/components/priority/PriorityNotificationBell";
 import * as XLSX from "xlsx";
 import { format } from "date-fns";
@@ -401,22 +404,24 @@ const WorkOrders = () => {
     finally { setIsExportingPdf(false); }
   };
 
-  if (loading) return <div className="flex items-center justify-center min-h-screen"><Loader2 className="h-8 w-8 animate-spin text-muted-foreground" /></div>;
+  const isMobile = useIsMobile();
+
+  if (loading) return <PageSkeleton />;
 
   return (
     <div className="min-h-screen bg-background">
       <header className="border-b bg-card sticky top-0 z-50">
-        <div className="container mx-auto px-4 py-4 flex justify-between items-center">
-          <div className="flex items-center gap-4">
+        <div className="container mx-auto px-3 md:px-4 py-3 md:py-4 flex justify-between items-center">
+          <div className="flex items-center gap-2 md:gap-4">
             <Button variant="ghost" size="icon" onClick={() => navigate("/dashboard")}><ArrowLeft className="h-5 w-5" /></Button>
             <img src="/gama-united-logo.svg" alt="Gama United" className="h-10 md:h-14 cursor-pointer hidden sm:block" onClick={() => navigate("/dashboard")} />
-            <h1 className="text-2xl font-bold">Radni nalozi</h1>
+            <h1 className="text-lg md:text-2xl font-bold">Radni nalozi</h1>
           </div>
           <div className="flex items-center gap-2">
             <PriorityNotificationBell />
-            <Button variant="outline" size="sm" onClick={() => navigate("/checklist")}>Checklist</Button>
-            <Button variant="outline" size="sm" onClick={() => navigate("/checklist?tab=pretraga")}>Pretraga i statistika</Button>
-            <Button onClick={() => navigate("/work-orders/new")}><Plus className="h-4 w-4 mr-2" />Novi nalog</Button>
+            <Button variant="outline" size="sm" className="hidden md:inline-flex" onClick={() => navigate("/checklist")}>Checklist</Button>
+            <Button variant="outline" size="sm" className="hidden md:inline-flex" onClick={() => navigate("/checklist?tab=pretraga")}>Pretraga i statistika</Button>
+            <Button size="sm" onClick={() => navigate("/work-orders/new")}><Plus className="h-4 w-4 mr-1 md:mr-2" /><span className="hidden sm:inline">Novi nalog</span><span className="sm:hidden">Novo</span></Button>
           </div>
         </div>
       </header>
@@ -453,6 +458,20 @@ const WorkOrders = () => {
               <div className="text-center py-12 text-muted-foreground">
                 <FileText className="h-12 w-12 mx-auto mb-4 opacity-50" />
                 <p>Nema radnih naloga za izabrane filtere.</p>
+              </div>
+            ) : isMobile ? (
+              <div className="space-y-0">
+                {filteredWorkOrders.map((order) => (
+                  <MobileOrderCard
+                    key={order.id}
+                    order={order}
+                    onView={(id) => navigate(`/work-orders/${id}`)}
+                    onDeliveryNote={(id) => navigate(`/work-orders/${id}/delivery-note`)}
+                    onEdit={(id) => navigate(`/work-orders/${id}/edit`)}
+                    onClose={(o) => handleCloseOrder(o, { stopPropagation: () => {} } as React.MouseEvent)}
+                    canClose={isSuper || isAdmin}
+                  />
+                ))}
               </div>
             ) : (
               <Table>
