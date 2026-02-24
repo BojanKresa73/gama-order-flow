@@ -29,51 +29,17 @@ export function ProcurementForecast({ plateFormats, orders }: ProcurementForecas
   const { data: monthlyData, isLoading: loadingMonthly } = useQuery({
     queryKey: ["monthly-consumption-by-format-v3"],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from("file_entries")
-        .select(`
-          quantity,
-          plate_format_id,
-          plate_formats(format_name),
-          work_orders!inner(status, order_type, closed_at, deleted_at)
-        `)
-        .eq("work_orders.order_type", "ctp")
-        .eq("work_orders.status", "closed")
-        .is("work_orders.deleted_at", null)
-        .not("work_orders.closed_at", "is", null)
-        .range(0, 49999); // Override default 1000 row limit
+      const { data, error } = await supabase.rpc("get_format_monthly_consumption");
 
       if (error) throw error;
       
-      // Group by month and format
-      const monthlyMap = new Map<string, Map<string, { total: number; formatId: string }>>();
-      
-      data?.forEach((row: any) => {
-        const closedAt = row.work_orders?.closed_at;
-        if (!closedAt) return;
-        
-        const date = new Date(closedAt);
-        const monthKey = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
-        const formatId = row.plate_format_id;
-        const qty = row.quantity || 0;
-        
-        if (!monthlyMap.has(monthKey)) {
-          monthlyMap.set(monthKey, new Map());
-        }
-        const formatMap = monthlyMap.get(monthKey)!;
-        const existing = formatMap.get(formatId) || { total: 0, formatId };
-        formatMap.set(formatId, { total: existing.total + qty, formatId });
-      });
-      
-      // Convert to array with month info
-      const result: { month: string; formatId: string; total: number }[] = [];
-      monthlyMap.forEach((formats, month) => {
-        formats.forEach(({ total, formatId }) => {
-          result.push({ month, formatId, total });
-        });
-      });
-      
-      return result.sort((a, b) => b.month.localeCompare(a.month));
+      // Data comes as array of { format_id, month, total }
+      const items = (data || []) as Array<{ format_id: string; month: string; total: number }>;
+      return items.map(item => ({
+        month: item.month.substring(0, 7), // "2026-02-01" -> "2026-02"
+        formatId: item.format_id,
+        total: item.total,
+      })).sort((a, b) => b.month.localeCompare(a.month));
     },
     staleTime: 60000,
   });

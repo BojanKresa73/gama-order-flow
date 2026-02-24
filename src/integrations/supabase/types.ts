@@ -3279,6 +3279,7 @@ export type Database = {
         Returns: Json
       }
       get_current_nbs_rate: { Args: { p_currency?: string }; Returns: number }
+      get_format_monthly_consumption: { Args: never; Returns: Json }
       get_monthly_plate_usage: {
         Args: { p_end: string; p_start: string }
         Returns: Json
