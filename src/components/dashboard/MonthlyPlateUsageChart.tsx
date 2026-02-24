@@ -7,63 +7,28 @@ import { Package, CheckCircle, Clock } from "lucide-react";
 
 export const MonthlyPlateUsageChart = () => {
   const { data, isLoading } = useQuery({
-    queryKey: ["monthly-plate-usage-chart-v4"],
+    queryKey: ["monthly-plate-usage-chart-v5-rpc"],
     staleTime: 300_000, // 5 minutes
     queryFn: async () => {
-      // Get current month start and end
       const now = new Date();
       const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1).toISOString();
       const endOfMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59).toISOString();
       
-      // Fetch ALL file_entries from CTP orders created this month
-      const { data: allEntries, error } = await supabase
-        .from("file_entries")
-        .select(`
-          quantity,
-          plate_formats(format_name),
-          work_orders!inner(status, order_type, created_at, deleted_at)
-        `)
-        .eq("work_orders.order_type", "ctp")
-        .is("work_orders.deleted_at", null)
-        .gte("work_orders.created_at", startOfMonth)
-        .lte("work_orders.created_at", endOfMonth)
-        .range(0, 49999);
+      const { data: result, error } = await supabase.rpc("get_monthly_plate_usage", {
+        p_start: startOfMonth,
+        p_end: endOfMonth,
+      });
 
       if (error) throw error;
-      if (!allEntries || allEntries.length === 0) {
+      if (!result) {
         return { chartData: [], totals: { total: 0, closed: 0, open: 0 } };
       }
 
-      // Calculate totals and aggregate by format
-      const formatMap = new Map<string, number>();
-      let totalPlates = 0;
-      let closedPlates = 0;
-      let openPlates = 0;
-      
-      allEntries.forEach(row => {
-        const format = (row.plate_formats as any)?.format_name || "Nepoznat";
-        const qty = row.quantity || 0;
-        const status = (row.work_orders as any)?.status;
-        
-        formatMap.set(format, (formatMap.get(format) || 0) + qty);
-        totalPlates += qty;
-        
-        if (status === "closed") {
-          closedPlates += qty;
-        } else {
-          openPlates += qty;
-        }
-      });
+      const parsed = result as any;
+      const totals = parsed.totals || { total: 0, closed: 0, open: 0 };
+      const chartData = (parsed.formats || []) as Array<{ name: string; value: number }>;
 
-      // Convert to pie chart format
-      const chartData = Array.from(formatMap.entries())
-        .map(([name, value]) => ({ name, value }))
-        .sort((a, b) => b.value - a.value);
-
-      return { 
-        chartData, 
-        totals: { total: totalPlates, closed: closedPlates, open: openPlates } 
-      };
+      return { chartData, totals };
     },
   });
 
