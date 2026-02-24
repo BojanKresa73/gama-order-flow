@@ -32,7 +32,8 @@ export function CtpStatsSummary({ workOrderIds }: CtpStatsSummaryProps) {
             format_name
           )
         `)
-        .in("work_order_id", workOrderIds);
+        .in("work_order_id", workOrderIds)
+        .range(0, 49999);
 
       if (error) throw error;
       return data || [];
