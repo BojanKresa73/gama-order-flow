@@ -3,6 +3,7 @@ import { Button } from "@/components/ui/button";
 import { CtpFiltersState } from "@/pages/CtpStats";
 import { Download, FileSpreadsheet, FileText, Loader2 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
+import { buildCtpRpcParams } from "@/lib/ctpRpcHelpers";
 import { toast } from "sonner";
 import * as XLSX from "xlsx";
 import { format } from "date-fns";
@@ -17,33 +18,14 @@ export const CtpExportButtons = ({ filters }: CtpExportButtonsProps) => {
   const [isExportingCSV, setIsExportingCSV] = useState(false);
 
   const fetchCtpData = async () => {
-    let query = supabase
-      .from("v_ctp_items" as any)
-      .select("work_order_id, work_order_number, client_name, plate_format_name, plates_qty, closed_on");
-
-    if (filters.dateRange.from) {
-      query = query.gte("closed_on", filters.dateRange.from.toISOString().split("T")[0]);
-    }
-    if (filters.dateRange.to) {
-      query = query.lte("closed_on", filters.dateRange.to.toISOString().split("T")[0]);
-    }
-    if (filters.clientIds.length > 0) {
-      query = query.in("client_id", filters.clientIds);
-    }
-    if (filters.plateFormatIds.length > 0) {
-      query = query.in("plate_format_id", filters.plateFormatIds);
-    }
-
-    const { data, error } = await query.range(0, 49999);
+    const { data, error } = await supabase.rpc("get_ctp_export_data", buildCtpRpcParams(filters));
     if (error) throw error;
-
-    return ((data || []) as unknown) as Array<{
-      work_order_id: string;
+    return (data || []) as Array<{
+      closed_on: string;
       work_order_number: string;
       client_name: string;
       plate_format_name: string;
       plates_qty: number;
-      closed_on: string;
     }>;
   };
 
@@ -85,7 +67,7 @@ export const CtpExportButtons = ({ filters }: CtpExportButtonsProps) => {
 
       // Calculate KPIs
       const totalPlates = data.reduce((sum, item) => sum + item.plates_qty, 0);
-      const uniqueOrders = new Set(data.map(item => item.work_order_id)).size;
+      const uniqueOrders = new Set(data.map(item => item.work_order_number)).size;
       const uniqueClients = new Set(data.map(item => item.client_name)).size;
       const avgPlatesPerOrder = uniqueOrders > 0 ? (totalPlates / uniqueOrders).toFixed(1) : "0.0";
 
@@ -124,7 +106,7 @@ export const CtpExportButtons = ({ filters }: CtpExportButtonsProps) => {
           clientStats[item.client_name] = { plates: 0, orders: new Set() };
         }
         clientStats[item.client_name].plates += item.plates_qty;
-        clientStats[item.client_name].orders.add(item.work_order_id);
+        clientStats[item.client_name].orders.add(item.work_order_number);
       });
 
       const topClients = Object.entries(clientStats)

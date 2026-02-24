@@ -4,6 +4,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { CtpFiltersState } from "@/pages/CtpStats";
+import { buildCtpRpcParams } from "@/lib/ctpRpcHelpers";
 import { FileText, Package, TrendingUp, Users } from "lucide-react";
 
 interface CtpStatsCardsProps {
@@ -11,85 +12,29 @@ interface CtpStatsCardsProps {
 }
 
 export const CtpStatsCards = ({ filters }: CtpStatsCardsProps) => {
-  const { data: rawData, isLoading } = useQuery({
-    queryKey: ["ctp-stats", filters],
+  const { data: stats, isLoading } = useQuery({
+    queryKey: ["ctp-stats-rpc", filters],
     queryFn: async () => {
-      // Build filter conditions for RPC or fetch all with proper limit
-      let query = supabase
-        .from("v_ctp_items" as any)
-        .select("work_order_id, client_id, plates_qty", { count: "exact" });
-
-      // Apply date range filter
-      if (filters.dateRange.from) {
-        query = query.gte("closed_on", filters.dateRange.from.toISOString().split("T")[0]);
-      }
-      if (filters.dateRange.to) {
-        query = query.lte("closed_on", filters.dateRange.to.toISOString().split("T")[0]);
-      }
-
-      // Apply client filter
-      if (filters.clientIds.length > 0) {
-        query = query.in("client_id", filters.clientIds);
-      }
-
-      // Apply plate format filter
-      if (filters.plateFormatIds.length > 0) {
-        query = query.in("plate_format_id", filters.plateFormatIds);
-      }
-
-      // IMPORTANT: Override default 1000 row limit to get ALL data for accurate stats
-      const { data, error, count } = await query.range(0, 49999);
-
+      const { data, error } = await supabase.rpc("get_ctp_stats", buildCtpRpcParams(filters));
       if (error) throw error;
-
-      return ((data || []) as unknown) as Array<{
-        work_order_id: string;
-        client_id: string;
-        plates_qty: number;
-      }>;
+      const parsed = data as any;
+      const totalPlates = parsed?.total_plates || 0;
+      const orderCount = parsed?.order_count || 0;
+      return {
+        totalPlates,
+        ordersCount: orderCount,
+        avgPlatesPerOrder: orderCount > 0 ? totalPlates / orderCount : 0,
+        clientsCount: parsed?.client_count || 0,
+      };
     },
     staleTime: 30000,
   });
 
-  // Memoize stats calculation
-  const stats = useMemo(() => {
-    if (!rawData) return null;
-
-    const totalPlates = rawData.reduce((sum, item) => sum + (item.plates_qty || 0), 0);
-    const uniqueOrders = new Set(rawData.map((item) => item.work_order_id)).size;
-    const uniqueClients = new Set(rawData.map((item) => item.client_id)).size;
-    const avgPlatesPerOrder = uniqueOrders > 0 ? totalPlates / uniqueOrders : 0;
-
-    return {
-      totalPlates,
-      ordersCount: uniqueOrders,
-      avgPlatesPerOrder,
-      clientsCount: uniqueClients,
-    };
-  }, [rawData]);
-
-  // Memoize cards array - MUST be before any early returns
   const cards = useMemo(() => [
-    {
-      title: "Ukupno ploča",
-      value: stats?.totalPlates || 0,
-      icon: Package,
-    },
-    {
-      title: "Broj CTP naloga",
-      value: stats?.ordersCount || 0,
-      icon: FileText,
-    },
-    {
-      title: "Prosečno ploča/nalog",
-      value: stats?.avgPlatesPerOrder?.toFixed(1) || "0.0",
-      icon: TrendingUp,
-    },
-    {
-      title: "Broj klijenata",
-      value: stats?.clientsCount || 0,
-      icon: Users,
-    },
+    { title: "Ukupno ploča", value: stats?.totalPlates || 0, icon: Package },
+    { title: "Broj CTP naloga", value: stats?.ordersCount || 0, icon: FileText },
+    { title: "Prosečno ploča/nalog", value: stats?.avgPlatesPerOrder?.toFixed(1) || "0.0", icon: TrendingUp },
+    { title: "Broj klijenata", value: stats?.clientsCount || 0, icon: Users },
   ], [stats]);
 
   if (isLoading) {

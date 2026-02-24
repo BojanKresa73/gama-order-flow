@@ -3224,6 +3224,60 @@ export type Database = {
         Returns: undefined
       }
       generate_order_number: { Args: never; Returns: string }
+      get_ctp_daily: {
+        Args: {
+          p_client_ids?: string[]
+          p_from: string
+          p_plate_format_ids?: string[]
+          p_to: string
+        }
+        Returns: Json
+      }
+      get_ctp_export_data: {
+        Args: {
+          p_client_ids?: string[]
+          p_from: string
+          p_plate_format_ids?: string[]
+          p_to: string
+        }
+        Returns: Json
+      }
+      get_ctp_formats: {
+        Args: {
+          p_client_ids?: string[]
+          p_from: string
+          p_plate_format_ids?: string[]
+          p_to: string
+        }
+        Returns: Json
+      }
+      get_ctp_stats: {
+        Args: {
+          p_client_ids?: string[]
+          p_from: string
+          p_plate_format_ids?: string[]
+          p_to: string
+        }
+        Returns: Json
+      }
+      get_ctp_top_clients: {
+        Args: {
+          p_client_ids?: string[]
+          p_from: string
+          p_plate_format_ids?: string[]
+          p_to: string
+        }
+        Returns: Json
+      }
+      get_ctp_top_formats: {
+        Args: {
+          p_client_ids?: string[]
+          p_from: string
+          p_plate_format_ids?: string[]
+          p_to: string
+        }
+        Returns: Json
+      }
       get_current_nbs_rate: { Args: { p_currency?: string }; Returns: number }
       get_monthly_plate_usage: {
         Args: { p_end: string; p_start: string }
