@@ -3225,6 +3225,10 @@ export type Database = {
       }
       generate_order_number: { Args: never; Returns: string }
       get_current_nbs_rate: { Args: { p_currency?: string }; Returns: number }
+      get_monthly_plate_usage: {
+        Args: { p_end: string; p_start: string }
+        Returns: Json
+      }
       get_orders_by_type: {
         Args: never
         Returns: {
