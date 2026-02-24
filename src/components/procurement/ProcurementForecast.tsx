@@ -41,7 +41,7 @@ export function ProcurementForecast({ plateFormats, orders }: ProcurementForecas
         .eq("work_orders.status", "closed")
         .is("work_orders.deleted_at", null)
         .not("work_orders.closed_at", "is", null)
-        .limit(10000); // Avoid default 1000 row limit
+        .range(0, 49999); // Override default 1000 row limit
 
       if (error) throw error;
       
@@ -86,7 +86,8 @@ export function ProcurementForecast({ plateFormats, orders }: ProcurementForecas
         .from("inventory_history")
         .select("plate_format_id, change_amount, created_at")
         .lt("change_amount", 0)
-        .order("created_at", { ascending: true });
+        .order("created_at", { ascending: true })
+        .range(0, 49999);
 
       if (error) throw error;
       

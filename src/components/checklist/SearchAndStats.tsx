@@ -134,7 +134,8 @@ const SearchAndStats = () => {
           profiles!work_orders_created_by_fkey(full_name)
         `)
         .is("deleted_at", null)
-        .order("created_at", { ascending: false });
+        .order("created_at", { ascending: false })
+        .range(0, 49999);
 
       if (error) throw error;
 
