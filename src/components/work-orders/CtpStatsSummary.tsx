@@ -15,28 +15,40 @@ interface FormatStats {
   heightMm: number;
 }
 
+// Batch .in() queries to avoid URL length limits (max ~100 UUIDs per chunk)
+async function fetchFileEntriesBatched(workOrderIds: string[]) {
+  const CHUNK_SIZE = 100;
+  const allData: any[] = [];
+
+  for (let i = 0; i < workOrderIds.length; i += CHUNK_SIZE) {
+    const chunk = workOrderIds.slice(i, i + CHUNK_SIZE);
+    const { data, error } = await supabase
+      .from("file_entries")
+      .select(`
+        id,
+        quantity,
+        plate_format_id,
+        plate_formats (
+          id,
+          format_name
+        )
+      `)
+      .in("work_order_id", chunk)
+      .range(0, 49999);
+
+    if (error) throw error;
+    if (data) allData.push(...data);
+  }
+
+  return allData;
+}
+
 export function CtpStatsSummary({ workOrderIds }: CtpStatsSummaryProps) {
   const { data: fileEntries, isLoading } = useQuery({
     queryKey: ["ctp-stats-summary", workOrderIds],
     queryFn: async () => {
       if (workOrderIds.length === 0) return [];
-
-      const { data, error } = await supabase
-        .from("file_entries")
-        .select(`
-          id,
-          quantity,
-          plate_format_id,
-          plate_formats (
-            id,
-            format_name
-          )
-        `)
-        .in("work_order_id", workOrderIds)
-        .range(0, 49999);
-
-      if (error) throw error;
-      return data || [];
+      return fetchFileEntriesBatched(workOrderIds);
     },
     enabled: workOrderIds.length > 0,
   });
@@ -103,7 +115,6 @@ export function CtpStatsSummary({ workOrderIds }: CtpStatsSummaryProps) {
   // Calculate total area in m²
   let totalAreaM2 = 0;
   Object.values(formatStats).forEach((stat) => {
-    // Convert mm² to m² (divide by 1,000,000)
     const areaPerPlate = (stat.widthMm * stat.heightMm) / 1_000_000;
     totalAreaM2 += areaPerPlate * stat.count;
   });

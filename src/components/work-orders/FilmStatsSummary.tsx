@@ -17,6 +17,31 @@ interface FilmStats {
   ordersCount: number;
 }
 
+// Batch .in() queries to avoid URL length limits
+async function fetchBatched<T>(
+  table: string,
+  select: string,
+  column: string,
+  ids: string[]
+): Promise<T[]> {
+  const CHUNK_SIZE = 100;
+  const allData: T[] = [];
+
+  for (let i = 0; i < ids.length; i += CHUNK_SIZE) {
+    const chunk = ids.slice(i, i + CHUNK_SIZE);
+    const { data, error } = await supabase
+      .from(table as any)
+      .select(select)
+      .in(column, chunk)
+      .range(0, 49999);
+
+    if (error) throw error;
+    if (data) allData.push(...(data as T[]));
+  }
+
+  return allData;
+}
+
 export function FilmStatsSummary({ workOrderIds }: FilmStatsSummaryProps) {
   const { isSuper, isAdmin } = useAuthz();
   const canSeePrices = isSuper || isAdmin;
@@ -40,22 +65,21 @@ export function FilmStatsSummary({ workOrderIds }: FilmStatsSummaryProps) {
         return { totalMeters: 0, totalCost: 0, totalRevenue: 0, totalProfit: 0, ordersCount: 0 };
       }
 
-      // Fetch film jobs for the given work orders
-      const { data: filmJobs, error } = await supabase
-        .from("film_jobs")
-        .select("work_order_id, computed_total_m")
-        .in("work_order_id", workOrderIds)
-        .range(0, 49999);
+      // Fetch film jobs in batches
+      const filmJobs = await fetchBatched<{ work_order_id: string; computed_total_m: number | null }>(
+        "film_jobs",
+        "work_order_id, computed_total_m",
+        "work_order_id",
+        workOrderIds
+      );
 
-      if (error) throw error;
-
-      // Also check work orders for price overrides
-      const { data: workOrders, error: woError } = await supabase
-        .from("work_orders")
-        .select("id, film_price_override_eur_per_m")
-        .in("id", workOrderIds);
-
-      if (woError) throw woError;
+      // Fetch work orders for price overrides in batches
+      const workOrders = await fetchBatched<{ id: string; film_price_override_eur_per_m: number | null }>(
+        "work_orders",
+        "id, film_price_override_eur_per_m",
+        "id",
+        workOrderIds
+      );
 
       const priceOverrides = new Map(
         workOrders?.map((wo) => [wo.id, wo.film_price_override_eur_per_m]) || []
@@ -72,7 +96,6 @@ export function FilmStatsSummary({ workOrderIds }: FilmStatsSummaryProps) {
 
       for (const job of filmJobs || []) {
         if (job.computed_total_m && job.computed_total_m > 0) {
-          // computed_total_m already includes waste, don't add it again
           totalMeters += job.computed_total_m;
           totalCost += job.computed_total_m * costPerM;
           
