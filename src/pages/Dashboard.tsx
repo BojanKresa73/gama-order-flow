@@ -25,6 +25,7 @@ import { DigitalStatsSection } from "@/components/dashboard/DigitalStatsSection"
 import { InvoiceStatsCard } from "@/components/dashboard/InvoiceStatsCard";
 import { OnlinePortalUsersCard } from "@/components/dashboard/OnlinePortalUsersCard";
 import { AppHeader } from "@/components/layout/AppHeader";
+import { APP_VERSION_DISPLAY } from "@/lib/version";
 
 const Dashboard = () => {
   const navigate = useNavigate();
@@ -214,7 +215,7 @@ const Dashboard = () => {
         </div>
         {/* App Version */}
         <div className="mt-8 mb-2 text-center text-xs text-muted-foreground/60">
-          v1.9.2 · Poslednja izmena: 17. feb 2026.
+          {APP_VERSION_DISPLAY}
         </div>
       </main>
     </div>
