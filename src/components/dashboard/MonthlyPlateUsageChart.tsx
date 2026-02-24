@@ -81,22 +81,22 @@ export const MonthlyPlateUsageChart = () => {
       <CardContent>
         {/* Summary Stats */}
         <div className="grid grid-cols-3 gap-3 mb-6">
-          <div className="bg-purple-50 dark:bg-purple-950/30 p-3 rounded-lg text-center">
-            <div className="flex items-center justify-center gap-1 text-purple-600 dark:text-purple-400 mb-1">
+          <div className="bg-primary/10 p-3 rounded-lg text-center">
+            <div className="flex items-center justify-center gap-1 text-primary mb-1">
               <Package className="h-4 w-4" />
               <span className="text-xs font-medium">Pripremljeno</span>
             </div>
             <p className="text-xl font-bold">{totals.total.toLocaleString('sr-RS')}</p>
           </div>
-          <div className="bg-green-50 dark:bg-green-950/30 p-3 rounded-lg text-center">
-            <div className="flex items-center justify-center gap-1 text-green-600 dark:text-green-400 mb-1">
+          <div className="bg-chart-1/10 p-3 rounded-lg text-center">
+            <div className="flex items-center justify-center gap-1 text-chart-1 mb-1">
               <CheckCircle className="h-4 w-4" />
               <span className="text-xs font-medium">Pušteno</span>
             </div>
             <p className="text-xl font-bold">{totals.closed.toLocaleString('sr-RS')}</p>
           </div>
-          <div className="bg-orange-50 dark:bg-orange-950/30 p-3 rounded-lg text-center">
-            <div className="flex items-center justify-center gap-1 text-orange-600 dark:text-orange-400 mb-1">
+          <div className="bg-destructive/10 p-3 rounded-lg text-center">
+            <div className="flex items-center justify-center gap-1 text-destructive mb-1">
               <Clock className="h-4 w-4" />
               <span className="text-xs font-medium">Ostalo</span>
             </div>

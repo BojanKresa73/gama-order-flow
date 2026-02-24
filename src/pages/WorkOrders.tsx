@@ -166,21 +166,10 @@ const WorkOrders = () => {
     setSearchParams(params, { replace: true });
   }, [setSearchParams]);
 
-  useEffect(() => {
-    checkAuth();
-  }, []);
-
-  // Re-fetch when filters change
+  // Re-fetch when filters change (auth is handled by InternalUserGuard)
   useEffect(() => {
     fetchWorkOrders();
   }, [filters]);
-
-  const checkAuth = async () => {
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) {
-      navigate("/");
-    }
-  };
 
   const fetchWorkOrders = async () => {
     try {
@@ -303,45 +292,10 @@ const WorkOrders = () => {
   };
 
   // Apply filters to work orders
+  // Sort work orders (filtering is done server-side in fetchWorkOrders)
   const filteredWorkOrders = useMemo(() => {
-    const filtered = workOrders.filter((order) => {
-      // Date range filter
-      if (filters.dateRange.from) {
-        const orderDate = new Date(order.created_at);
-        if (orderDate < filters.dateRange.from) return false;
-      }
-      if (filters.dateRange.to) {
-        const orderDate = new Date(order.created_at);
-        const endOfDay = new Date(filters.dateRange.to);
-        endOfDay.setHours(23, 59, 59, 999);
-        if (orderDate > endOfDay) return false;
-      }
+    const sorted = [...workOrders];
 
-      // Client filter
-      if (filters.clientIds.length > 0 && !filters.clientIds.includes(order.client_id)) {
-        return false;
-      }
-
-      // Order type filter
-      if (filters.orderType !== "all" && order.order_type !== filters.orderType) {
-        return false;
-      }
-
-      // Status filter
-      if (filters.status !== "all") {
-        if (filters.status === "invoiced") {
-          if (!order.invoiced_at) return false;
-        } else if (filters.status === "not_invoiced") {
-          if (order.invoiced_at) return false;
-        } else if (order.status !== filters.status) {
-          return false;
-        }
-      }
-
-      return true;
-    });
-
-    // Sort
     const getSortValue = (order: any): string | number => {
       switch (sortField) {
         case 'order_number':
@@ -372,7 +326,7 @@ const WorkOrders = () => {
       }
     };
 
-    filtered.sort((a, b) => {
+    sorted.sort((a, b) => {
       const valA = getSortValue(a);
       const valB = getSortValue(b);
       const dir = sortDirection === 'asc' ? 1 : -1;
@@ -382,8 +336,8 @@ const WorkOrders = () => {
       return String(valA).localeCompare(String(valB), 'sr') * dir;
     });
 
-    return filtered;
-  }, [workOrders, filters, sortField, sortDirection]);
+    return sorted;
+  }, [workOrders, sortField, sortDirection]);
 
   // Get film order IDs for stats summary
   const filmOrderIds = useMemo(() => {
@@ -414,7 +368,7 @@ const WorkOrders = () => {
       return <Badge variant="destructive">Obrisan</Badge>;
     }
     if (invalidatedAt) {
-      return <Badge variant="outline" className="border-orange-500 text-orange-600">Nevažeći</Badge>;
+      return <Badge variant="outline" className="border-destructive/50 text-destructive">Nevažeći</Badge>;
     }
     return status === "open" ? (
       <Badge variant="default">Otvoren</Badge>
@@ -1362,7 +1316,7 @@ const WorkOrders = () => {
                             <TooltipProvider>
                               <Tooltip>
                                 <TooltipTrigger asChild>
-                                  <FileCheck className="h-4 w-4 text-green-600" />
+                                  <FileCheck className="h-4 w-4 text-primary" />
                                 </TooltipTrigger>
                                 <TooltipContent>
                                   Fakturisano: {order.invoice_number || 'Da'}
@@ -1372,7 +1326,7 @@ const WorkOrders = () => {
                           )}
                         </div>
                         {order.invalid_reason && (
-                          <span className="text-xs text-orange-600 block mt-1">
+                          <span className="text-xs text-destructive block mt-1">
                             Razlog: {order.invalid_reason}
                           </span>
                         )}
