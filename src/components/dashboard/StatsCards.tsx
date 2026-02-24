@@ -10,7 +10,7 @@ export const StatsCards = () => {
     staleTime: 60_000,
     queryFn: async () => {
       const [ordersRes, clientsRes, formatsRes] = await Promise.all([
-        supabase.from("work_orders").select("status, created_at").is("deleted_at", null),
+        supabase.from("work_orders").select("status, created_at").is("deleted_at", null).range(0, 49999),
         supabase.from("clients").select("id", { count: "exact" }),
         supabase.from("plate_formats").select("id, current_stock, low_stock_threshold"),
       ]);

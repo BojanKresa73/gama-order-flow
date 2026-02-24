@@ -34,7 +34,7 @@ export const CtpExportButtons = ({ filters }: CtpExportButtonsProps) => {
       query = query.in("plate_format_id", filters.plateFormatIds);
     }
 
-    const { data, error } = await query;
+    const { data, error } = await query.range(0, 49999);
     if (error) throw error;
 
     return ((data || []) as unknown) as Array<{

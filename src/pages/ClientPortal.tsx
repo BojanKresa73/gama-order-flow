@@ -215,7 +215,8 @@ const ClientPortal = () => {
       const { data: plateCounts } = await supabase
         .from("file_entries")
         .select("work_order_id, quantity")
-        .in("work_order_id", orderIds);
+        .in("work_order_id", orderIds)
+        .range(0, 49999);
 
       // Calculate totals per order
       const plateMap = new Map<string, number>();
@@ -265,7 +266,8 @@ const ClientPortal = () => {
       const { data: ctpFiles } = await supabase
         .from("file_entries")
         .select("work_order_id, filename")
-        .in("work_order_id", orderIds);
+        .in("work_order_id", orderIds)
+        .range(0, 49999);
       
       (ctpFiles || []).forEach((f) => {
         files.push({ orderId: f.work_order_id, name: f.filename });
@@ -275,7 +277,8 @@ const ClientPortal = () => {
       const { data: filmFiles } = await supabase
         .from("film_jobs")
         .select("work_order_id, file_name")
-        .in("work_order_id", orderIds);
+        .in("work_order_id", orderIds)
+        .range(0, 49999);
       
       (filmFiles || []).forEach((f) => {
         files.push({ orderId: f.work_order_id, name: f.file_name });
@@ -285,7 +288,8 @@ const ClientPortal = () => {
       const { data: digitalFiles } = await supabase
         .from("digital_jobs")
         .select("work_order_id, file_name")
-        .in("work_order_id", orderIds);
+        .in("work_order_id", orderIds)
+        .range(0, 49999);
       
       (digitalFiles || []).forEach((f) => {
         files.push({ orderId: f.work_order_id, name: f.file_name });
