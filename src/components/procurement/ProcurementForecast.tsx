@@ -79,7 +79,12 @@ export function ProcurementForecast({ plateFormats, orders }: ProcurementForecas
       totals: number[]; 
       months: string[];
       totalPlates: number;
+      completeTotals: number[];
+      completeMonths: string[];
     }>();
+    
+    // Current month key (incomplete month - should be excluded from averages)
+    const currentMonthKey = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
     
     if (monthlyData && monthlyData.length > 0) {
       // Sort by month descending to ensure most recent comes first
@@ -87,12 +92,17 @@ export function ProcurementForecast({ plateFormats, orders }: ProcurementForecas
       
       sortedMonthly.forEach(({ month, formatId, total }) => {
         if (!monthlyStatsByFormat.has(formatId)) {
-          monthlyStatsByFormat.set(formatId, { totals: [], months: [], totalPlates: 0 });
+          monthlyStatsByFormat.set(formatId, { totals: [], months: [], totalPlates: 0, completeTotals: [], completeMonths: [] });
         }
         const data = monthlyStatsByFormat.get(formatId)!;
         data.totals.push(total);
         data.months.push(month);
         data.totalPlates += total;
+        // Track only complete months for average calculation
+        if (month !== currentMonthKey) {
+          data.completeTotals.push(total);
+          data.completeMonths.push(month);
+        }
       });
     }
 
@@ -110,26 +120,35 @@ export function ProcurementForecast({ plateFormats, orders }: ProcurementForecas
       
       if (monthlyStats && monthlyStats.totals.length > 0) {
         totalConsumed = monthlyStats.totalPlates;
-        activeMonths = monthlyStats.totals.length;
-        lastMonthUsage = monthlyStats.totals[0] || 0; // Most recent month (already sorted desc)
+        lastMonthUsage = monthlyStats.totals[0] || 0;
         
-        // Monthly average
-        monthlyAvg = totalConsumed / activeMonths;
+        // Use only COMPLETE months for average (exclude current incomplete month)
+        const completeTotals = monthlyStats.completeTotals;
+        activeMonths = completeTotals.length;
         
-        // Daily average from monthly data (more accurate than inventory_history)
+        if (activeMonths > 0) {
+          const completeTotal = completeTotals.reduce((a, b) => a + b, 0);
+          monthlyAvg = completeTotal / activeMonths;
+        } else {
+          // Only have current month data - extrapolate
+          const dayOfMonth = now.getDate();
+          const currentMonthTotal = monthlyStats.totals[0] || 0;
+          monthlyAvg = dayOfMonth > 0 ? (currentMonthTotal / dayOfMonth) * 30 : 0;
+          activeMonths = 1;
+        }
+        
         avgDaily = monthlyAvg / 30;
         
-        // Calculate trend (comparing recent 2 months vs older months)
-        if (monthlyStats.totals.length >= 2) {
-          const recentMonths = monthlyStats.totals.slice(0, 2);
+        // Calculate trend using complete months only
+        if (completeTotals.length >= 2) {
+          const recentMonths = completeTotals.slice(0, 2);
           const recentAvg = recentMonths.reduce((a, b) => a + b, 0) / recentMonths.length;
           
-          if (monthlyStats.totals.length > 2) {
-            const olderMonths = monthlyStats.totals.slice(2);
+          if (completeTotals.length > 2) {
+            const olderMonths = completeTotals.slice(2);
             const olderAvg = olderMonths.reduce((a, b) => a + b, 0) / olderMonths.length;
             if (olderAvg > 0) {
               trend = recentAvg / olderAvg;
-              // Clamp between 0.5x and 2x
               trend = Math.max(0.5, Math.min(2, trend));
             }
           }
