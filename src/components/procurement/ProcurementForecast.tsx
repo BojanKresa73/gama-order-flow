@@ -27,7 +27,7 @@ export function ProcurementForecast({ plateFormats, orders }: ProcurementForecas
   // Fetch monthly consumption by format from file_entries
   // IMPORTANT: Using limit(10000) to avoid Supabase's default 1000 row limit
   const { data: monthlyData, isLoading: loadingMonthly } = useQuery({
-    queryKey: ["monthly-consumption-by-format-v3"],
+    queryKey: ["monthly-consumption-by-format-v4"],
     queryFn: async () => {
       const { data, error } = await supabase.rpc("get_format_monthly_consumption");
 
