@@ -5,7 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { CtpFiltersState } from "@/pages/CtpStats";
 import { buildCtpRpcParams } from "@/lib/ctpRpcHelpers";
-import { FileText, Package, TrendingUp, Users, Euro, ArrowUpDown } from "lucide-react";
+import { FileText, Package, TrendingUp, Users, Euro, ArrowUpDown, Ruler } from "lucide-react";
 import { useAuthz } from "@/hooks/useAuthz";
 
 interface CtpStatsCardsProps {
@@ -65,6 +65,23 @@ export const CtpStatsCards = ({ filters }: CtpStatsCardsProps) => {
     staleTime: 30000,
   });
 
+  const { data: areaData, isLoading: areaLoading } = useQuery({
+    queryKey: ["ctp-area-rpc", filters],
+    queryFn: async () => {
+      const params = buildCtpRpcParams(filters);
+      const { data, error } = await supabase.rpc("get_ctp_area_m2", {
+        p_from: params.p_from,
+        p_to: params.p_to,
+        p_client_ids: params.p_client_ids,
+        p_format_ids: params.p_plate_format_ids,
+      });
+      if (error) throw error;
+      const row = (data as any)?.[0];
+      return row?.total_area_m2 || 0;
+    },
+    staleTime: 30000,
+  });
+
   const margin = useMemo(() => {
     const revenue = Number(revenueData || 0);
     const cost = Number(costData || 0);
@@ -81,11 +98,13 @@ export const CtpStatsCards = ({ filters }: CtpStatsCardsProps) => {
     val.toLocaleString("sr-RS", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 
   const cards = useMemo(() => {
+    const areaFormatted = Number(areaData || 0).toLocaleString("sr-RS", { minimumFractionDigits: 1, maximumFractionDigits: 1 });
     const base = [
       { title: "Ukupno ploča", value: stats?.totalPlates || 0, icon: Package, format: false, color: "" },
       { title: "Broj CTP naloga", value: stats?.ordersCount || 0, icon: FileText, format: false, color: "" },
       { title: "Prosečno ploča/nalog", value: stats?.avgPlatesPerOrder?.toFixed(1) || "0.0", icon: TrendingUp, format: false, color: "" },
       { title: "Broj klijenata", value: stats?.clientsCount || 0, icon: Users, format: false, color: "" },
+      { title: "Površina (m²)", value: areaFormatted, icon: Ruler, format: false, color: "" },
     ];
     if (canViewFinancials) {
       base.push(
@@ -113,15 +132,14 @@ export const CtpStatsCards = ({ filters }: CtpStatsCardsProps) => {
       );
     }
     return base;
-  }, [stats, revenueData, costData, margin, marginPercent, canViewFinancials]);
+  }, [stats, areaData, revenueData, costData, margin, marginPercent, canViewFinancials]);
 
-  const totalCards = canViewFinancials ? 7 : 4;
-  const isAnyLoading = isLoading || (canViewFinancials && (revenueLoading || costLoading));
+  const isAnyLoading = isLoading || areaLoading || (canViewFinancials && (revenueLoading || costLoading));
 
   if (isAnyLoading) {
     return (
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-        {[...Array(Math.min(totalCards, 4))].map((_, i) => (
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
+        {[...Array(5)].map((_, i) => (
           <Card key={i} className="rounded-2xl">
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
               <Skeleton className="h-4 w-24" />
@@ -138,8 +156,8 @@ export const CtpStatsCards = ({ filters }: CtpStatsCardsProps) => {
 
   return (
     <div className="space-y-4">
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-        {cards.slice(0, 4).map((card, index) => (
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
+        {cards.slice(0, 5).map((card, index) => (
           <Card key={index} className="rounded-2xl shadow-sm">
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
               <CardTitle className="text-sm font-medium text-muted-foreground">
@@ -155,7 +173,7 @@ export const CtpStatsCards = ({ filters }: CtpStatsCardsProps) => {
       </div>
       {canViewFinancials && (
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          {cards.slice(4).map((card, index) => (
+          {cards.slice(5).map((card, index) => (
             <Card key={index} className="rounded-2xl shadow-sm">
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                 <CardTitle className="text-sm font-medium text-muted-foreground">
