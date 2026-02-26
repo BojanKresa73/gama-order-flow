@@ -53,17 +53,17 @@ export const ClientsTable = ({ clients, onEdit }: ClientsTableProps) => {
   const queryClient = useQueryClient();
   const [columnVisibility, setColumnVisibility] = useState({
     name: true,
-    pib: true,
-    maticni_broj: true,
-    adresa: true,
+    pib: false,
+    maticni_broj: false,
+    adresa: false,
     grad: true,
-    postanski_broj: true,
+    postanski_broj: false,
     telefon: true,
     email: true,
-    notification_email: true,
+    notification_email: false,
     rok_placanja_dana: true,
     rabat_procenat: true,
-    next_follow_up_at: true,
+    next_follow_up_at: false,
     created_at: true,
   });
 
