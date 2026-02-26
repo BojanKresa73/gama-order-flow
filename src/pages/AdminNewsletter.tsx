@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
@@ -10,17 +10,17 @@ import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { Table, TableHeader, TableRow, TableHead, TableBody, TableCell } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import {
   ArrowLeft, Upload, Plus, Send, Mail, Users, BarChart3,
-  Trash2, Edit, Search, Loader2, CheckCircle2, XCircle, Clock, Code
+  Trash2, Edit, Search, Loader2, CheckCircle2, XCircle, Clock, Code, Sparkles, Package
 } from "lucide-react";
 import * as XLSX from "xlsx";
-import NewsletterBuilder, { blocksToFullHtml } from "@/components/newsletter/NewsletterBuilder";
+import NewsletterBuilder, { blocksToFullHtml, ThemePicker, EMAIL_THEMES, type EmailTheme } from "@/components/newsletter/NewsletterBuilder";
 
 // ── Recipients Tab ──
 function RecipientsTab() {
@@ -215,7 +215,7 @@ function RecipientsTab() {
   );
 }
 
-// ── Compose Tab ──
+// ── Compose Tab (redesigned) ──
 function ComposeTab() {
   const { toast } = useToast();
   const qc = useQueryClient();
@@ -225,7 +225,9 @@ function ComposeTab() {
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [selectAll, setSelectAll] = useState(true);
   const [sending, setSending] = useState(false);
-  const [mode, setMode] = useState<"builder" | "raw">("builder");
+  const [campaignMode, setCampaignMode] = useState<"template" | "custom">("custom");
+  const [selectedTheme, setSelectedTheme] = useState<EmailTheme>(EMAIL_THEMES[0]);
+  const [showRecipientList, setShowRecipientList] = useState(false);
 
   const { data: recipients = [] } = useQuery({
     queryKey: ["newsletter-recipients"],
@@ -236,10 +238,22 @@ function ComposeTab() {
     },
   });
 
+  const { data: campaigns = [] } = useQuery({
+    queryKey: ["newsletter-campaigns-count"],
+    queryFn: async () => {
+      const now = new Date();
+      const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1).toISOString();
+      const { data, error } = await supabase
+        .from("newsletter_campaigns")
+        .select("id")
+        .gte("created_at", startOfMonth);
+      if (error) throw error;
+      return data;
+    },
+  });
+
   const cities = [...new Set(recipients.map((r: any) => r.city).filter(Boolean))].sort();
-
   const filtered = recipients.filter((r: any) => cityFilter === "all" || r.city === cityFilter);
-
   const finalRecipients = selectAll ? filtered : filtered.filter((r: any) => selectedIds.has(r.id));
 
   const toggleRecipient = (id: string) => {
@@ -248,6 +262,13 @@ function ComposeTab() {
     if (next.has(id)) next.delete(id); else next.add(id);
     setSelectedIds(next);
   };
+
+  // Re-emit HTML when theme changes
+  useEffect(() => {
+    if (htmlBody) {
+      // We don't regenerate here because builder handles it via onHtmlChange
+    }
+  }, [selectedTheme]);
 
   const handleSend = async () => {
     if (!subject.trim() || !htmlBody.trim()) {
@@ -264,7 +285,6 @@ function ComposeTab() {
 
     setSending(true);
     try {
-      // Create campaign
       const { data: campaign, error: campErr } = await supabase
         .from("newsletter_campaigns")
         .insert({ subject, html_body: htmlBody, total_recipients: finalRecipients.length })
@@ -272,7 +292,6 @@ function ComposeTab() {
         .single();
       if (campErr) throw campErr;
 
-      // Create send records
       const sendRecords = finalRecipients.map((r: any) => ({
         campaign_id: campaign.id,
         recipient_id: r.id,
@@ -281,7 +300,6 @@ function ComposeTab() {
       const { error: sendsErr } = await supabase.from("newsletter_sends").insert(sendRecords);
       if (sendsErr) throw sendsErr;
 
-      // Invoke edge function
       const { data, error } = await supabase.functions.invoke("send-newsletter", {
         body: { campaign_id: campaign.id },
       });
@@ -293,6 +311,7 @@ function ComposeTab() {
       });
 
       qc.invalidateQueries({ queryKey: ["newsletter-campaigns"] });
+      qc.invalidateQueries({ queryKey: ["newsletter-campaigns-count"] });
       setSubject("");
       setHtmlBody("");
     } catch (err: any) {
@@ -303,76 +322,170 @@ function ComposeTab() {
   };
 
   return (
-    <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-      {/* Left: Compose */}
-      <div className="space-y-4">
-        <div><Label>Naslov emaila *</Label><Input value={subject} onChange={(e) => setSubject(e.target.value)} placeholder="Npr: Novogodišnja čestitka" /></div>
-        
-        <div className="flex gap-2 items-center">
-          <Button variant={mode === "builder" ? "default" : "outline"} size="sm" onClick={() => setMode("builder")}>
-            Vizuelni editor
-          </Button>
-          <Button variant={mode === "raw" ? "default" : "outline"} size="sm" onClick={() => setMode("raw")} className="gap-1">
-            <Code className="h-3 w-3" />HTML
-          </Button>
-        </div>
-
-        {mode === "builder" ? (
-          <NewsletterBuilder onHtmlChange={setHtmlBody} />
-        ) : (
-          <Textarea
-            value={htmlBody}
-            onChange={(e) => setHtmlBody(e.target.value)}
-            placeholder="<h1>Poštovani,</h1><p>...</p>"
-            className="min-h-[300px] font-mono text-sm"
-          />
-        )}
-
-        <Button onClick={handleSend} disabled={sending || !subject || !htmlBody}>
-          {sending ? <Loader2 className="h-4 w-4 animate-spin mr-1" /> : <Send className="h-4 w-4 mr-1" />}
-          Pošalji ({finalRecipients.length})
-        </Button>
+    <div className="space-y-4">
+      {/* Campaign counter */}
+      <div className="text-sm text-muted-foreground">
+        Kampanje ovog meseca: <span className="font-semibold text-foreground">{campaigns.length}/10</span>
       </div>
 
-      {/* Right: Recipients selection */}
-      <div className="space-y-3">
-        <div className="flex gap-2 items-center">
-          <Select value={cityFilter} onValueChange={setCityFilter}>
-            <SelectTrigger className="w-[180px]"><SelectValue placeholder="Svi gradovi" /></SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">Svi gradovi</SelectItem>
-              {cities.map((c) => <SelectItem key={c} value={c}>{c}</SelectItem>)}
-            </SelectContent>
-          </Select>
-          <Button variant={selectAll ? "default" : "outline"} size="sm" onClick={() => { setSelectAll(true); setSelectedIds(new Set()); }}>
-            Svi ({filtered.length})
-          </Button>
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+        {/* Left: Campaign creation - 2 cols */}
+        <div className="lg:col-span-2 space-y-4">
+          <Card>
+            <CardHeader className="pb-3">
+              <CardTitle className="text-lg flex items-center gap-2">
+                <Send className="h-5 w-5" />
+                Kreiraj kampanju
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              {/* Mode toggle */}
+              <div className="flex rounded-lg border overflow-hidden">
+                <button
+                  onClick={() => setCampaignMode("template")}
+                  className={`flex-1 flex items-center justify-center gap-2 py-2.5 px-4 text-sm font-medium transition-colors ${
+                    campaignMode === "template"
+                      ? "bg-primary text-primary-foreground"
+                      : "bg-background hover:bg-muted/50"
+                  }`}
+                >
+                  <Package className="h-4 w-4" />
+                  Gotov paket
+                </button>
+                <button
+                  onClick={() => setCampaignMode("custom")}
+                  className={`flex-1 flex items-center justify-center gap-2 py-2.5 px-4 text-sm font-medium transition-colors ${
+                    campaignMode === "custom"
+                      ? "bg-primary text-primary-foreground"
+                      : "bg-background hover:bg-muted/50"
+                  }`}
+                >
+                  <Plus className="h-4 w-4" />
+                  Sopstvena kampanja
+                </button>
+              </div>
+
+              {campaignMode === "custom" && (
+                <div className="bg-primary/5 border border-primary/20 rounded-lg p-3">
+                  <div className="flex items-center gap-2 text-sm">
+                    <Sparkles className="h-4 w-4 text-primary" />
+                    <span className="font-medium text-primary">Sopstvena kampanja</span>
+                  </div>
+                  <p className="text-xs text-muted-foreground mt-1">Kreirajte potpuno prilagođenu kampanju. Samo vi je vidite.</p>
+                </div>
+              )}
+
+              {/* Subject */}
+              <div>
+                <Label className="text-sm font-medium">Subject emaila:</Label>
+                <Input value={subject} onChange={(e) => setSubject(e.target.value)} placeholder="Unesite subject..." className="mt-1" />
+              </div>
+
+              {/* Content */}
+              {campaignMode === "custom" ? (
+                <>
+                  <div>
+                    <Label className="text-sm font-medium">Sadržaj poruke:</Label>
+                    <div className="mt-1">
+                      <NewsletterBuilder onHtmlChange={setHtmlBody} theme={selectedTheme} />
+                    </div>
+                  </div>
+                </>
+              ) : (
+                <div>
+                  <Label className="text-sm font-medium">Sadržaj poruke:</Label>
+                  <Textarea
+                    value={htmlBody}
+                    onChange={(e) => setHtmlBody(e.target.value)}
+                    placeholder="Unesite tekst kampanje..."
+                    className="mt-1 min-h-[200px]"
+                  />
+                </div>
+              )}
+
+              {/* Theme picker */}
+              <ThemePicker selectedTheme={selectedTheme} onSelect={setSelectedTheme} />
+
+              {/* Send button */}
+              <Button onClick={handleSend} disabled={sending || !subject || !htmlBody} className="w-full" size="lg">
+                {sending ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <Send className="h-4 w-4 mr-2" />}
+                Pošalji ({finalRecipients.length})
+              </Button>
+            </CardContent>
+          </Card>
         </div>
 
-        <div className="rounded-lg border overflow-auto max-h-[400px]">
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead className="w-[40px]"></TableHead>
-                <TableHead>Firma</TableHead>
-                <TableHead>Grad</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {filtered.map((r: any) => (
-                <TableRow key={r.id} className="cursor-pointer" onClick={() => toggleRecipient(r.id)}>
-                  <TableCell>
-                    <Checkbox
-                      checked={selectAll || selectedIds.has(r.id)}
-                      onCheckedChange={() => toggleRecipient(r.id)}
-                    />
-                  </TableCell>
-                  <TableCell className="font-medium">{r.company_name}</TableCell>
-                  <TableCell>{r.city}</TableCell>
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
+        {/* Right: Recipients panel - 1 col */}
+        <div>
+          <Card>
+            <CardHeader className="pb-3">
+              <div className="flex items-center justify-between">
+                <CardTitle className="text-lg flex items-center gap-2">
+                  <Users className="h-5 w-5" />
+                  Primaoci
+                </CardTitle>
+                <div className="flex gap-1">
+                  <Badge variant={selectAll ? "default" : "outline"} className="cursor-pointer" onClick={() => { setSelectAll(true); setSelectedIds(new Set()); }}>
+                    Svi ({filtered.length})
+                  </Badge>
+                  <Badge variant={!selectAll ? "default" : "outline"} className="cursor-pointer" onClick={() => setShowRecipientList(true)}>
+                    Ručno
+                  </Badge>
+                </div>
+              </div>
+            </CardHeader>
+            <CardContent>
+              {selectAll ? (
+                <div className="text-center py-6">
+                  <Users className="h-10 w-10 mx-auto text-muted-foreground mb-3" />
+                  <p className="font-medium text-sm">Slanje svim klijentima</p>
+                  <p className="text-xs text-muted-foreground mt-1">
+                    Kampanja će biti poslata na <span className="font-semibold">{filtered.length}</span> email adresa
+                    {cities.length > 0 && (
+                      <> u gradovima: {cities.slice(0, 5).join(", ")}{cities.length > 5 ? `, +${cities.length - 5}` : ""}</>
+                    )}
+                  </p>
+                  <button
+                    onClick={() => { setSelectAll(false); setShowRecipientList(true); }}
+                    className="text-xs text-primary hover:underline mt-3 inline-block"
+                  >
+                    ili izaberite ručno →
+                  </button>
+                </div>
+              ) : (
+                <div className="space-y-3">
+                  <div className="text-sm text-muted-foreground">
+                    Izabrano: <span className="font-semibold text-foreground">{selectedIds.size}</span> od {filtered.length}
+                  </div>
+                  <Select value={cityFilter} onValueChange={setCityFilter}>
+                    <SelectTrigger className="w-full"><SelectValue placeholder="Svi gradovi" /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">Svi gradovi</SelectItem>
+                      {cities.map((c) => <SelectItem key={c} value={c}>{c}</SelectItem>)}
+                    </SelectContent>
+                  </Select>
+                  <div className="rounded-lg border overflow-auto max-h-[350px]">
+                    <Table>
+                      <TableBody>
+                        {filtered.map((r: any) => (
+                          <TableRow key={r.id} className="cursor-pointer" onClick={() => toggleRecipient(r.id)}>
+                            <TableCell className="w-[30px] py-2">
+                              <Checkbox checked={selectedIds.has(r.id)} onCheckedChange={() => toggleRecipient(r.id)} />
+                            </TableCell>
+                            <TableCell className="font-medium py-2 text-xs">{r.company_name}</TableCell>
+                            <TableCell className="py-2 text-xs text-muted-foreground">{r.city}</TableCell>
+                          </TableRow>
+                        ))}
+                      </TableBody>
+                    </Table>
+                  </div>
+                  <Button variant="outline" size="sm" className="w-full" onClick={() => { setSelectAll(true); setSelectedIds(new Set()); }}>
+                    Resetuj na sve
+                  </Button>
+                </div>
+              )}
+            </CardContent>
+          </Card>
         </div>
       </div>
     </div>
@@ -464,7 +577,7 @@ export default function AdminNewsletter() {
             <TabsTrigger value="history" className="gap-1"><BarChart3 className="h-4 w-4" />Istorija</TabsTrigger>
           </TabsList>
 
-          <TabsContent value="compose"><Card><CardContent className="pt-6"><ComposeTab /></CardContent></Card></TabsContent>
+          <TabsContent value="compose"><ComposeTab /></TabsContent>
           <TabsContent value="recipients"><Card><CardContent className="pt-6"><RecipientsTab /></CardContent></Card></TabsContent>
           <TabsContent value="history"><Card><CardContent className="pt-6"><HistoryTab /></CardContent></Card></TabsContent>
         </Tabs>
