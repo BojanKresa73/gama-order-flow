@@ -171,7 +171,7 @@ export function blocksToFullHtml(blocks: Block[], theme: EmailTheme = EMAIL_THEM
 <div style="max-width:600px;margin:0 auto;padding:20px;">
   <!-- Header -->
   <div style="background:${theme.primary};border-radius:12px 12px 0 0;padding:24px;text-align:center;">
-    <img src="https://ytophmlfbrnhmqtwpijn.supabase.co/storage/v1/object/public/newsletter-assets/gama-united-white.png" alt="Gama United" style="height:48px;display:inline-block;" />
+    <img src="https://ytophmlfbrnhmqtwpijn.supabase.co/storage/v1/object/public/newsletter-assets/gama-united-white.png" alt="Gama United" style="height:58px;display:inline-block;" />
   </div>
   <!-- Content -->
   <div style="background:${theme.white};padding:32px;border-left:1px solid #e0e0e0;border-right:1px solid #e0e0e0;">
