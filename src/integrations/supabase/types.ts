@@ -3521,6 +3521,17 @@ export type Database = {
           revenue_eur: number
         }[]
       }
+      get_ctp_cost: {
+        Args: {
+          p_client_ids?: string[]
+          p_format_ids?: string[]
+          p_from: string
+          p_to: string
+        }
+        Returns: {
+          total_cost_eur: number
+        }[]
+      }
       get_ctp_daily: {
         Args: {
           p_client_ids?: string[]
