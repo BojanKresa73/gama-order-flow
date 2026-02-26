@@ -17,10 +17,11 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import {
   ArrowLeft, Upload, Plus, Send, Mail, Users, BarChart3,
-  Trash2, Edit, Search, Loader2, CheckCircle2, XCircle, Clock, Code, Sparkles, Package
+  Trash2, Edit, Search, Loader2, CheckCircle2, XCircle, Clock, Code, Sparkles, Package,
+  Save, FolderOpen
 } from "lucide-react";
 import * as XLSX from "xlsx";
-import NewsletterBuilder, { blocksToFullHtml, ThemePicker, EMAIL_THEMES, type EmailTheme } from "@/components/newsletter/NewsletterBuilder";
+import NewsletterBuilder, { blocksToFullHtml, ThemePicker, EMAIL_THEMES, type EmailTheme, type Block } from "@/components/newsletter/NewsletterBuilder";
 
 // ── Recipients Tab ──
 function RecipientsTab() {
@@ -228,6 +229,14 @@ function ComposeTab() {
   const [campaignMode, setCampaignMode] = useState<"template" | "custom">("custom");
   const [selectedTheme, setSelectedTheme] = useState<EmailTheme>(EMAIL_THEMES[0]);
   const [showRecipientList, setShowRecipientList] = useState(false);
+  const [currentBlocks, setCurrentBlocks] = useState<Block[]>([]);
+  const [draftName, setDraftName] = useState("");
+  const [showSaveDialog, setShowSaveDialog] = useState(false);
+  const [showLoadDialog, setShowLoadDialog] = useState(false);
+  const [savingDraft, setSavingDraft] = useState(false);
+  const [loadedDraftId, setLoadedDraftId] = useState<string | null>(null);
+  const [initialBlocks, setInitialBlocks] = useState<Block[] | undefined>(undefined);
+  const [builderKey, setBuilderKey] = useState(0);
 
   const { data: recipients = [] } = useQuery({
     queryKey: ["newsletter-recipients"],
@@ -252,6 +261,18 @@ function ComposeTab() {
     },
   });
 
+  const { data: drafts = [], isLoading: draftsLoading } = useQuery({
+    queryKey: ["newsletter-drafts"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("newsletter_drafts")
+        .select("*")
+        .order("updated_at", { ascending: false });
+      if (error) throw error;
+      return data;
+    },
+  });
+
   const cities = [...new Set(recipients.map((r: any) => r.city).filter(Boolean))].sort();
   const filtered = recipients.filter((r: any) => cityFilter === "all" || r.city === cityFilter);
   const finalRecipients = selectAll ? filtered : filtered.filter((r: any) => selectedIds.has(r.id));
@@ -269,6 +290,70 @@ function ComposeTab() {
       // We don't regenerate here because builder handles it via onHtmlChange
     }
   }, [selectedTheme]);
+
+  const handleSaveDraft = async () => {
+    if (!draftName.trim()) {
+      toast({ title: "Unesite naziv drafta", variant: "destructive" });
+      return;
+    }
+    setSavingDraft(true);
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error("Niste prijavljeni");
+      
+      const draftData = {
+        user_id: user.id,
+        name: draftName,
+        subject,
+        blocks: currentBlocks as any,
+        theme_name: selectedTheme.name,
+      };
+
+      if (loadedDraftId) {
+        const { error } = await supabase.from("newsletter_drafts").update(draftData).eq("id", loadedDraftId);
+        if (error) throw error;
+      } else {
+        const { data, error } = await supabase.from("newsletter_drafts").insert(draftData).select().single();
+        if (error) throw error;
+        setLoadedDraftId(data.id);
+      }
+
+      qc.invalidateQueries({ queryKey: ["newsletter-drafts"] });
+      toast({ title: loadedDraftId ? "Draft ažuriran" : "Draft sačuvan" });
+      setShowSaveDialog(false);
+    } catch (err: any) {
+      toast({ title: "Greška", description: err.message, variant: "destructive" });
+    } finally {
+      setSavingDraft(false);
+    }
+  };
+
+  const handleLoadDraft = (draft: any) => {
+    setSubject(draft.subject || "");
+    const themeName = draft.theme_name || "Standard";
+    const theme = EMAIL_THEMES.find(t => t.name === themeName) || EMAIL_THEMES[0];
+    setSelectedTheme(theme);
+    setLoadedDraftId(draft.id);
+    setDraftName(draft.name);
+    setInitialBlocks(draft.blocks as Block[]);
+    setBuilderKey(prev => prev + 1);
+    setHtmlBody(blocksToFullHtml(draft.blocks as Block[], theme));
+    setCurrentBlocks(draft.blocks as Block[]);
+    setShowLoadDialog(false);
+    toast({ title: `Draft "${draft.name}" učitan` });
+  };
+
+  const handleDeleteDraft = async (id: string, e: React.MouseEvent) => {
+    e.stopPropagation();
+    const { error } = await supabase.from("newsletter_drafts").delete().eq("id", id);
+    if (error) {
+      toast({ title: "Greška", description: error.message, variant: "destructive" });
+    } else {
+      qc.invalidateQueries({ queryKey: ["newsletter-drafts"] });
+      if (loadedDraftId === id) setLoadedDraftId(null);
+      toast({ title: "Draft obrisan" });
+    }
+  };
 
   const handleSend = async () => {
     if (!subject.trim() || !htmlBody.trim()) {
@@ -387,7 +472,13 @@ function ComposeTab() {
                   <div>
                     <Label className="text-sm font-medium">Sadržaj poruke:</Label>
                     <div className="mt-1">
-                      <NewsletterBuilder onHtmlChange={setHtmlBody} theme={selectedTheme} />
+                      <NewsletterBuilder
+                        key={builderKey}
+                        onHtmlChange={setHtmlBody}
+                        theme={selectedTheme}
+                        initialBlocks={initialBlocks}
+                        onBlocksChange={setCurrentBlocks}
+                      />
                     </div>
                   </div>
                 </>
@@ -405,6 +496,30 @@ function ComposeTab() {
 
               {/* Theme picker */}
               <ThemePicker selectedTheme={selectedTheme} onSelect={setSelectedTheme} />
+
+              {/* Draft buttons */}
+              {campaignMode === "custom" && (
+                <div className="flex gap-2">
+                  <Button variant="outline" className="flex-1" onClick={() => {
+                    if (!draftName && !loadedDraftId) setDraftName("");
+                    setShowSaveDialog(true);
+                  }}>
+                    <Save className="h-4 w-4 mr-2" />
+                    {loadedDraftId ? "Ažuriraj draft" : "Sačuvaj draft"}
+                  </Button>
+                  <Button variant="outline" className="flex-1" onClick={() => setShowLoadDialog(true)}>
+                    <FolderOpen className="h-4 w-4 mr-2" />
+                    Učitaj draft {drafts.length > 0 && `(${drafts.length})`}
+                  </Button>
+                </div>
+              )}
+
+              {loadedDraftId && (
+                <div className="text-xs text-muted-foreground bg-muted/50 rounded px-3 py-1.5 flex items-center gap-1">
+                  <FolderOpen className="h-3 w-3" />
+                  Trenutni draft: <span className="font-medium">{draftName}</span>
+                </div>
+              )}
 
               {/* Send button */}
               <Button onClick={handleSend} disabled={sending || !subject || !htmlBody} className="w-full" size="lg">
@@ -488,6 +603,73 @@ function ComposeTab() {
           </Card>
         </div>
       </div>
+
+      {/* Save Draft Dialog */}
+      <Dialog open={showSaveDialog} onOpenChange={setShowSaveDialog}>
+        <DialogContent>
+          <DialogHeader><DialogTitle><Save className="h-5 w-5 inline mr-2" />Sačuvaj draft</DialogTitle></DialogHeader>
+          <div className="space-y-3">
+            <div>
+              <Label>Naziv drafta *</Label>
+              <Input
+                value={draftName}
+                onChange={(e) => setDraftName(e.target.value)}
+                placeholder="npr. Praznik Mart 2026"
+              />
+            </div>
+            <p className="text-xs text-muted-foreground">
+              Čuva se: subject, svi blokovi sadržaja, i izabrana tema.
+            </p>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowSaveDialog(false)}>Otkaži</Button>
+            <Button onClick={handleSaveDraft} disabled={savingDraft || !draftName.trim()}>
+              {savingDraft ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <Save className="h-4 w-4 mr-2" />}
+              {loadedDraftId ? "Ažuriraj" : "Sačuvaj"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Load Draft Dialog */}
+      <Dialog open={showLoadDialog} onOpenChange={setShowLoadDialog}>
+        <DialogContent className="max-w-md">
+          <DialogHeader><DialogTitle><FolderOpen className="h-5 w-5 inline mr-2" />Učitaj draft</DialogTitle></DialogHeader>
+          {draftsLoading ? (
+            <div className="flex justify-center py-8"><Loader2 className="h-6 w-6 animate-spin" /></div>
+          ) : drafts.length === 0 ? (
+            <p className="text-center py-8 text-muted-foreground text-sm">Nemate sačuvanih draftova</p>
+          ) : (
+            <div className="space-y-2 max-h-[400px] overflow-auto">
+              {drafts.map((d: any) => (
+                <div
+                  key={d.id}
+                  onClick={() => handleLoadDraft(d)}
+                  className={`flex items-center justify-between p-3 rounded-lg border cursor-pointer hover:bg-muted/50 transition-colors ${
+                    loadedDraftId === d.id ? "border-primary bg-primary/5" : ""
+                  }`}
+                >
+                  <div className="min-w-0 flex-1">
+                    <p className="font-medium text-sm truncate">{d.name}</p>
+                    <p className="text-xs text-muted-foreground truncate">{d.subject || "Bez subjecta"}</p>
+                    <p className="text-xs text-muted-foreground mt-0.5">
+                      {new Date(d.updated_at).toLocaleDateString("sr-Latn")} · {d.theme_name}
+                    </p>
+                  </div>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="h-8 w-8 shrink-0 ml-2"
+                    onClick={(e) => handleDeleteDraft(d.id, e)}
+                  >
+                    <Trash2 className="h-4 w-4 text-destructive" />
+                  </Button>
+                </div>
+              ))}
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
