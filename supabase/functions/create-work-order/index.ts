@@ -1,5 +1,8 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.75.0';
-
+import { Buffer } from "node:buffer";
+// @ts-ignore
+(globalThis as any).Buffer = (globalThis as any).Buffer ?? Buffer;
+import { Resend } from "https://esm.sh/resend@2.0.0";
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
@@ -160,6 +163,66 @@ Deno.serve(async (req) => {
         title: `Novi nalog ${orderLabel}`,
         message: `Kreiran je novi ${input.order_type} nalog za ${clientName}.`,
       });
+
+      // Send email to portal users who have email_notifications_enabled
+      const { data: portalUsers } = await supabase
+        .from('client_portal_users')
+        .select('user_id, full_name, email_notifications_enabled')
+        .eq('client_id', input.client_id)
+        .eq('is_active', true)
+        .eq('email_notifications_enabled', true);
+
+      if (portalUsers && portalUsers.length > 0) {
+        const resendApiKey = Deno.env.get('RESEND_API_KEY');
+        const fromEmail = Deno.env.get('FROM_EMAIL') || 'notifications@resend.dev';
+
+        if (resendApiKey) {
+          const resend = new Resend(resendApiKey);
+
+          for (const pu of portalUsers) {
+            try {
+              // Get user email from auth
+              const { data: authUser } = await supabase.auth.admin.getUserById(pu.user_id);
+              const userEmail = authUser?.user?.email;
+              if (!userEmail) continue;
+
+              await resend.emails.send({
+                from: fromEmail,
+                to: [userEmail],
+                subject: `Novi nalog ${orderLabel} - ${clientName}`,
+                html: `
+                  <html>
+                    <body style="font-family: Arial, sans-serif; color: #333;">
+                      <h2 style="color: #1a1a1a;">Novi radni nalog</h2>
+                      <p>Poštovani ${pu.full_name},</p>
+                      <p>Kreiran je novi <strong>${input.order_type}</strong> nalog za <strong>${clientName}</strong>.</p>
+                      <table style="border-collapse: collapse; margin: 16px 0;">
+                        <tr>
+                          <td style="padding: 8px; border: 1px solid #ddd; font-weight: bold;">Broj naloga</td>
+                          <td style="padding: 8px; border: 1px solid #ddd;">${orderLabel}</td>
+                        </tr>
+                        ${input.job_name ? `<tr>
+                          <td style="padding: 8px; border: 1px solid #ddd; font-weight: bold;">Naziv</td>
+                          <td style="padding: 8px; border: 1px solid #ddd;">${input.job_name}</td>
+                        </tr>` : ''}
+                        <tr>
+                          <td style="padding: 8px; border: 1px solid #ddd; font-weight: bold;">Tip</td>
+                          <td style="padding: 8px; border: 1px solid #ddd;">${input.order_type}</td>
+                        </tr>
+                      </table>
+                      <p>Možete pratiti realizaciju naloga na <a href="https://gama-order-flow.lovable.app/portal">Klijent Portalu</a>.</p>
+                      <p style="color: #888; font-size: 12px; margin-top: 24px;">Ovo obaveštenje možete isključiti u podešavanjima portala.</p>
+                    </body>
+                  </html>
+                `,
+              });
+              console.log(`Email sent to portal user ${userEmail} for order ${orderLabel}`);
+            } catch (emailErr) {
+              console.error(`Failed to email portal user ${pu.user_id}:`, emailErr);
+            }
+          }
+        }
+      }
     } catch (notifyErr) {
       console.error('Portal notification failed (non-blocking):', notifyErr);
     }

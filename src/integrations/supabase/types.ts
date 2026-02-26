@@ -251,6 +251,7 @@ export type Database = {
         Row: {
           client_id: string
           created_at: string
+          email_notifications_enabled: boolean
           full_name: string
           id: string
           is_active: boolean
@@ -261,6 +262,7 @@ export type Database = {
         Insert: {
           client_id: string
           created_at?: string
+          email_notifications_enabled?: boolean
           full_name: string
           id?: string
           is_active?: boolean
@@ -271,6 +273,7 @@ export type Database = {
         Update: {
           client_id?: string
           created_at?: string
+          email_notifications_enabled?: boolean
           full_name?: string
           id?: string
           is_active?: boolean
