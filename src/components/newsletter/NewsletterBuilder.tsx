@@ -210,7 +210,7 @@ function TextFormattingToolbar({ content, onChange }: { content: Record<string, 
   const align = content.align || "left";
   const bold = content.bold === "true";
   const italic = content.italic === "true";
-  const fontSize = content.fontSize || "";
+  const fontSize = content.fontSize || "16";
   const color = content.color || "";
 
   return (
