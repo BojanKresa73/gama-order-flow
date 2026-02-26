@@ -3535,6 +3535,17 @@ export type Database = {
         }
         Returns: Json
       }
+      get_ctp_revenue: {
+        Args: {
+          p_client_ids?: string[]
+          p_from: string
+          p_plate_format_ids?: string[]
+          p_to: string
+        }
+        Returns: {
+          total_revenue_eur: number
+        }[]
+      }
       get_ctp_stats: {
         Args: {
           p_client_ids?: string[]
