@@ -3527,6 +3527,7 @@ export type Database = {
           p_to: string
         }
         Returns: {
+          area_m2: number
           format_name: string
           plates_consumed: number
           revenue_eur: number
