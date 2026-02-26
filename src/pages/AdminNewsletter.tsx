@@ -17,9 +17,10 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import {
   ArrowLeft, Upload, Plus, Send, Mail, Users, BarChart3,
-  Trash2, Edit, Search, Loader2, CheckCircle2, XCircle, Clock
+  Trash2, Edit, Search, Loader2, CheckCircle2, XCircle, Clock, Code
 } from "lucide-react";
 import * as XLSX from "xlsx";
+import NewsletterBuilder, { blocksToFullHtml } from "@/components/newsletter/NewsletterBuilder";
 
 // ── Recipients Tab ──
 function RecipientsTab() {
@@ -224,7 +225,7 @@ function ComposeTab() {
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [selectAll, setSelectAll] = useState(true);
   const [sending, setSending] = useState(false);
-  const [previewHtml, setPreviewHtml] = useState<string | null>(null);
+  const [mode, setMode] = useState<"builder" | "raw">("builder");
 
   const { data: recipients = [] } = useQuery({
     queryKey: ["newsletter-recipients"],
@@ -306,24 +307,31 @@ function ComposeTab() {
       {/* Left: Compose */}
       <div className="space-y-4">
         <div><Label>Naslov emaila *</Label><Input value={subject} onChange={(e) => setSubject(e.target.value)} placeholder="Npr: Novogodišnja čestitka" /></div>
-        <div>
-          <Label>HTML sadržaj *</Label>
+        
+        <div className="flex gap-2 items-center">
+          <Button variant={mode === "builder" ? "default" : "outline"} size="sm" onClick={() => setMode("builder")}>
+            Vizuelni editor
+          </Button>
+          <Button variant={mode === "raw" ? "default" : "outline"} size="sm" onClick={() => setMode("raw")} className="gap-1">
+            <Code className="h-3 w-3" />HTML
+          </Button>
+        </div>
+
+        {mode === "builder" ? (
+          <NewsletterBuilder onHtmlChange={setHtmlBody} />
+        ) : (
           <Textarea
             value={htmlBody}
             onChange={(e) => setHtmlBody(e.target.value)}
             placeholder="<h1>Poštovani,</h1><p>...</p>"
             className="min-h-[300px] font-mono text-sm"
           />
-        </div>
-        <div className="flex gap-2">
-          <Button variant="outline" onClick={() => setPreviewHtml(htmlBody)} disabled={!htmlBody}>
-            Pregled
-          </Button>
-          <Button onClick={handleSend} disabled={sending || !subject || !htmlBody}>
-            {sending ? <Loader2 className="h-4 w-4 animate-spin mr-1" /> : <Send className="h-4 w-4 mr-1" />}
-            Pošalji ({finalRecipients.length})
-          </Button>
-        </div>
+        )}
+
+        <Button onClick={handleSend} disabled={sending || !subject || !htmlBody}>
+          {sending ? <Loader2 className="h-4 w-4 animate-spin mr-1" /> : <Send className="h-4 w-4 mr-1" />}
+          Pošalji ({finalRecipients.length})
+        </Button>
       </div>
 
       {/* Right: Recipients selection */}
@@ -367,14 +375,6 @@ function ComposeTab() {
           </Table>
         </div>
       </div>
-
-      {/* Preview dialog */}
-      <Dialog open={!!previewHtml} onOpenChange={() => setPreviewHtml(null)}>
-        <DialogContent className="max-w-2xl max-h-[80vh] overflow-auto">
-          <DialogHeader><DialogTitle>Pregled emaila</DialogTitle></DialogHeader>
-          <div className="border rounded p-4" dangerouslySetInnerHTML={{ __html: previewHtml || "" }} />
-        </DialogContent>
-      </Dialog>
     </div>
   );
 }
