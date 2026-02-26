@@ -292,8 +292,12 @@ function BlockEditor({ block, onChange }: { block: Block; onChange: (c: Record<s
             value={c.text || ""}
             onChange={(e) => onChange({ ...c, text: e.target.value })}
             placeholder={block.type === "heading" ? "Naslov..." : "Tekst paragrafa..."}
-            className={`${block.type === "heading" ? "font-bold text-lg" : ""} ${c.bold === "true" ? "font-bold" : ""} ${c.italic === "true" ? "italic" : ""}`}
-            style={{ textAlign: (c.align as any) || "left" }}
+            className={`${c.bold === "true" ? "font-bold" : ""} ${c.italic === "true" ? "italic" : ""}`}
+            style={{
+              textAlign: (c.align as any) || "left",
+              fontSize: `${c.fontSize || (block.type === "heading" ? "24" : "16")}px`,
+              fontWeight: block.type === "heading" && c.bold !== "false" ? 700 : undefined,
+            }}
             rows={block.type === "heading" ? 2 : 4}
           />
         </div>
