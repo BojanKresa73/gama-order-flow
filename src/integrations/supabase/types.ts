@@ -1768,6 +1768,95 @@ export type Database = {
         }
         Relationships: []
       }
+      portal_notifications: {
+        Row: {
+          client_id: string
+          created_at: string
+          event_type: string
+          id: string
+          is_read: boolean
+          message: string
+          read_at: string | null
+          read_by: string | null
+          title: string
+          work_order_id: string
+        }
+        Insert: {
+          client_id: string
+          created_at?: string
+          event_type: string
+          id?: string
+          is_read?: boolean
+          message: string
+          read_at?: string | null
+          read_by?: string | null
+          title: string
+          work_order_id: string
+        }
+        Update: {
+          client_id?: string
+          created_at?: string
+          event_type?: string
+          id?: string
+          is_read?: boolean
+          message?: string
+          read_at?: string | null
+          read_by?: string | null
+          title?: string
+          work_order_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "portal_notifications_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "portal_notifications_work_order_id_fkey"
+            columns: ["work_order_id"]
+            isOneToOne: false
+            referencedRelation: "v_ctp_items"
+            referencedColumns: ["work_order_id"]
+          },
+          {
+            foreignKeyName: "portal_notifications_work_order_id_fkey"
+            columns: ["work_order_id"]
+            isOneToOne: false
+            referencedRelation: "work_orders"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "portal_notifications_work_order_id_fkey"
+            columns: ["work_order_id"]
+            isOneToOne: false
+            referencedRelation: "work_orders_ctp"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "portal_notifications_work_order_id_fkey"
+            columns: ["work_order_id"]
+            isOneToOne: false
+            referencedRelation: "work_orders_digitala"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "portal_notifications_work_order_id_fkey"
+            columns: ["work_order_id"]
+            isOneToOne: false
+            referencedRelation: "work_orders_filmovanje"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "portal_notifications_work_order_id_fkey"
+            columns: ["work_order_id"]
+            isOneToOne: false
+            referencedRelation: "work_orders_razno"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       price_list_digital: {
         Row: {
           break_qty: number
@@ -2070,6 +2159,36 @@ export type Database = {
           id?: string
           is_active?: boolean
           updated_at?: string
+        }
+        Relationships: []
+      }
+      push_subscriptions: {
+        Row: {
+          auth_key: string
+          created_at: string
+          endpoint: string
+          id: string
+          p256dh: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          auth_key: string
+          created_at?: string
+          endpoint: string
+          id?: string
+          p256dh: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          auth_key?: string
+          created_at?: string
+          endpoint?: string
+          id?: string
+          p256dh?: string
+          updated_at?: string
+          user_id?: string
         }
         Relationships: []
       }
