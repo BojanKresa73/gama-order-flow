@@ -6,7 +6,9 @@ import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
-import { Plus, Trash2, ArrowUp, ArrowDown, Eye, Type, Image, RectangleHorizontal, Phone, Minus } from "lucide-react";
+import { Plus, Trash2, ArrowUp, ArrowDown, Eye, Type, Image, RectangleHorizontal, Phone, Minus, Upload, Loader2 } from "lucide-react";
+import { supabase } from "@/integrations/supabase/client";
+import { useToast } from "@/hooks/use-toast";
 
 type BlockType = "heading" | "text" | "image" | "button" | "divider" | "contact";
 
@@ -154,12 +156,7 @@ function BlockEditor({ block, onChange }: { block: Block; onChange: (c: Record<s
         />
       );
     case "image":
-      return (
-        <div className="space-y-2">
-          <Input value={c.url || ""} onChange={(e) => onChange({ ...c, url: e.target.value })} placeholder="URL slike (https://...)" />
-          <Input value={c.alt || ""} onChange={(e) => onChange({ ...c, alt: e.target.value })} placeholder="Opis slike (alt tekst)" />
-        </div>
-      );
+      return <ImageBlockEditor content={c} onChange={onChange} />;
     case "button":
       return (
         <div className="space-y-2">
@@ -179,6 +176,55 @@ function BlockEditor({ block, onChange }: { block: Block; onChange: (c: Record<s
     default:
       return null;
   }
+}
+
+function ImageBlockEditor({ content, onChange }: { content: Record<string, string>; onChange: (c: Record<string, string>) => void }) {
+  const { toast } = useToast();
+  const [uploading, setUploading] = useState(false);
+
+  const handleUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    if (!file.type.startsWith("image/")) {
+      toast({ title: "Samo slike su dozvoljene", variant: "destructive" });
+      return;
+    }
+    setUploading(true);
+    try {
+      const ext = file.name.split(".").pop() || "png";
+      const path = `${Date.now()}-${Math.random().toString(36).slice(2, 8)}.${ext}`;
+      const { error } = await supabase.storage.from("newsletter-assets").upload(path, file);
+      if (error) throw error;
+      const { data: urlData } = supabase.storage.from("newsletter-assets").getPublicUrl(path);
+      onChange({ ...content, url: urlData.publicUrl });
+      toast({ title: "Slika uploadovana!" });
+    } catch (err: any) {
+      toast({ title: "Greška pri uploadu", description: err.message, variant: "destructive" });
+    } finally {
+      setUploading(false);
+      e.target.value = "";
+    }
+  };
+
+  return (
+    <div className="space-y-2">
+      <div className="flex gap-2 items-center">
+        <Input value={content.url || ""} onChange={(e) => onChange({ ...content, url: e.target.value })} placeholder="URL slike ili uploaduj" className="flex-1" />
+        <label className="cursor-pointer">
+          <input type="file" accept="image/*" className="hidden" onChange={handleUpload} disabled={uploading} />
+          <Button variant="outline" size="sm" asChild disabled={uploading}>
+            <span>{uploading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Upload className="h-4 w-4" />}</span>
+          </Button>
+        </label>
+      </div>
+      <Input value={content.alt || ""} onChange={(e) => onChange({ ...content, alt: e.target.value })} placeholder="Opis slike (alt tekst)" />
+      {content.url && (
+        <div className="border rounded p-2 bg-muted/30">
+          <img src={content.url} alt={content.alt || ""} className="max-h-[120px] mx-auto rounded" />
+        </div>
+      )}
+    </div>
+  );
 }
 
 interface Props {
