@@ -1756,6 +1756,39 @@ export type Database = {
         }
         Relationships: []
       }
+      newsletter_drafts: {
+        Row: {
+          blocks: Json
+          created_at: string
+          id: string
+          name: string
+          subject: string
+          theme_name: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          blocks?: Json
+          created_at?: string
+          id?: string
+          name: string
+          subject?: string
+          theme_name?: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          blocks?: Json
+          created_at?: string
+          id?: string
+          name?: string
+          subject?: string
+          theme_name?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       newsletter_recipients: {
         Row: {
           city: string | null

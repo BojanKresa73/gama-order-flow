@@ -417,15 +417,20 @@ export function ThemePicker({ selectedTheme, onSelect }: { selectedTheme: EmailT
 interface Props {
   onHtmlChange: (html: string) => void;
   theme?: EmailTheme;
+  initialBlocks?: Block[];
+  onBlocksChange?: (blocks: Block[]) => void;
 }
 
-export default function NewsletterBuilder({ onHtmlChange, theme = EMAIL_THEMES[0] }: Props) {
-  const [blocks, setBlocks] = useState<Block[]>([...DEFAULT_BLOCKS]);
+export type { Block, BlockType };
+
+export default function NewsletterBuilder({ onHtmlChange, theme = EMAIL_THEMES[0], initialBlocks, onBlocksChange }: Props) {
+  const [blocks, setBlocks] = useState<Block[]>(initialBlocks || [...DEFAULT_BLOCKS]);
   const [activeTab, setActiveTab] = useState("edit");
 
   const updateBlocks = (newBlocks: Block[]) => {
     setBlocks(newBlocks);
     onHtmlChange(blocksToFullHtml(newBlocks, theme));
+    onBlocksChange?.(newBlocks);
   };
 
   // Re-generate HTML when theme changes
