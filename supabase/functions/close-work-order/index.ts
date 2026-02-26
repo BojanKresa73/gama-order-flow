@@ -1125,6 +1125,21 @@ const handler = async (req: Request): Promise<Response> => {
       .eq('id', work_order_id)
       .single();
 
+    // Notify portal users about order closure (fire and forget)
+    try {
+      const orderLabel = workOrder.display_order_number || workOrder.order_code || work_order_id;
+      const clientName = workOrder.clients?.name || 'Klijent';
+      await supabase.from('portal_notifications').insert({
+        client_id: workOrder.client_id,
+        work_order_id: work_order_id,
+        event_type: 'closed',
+        title: `Nalog ${orderLabel} zatvoren`,
+        message: `Nalog za ${clientName} je zatvoren.`,
+      });
+    } catch (notifyErr) {
+      console.error('Portal notification on close failed (non-blocking):', notifyErr);
+    }
+
     const successMessage = clientEmailStatus === 'skipped' 
       ? `Nalog zatvoren. ${clientEmailMessage}. Arhivski mail poslat.`
       : clientEmailStatus === 'error'

@@ -140,6 +140,30 @@ Deno.serve(async (req) => {
       },
     });
 
+    // Notify portal users (fire and forget)
+    try {
+      // Get client name for notification
+      const { data: client } = await supabase
+        .from('clients')
+        .select('name')
+        .eq('id', input.client_id)
+        .single();
+
+      const clientName = client?.name || 'Klijent';
+      const orderLabel = workOrder.display_order_number || orderCode;
+
+      // Insert portal notification directly (service role)
+      await supabase.from('portal_notifications').insert({
+        client_id: input.client_id,
+        work_order_id: workOrder.id,
+        event_type: 'created',
+        title: `Novi nalog ${orderLabel}`,
+        message: `Kreiran je novi ${input.order_type} nalog za ${clientName}.`,
+      });
+    } catch (notifyErr) {
+      console.error('Portal notification failed (non-blocking):', notifyErr);
+    }
+
     console.log('=== Create Work Order Function Completed ===');
 
     return new Response(
