@@ -139,24 +139,24 @@ function blockToHtml(block: Block, theme: EmailTheme): string {
       const color = customColor || theme.primary;
       const fontWeight = bold || !c.bold ? "700" : "400"; // headings bold by default
       const fontStyle = italic ? "font-style:italic;" : "";
-      return `<h1 style="color:${color};font-size:${fontSize}px;font-weight:${fontWeight};margin:0 0 16px;text-align:${align};${fontStyle}font-family:'Helvetica Neue',Helvetica,Arial,sans-serif;">${(c.text || "").replace(/\n/g, "<br>")}</h1>`;
+      return `<h1 style="color:${color};font-size:${fontSize}px;font-weight:${fontWeight};margin:0 0 16px;text-align:${align};${fontStyle}font-family:Arial,'Helvetica Neue',Helvetica,sans-serif;">${(c.text || "").replace(/\n/g, "<br>")}</h1>`;
     }
     case "text": {
       const fontSize = c.fontSize || "16";
       const color = customColor || theme.text;
       const fontWeight = bold ? "font-weight:700;" : "";
       const fontStyle = italic ? "font-style:italic;" : "";
-      return `<p style="color:${color};font-size:${fontSize}px;line-height:1.6;margin:0 0 16px;text-align:${align};${fontWeight}${fontStyle}font-family:'Helvetica Neue',Helvetica,Arial,sans-serif;">${(c.text || "").replace(/\n/g, "<br>")}</p>`;
+      return `<p style="color:${color};font-size:${fontSize}px;line-height:1.6;margin:0 0 16px;text-align:${align};${fontWeight}${fontStyle}font-family:Arial,'Helvetica Neue',Helvetica,sans-serif;">${(c.text || "").replace(/\n/g, "<br>")}</p>`;
     }
     case "image":
       if (!c.url) return "";
       return `<div style="margin:0 0 16px;text-align:center;"><img src="${c.url}" alt="${c.alt || ""}" style="max-width:100%;height:auto;border-radius:8px;" /></div>`;
     case "button":
-      return `<div style="margin:24px 0;text-align:center;"><a href="${c.url || "#"}" style="display:inline-block;background:${theme.accent};color:#ffffff;padding:14px 32px;border-radius:6px;text-decoration:none;font-weight:600;font-size:16px;font-family:'Helvetica Neue',Helvetica,Arial,sans-serif;">${c.text || "Kliknite ovde"}</a></div>`;
+      return `<div style="margin:24px 0;text-align:center;"><a href="${c.url || "#"}" style="display:inline-block;background:${theme.accent};color:#ffffff;padding:14px 32px;border-radius:6px;text-decoration:none;font-weight:600;font-size:16px;font-family:Arial,'Helvetica Neue',Helvetica,sans-serif;">${c.text || "Kliknite ovde"}</a></div>`;
     case "divider":
       return `<hr style="border:none;border-top:1px solid #e0e0e0;margin:24px 0;" />`;
     case "contact":
-      return `<div style="background:${theme.primary};border-radius:8px;padding:20px;text-align:center;margin:16px 0;"><p style="color:#ffffff;margin:0 0 8px;font-size:14px;font-family:'Helvetica Neue',Helvetica,Arial,sans-serif;">${c.label || "Kontakt"}</p><p style="color:#ffffff;margin:0;font-size:22px;font-weight:700;font-family:'Helvetica Neue',Helvetica,Arial,sans-serif;">${c.phone || ""}</p></div>`;
+      return `<div style="background:${theme.primary};border-radius:8px;padding:20px;text-align:center;margin:16px 0;"><p style="color:#ffffff;margin:0 0 8px;font-size:14px;font-family:Arial,'Helvetica Neue',Helvetica,sans-serif;">${c.label || "Kontakt"}</p><p style="color:#ffffff;margin:0;font-size:22px;font-weight:700;font-family:Arial,'Helvetica Neue',Helvetica,sans-serif;">${c.phone || ""}</p></div>`;
     default:
       return "";
   }
@@ -167,7 +167,7 @@ export function blocksToFullHtml(blocks: Block[], theme: EmailTheme = EMAIL_THEM
   return `<!DOCTYPE html>
 <html>
 <head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1.0"></head>
-<body style="margin:0;padding:0;background-color:${theme.bg};font-family:'Helvetica Neue',Helvetica,Arial,sans-serif;">
+<body style="margin:0;padding:0;background-color:${theme.bg};font-family:Arial,'Helvetica Neue',Helvetica,sans-serif;">
 <div style="max-width:600px;margin:0 auto;padding:20px;">
   <!-- Header -->
   <div style="background:${theme.primary};border-radius:12px 12px 0 0;padding:24px;text-align:center;">
@@ -179,7 +179,7 @@ export function blocksToFullHtml(blocks: Block[], theme: EmailTheme = EMAIL_THEM
   </div>
   <!-- Footer -->
   <div style="background:${theme.primary};border-radius:0 0 12px 12px;padding:20px;text-align:center;">
-    <p style="color:rgba(255,255,255,0.7);font-size:12px;margin:0;font-family:'Helvetica Neue',Helvetica,Arial,sans-serif;">© ${new Date().getFullYear()} Gama United · Veljka Milićevića 2/10, Beograd</p>
+    <p style="color:rgba(255,255,255,0.7);font-size:12px;margin:0;font-family:Arial,'Helvetica Neue',Helvetica,sans-serif;">© ${new Date().getFullYear()} Gama United · Veljka Milićevića 2/10, Beograd</p>
   </div>
 </div>
 </body>
