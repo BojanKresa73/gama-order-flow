@@ -5,7 +5,9 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
-import { Plus, Trash2, ArrowUp, ArrowDown, Eye, Type, Image, RectangleHorizontal, Phone, Minus, Upload, Loader2, Palette } from "lucide-react";
+import { Plus, Trash2, ArrowUp, ArrowDown, Eye, Type, Image, RectangleHorizontal, Phone, Minus, Upload, Loader2, Palette, AlignLeft, AlignCenter, AlignRight, Bold, Italic } from "lucide-react";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
@@ -99,21 +101,62 @@ function generateId() {
   return Math.random().toString(36).substring(2, 9);
 }
 
+const FONT_SIZES = [
+  { label: "Mali (12px)", value: "12" },
+  { label: "Normal (16px)", value: "16" },
+  { label: "Srednji (20px)", value: "20" },
+  { label: "Veliki (24px)", value: "24" },
+  { label: "XL (32px)", value: "32" },
+  { label: "XXL (40px)", value: "40" },
+];
+
+const TEXT_COLORS = [
+  { label: "Podrazumevana", value: "" },
+  { label: "Crna", value: "#000000" },
+  { label: "Tamno siva", value: "#333333" },
+  { label: "Siva", value: "#666666" },
+  { label: "Crvena", value: "#dc2626" },
+  { label: "Plava", value: "#2563eb" },
+  { label: "Zelena", value: "#16a34a" },
+  { label: "Narandžasta", value: "#ea580c" },
+  { label: "Ljubičasta", value: "#7c3aed" },
+  { label: "Roze", value: "#db2777" },
+  { label: "Teal", value: "#0d9488" },
+  { label: "Braon", value: "#92400e" },
+  { label: "Bela", value: "#ffffff" },
+];
+
 function blockToHtml(block: Block, theme: EmailTheme): string {
+  const c = block.content;
+  const align = c.align || "left";
+  const bold = c.bold === "true";
+  const italic = c.italic === "true";
+  const customColor = c.color || "";
+
   switch (block.type) {
-    case "heading":
-      return `<h1 style="color:${theme.primary};font-size:24px;font-weight:700;margin:0 0 16px;font-family:'Helvetica Neue',Helvetica,Arial,sans-serif;">${(block.content.text || "").replace(/\n/g, "<br>")}</h1>`;
-    case "text":
-      return `<p style="color:${theme.text};font-size:16px;line-height:1.6;margin:0 0 16px;font-family:'Helvetica Neue',Helvetica,Arial,sans-serif;">${(block.content.text || "").replace(/\n/g, "<br>")}</p>`;
+    case "heading": {
+      const fontSize = c.fontSize || "24";
+      const color = customColor || theme.primary;
+      const fontWeight = bold || !c.bold ? "700" : "400"; // headings bold by default
+      const fontStyle = italic ? "font-style:italic;" : "";
+      return `<h1 style="color:${color};font-size:${fontSize}px;font-weight:${fontWeight};margin:0 0 16px;text-align:${align};${fontStyle}font-family:'Helvetica Neue',Helvetica,Arial,sans-serif;">${(c.text || "").replace(/\n/g, "<br>")}</h1>`;
+    }
+    case "text": {
+      const fontSize = c.fontSize || "16";
+      const color = customColor || theme.text;
+      const fontWeight = bold ? "font-weight:700;" : "";
+      const fontStyle = italic ? "font-style:italic;" : "";
+      return `<p style="color:${color};font-size:${fontSize}px;line-height:1.6;margin:0 0 16px;text-align:${align};${fontWeight}${fontStyle}font-family:'Helvetica Neue',Helvetica,Arial,sans-serif;">${(c.text || "").replace(/\n/g, "<br>")}</p>`;
+    }
     case "image":
-      if (!block.content.url) return "";
-      return `<div style="margin:0 0 16px;text-align:center;"><img src="${block.content.url}" alt="${block.content.alt || ""}" style="max-width:100%;height:auto;border-radius:8px;" /></div>`;
+      if (!c.url) return "";
+      return `<div style="margin:0 0 16px;text-align:center;"><img src="${c.url}" alt="${c.alt || ""}" style="max-width:100%;height:auto;border-radius:8px;" /></div>`;
     case "button":
-      return `<div style="margin:24px 0;text-align:center;"><a href="${block.content.url || "#"}" style="display:inline-block;background:${theme.accent};color:#ffffff;padding:14px 32px;border-radius:6px;text-decoration:none;font-weight:600;font-size:16px;font-family:'Helvetica Neue',Helvetica,Arial,sans-serif;">${block.content.text || "Kliknite ovde"}</a></div>`;
+      return `<div style="margin:24px 0;text-align:center;"><a href="${c.url || "#"}" style="display:inline-block;background:${theme.accent};color:#ffffff;padding:14px 32px;border-radius:6px;text-decoration:none;font-weight:600;font-size:16px;font-family:'Helvetica Neue',Helvetica,Arial,sans-serif;">${c.text || "Kliknite ovde"}</a></div>`;
     case "divider":
       return `<hr style="border:none;border-top:1px solid #e0e0e0;margin:24px 0;" />`;
     case "contact":
-      return `<div style="background:${theme.primary};border-radius:8px;padding:20px;text-align:center;margin:16px 0;"><p style="color:#ffffff;margin:0 0 8px;font-size:14px;font-family:'Helvetica Neue',Helvetica,Arial,sans-serif;">${block.content.label || "Kontakt"}</p><p style="color:#ffffff;margin:0;font-size:22px;font-weight:700;font-family:'Helvetica Neue',Helvetica,Arial,sans-serif;">${block.content.phone || ""}</p></div>`;
+      return `<div style="background:${theme.primary};border-radius:8px;padding:20px;text-align:center;margin:16px 0;"><p style="color:#ffffff;margin:0 0 8px;font-size:14px;font-family:'Helvetica Neue',Helvetica,Arial,sans-serif;">${c.label || "Kontakt"}</p><p style="color:#ffffff;margin:0;font-size:22px;font-weight:700;font-family:'Helvetica Neue',Helvetica,Arial,sans-serif;">${c.phone || ""}</p></div>`;
     default:
       return "";
   }
@@ -162,19 +205,99 @@ const BLOCK_LABELS: Record<BlockType, string> = {
   contact: "Kontakt / Telefon",
 };
 
+// ── Text Formatting Toolbar ──
+function TextFormattingToolbar({ content, onChange }: { content: Record<string, string>; onChange: (c: Record<string, string>) => void }) {
+  const align = content.align || "left";
+  const bold = content.bold === "true";
+  const italic = content.italic === "true";
+  const fontSize = content.fontSize || "";
+  const color = content.color || "";
+
+  return (
+    <div className="flex flex-wrap gap-1 items-center pb-2 border-b mb-2">
+      {/* Alignment */}
+      <div className="flex border rounded-md overflow-hidden">
+        <Button type="button" variant={align === "left" ? "secondary" : "ghost"} size="icon" className="h-7 w-7 rounded-none" onClick={() => onChange({ ...content, align: "left" })}>
+          <AlignLeft className="h-3.5 w-3.5" />
+        </Button>
+        <Button type="button" variant={align === "center" ? "secondary" : "ghost"} size="icon" className="h-7 w-7 rounded-none" onClick={() => onChange({ ...content, align: "center" })}>
+          <AlignCenter className="h-3.5 w-3.5" />
+        </Button>
+        <Button type="button" variant={align === "right" ? "secondary" : "ghost"} size="icon" className="h-7 w-7 rounded-none" onClick={() => onChange({ ...content, align: "right" })}>
+          <AlignRight className="h-3.5 w-3.5" />
+        </Button>
+      </div>
+
+      {/* Bold / Italic */}
+      <div className="flex border rounded-md overflow-hidden">
+        <Button type="button" variant={bold ? "secondary" : "ghost"} size="icon" className="h-7 w-7 rounded-none" onClick={() => onChange({ ...content, bold: bold ? "" : "true" })}>
+          <Bold className="h-3.5 w-3.5" />
+        </Button>
+        <Button type="button" variant={italic ? "secondary" : "ghost"} size="icon" className="h-7 w-7 rounded-none" onClick={() => onChange({ ...content, italic: italic ? "" : "true" })}>
+          <Italic className="h-3.5 w-3.5" />
+        </Button>
+      </div>
+
+      {/* Font size */}
+      <Select value={fontSize} onValueChange={(v) => onChange({ ...content, fontSize: v })}>
+        <SelectTrigger className="h-7 w-[110px] text-xs">
+          <SelectValue placeholder="Veličina" />
+        </SelectTrigger>
+        <SelectContent>
+          {FONT_SIZES.map((s) => (
+            <SelectItem key={s.value} value={s.value}>{s.label}</SelectItem>
+          ))}
+        </SelectContent>
+      </Select>
+
+      {/* Color picker */}
+      <Popover>
+        <PopoverTrigger asChild>
+          <Button type="button" variant="ghost" size="sm" className="h-7 gap-1 text-xs px-2">
+            <span className="w-3 h-3 rounded-full border" style={{ backgroundColor: color || "#333" }} />
+            Boja
+          </Button>
+        </PopoverTrigger>
+        <PopoverContent className="w-auto p-2" align="start">
+          <div className="grid grid-cols-4 gap-1">
+            {TEXT_COLORS.map((tc) => (
+              <button
+                key={tc.value || "default"}
+                onClick={() => onChange({ ...content, color: tc.value })}
+                className={`flex items-center gap-1.5 px-2 py-1 rounded text-xs hover:bg-muted transition-colors ${color === tc.value ? "bg-muted font-medium" : ""}`}
+                title={tc.label}
+              >
+                <span
+                  className="w-3 h-3 rounded-full border shrink-0"
+                  style={{ backgroundColor: tc.value || "#333" }}
+                />
+                <span className="truncate">{tc.label}</span>
+              </button>
+            ))}
+          </div>
+        </PopoverContent>
+      </Popover>
+    </div>
+  );
+}
+
 function BlockEditor({ block, onChange }: { block: Block; onChange: (c: Record<string, string>) => void }) {
   const c = block.content;
   switch (block.type) {
     case "heading":
     case "text":
       return (
-        <Textarea
-          value={c.text || ""}
-          onChange={(e) => onChange({ ...c, text: e.target.value })}
-          placeholder={block.type === "heading" ? "Naslov..." : "Tekst paragrafa..."}
-          className={block.type === "heading" ? "font-bold text-lg" : ""}
-          rows={block.type === "heading" ? 2 : 4}
-        />
+        <div>
+          <TextFormattingToolbar content={c} onChange={onChange} />
+          <Textarea
+            value={c.text || ""}
+            onChange={(e) => onChange({ ...c, text: e.target.value })}
+            placeholder={block.type === "heading" ? "Naslov..." : "Tekst paragrafa..."}
+            className={`${block.type === "heading" ? "font-bold text-lg" : ""} ${c.bold === "true" ? "font-bold" : ""} ${c.italic === "true" ? "italic" : ""}`}
+            style={{ textAlign: (c.align as any) || "left" }}
+            rows={block.type === "heading" ? 2 : 4}
+          />
+        </div>
       );
     case "image":
       return <ImageBlockEditor content={c} onChange={onChange} />;
