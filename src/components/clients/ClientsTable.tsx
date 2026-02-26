@@ -62,7 +62,7 @@ export const ClientsTable = ({ clients, onEdit }: ClientsTableProps) => {
     email: true,
     notification_email: false,
     rok_placanja_dana: true,
-    rabat_procenat: true,
+    rabat_procenat: false,
     next_follow_up_at: false,
     created_at: true,
   });
