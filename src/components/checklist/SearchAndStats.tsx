@@ -5,7 +5,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Eye, Receipt } from "lucide-react";
+import { Eye, Receipt, ArrowUpDown, ArrowUp, ArrowDown } from "lucide-react";
 import { format } from "date-fns";
 import ChecklistStats from "./ChecklistStats";
 import ChecklistFilters from "./ChecklistFilters";
@@ -514,6 +514,21 @@ const SearchAndStats = () => {
   );
 };
 
+// Sortable column header
+type SearchSortField = 'order_number' | 'client' | 'type' | 'date' | 'status' | 'created_by' | 'closed_by' | 'invoiced' | 'plates';
+type SortDir = 'asc' | 'desc';
+
+const SortHead = ({ field, label, current, dir, onSort, className = '' }: {
+  field: SearchSortField; label: string; current: SearchSortField; dir: SortDir; onSort: (f: SearchSortField) => void; className?: string;
+}) => (
+  <TableHead className={className}>
+    <button type="button" onClick={() => onSort(field)} className="flex items-center gap-1 hover:text-foreground transition-colors w-full">
+      {label}
+      {current === field ? (dir === 'asc' ? <ArrowUp className="h-3.5 w-3.5" /> : <ArrowDown className="h-3.5 w-3.5" />) : <ArrowUpDown className="h-3.5 w-3.5 opacity-30" />}
+    </button>
+  </TableHead>
+);
+
 // Component for displaying search results table
 interface SearchResultsTableProps {
   orders: WorkOrder[];
@@ -521,6 +536,48 @@ interface SearchResultsTableProps {
 }
 
 const SearchResultsTable = ({ orders, onViewOrder }: SearchResultsTableProps) => {
+  const [sortField, setSortField] = useState<SearchSortField>('date');
+  const [sortDir, setSortDir] = useState<SortDir>('desc');
+
+  const handleSort = (field: SearchSortField) => {
+    if (sortField === field) {
+      setSortDir(d => d === 'asc' ? 'desc' : 'asc');
+    } else {
+      setSortField(field);
+      setSortDir(field === 'date' ? 'desc' : 'asc');
+    }
+  };
+
+  const sortedOrders = useMemo(() => {
+    const arr = [...orders];
+    const mult = sortDir === 'asc' ? 1 : -1;
+    arr.sort((a, b) => {
+      switch (sortField) {
+        case 'order_number':
+          return mult * (displayOrderNumber(a) || '').localeCompare(displayOrderNumber(b) || '', 'sr');
+        case 'client':
+          return mult * a.client_name.localeCompare(b.client_name, 'sr');
+        case 'type':
+          return mult * (a.order_type || '').localeCompare(b.order_type || '', 'sr');
+        case 'date':
+          return mult * (new Date(a.created_at).getTime() - new Date(b.created_at).getTime());
+        case 'status':
+          return mult * a.status.localeCompare(b.status, 'sr');
+        case 'created_by':
+          return mult * (a.created_by_name || '').localeCompare(b.created_by_name || '', 'sr');
+        case 'closed_by':
+          return mult * (a.closed_by_name || '').localeCompare(b.closed_by_name || '', 'sr');
+        case 'invoiced':
+          return mult * ((a.invoiced_at ? 1 : 0) - (b.invoiced_at ? 1 : 0));
+        case 'plates':
+          return mult * (a.total_plates - b.total_plates);
+        default:
+          return 0;
+      }
+    });
+    return arr;
+  }, [orders, sortField, sortDir]);
+
   const getStatusBadge = (status: string) => {
     switch (status) {
       case "open":
@@ -557,20 +614,20 @@ const SearchResultsTable = ({ orders, onViewOrder }: SearchResultsTableProps) =>
         <Table>
           <TableHeader>
             <TableRow>
-              <TableHead>Broj naloga</TableHead>
-              <TableHead>Klijent</TableHead>
-              <TableHead>Tip</TableHead>
-              <TableHead>Datum</TableHead>
-              <TableHead>Status</TableHead>
-              <TableHead>Kreirao</TableHead>
-              <TableHead>Zatvorio</TableHead>
-              <TableHead>Fakturisano</TableHead>
-              <TableHead className="text-right">Ploča/Stavki</TableHead>
+              <SortHead field="order_number" label="Broj naloga" current={sortField} dir={sortDir} onSort={handleSort} />
+              <SortHead field="client" label="Klijent" current={sortField} dir={sortDir} onSort={handleSort} />
+              <SortHead field="type" label="Tip" current={sortField} dir={sortDir} onSort={handleSort} />
+              <SortHead field="date" label="Datum" current={sortField} dir={sortDir} onSort={handleSort} />
+              <SortHead field="status" label="Status" current={sortField} dir={sortDir} onSort={handleSort} />
+              <SortHead field="created_by" label="Kreirao" current={sortField} dir={sortDir} onSort={handleSort} />
+              <SortHead field="closed_by" label="Zatvorio" current={sortField} dir={sortDir} onSort={handleSort} />
+              <SortHead field="invoiced" label="Fakturisano" current={sortField} dir={sortDir} onSort={handleSort} />
+              <SortHead field="plates" label="Ploča/Stavki" current={sortField} dir={sortDir} onSort={handleSort} className="text-right" />
               <TableHead className="w-[80px]"></TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
-            {orders.slice(0, 100).map((order) => (
+            {sortedOrders.slice(0, 100).map((order) => (
               <TableRow key={order.id} className="cursor-pointer hover:bg-muted/50" onClick={() => onViewOrder(order.id)}>
                 <TableCell className="font-medium">{displayOrderNumber(order)}</TableCell>
                 <TableCell>{order.client_name}</TableCell>
