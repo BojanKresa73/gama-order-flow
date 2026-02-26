@@ -36,6 +36,7 @@ import { ClientOrderRow } from "@/components/portal/ClientOrderRow";
 import { ClientOrderCard } from "@/components/portal/ClientOrderCard";
 import { PortalNotificationBell } from "@/components/portal/PortalNotificationBell";
 import { PushNotificationToggle } from "@/components/portal/PushNotificationToggle";
+import { EmailNotificationToggle } from "@/components/portal/EmailNotificationToggle";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { Badge } from "@/components/ui/badge";
 
@@ -431,6 +432,12 @@ const ClientPortal = () => {
                 </div>
               )}
               <PushNotificationToggle />
+              {portalUser && (
+                <EmailNotificationToggle
+                  portalUserId={portalUser.id}
+                  initialEnabled={(portalUser as any).email_notifications_enabled ?? true}
+                />
+              )}
               {portalUser?.client_id && (
                 <PortalNotificationBell clientId={portalUser.client_id} />
               )}
