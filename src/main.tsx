@@ -32,5 +32,11 @@ const updateSW = registerSW({
     console.log("App ready for offline use.");
   },
 });
+// Register push notification service worker (separate from PWA SW)
+if ("serviceWorker" in navigator) {
+  navigator.serviceWorker.register("/push-sw.js").catch((err) => {
+    console.log("Push SW registration failed:", err);
+  });
+}
 
 createRoot(document.getElementById("root")!).render(<App />);

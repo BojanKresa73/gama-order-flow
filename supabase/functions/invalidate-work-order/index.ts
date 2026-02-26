@@ -75,6 +75,24 @@ Deno.serve(async (req) => {
       created_by: user.id
     });
 
+    // Notify portal users about invalidation (fire and forget)
+    try {
+      const serviceSupabase = createClient(
+        Deno.env.get("SUPABASE_URL")!,
+        Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!
+      );
+      const orderLabel = updated.display_order_number || updated.order_code || work_order_id;
+      await serviceSupabase.from('portal_notifications').insert({
+        client_id: updated.client_id,
+        work_order_id,
+        event_type: 'invalidated',
+        title: `Nalog ${orderLabel} storniran`,
+        message: reason ? `Razlog: ${reason}` : 'Nalog je storniran.',
+      });
+    } catch (notifyErr) {
+      console.error('Portal notification on invalidate failed:', notifyErr);
+    }
+
     return new Response(
       JSON.stringify({ ok: true }), 
       { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }

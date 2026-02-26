@@ -155,6 +155,19 @@ const handler = async (req: Request): Promise<Response> => {
       console.log("[notify-priority-change] RESEND_API_KEY not configured, skipping email");
     }
 
+    // Also create portal notification for priority change
+    try {
+      await supabase.from('portal_notifications').insert({
+        client_id: workOrder.client_id,
+        work_order_id: workOrderId,
+        event_type: 'priority_changed',
+        title: `Prioritet promenjen: ${orderNumber}`,
+        message: `Prioritet ${priorityDirection} sa ${oldPriority} na ${newPriority}. ${note ? 'Napomena: ' + note : ''}`.trim(),
+      });
+    } catch (portalErr) {
+      console.error('[notify-priority-change] Portal notification failed:', portalErr);
+    }
+
     return new Response(
       JSON.stringify({ success: true, emailsSent: recipientEmails.length }),
       {

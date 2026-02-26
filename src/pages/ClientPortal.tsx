@@ -34,6 +34,8 @@ import { PriorityBadge } from "@/components/priority/PriorityBadge";
 import { PrioritySelect } from "@/components/priority/PrioritySelect";
 import { ClientOrderRow } from "@/components/portal/ClientOrderRow";
 import { ClientOrderCard } from "@/components/portal/ClientOrderCard";
+import { PortalNotificationBell } from "@/components/portal/PortalNotificationBell";
+import { PushNotificationToggle } from "@/components/portal/PushNotificationToggle";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { Badge } from "@/components/ui/badge";
 
@@ -415,7 +417,7 @@ const ClientPortal = () => {
                 {portalUser?.clients?.name} - {portalUser?.full_name}
               </p>
             </div>
-            <div className="flex items-center gap-4">
+            <div className="flex items-center gap-2">
               {/* Stock display for Publik clients */}
               {isPublikClient && publikStock && (
                 <div className="hidden sm:flex items-center gap-2 px-3 py-2 bg-muted/50 rounded-lg border">
@@ -427,6 +429,10 @@ const ClientPortal = () => {
                     </Badge>
                   </span>
                 </div>
+              )}
+              <PushNotificationToggle />
+              {portalUser?.client_id && (
+                <PortalNotificationBell clientId={portalUser.client_id} />
               )}
               <Button variant="outline" onClick={handleLogout}>
                 <LogOut className="h-4 w-4 mr-2" />
