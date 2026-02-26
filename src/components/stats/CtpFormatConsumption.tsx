@@ -23,13 +23,14 @@ export const CtpFormatConsumption = ({ filters }: Props) => {
       const params = buildCtpRpcParams(filters);
       const { data, error } = await supabase.rpc("get_ctp_consumption_by_format", params);
       if (error) throw error;
-      return (data || []) as Array<{ format_name: string; plates_consumed: number; revenue_eur: number }>;
+      return (data || []) as Array<{ format_name: string; plates_consumed: number; revenue_eur: number; area_m2: number }>;
     },
     staleTime: 30000,
   });
 
   const totalPlates = data?.reduce((s, r) => s + r.plates_consumed, 0) || 0;
   const totalRevenue = data?.reduce((s, r) => s + Number(r.revenue_eur), 0) || 0;
+  const totalArea = data?.reduce((s, r) => s + Number(r.area_m2), 0) || 0;
 
   if (isLoading) {
     return (
@@ -55,6 +56,7 @@ export const CtpFormatConsumption = ({ filters }: Props) => {
               <TableRow>
                 <TableHead>Format</TableHead>
                 <TableHead className="text-right">Ploča</TableHead>
+                <TableHead className="text-right">m²</TableHead>
                 <TableHead className="text-right">% učešća</TableHead>
                 {canViewRevenue && <TableHead className="text-right">Vrednost (EUR)</TableHead>}
               </TableRow>
@@ -66,6 +68,7 @@ export const CtpFormatConsumption = ({ filters }: Props) => {
                     <TableRow key={row.format_name}>
                       <TableCell className="font-medium">{row.format_name}</TableCell>
                       <TableCell className="text-right">{row.plates_consumed.toLocaleString("sr-RS")}</TableCell>
+                      <TableCell className="text-right">{Number(row.area_m2).toLocaleString("sr-RS", { minimumFractionDigits: 1, maximumFractionDigits: 1 })}</TableCell>
                       <TableCell className="text-right">
                         {totalPlates > 0 ? ((row.plates_consumed / totalPlates) * 100).toFixed(1) : "0.0"}%
                       </TableCell>
@@ -80,6 +83,7 @@ export const CtpFormatConsumption = ({ filters }: Props) => {
                   <TableRow className="bg-muted/50 font-bold border-t-2">
                     <TableCell className="font-bold">UKUPNO</TableCell>
                     <TableCell className="text-right font-bold">{totalPlates.toLocaleString("sr-RS")}</TableCell>
+                    <TableCell className="text-right font-bold">{totalArea.toLocaleString("sr-RS", { minimumFractionDigits: 1, maximumFractionDigits: 1 })}</TableCell>
                     <TableCell className="text-right font-bold">100%</TableCell>
                     {canViewRevenue && (
                       <TableCell className="text-right font-bold text-green-600">
@@ -90,7 +94,7 @@ export const CtpFormatConsumption = ({ filters }: Props) => {
                 </>
               ) : (
                 <TableRow>
-                  <TableCell colSpan={canViewRevenue ? 4 : 3} className="text-center text-muted-foreground py-8">
+                  <TableCell colSpan={canViewRevenue ? 5 : 4} className="text-center text-muted-foreground py-8">
                     Nema podataka za selektovani period
                   </TableCell>
                 </TableRow>
