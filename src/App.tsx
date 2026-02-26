@@ -36,6 +36,7 @@ const ClientDeliveryReport = lazy(() => import("./pages/ClientDeliveryReport"));
 const ClientPortal = lazy(() => import("./pages/ClientPortal"));
 const ClientPortalLogin = lazy(() => import("./pages/ClientPortalLogin"));
 const SretenjeNewsletter = lazy(() => import("./pages/SretenjeNewsletter"));
+const AdminNewsletter = lazy(() => import("./pages/AdminNewsletter"));
 const NotFound = lazy(() => import("./pages/NotFound"));
 
 // Guards are small - keep synchronous
@@ -98,6 +99,7 @@ const App = () => {
                 <Route path="/admin/users" element={<AdminGuard><AdminUsers /></AdminGuard>} />
                 <Route path="/admin/inventory" element={<AdminGuard><AdminInventory /></AdminGuard>} />
                 <Route path="/admin/priority" element={<AdminGuard><AdminPriority /></AdminGuard>} />
+                <Route path="/admin/newsletter" element={<AdminGuard><AdminNewsletter /></AdminGuard>} />
                 <Route path="/stats/ctp" element={<InternalUserGuard><CtpStats /></InternalUserGuard>} />
                 <Route path="/stats/digital" element={<InternalUserGuard><DigitalStats /></InternalUserGuard>} />
                 <Route path="/large-format/new" element={<InternalUserGuard><LargeFormatNew /></InternalUserGuard>} />
