@@ -23,18 +23,30 @@ export function InvoiceStatsCard() {
 
   const fetchInvoiceStats = async () => {
     try {
-      // Get closed orders only (invoicing applies to closed orders)
-      const { data, error } = await supabase
+      // Use count queries to avoid the 1000-row default limit
+      const baseFilter = supabase
         .from("work_orders")
-        .select("id, invoiced_at")
+        .select("id", { count: "exact", head: true })
         .eq("status", "closed")
         .is("deleted_at", null)
         .is("invalidated_at", null);
 
-      if (error) throw error;
+      const [totalRes, invoicedRes] = await Promise.all([
+        baseFilter,
+        supabase
+          .from("work_orders")
+          .select("id", { count: "exact", head: true })
+          .eq("status", "closed")
+          .is("deleted_at", null)
+          .is("invalidated_at", null)
+          .not("invoiced_at", "is", null),
+      ]);
 
-      const total = data?.length || 0;
-      const invoiced = data?.filter((o) => o.invoiced_at).length || 0;
+      if (totalRes.error) throw totalRes.error;
+      if (invoicedRes.error) throw invoicedRes.error;
+
+      const total = totalRes.count || 0;
+      const invoiced = invoicedRes.count || 0;
       const notInvoiced = total - invoiced;
       const invoicedPercentage = total > 0 ? Math.round((invoiced / total) * 100) : 0;
 
