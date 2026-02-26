@@ -14,8 +14,8 @@ interface Props {
 }
 
 export const CtpFormatConsumption = ({ filters }: Props) => {
-  const { isSuper, isAdmin } = useAuthz();
-  const canViewRevenue = isSuper || isAdmin;
+  const { isAdminPlus } = useAuthz();
+  const canViewRevenue = isAdminPlus;
 
   const { data, isLoading } = useQuery({
     queryKey: ["ctp-consumption-by-format", filters],
