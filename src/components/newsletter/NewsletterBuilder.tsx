@@ -431,7 +431,7 @@ export default function NewsletterBuilder({ onHtmlChange, theme = EMAIL_THEMES[0
   const [blocks, setBlocks] = useState<Block[]>(initialBlocks || [...DEFAULT_BLOCKS]);
   const [activeTab, setActiveTab] = useState("edit");
 
-  const updateBlocks = (newBlocks: Block[]) => {
+  const emitBlocks = (newBlocks: Block[]) => {
     setBlocks(newBlocks);
     onHtmlChange(blocksToFullHtml(newBlocks, theme));
     onBlocksChange?.(newBlocks);
@@ -449,15 +449,11 @@ export default function NewsletterBuilder({ onHtmlChange, theme = EMAIL_THEMES[0
       divider: {},
       contact: { label: "Kontakt", phone: "" },
     };
-    const newBlocks = [...blocks, { id: generateId(), type, content: defaults[type] }];
-    setBlocks(newBlocks);
-    onHtmlChange(blocksToFullHtml(newBlocks, theme));
+    emitBlocks([...blocks, { id: generateId(), type, content: defaults[type] }]);
   };
 
   const removeBlock = (id: string) => {
-    const newBlocks = blocks.filter((b) => b.id !== id);
-    setBlocks(newBlocks);
-    onHtmlChange(blocksToFullHtml(newBlocks, theme));
+    emitBlocks(blocks.filter((b) => b.id !== id));
   };
 
   const moveBlock = (id: string, dir: -1 | 1) => {
@@ -465,21 +461,16 @@ export default function NewsletterBuilder({ onHtmlChange, theme = EMAIL_THEMES[0
     if ((dir === -1 && idx === 0) || (dir === 1 && idx === blocks.length - 1)) return;
     const next = [...blocks];
     [next[idx], next[idx + dir]] = [next[idx + dir], next[idx]];
-    setBlocks(next);
-    onHtmlChange(blocksToFullHtml(next, theme));
+    emitBlocks(next);
   };
 
   const updateBlock = (id: string, content: Record<string, string>) => {
-    const newBlocks = blocks.map((b) => (b.id === id ? { ...b, content } : b));
-    setBlocks(newBlocks);
-    onHtmlChange(blocksToFullHtml(newBlocks, theme));
+    emitBlocks(blocks.map((b) => (b.id === id ? { ...b, content } : b)));
   };
 
   const loadTemplate = (tplIdx: number) => {
     const tpl = TEMPLATES[tplIdx];
-    const newBlocks = tpl.blocks.map((b) => ({ ...b, id: generateId() }));
-    setBlocks(newBlocks);
-    onHtmlChange(blocksToFullHtml(newBlocks, theme));
+    emitBlocks(tpl.blocks.map((b) => ({ ...b, id: generateId() })));
   };
 
   return (
