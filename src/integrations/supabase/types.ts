@@ -3508,6 +3508,17 @@ export type Database = {
         Returns: undefined
       }
       generate_order_number: { Args: never; Returns: string }
+      get_ctp_area_m2: {
+        Args: {
+          p_client_ids?: string[]
+          p_format_ids?: string[]
+          p_from: string
+          p_to: string
+        }
+        Returns: {
+          total_area_m2: number
+        }[]
+      }
       get_ctp_consumption_by_format: {
         Args: {
           p_client_ids?: string[]
