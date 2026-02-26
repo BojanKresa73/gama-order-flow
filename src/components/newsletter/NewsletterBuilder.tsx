@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -428,8 +428,21 @@ interface Props {
 export type { Block, BlockType };
 
 export default function NewsletterBuilder({ onHtmlChange, theme = EMAIL_THEMES[0], initialBlocks, onBlocksChange }: Props) {
-  const [blocks, setBlocks] = useState<Block[]>(initialBlocks || [...DEFAULT_BLOCKS]);
+  const [blocks, setBlocks] = useState<Block[]>(() => {
+    const initial = initialBlocks || [...DEFAULT_BLOCKS];
+    return initial;
+  });
   const [activeTab, setActiveTab] = useState("edit");
+  const mountedRef = useRef(false);
+
+  // Emit initial blocks on mount so parent has the correct state
+  useEffect(() => {
+    if (!mountedRef.current) {
+      mountedRef.current = true;
+      onBlocksChange?.(blocks);
+      onHtmlChange(blocksToFullHtml(blocks, theme));
+    }
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   const emitBlocks = (newBlocks: Block[]) => {
     setBlocks(newBlocks);
