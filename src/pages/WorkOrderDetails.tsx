@@ -315,6 +315,7 @@ const WorkOrderDetails = () => {
           clients: workOrder.clients,
           file_entries: fileEntries,
           client_plate_prices: clientPlatePrices,
+          has_mono_pricing: clientHasMonoPricing,
           nbs_rate: nbsRate
         });
 
