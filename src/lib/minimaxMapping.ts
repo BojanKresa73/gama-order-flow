@@ -331,3 +331,27 @@ export function getMinimaxArtikalNaziv(formatName: string): string | null {
   
   return null;
 }
+
+/**
+ * Override mapa za skraćene nazive klijenata u Minimax XML opisu.
+ * Ključ: početak naziva klijenta (case-insensitive match).
+ * Vrednost: željeni skraćeni naziv za Opis polje.
+ */
+const CLIENT_SHORT_NAME_OVERRIDES: Record<string, string> = {
+  "ŠTAMPARIJA DUNAV": "dunav",
+  "STAMPARIJA DUNAV": "dunav",
+};
+
+/**
+ * Dobija skraćeni naziv klijenta za Minimax XML opis.
+ * Prvo proverava override mapu, pa koristi prvu reč naziva.
+ */
+export function getClientShortName(clientName: string): string {
+  const upper = clientName.toUpperCase().trim();
+  for (const [prefix, shortName] of Object.entries(CLIENT_SHORT_NAME_OVERRIDES)) {
+    if (upper.startsWith(prefix.toUpperCase())) {
+      return shortName;
+    }
+  }
+  return clientName.split(" ")[0].toLowerCase().substring(0, 10);
+}

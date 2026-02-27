@@ -2,7 +2,8 @@ import { format } from "date-fns";
 import { 
   getMinimaxArtikalSifra, 
   getMinimaxStrankaSifra, 
-  getMinimaxArtikalNaziv 
+  getMinimaxArtikalNaziv,
+  getClientShortName 
 } from "./minimaxMapping";
 
 /**
@@ -135,7 +136,7 @@ export function generateMinimaxOrderXml(workOrder: WorkOrderData): string {
       
       // Opis: "Usluga: [naziv klijenta kraci] [format] [broj naloga] [naziv fajla]"
       // Primer: "Usluga: dbox 1060x795 RN-0056-2025 FLAMMAT Kutije za hepo 21mm..."
-      const clientShort = truncate(client.name.split(" ")[0].toLowerCase(), 10);
+      const clientShort = getClientShortName(client.name);
       const posaoOpis = `Usluga: ${clientShort} ${formatName} ${orderNumber} ${truncate(entry.filename, 60)}`;
       
       // Koristi pun Minimax naziv artikla (CTcP QUANTUM PREMIUM PLATE...)
