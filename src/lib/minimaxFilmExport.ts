@@ -1,5 +1,5 @@
 import { format } from "date-fns";
-import { getMinimaxStrankaSifra } from "./minimaxMapping";
+import { getMinimaxStrankaSifra, getClientShortName } from "./minimaxMapping";
 
 /**
  * Minimax XML Export za FILMOVANJE radne naloge
@@ -107,7 +107,7 @@ export function generateMinimaxFilmXml(workOrder: FilmWorkOrderData): string {
       const totalMeters = job.computed_total_m || 0;
       
       // Opis: "Usluga: [klijent] [dimenzije] [broj naloga] [naziv fajla]"
-      const clientShort = truncate(client.name.split(" ")[0].toLowerCase(), 10);
+      const clientShort = getClientShortName(client.name);
       const dimensions = `${job.width_mm}×${job.height_mm}mm`;
       const posaoOpis = `Usluga: ${clientShort} ${dimensions} ${orderNumber} ${truncate(job.file_name, 50)}`;
       
