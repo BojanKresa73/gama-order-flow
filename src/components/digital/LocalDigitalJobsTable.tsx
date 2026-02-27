@@ -99,7 +99,7 @@ export const LocalDigitalJobsTable = ({ jobs, onChange, printSides, clientRabatP
         totalPieces = qty * job.pieces_count;
       } else {
         const parsed = extractPiecesFromName(job.name || job.file_name || '');
-        if (parsed && parsed > 0) totalPieces = parsed;
+        if (parsed && parsed > 0) totalPieces = qty * parsed;
       }
       map.set(index, totalPieces > 0 ? totalPrice / totalPieces : 0);
     });
