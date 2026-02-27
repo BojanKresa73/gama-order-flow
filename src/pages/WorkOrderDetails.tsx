@@ -41,18 +41,10 @@ const WorkOrderDetails = () => {
   const canSeeDigitalSummary = isSuper || isAdmin || isAdminPlus;
 
   useEffect(() => {
-    checkAuth();
     if (id) {
       fetchWorkOrder();
     }
   }, [id]);
-
-  const checkAuth = async () => {
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) {
-      navigate("/");
-    }
-  };
 
   const fetchWorkOrder = async () => {
     try {
