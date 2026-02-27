@@ -36,7 +36,7 @@ function calculatePricePerPiece(
   } else {
     const parsed = extractPiecesFromName(item.name);
     if (parsed && parsed > 0) {
-      totalPieces = parsed;
+      totalPieces = item.qty * parsed;
     }
   }
   
