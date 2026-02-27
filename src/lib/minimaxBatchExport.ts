@@ -38,7 +38,8 @@ async function fetchWorkOrderForMinimax(workOrderId: string, nbsRate: number): P
         grad,
         postanski_broj,
         email,
-        telefon
+        telefon,
+        has_mono_pricing
       )
     `)
     .eq("id", workOrderId)
@@ -79,6 +80,7 @@ async function fetchWorkOrderForMinimax(workOrderId: string, nbsRate: number): P
     .select(`
       plate_format_id,
       price_eur,
+      price_eur_mono,
       plate_formats (format_name)
     `)
     .eq("client_id", workOrder.client_id);
@@ -103,6 +105,7 @@ async function fetchWorkOrderForMinimax(workOrderId: string, nbsRate: number): P
     plate_format_id: price.plate_format_id,
     format_name: price.plate_formats?.format_name || "",
     price_eur: price.price_eur,
+    price_eur_mono: price.price_eur_mono != null ? Number(price.price_eur_mono) : null,
   }));
 
   return {
@@ -116,6 +119,7 @@ async function fetchWorkOrderForMinimax(workOrderId: string, nbsRate: number): P
     clients: workOrder.clients as any,
     file_entries: transformedEntries,
     client_plate_prices: transformedPrices,
+    has_mono_pricing: (workOrder.clients as any)?.has_mono_pricing || false,
     nbs_rate: nbsRate,
   };
 }

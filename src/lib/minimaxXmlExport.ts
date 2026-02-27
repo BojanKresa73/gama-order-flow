@@ -45,6 +45,7 @@ export interface ClientPlatePrice {
   plate_format_id: string;
   format_name: string;
   price_eur: number;
+  price_eur_mono?: number | null;
 }
 
 // Podaci o radnom nalogu
@@ -59,6 +60,7 @@ export interface WorkOrderData {
   clients: ClientData;
   file_entries: FileEntry[];
   client_plate_prices?: ClientPlatePrice[];
+  has_mono_pricing?: boolean;
   nbs_rate?: number; // EUR to RSD exchange rate from NBS
 }
 
@@ -87,15 +89,24 @@ function formatPrice(price: number | null | undefined): string {
 }
 
 // Dobavi cenu za format iz cenovnika klijenta (EUR) i konvertuj u RSD
+// Ako klijent ima mono pricing i fajl ima quantity=1, koristi CB cenu
 function getPriceForFormat(
   formatName: string | undefined, 
   clientPrices: ClientPlatePrice[] | undefined,
-  nbsRate: number
+  nbsRate: number,
+  hasMonoPricing?: boolean,
+  quantity?: number
 ): number {
   if (!formatName || !clientPrices || clientPrices.length === 0) return 0;
   
   const priceEntry = clientPrices.find(p => p.format_name === formatName);
-  const priceEur = priceEntry?.price_eur || 0;
+  if (!priceEntry) return 0;
+
+  // Ako klijent ima mono pricing i stavka ima 1 ploču, koristi CB cenu
+  let priceEur = priceEntry.price_eur || 0;
+  if (hasMonoPricing && quantity === 1 && priceEntry.price_eur_mono != null && priceEntry.price_eur_mono > 0) {
+    priceEur = priceEntry.price_eur_mono;
+  }
   
   // Konvertuj EUR u RSD po kursu NBS
   return priceEur * nbsRate;
@@ -132,7 +143,7 @@ export function generateMinimaxOrderXml(workOrder: WorkOrderData): string {
       }
       
       // Cena iz cenovnika klijenta (EUR -> RSD po kursu NBS)
-      const priceRsd = getPriceForFormat(formatName, workOrder.client_plate_prices, nbsRate);
+      const priceRsd = getPriceForFormat(formatName, workOrder.client_plate_prices, nbsRate, workOrder.has_mono_pricing, entry.quantity);
       
       // Opis: "Usluga: [naziv klijenta kraci] [format] [broj naloga] [naziv fajla]"
       // Primer: "Usluga: dbox 1060x795 RN-0056-2025 FLAMMAT Kutije za hepo 21mm..."
