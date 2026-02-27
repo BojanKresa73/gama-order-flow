@@ -11,9 +11,16 @@ import {
 } from "@/lib/digitalGroupedPricing";
 
 /**
+ * Extract pieces count from item name (e.g., "flajer 27 kom" → 27)
+ */
+function extractPiecesFromName(name: string): number | null {
+  const match = name.match(/(\d+)\s*kom\b/i);
+  return match ? parseInt(match[1], 10) : null;
+}
+
+/**
  * Calculate price per piece for an item
- * If pieces_count is set, total pieces = pieces_count (user-entered total)
- * Otherwise, total pieces = qty (tiraž)
+ * Uses pieces_count if set, otherwise tries to parse from name, otherwise uses qty
  */
 function calculatePricePerPiece(
   item: GroupedPricingItem, 
@@ -21,8 +28,18 @@ function calculatePricePerPiece(
   formatMultiplier: number
 ): { totalPieces: number; pricePerPiece: number } {
   const itemPrice = item.sheets * pricePerSheet * formatMultiplier;
-  const piecesCount = item.piecesCount && item.piecesCount > 0 ? item.piecesCount : 1;
-  const totalPieces = item.qty * piecesCount;
+  
+  // Priority: explicit piecesCount > parsed from name > default to qty
+  let totalPieces = item.qty;
+  if (item.piecesCount && item.piecesCount > 0) {
+    totalPieces = item.qty * item.piecesCount;
+  } else {
+    const parsed = extractPiecesFromName(item.name);
+    if (parsed && parsed > 0) {
+      totalPieces = parsed;
+    }
+  }
+  
   const pricePerPiece = totalPieces > 0 ? itemPrice / totalPieces : 0;
   return { totalPieces, pricePerPiece };
 }
