@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { Plus, Trash2, FileUp } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -15,6 +15,8 @@ import {
 } from "@/components/ui/table";
 import { useDigitalPaperTypes } from "@/hooks/useDigitalPaperTypes";
 import { SHEET_FORMATS, PRINT_MODES } from "@/lib/digitalCalculations";
+import { calculateGroupedPricing } from "@/lib/digitalGroupedPricing";
+import { useAuthz } from "@/hooks/useAuthz";
 
 export interface LocalDigitalJob {
   id?: string; // UUID from database for existing items
@@ -60,6 +62,36 @@ interface LocalDigitalJobsTableProps {
 export const LocalDigitalJobsTable = ({ jobs, onChange, printSides, clientRabatProcenat, prepHours = 0 }: LocalDigitalJobsTableProps) => {
   const [showAddFilesModal, setShowAddFilesModal] = useState(false);
   const { data: paperTypes } = useDigitalPaperTypes();
+  const { isSuper, isAdmin } = useAuthz();
+  const canSeePrices = isSuper || isAdmin;
+
+  // Calculate per-item price using grouped pricing logic
+  const pricePerPieceMap = useMemo(() => {
+    const pricing = calculateGroupedPricing(jobs, prepHours);
+    const map = new Map<number, number>(); // index -> price per piece
+    
+    // Build a lookup: group key -> pricePerSheet (with format multiplier)
+    const groupPriceMap = new Map<string, number>();
+    for (const group of pricing.groups) {
+      const key = `${group.coverage}|${group.format}`;
+      groupPriceMap.set(key, group.pricePerSheetBase * group.formatMultiplier);
+    }
+    
+    jobs.forEach((job, index) => {
+      if (job.is_test_print) return;
+      const coverage = job.print_sides || '4/4';
+      const format = job.machine_sheet_format || '488x330';
+      const key = `${coverage}|${format}`;
+      const pricePerSheet = groupPriceMap.get(key) || 0;
+      const obim = job.obim || 1;
+      const qty = job.qty || 1;
+      const totalSheets = obim * qty;
+      const totalPrice = totalSheets * pricePerSheet;
+      map.set(index, totalPrice / qty);
+    });
+    
+    return map;
+  }, [jobs, prepHours]);
 
   const handleAdd = () => {
     const newJob: LocalDigitalJob = {
@@ -149,6 +181,7 @@ export const LocalDigitalJobsTable = ({ jobs, onChange, printSides, clientRabatP
                 <TableHead className="w-[70px]">Komada</TableHead>
                 <TableHead className="w-[130px]">Papir</TableHead>
                 <TableHead className="w-[110px]">Format</TableHead>
+                {canSeePrices && <TableHead className="w-[80px]">€/kom</TableHead>}
                 <TableHead className="w-[40px]"></TableHead>
               </TableRow>
             </TableHeader>
@@ -242,6 +275,11 @@ export const LocalDigitalJobsTable = ({ jobs, onChange, printSides, clientRabatP
                       </SelectContent>
                     </Select>
                   </TableCell>
+                  {canSeePrices && (
+                    <TableCell className="py-2 text-right text-sm font-medium text-muted-foreground">
+                      {job.is_test_print ? '—' : `€${(pricePerPieceMap.get(index) || 0).toFixed(3)}`}
+                    </TableCell>
+                  )}
                   <TableCell className="py-2">
                     <Button
                       type="button"
