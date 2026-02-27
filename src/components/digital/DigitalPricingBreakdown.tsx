@@ -11,23 +11,19 @@ import {
 } from "@/lib/digitalGroupedPricing";
 
 /**
- * Calculate price per piece for an item using stored pieces_count
- * pieces_count represents the TOTAL number of pieces (e.g., 130 flyers total),
- * NOT pieces per copy
+ * Calculate price per piece for an item
+ * If pieces_count is set, total pieces = pieces_count (user-entered total)
+ * Otherwise, total pieces = qty (tiraž)
  */
 function calculatePricePerPiece(
   item: GroupedPricingItem, 
   pricePerSheet: number, 
   formatMultiplier: number
-): { totalPieces: number; pricePerPiece: number } | null {
-  if (!item.piecesCount || item.piecesCount <= 0) return null;
-  
-  // pieces_count IS the total number of pieces (user-entered)
-  const totalPieces = item.piecesCount;
-  // Item price = sheets * pricePerSheet * formatMultiplier
+): { totalPieces: number; pricePerPiece: number } {
   const itemPrice = item.sheets * pricePerSheet * formatMultiplier;
-  const pricePerPiece = itemPrice / totalPieces;
-  
+  const piecesCount = item.piecesCount && item.piecesCount > 0 ? item.piecesCount : 1;
+  const totalPieces = item.qty * piecesCount;
+  const pricePerPiece = totalPieces > 0 ? itemPrice / totalPieces : 0;
   return { totalPieces, pricePerPiece };
 }
 
@@ -74,10 +70,11 @@ export const DigitalPricingBreakdown = ({
             <Table>
               <TableHeader>
                 <TableRow className="bg-muted/30">
-                  <TableHead className="w-[40%]">Naziv</TableHead>
+                  <TableHead className="w-[35%]">Naziv</TableHead>
                   <TableHead className="text-center">Obim</TableHead>
                   <TableHead className="text-center">Tiraž</TableHead>
                   <TableHead className="text-right">Tabaka</TableHead>
+                  <TableHead className="text-right">€/kom</TableHead>
                   {group.format === '760x330' && (
                     <TableHead className="text-right">× 1.5</TableHead>
                   )}
@@ -94,20 +91,14 @@ export const DigitalPricingBreakdown = ({
                   return (
                     <TableRow key={itemIndex}>
                       <TableCell className="font-medium">
-                        <div>{item.name}</div>
-                        {perPieceInfo && (
-                          <div className="text-xs text-blue-600 mt-1 bg-blue-50 px-2 py-1 rounded">
-                            <span className="font-medium">{perPieceInfo.totalPieces} kom</span>
-                            {" × "}
-                            <span>{perPieceInfo.pricePerPiece.toFixed(4)} €</span>
-                            {" = "}
-                            <span className="font-medium">{(perPieceInfo.totalPieces * perPieceInfo.pricePerPiece).toFixed(2)} €</span>
-                          </div>
-                        )}
+                        {item.name}
                       </TableCell>
                       <TableCell className="text-center">{item.obim}</TableCell>
                       <TableCell className="text-center">{item.qty}</TableCell>
                       <TableCell className="text-right">{item.sheets}</TableCell>
+                      <TableCell className="text-right text-sm font-medium text-muted-foreground">
+                        €{perPieceInfo.pricePerPiece.toFixed(3)}
+                      </TableCell>
                       {group.format === '760x330' && (
                         <TableCell className="text-right text-muted-foreground">
                           {item.sheetsForTier}
@@ -119,8 +110,8 @@ export const DigitalPricingBreakdown = ({
                 
                 {/* Group subtotal row */}
                 <TableRow className="bg-muted/50 font-semibold">
-                  <TableCell colSpan={3}>Ukupno {group.coverage} {group.format}</TableCell>
-                  <TableCell className="text-right">{group.totalSheets} tab.</TableCell>
+                  <TableCell colSpan={4}>Ukupno {group.coverage} {group.format}</TableCell>
+                  <TableCell></TableCell>
                   {group.format === '760x330' && (
                     <TableCell className="text-right">{group.totalSheetsForTier}</TableCell>
                   )}
