@@ -18,6 +18,12 @@ import { SHEET_FORMATS, PRINT_MODES } from "@/lib/digitalCalculations";
 import { calculateGroupedPricing } from "@/lib/digitalGroupedPricing";
 import { useAuthz } from "@/hooks/useAuthz";
 
+/** Extract pieces count from name (e.g., "flajer 27 kom" → 27) */
+function extractPiecesFromName(name: string): number | null {
+  const match = name.match(/(\d+)\s*kom\b/i);
+  return match ? parseInt(match[1], 10) : null;
+}
+
 export interface LocalDigitalJob {
   id?: string; // UUID from database for existing items
   __status?: 'unchanged' | 'created' | 'updated' | 'deleted'; // Tracking status for diff
@@ -87,9 +93,14 @@ export const LocalDigitalJobsTable = ({ jobs, onChange, printSides, clientRabatP
       const qty = job.qty || 1;
       const totalSheets = obim * qty;
       const totalPrice = totalSheets * pricePerSheet;
-      // Total pieces = tiraž × pieces_count (if pieces_count is set, otherwise just tiraž)
-      const piecesCount = job.pieces_count && job.pieces_count > 0 ? job.pieces_count : 1;
-      const totalPieces = qty * piecesCount;
+      // Total pieces: explicit pieces_count > parsed from name > qty
+      let totalPieces = qty;
+      if (job.pieces_count && job.pieces_count > 0) {
+        totalPieces = qty * job.pieces_count;
+      } else {
+        const parsed = extractPiecesFromName(job.name || job.file_name || '');
+        if (parsed && parsed > 0) totalPieces = parsed;
+      }
       map.set(index, totalPieces > 0 ? totalPrice / totalPieces : 0);
     });
     
@@ -125,21 +136,35 @@ export const LocalDigitalJobsTable = ({ jobs, onChange, printSides, clientRabatP
   const handleFieldChange = (index: number, field: keyof LocalDigitalJob, value: any) => {
     const updated = [...jobs];
     const job = updated[index];
-    // Mark existing items (with id) as updated so they get saved
     const newStatus = job.id ? 'updated' : job.__status;
-    updated[index] = { ...job, [field]: value, __status: newStatus };
+    const patch: Partial<LocalDigitalJob> = { [field]: value, __status: newStatus };
+    
+    // Auto-fill pieces_count when name changes and pieces_count isn't manually set
+    if (field === 'name' && typeof value === 'string') {
+      const parsed = extractPiecesFromName(value);
+      if (parsed && parsed > 0) {
+        patch.pieces_count = parsed;
+      }
+    }
+    
+    updated[index] = { ...job, ...patch };
     onChange(updated);
   };
 
   const handleAddJobs = (newJobs: LocalDigitalJob[]) => {
-    const jobsWithDefaults = newJobs.map(job => ({
-      ...job,
-      obim: job.obim || 1,
-      paper_type: paperTypes?.[0]?.name || "",
-      machine_sheet_format: "488x330",
-      test_sheets: 0,
-      include_test_in_clicks: false,
-    }));
+    const jobsWithDefaults = newJobs.map(job => {
+      const name = job.name || job.file_name || '';
+      const parsedPieces = extractPiecesFromName(name);
+      return {
+        ...job,
+        obim: job.obim || 1,
+        paper_type: paperTypes?.[0]?.name || "",
+        machine_sheet_format: "488x330",
+        pieces_count: parsedPieces || job.pieces_count || null,
+        test_sheets: 0,
+        include_test_in_clicks: false,
+      };
+    });
     onChange([...jobs, ...jobsWithDefaults]);
   };
 
