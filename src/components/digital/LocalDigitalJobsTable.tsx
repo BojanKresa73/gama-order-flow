@@ -87,7 +87,10 @@ export const LocalDigitalJobsTable = ({ jobs, onChange, printSides, clientRabatP
       const qty = job.qty || 1;
       const totalSheets = obim * qty;
       const totalPrice = totalSheets * pricePerSheet;
-      map.set(index, totalPrice / qty);
+      // Total pieces = tiraž × pieces_count (if pieces_count is set, otherwise just tiraž)
+      const piecesCount = job.pieces_count && job.pieces_count > 0 ? job.pieces_count : 1;
+      const totalPieces = qty * piecesCount;
+      map.set(index, totalPieces > 0 ? totalPrice / totalPieces : 0);
     });
     
     return map;
