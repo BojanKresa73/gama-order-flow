@@ -622,20 +622,30 @@ const NewWorkOrder = () => {
     }
   };
 
-  const removeCtpItem = (index: number) => {
-    setCtpItems(ctpItems.filter((_, i) => i !== index));
+  const removeCtpItem = (item: typeof ctpItems[0]) => {
+    if (isEditMode && item?.id) {
+      // Mark as deleted so diff payload includes it
+      setCtpItems(ctpItems.map(it => (it === item || (it.id && it.id === item.id)) ? { ...it, __status: 'deleted' as const } : it));
+    } else {
+      // New item, just remove from array
+      const key = item.id || item.tempId;
+      setCtpItems(ctpItems.filter(it => {
+        const itKey = it.id || it.tempId;
+        return key ? itKey !== key : it !== item;
+      }));
+    }
   };
 
-  const updateCtpItem = (index: number, field: string, value: any) => {
-    const updated = [...ctpItems];
-    const item = updated[index];
-    updated[index] = { 
-      ...item, 
-      [field]: value,
-      // Mark as updated if it already has an id (existing item from DB)
-      __status: item.id ? 'updated' as const : item.__status,
-    };
-    setCtpItems(updated);
+  const updateCtpItem = (item: typeof ctpItems[0], field: string, value: any) => {
+    setCtpItems(ctpItems.map(it => {
+      const match = item.id ? it.id === item.id : (item.tempId ? it.tempId === item.tempId : it === item);
+      if (!match) return it;
+      return { 
+        ...it, 
+        [field]: value,
+        __status: it.id ? 'updated' as const : it.__status,
+      };
+    }));
   };
 
   return (
@@ -825,7 +835,7 @@ const NewWorkOrder = () => {
 
                     {ctpItems.length > 0 && (
                       <div className="space-y-2">
-                        {ctpItems.map((item, index) => (
+                        {ctpItems.filter(it => it.__status !== 'deleted').map((item, index) => (
                           <div key={item.id || item.tempId || `ctp-${index}`} className="grid grid-cols-12 gap-2 items-center p-2 border rounded">
                             <div className="col-span-6">
                               <p className="text-sm truncate" title={item.file_name}>
@@ -835,7 +845,7 @@ const NewWorkOrder = () => {
                             <div className="col-span-4">
                               <Select
                                 value={item.plate_format_id}
-                                onValueChange={(value) => updateCtpItem(index, "plate_format_id", value)}
+                                onValueChange={(value) => updateCtpItem(item, "plate_format_id", value)}
                               >
                                 <SelectTrigger>
                                   <SelectValue placeholder="Format" />
@@ -854,7 +864,7 @@ const NewWorkOrder = () => {
                                 type="number"
                                 placeholder="Kol."
                                 value={item.quantity}
-                                onChange={(e) => updateCtpItem(index, "quantity", parseInt(e.target.value))}
+                                onChange={(e) => updateCtpItem(item, "quantity", parseInt(e.target.value))}
                                 min="1"
                               />
                             </div>
@@ -863,7 +873,7 @@ const NewWorkOrder = () => {
                                 type="button"
                                 variant="ghost"
                                 size="icon"
-                                onClick={() => removeCtpItem(index)}
+                                onClick={() => removeCtpItem(item)}
                               >
                                 ✕
                               </Button>
@@ -1090,9 +1100,9 @@ const NewWorkOrder = () => {
                       </Button>
                     </div>
 
-                    {ctpItems.length > 0 && (
+                    {ctpItems.filter(it => it.__status !== 'deleted').length > 0 && (
                       <div className="space-y-2">
-                        {ctpItems.map((item, index) => (
+                        {ctpItems.filter(it => it.__status !== 'deleted').map((item, index) => (
                           <div key={index} className="flex items-center gap-2 p-2 border rounded">
                             <p className="text-sm flex-1 truncate" title={item.file_name}>
                               {item.file_name || "Naziv fajla"}
@@ -1101,7 +1111,7 @@ const NewWorkOrder = () => {
                               type="button"
                               variant="ghost"
                               size="icon"
-                              onClick={() => removeCtpItem(index)}
+                              onClick={() => removeCtpItem(item)}
                             >
                               ✕
                             </Button>
