@@ -254,7 +254,8 @@ const ChecklistView = ({ orderType, onNavigateToSearch }: ChecklistViewProps) =>
           profiles!work_orders_created_by_fkey(full_name)
         `)
         .eq("order_type", orderType)
-        .is("deleted_at", null);
+        .is("deleted_at", null)
+        .is("invalidated_at", null);
 
       // Apply status filter
       if (statusFilter === "open") {
