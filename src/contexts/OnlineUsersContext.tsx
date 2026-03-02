@@ -1,4 +1,4 @@
-import { createContext, useContext, useEffect, useState, ReactNode } from "react";
+import { createContext, useContext, useEffect, useRef, useState, ReactNode, useMemo, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
 
 interface OnlineUser {
@@ -15,8 +15,23 @@ const OnlineUsersContext = createContext<OnlineUsersContextType>({ onlineUsers: 
 
 export const useOnlineUsers = () => useContext(OnlineUsersContext);
 
+/**
+ * Compares two user lists by id+full_name only (ignoring online_at which changes on every heartbeat).
+ * Returns true if the lists are effectively the same.
+ */
+function usersEqual(a: OnlineUser[], b: OnlineUser[]): boolean {
+  if (a.length !== b.length) return false;
+  const setA = new Set(a.map(u => u.id));
+  const setB = new Set(b.map(u => u.id));
+  for (const id of setA) {
+    if (!setB.has(id)) return false;
+  }
+  return true;
+}
+
 export function OnlineUsersProvider({ children }: { children: ReactNode }) {
   const [onlineUsers, setOnlineUsers] = useState<OnlineUser[]>([]);
+  const prevUsersRef = useRef<OnlineUser[]>([]);
 
   useEffect(() => {
     let channel: ReturnType<typeof supabase.channel> | null = null;
@@ -24,19 +39,13 @@ export function OnlineUsersProvider({ children }: { children: ReactNode }) {
 
     const setupPresence = async () => {
       const { data: { user } } = await supabase.auth.getUser();
-      if (!user) {
-        console.log("[Presence] No user found");
-        return;
-      }
+      if (!user) return;
 
-      // Get user profile
       const { data: profile } = await supabase
         .from("profiles")
         .select("full_name")
         .eq("id", user.id)
         .single();
-
-      console.log("[Presence] Setting up for user:", profile?.full_name || user.email);
 
       channel = supabase.channel("online-users-v2", {
         config: {
@@ -52,7 +61,6 @@ export function OnlineUsersProvider({ children }: { children: ReactNode }) {
       channel
         .on("presence", { event: "sync" }, () => {
           const state = channel!.presenceState();
-          console.log("[Presence] Sync event, state:", state);
           const users: OnlineUser[] = [];
           
           Object.entries(state).forEach(([key, presences]) => {
@@ -66,24 +74,19 @@ export function OnlineUsersProvider({ children }: { children: ReactNode }) {
             }
           });
           
-          console.log("[Presence] Online users:", users);
-          setOnlineUsers(users);
-        })
-        .on("presence", { event: "join" }, ({ key, newPresences }) => {
-          console.log("[Presence] User joined:", key, newPresences);
-        })
-        .on("presence", { event: "leave" }, ({ key, leftPresences }) => {
-          console.log("[Presence] User left:", key, leftPresences);
+          // Only update state if the user list actually changed (ignoring online_at)
+          if (!usersEqual(prevUsersRef.current, users)) {
+            prevUsersRef.current = users;
+            setOnlineUsers(users);
+          }
         })
         .subscribe(async (status) => {
-          console.log("[Presence] Channel status:", status);
           if (status === "SUBSCRIBED") {
-            const trackResult = await channel!.track({
+            await channel!.track({
               user_id: user.id,
               full_name: profile?.full_name || user.email || "Korisnik",
               online_at: new Date().toISOString(),
             });
-            console.log("[Presence] Track result:", trackResult);
             
             // Heartbeat to keep presence alive
             heartbeatInterval = setInterval(async () => {
@@ -94,14 +97,13 @@ export function OnlineUsersProvider({ children }: { children: ReactNode }) {
                   online_at: new Date().toISOString(),
                 });
               }
-            }, 30000); // Every 30 seconds
+            }, 30000);
           }
         });
     };
 
     setupPresence();
 
-    // Re-setup on auth change
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event) => {
       if (event === "SIGNED_IN") {
         setupPresence();
@@ -110,14 +112,13 @@ export function OnlineUsersProvider({ children }: { children: ReactNode }) {
           channel.unsubscribe();
           channel = null;
         }
+        prevUsersRef.current = [];
         setOnlineUsers([]);
       }
     });
 
     return () => {
-      if (heartbeatInterval) {
-        clearInterval(heartbeatInterval);
-      }
+      if (heartbeatInterval) clearInterval(heartbeatInterval);
       if (channel) {
         channel.untrack();
         channel.unsubscribe();
@@ -126,8 +127,10 @@ export function OnlineUsersProvider({ children }: { children: ReactNode }) {
     };
   }, []);
 
+  const value = useMemo(() => ({ onlineUsers }), [onlineUsers]);
+
   return (
-    <OnlineUsersContext.Provider value={{ onlineUsers }}>
+    <OnlineUsersContext.Provider value={value}>
       {children}
     </OnlineUsersContext.Provider>
   );

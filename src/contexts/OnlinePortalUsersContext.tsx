@@ -1,4 +1,4 @@
-import { createContext, useContext, useEffect, useState, ReactNode } from "react";
+import { createContext, useContext, useEffect, useRef, useState, ReactNode, useMemo } from "react";
 import { supabase } from "@/integrations/supabase/client";
 
 interface OnlinePortalUser {
@@ -16,23 +16,31 @@ const OnlinePortalUsersContext = createContext<OnlinePortalUsersContextType>({ o
 
 export const useOnlinePortalUsers = () => useContext(OnlinePortalUsersContext);
 
+function usersEqual(a: OnlinePortalUser[], b: OnlinePortalUser[]): boolean {
+  if (a.length !== b.length) return false;
+  const setA = new Set(a.map(u => u.id));
+  const setB = new Set(b.map(u => u.id));
+  for (const id of setA) {
+    if (!setB.has(id)) return false;
+  }
+  return true;
+}
+
 export function OnlinePortalUsersProvider({ children }: { children: ReactNode }) {
   const [onlinePortalUsers, setOnlinePortalUsers] = useState<OnlinePortalUser[]>([]);
+  const prevUsersRef = useRef<OnlinePortalUser[]>([]);
 
   useEffect(() => {
-    // Listen to the portal users presence channel
     const channel = supabase.channel("online-portal-users");
 
     channel
       .on("presence", { event: "sync" }, () => {
         const state = channel.presenceState();
-        console.log("[Portal Presence] Sync event, state:", state);
         const users: OnlinePortalUser[] = [];
         
         Object.entries(state).forEach(([key, presences]) => {
           if (presences && presences.length > 0) {
             const presence = presences[0] as any;
-            // Only include portal users (they have client_name)
             if (presence.client_name) {
               users.push({
                 id: key,
@@ -44,26 +52,22 @@ export function OnlinePortalUsersProvider({ children }: { children: ReactNode })
           }
         });
         
-        console.log("[Portal Presence] Online portal users:", users);
-        setOnlinePortalUsers(users);
+        if (!usersEqual(prevUsersRef.current, users)) {
+          prevUsersRef.current = users;
+          setOnlinePortalUsers(users);
+        }
       })
-      .on("presence", { event: "join" }, ({ key, newPresences }) => {
-        console.log("[Portal Presence] User joined:", key, newPresences);
-      })
-      .on("presence", { event: "leave" }, ({ key, leftPresences }) => {
-        console.log("[Portal Presence] User left:", key, leftPresences);
-      })
-      .subscribe((status) => {
-        console.log("[Portal Presence] Channel status:", status);
-      });
+      .subscribe();
 
     return () => {
       channel.unsubscribe();
     };
   }, []);
 
+  const value = useMemo(() => ({ onlinePortalUsers }), [onlinePortalUsers]);
+
   return (
-    <OnlinePortalUsersContext.Provider value={{ onlinePortalUsers }}>
+    <OnlinePortalUsersContext.Provider value={value}>
       {children}
     </OnlinePortalUsersContext.Provider>
   );
