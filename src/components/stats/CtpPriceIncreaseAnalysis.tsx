@@ -175,7 +175,7 @@ export const CtpPriceIncreaseAnalysis = () => {
     if (sortedClients.length === 0) return null;
 
     const maxM2 = sortedClients[0][1];
-    const costIncreasePctBase = (NEW_COST - OLD_COST) / OLD_COST; // 12.5%
+    const costDeltaPerM2 = NEW_COST - OLD_COST; // 0.30 €/m²
 
     // Calculate per-client analysis
     const clientAnalyses: ClientAnalysis[] = [];
@@ -187,13 +187,11 @@ export const CtpPriceIncreaseAnalysis = () => {
       // Volume ratio: 1.0 for highest, approaches 0 for lowest
       const volumeRatio = totalM2 / maxM2;
       
-      // Increase factor: inversely proportional to volume
-      // High volume → lower increase, low volume → higher increase
-      // Formula: increase = basePct * (1 + spreadFactor * (1 - volumeRatio)) / (1 + spreadFactor * 0.5)
-      // This normalizes so the average increase ≈ basePct
+      // Spread factor for distributing the cost increase
+      // High volume → lower multiplier, low volume → higher multiplier
       const rawFactor = 1 + spreadFactor * (1 - volumeRatio);
-      const normFactor = 1 + spreadFactor * 0.5; // normalization
-      const clientIncreasePct = costIncreasePctBase * (rawFactor / normFactor);
+      const normFactor = 1 + spreadFactor * 0.5;
+      const clientMultiplier = rawFactor / normFactor;
 
       // Determine tier
       const tier: "high" | "medium" | "low" = volumeRatio > 0.3 ? "high" : volumeRatio > 0.05 ? "medium" : "low";
@@ -209,7 +207,7 @@ export const CtpPriceIncreaseAnalysis = () => {
       for (const [formatId, qty] of Object.entries(formatEntries)) {
         totalPlates += qty;
         const fname = formatMap.get(formatId) || "?";
-        const area = formatArea(fname);
+        const area = formatArea(fname); // m² per plate
         const price = priceMap.get(`${clientId}-${formatId}`);
         const currentPriceEur = price ? Number(price.price_eur) : 0;
         const currentPriceMono = price?.price_eur_mono ? Number(price.price_eur_mono) : null;
@@ -219,13 +217,18 @@ export const CtpPriceIncreaseAnalysis = () => {
         currentRevenue += entryRevenue;
         currentCost += entryCost;
 
+        // Only increase by the MATERIAL cost delta per plate, weighted by spread
+        // materialDelta = area × 0.30 €/m² × clientMultiplier
+        const materialDeltaPerPlate = area * costDeltaPerM2 * clientMultiplier;
+
         const proposedPrice = currentPriceEur > 0 
-          ? Math.round(currentPriceEur * (1 + clientIncreasePct) * 100) / 100 
+          ? Math.round((currentPriceEur + materialDeltaPerPlate) * 100) / 100 
           : 0;
         const proposedPriceMono = currentPriceMono !== null && currentPriceMono > 0
-          ? Math.round(currentPriceMono * (1 + clientIncreasePct) * 100) / 100
+          ? Math.round((currentPriceMono + materialDeltaPerPlate) * 100) / 100
           : null;
         
+        const increasePct = currentPriceEur > 0 ? (materialDeltaPerPlate / currentPriceEur) * 100 : 0;
         proposedRevenue += qty * proposedPrice;
 
         if (currentPriceEur > 0) {
@@ -236,7 +239,7 @@ export const CtpPriceIncreaseAnalysis = () => {
             currentPriceMono,
             proposedPrice,
             proposedPriceMono,
-            increasePct: clientIncreasePct * 100,
+            increasePct,
           });
         }
       }
@@ -254,7 +257,7 @@ export const CtpPriceIncreaseAnalysis = () => {
           currentMargin: currentRevenue - currentCost,
           currentMarginPct: ((currentRevenue - currentCost) / currentRevenue) * 100,
           newCost,
-          proposedIncreasePct: clientIncreasePct * 100,
+          proposedIncreasePct: currentRevenue > 0 ? ((proposedRevenue - currentRevenue) / currentRevenue) * 100 : 0,
           proposedNewRevenue: proposedRevenue,
           proposedNewMargin: proposedRevenue - newCost,
           proposedNewMarginPct: ((proposedRevenue - newCost) / proposedRevenue) * 100,
@@ -284,7 +287,7 @@ export const CtpPriceIncreaseAnalysis = () => {
         totalAdditionalCost,
         totalAdditionalRevenue,
         costCoverage: totalAdditionalCost > 0 ? (totalAdditionalRevenue / totalAdditionalCost) * 100 : 0,
-        avgIncreasePct: costIncreasePctBase * 100,
+        avgIncreasePct: ((NEW_COST - OLD_COST) / OLD_COST) * 100,
       },
     };
   }, [consumptionData, clients, formats, prices, spreadFactor]);
