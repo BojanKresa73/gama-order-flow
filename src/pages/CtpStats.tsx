@@ -11,9 +11,11 @@ import { CtpTopFormatsTable } from "@/components/stats/CtpTopFormatsTable";
 import { CtpExportButtons } from "@/components/stats/CtpExportButtons";
 import { CtpInventoryForecast } from "@/components/stats/CtpInventoryForecast";
 import { CtpFormatConsumption } from "@/components/stats/CtpFormatConsumption";
+import { CtpPriceIncreaseAnalysis } from "@/components/stats/CtpPriceIncreaseAnalysis";
 import { SavedReportsDropdown } from "@/components/stats/SavedReportsDropdown";
 import { subDays } from "date-fns";
 import { ChevronLeft } from "lucide-react";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 export interface CtpFiltersState {
   dateRange: {
@@ -64,23 +66,35 @@ const CtpStats = () => {
       </header>
 
       <main className="container mx-auto px-4 py-6 space-y-6">
-        <SavedReportsDropdown filters={filters} onFiltersChange={setFilters} />
-        <CtpFilters filters={filters} onFiltersChange={setFilters} />
-        <CtpStatsCards filters={filters} />
-        
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-          <CtpDailyChart filters={filters} />
-          <CtpFormatChart filters={filters} />
-        </div>
+        <Tabs defaultValue="overview">
+          <TabsList>
+            <TabsTrigger value="overview">Pregled</TabsTrigger>
+            <TabsTrigger value="price-increase">Rast cena</TabsTrigger>
+          </TabsList>
 
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-          <CtpTopClientsTable filters={filters} />
-          <CtpTopFormatsTable filters={filters} />
-        </div>
+          <TabsContent value="overview" className="space-y-6 mt-4">
+            <SavedReportsDropdown filters={filters} onFiltersChange={setFilters} />
+            <CtpFilters filters={filters} onFiltersChange={setFilters} />
+            <CtpStatsCards filters={filters} />
+            
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+              <CtpDailyChart filters={filters} />
+              <CtpFormatChart filters={filters} />
+            </div>
 
-        <CtpFormatConsumption filters={filters} />
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+              <CtpTopClientsTable filters={filters} />
+              <CtpTopFormatsTable filters={filters} />
+            </div>
 
-        <CtpInventoryForecast />
+            <CtpFormatConsumption filters={filters} />
+            <CtpInventoryForecast />
+          </TabsContent>
+
+          <TabsContent value="price-increase" className="mt-4">
+            <CtpPriceIncreaseAnalysis />
+          </TabsContent>
+        </Tabs>
       </main>
     </div>
   );
