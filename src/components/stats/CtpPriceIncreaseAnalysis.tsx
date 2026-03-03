@@ -337,6 +337,50 @@ export const CtpPriceIncreaseAnalysis = () => {
           </CardDescription>
         </CardHeader>
         <CardContent>
+          {/* Scenario: bez povećanja cena */}
+          <div className="rounded-xl border-2 border-destructive/30 bg-destructive/5 p-4 mb-6">
+            <div className="flex items-center gap-2 mb-3">
+              <ArrowDownRight className="h-5 w-5 text-destructive" />
+              <p className="font-semibold text-destructive">Scenario: BEZ povećanja cena</p>
+            </div>
+            <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
+              <div>
+                <p className="text-xs text-muted-foreground">Trenutna marža (stara nabavka)</p>
+                <p className="text-lg font-bold">{fmt(summary.totalCurrentMargin)} €</p>
+                <p className="text-xs text-muted-foreground">
+                  ({fmt(summary.totalCurrentRevenue > 0 ? (summary.totalCurrentMargin / summary.totalCurrentRevenue * 100) : 0, 1)}%)
+                </p>
+              </div>
+              <div>
+                <p className="text-xs text-muted-foreground">Dodatni godišnji trošak</p>
+                <p className="text-lg font-bold text-destructive">+{fmt(summary.totalAdditionalCost)} €</p>
+                <p className="text-xs text-muted-foreground">({fmt(NEW_COST)} - {fmt(OLD_COST)}) × {fmt(clientData.reduce((s, c) => s + c.totalM2, 0), 1)} m²</p>
+              </div>
+              <div>
+                <p className="text-xs text-muted-foreground">Nova marža BEZ povećanja</p>
+                <p className="text-lg font-bold text-destructive">{fmt(summary.totalCurrentRevenue - summary.totalNewCost)} €</p>
+                <p className="text-xs text-muted-foreground">
+                  ({fmt(summary.totalCurrentRevenue > 0 ? ((summary.totalCurrentRevenue - summary.totalNewCost) / summary.totalCurrentRevenue * 100) : 0, 1)}%)
+                </p>
+              </div>
+              <div>
+                <p className="text-xs text-muted-foreground">Pad marže</p>
+                <p className="text-lg font-bold text-destructive">
+                  -{fmt(summary.totalCurrentMargin - (summary.totalCurrentRevenue - summary.totalNewCost))} €
+                </p>
+                <p className="text-xs text-muted-foreground">
+                  -{fmt(summary.totalCurrentRevenue > 0 ? ((summary.totalCurrentMargin - (summary.totalCurrentRevenue - summary.totalNewCost)) / summary.totalCurrentMargin * 100) : 0, 1)}% od trenutne marže
+                </p>
+              </div>
+              <div>
+                <p className="text-xs text-muted-foreground">Potrebno mesečno pokriće</p>
+                <p className="text-lg font-bold text-orange-600">{fmt(summary.totalAdditionalCost / 12)} €/mes</p>
+                <p className="text-xs text-muted-foreground">ako se ne povećaju cene</p>
+              </div>
+            </div>
+          </div>
+
+          {/* Scenario: sa povećanjem */}
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
             <div className="rounded-xl border p-4">
               <p className="text-xs text-muted-foreground">Dodatni trošak</p>
