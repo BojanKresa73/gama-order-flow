@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
@@ -26,7 +26,7 @@ import {
   CollapsibleContent,
   CollapsibleTrigger,
 } from "@/components/ui/collapsible";
-import { CheckCircle, XCircle, Search, FileText, Calendar, User, Eye, ChevronRight, ChevronDown, Play, Pause, Square } from "lucide-react";
+import { CheckCircle, XCircle, Search, FileText, Calendar, User, Eye, ChevronRight, ChevronDown, Play, Pause, Square, ArrowUpDown, ArrowUp, ArrowDown } from "lucide-react";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { PriorityBadge } from "@/components/priority/PriorityBadge";
 import { InProgressIndicator } from "@/components/checklist/InProgressIndicator";
@@ -98,6 +98,8 @@ interface ChecklistViewProps {
 }
 
 type StatusFilter = "open" | "closed" | "all";
+type ChecklistSortField = 'order_number' | 'client_name' | 'created_by_name' | 'created_at' | 'closed_at' | 'status' | 'total_plates' | 'priority';
+type SortDir = 'asc' | 'desc';
 
 const ChecklistView = ({ orderType, onNavigateToSearch }: ChecklistViewProps) => {
   const [workOrders, setWorkOrders] = useState<WorkOrder[]>([]);
@@ -109,6 +111,37 @@ const ChecklistView = ({ orderType, onNavigateToSearch }: ChecklistViewProps) =>
   const { toast } = useToast();
   const isMobile = useIsMobile();
   const navigate = useNavigate();
+  const [sortField, setSortField] = useState<ChecklistSortField>('created_at');
+  const [sortDir, setSortDir] = useState<SortDir>('desc');
+
+  const toggleSort = (field: ChecklistSortField) => {
+    if (sortField === field) {
+      setSortDir(prev => prev === 'asc' ? 'desc' : 'asc');
+    } else {
+      setSortField(field);
+      setSortDir('asc');
+    }
+  };
+
+  const SortHead = ({ field, label, className = '' }: { field: ChecklistSortField; label: string; className?: string }) => {
+    const isActive = sortField === field;
+    return (
+      <TableHead className={className}>
+        <button
+          type="button"
+          onClick={() => toggleSort(field)}
+          className="flex items-center gap-1 hover:text-foreground transition-colors w-full"
+        >
+          {label}
+          {isActive ? (
+            sortDir === 'asc' ? <ArrowUp className="h-3.5 w-3.5" /> : <ArrowDown className="h-3.5 w-3.5" />
+          ) : (
+            <ArrowUpDown className="h-3.5 w-3.5 opacity-30" />
+          )}
+        </button>
+      </TableHead>
+    );
+  };
 
   // Fetch machine speeds once
   useEffect(() => {
@@ -618,6 +651,34 @@ const ChecklistView = ({ orderType, onNavigateToSearch }: ChecklistViewProps) =>
     }
   };
 
+  const sortedOrders = useMemo(() => {
+    const list = [...workOrders];
+    list.sort((a, b) => {
+      const dir = sortDir === 'asc' ? 1 : -1;
+      switch (sortField) {
+        case 'order_number':
+          return dir * (Number(a.order_number) - Number(b.order_number));
+        case 'client_name':
+          return dir * a.client_name.localeCompare(b.client_name, 'sr');
+        case 'created_by_name':
+          return dir * (a.created_by_name || '').localeCompare(b.created_by_name || '', 'sr');
+        case 'created_at':
+          return dir * (new Date(a.created_at).getTime() - new Date(b.created_at).getTime());
+        case 'closed_at':
+          return dir * ((a.closed_at ? new Date(a.closed_at).getTime() : 0) - (b.closed_at ? new Date(b.closed_at).getTime() : 0));
+        case 'status':
+          return dir * a.status.localeCompare(b.status, 'sr');
+        case 'total_plates':
+          return dir * (a.total_plates - b.total_plates);
+        case 'priority':
+          return dir * (a.priority - b.priority);
+        default:
+          return 0;
+      }
+    });
+    return list;
+  }, [workOrders, sortField, sortDir]);
+
   if (loading) {
     return <div className="p-4 text-center">Učitavanje...</div>;
   }
@@ -1019,7 +1080,7 @@ const ChecklistView = ({ orderType, onNavigateToSearch }: ChecklistViewProps) =>
       ) : isMobile ? (
         // Mobile: Card-based layout
         <div className="space-y-3">
-          {workOrders.map((order) => (
+          {sortedOrders.map((order) => (
             <MobileOrderCard key={order.id} order={order} />
           ))}
         </div>
@@ -1029,20 +1090,20 @@ const ChecklistView = ({ orderType, onNavigateToSearch }: ChecklistViewProps) =>
           <TableHeader>
             <TableRow>
               <TableHead className="w-8"></TableHead>
-              <TableHead>Broj Naloga</TableHead>
-              <TableHead>Klijent</TableHead>
-              <TableHead>Kreirao</TableHead>
+              <SortHead field="order_number" label="Broj Naloga" />
+              <SortHead field="client_name" label="Klijent" />
+              <SortHead field="created_by_name" label="Kreirao" />
               <TableHead>Tip</TableHead>
-              <TableHead>Datum Otvaranja</TableHead>
-              <TableHead>Datum Zatvaranja</TableHead>
-              <TableHead>Status</TableHead>
-              {orderType === "ctp" && <TableHead>Broj Ploča</TableHead>}
+              <SortHead field="created_at" label="Datum Otvaranja" />
+              <SortHead field="closed_at" label="Datum Zatvaranja" />
+              <SortHead field="status" label="Status" />
+              {orderType === "ctp" && <SortHead field="total_plates" label="Broj Ploča" />}
               {orderType === "ctp" && <TableHead>Mašina</TableHead>}
               <TableHead className="text-right">Akcije</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
-            {workOrders.map((order) => (
+            {sortedOrders.map((order) => (
               <DesktopOrderRow key={order.id} order={order} />
             ))}
           </TableBody>
