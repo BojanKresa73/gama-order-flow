@@ -430,6 +430,8 @@ export const CtpPriceIncreaseAnalysis = () => {
                   <TableHead>Klijent</TableHead>
                   <TableHead className="text-right">Ploča ukupno</TableHead>
                   <TableHead className="text-right">m²</TableHead>
+                  <TableHead className="text-right">Prosečna cena (€)</TableHead>
+                  <TableHead className="text-right">Nova cena (€)</TableHead>
                   <TableHead className="text-right">Trenutni prihod (€)</TableHead>
                   <TableHead className="text-right">Trenutna marža</TableHead>
                   <TableHead className="text-center">Rast %</TableHead>
@@ -450,6 +452,8 @@ export const CtpPriceIncreaseAnalysis = () => {
                       <TableCell className="font-medium">{client.clientName}</TableCell>
                       <TableCell className="text-right">{client.totalPlates.toLocaleString("sr-RS")}</TableCell>
                       <TableCell className="text-right">{fmt(client.totalM2, 1)}</TableCell>
+                      <TableCell className="text-right">{client.totalPlates > 0 ? fmt(client.currentRevenue / client.totalPlates) : "—"}</TableCell>
+                      <TableCell className="text-right font-medium text-orange-600">{client.totalPlates > 0 ? fmt(client.proposedNewRevenue / client.totalPlates) : "—"}</TableCell>
                       <TableCell className="text-right">{fmt(client.currentRevenue)}</TableCell>
                       <TableCell className="text-right">
                         <span className={client.currentMarginPct > 30 ? "text-green-600" : client.currentMarginPct > 15 ? "text-orange-600" : "text-red-600"}>
@@ -481,7 +485,7 @@ export const CtpPriceIncreaseAnalysis = () => {
                     {/* Expanded format details */}
                     {expandedClient === client.clientId && client.formats.length > 0 && (
                       <TableRow key={`${client.clientId}-detail`}>
-                        <TableCell colSpan={10} className="bg-muted/30 p-4">
+                        <TableCell colSpan={12} className="bg-muted/30 p-4">
                           <Table>
                             <TableHeader>
                               <TableRow>
@@ -522,6 +526,12 @@ export const CtpPriceIncreaseAnalysis = () => {
                   <TableCell className="text-right font-bold">
                     {fmt(clientData.reduce((s, c) => s + c.totalM2, 0), 1)}
                   </TableCell>
+                  <TableCell className="text-right font-bold">
+                    {(() => { const tp = clientData.reduce((s, c) => s + c.totalPlates, 0); return tp > 0 ? fmt(summary.totalCurrentRevenue / tp) : "—"; })()}
+                  </TableCell>
+                  <TableCell className="text-right font-bold text-orange-600">
+                    {(() => { const tp = clientData.reduce((s, c) => s + c.totalPlates, 0); return tp > 0 ? fmt(summary.totalProposedRevenue / tp) : "—"; })()}
+                  </TableCell>
                   <TableCell className="text-right font-bold">{fmt(summary.totalCurrentRevenue)}</TableCell>
                   <TableCell className="text-right font-bold">
                     {fmt(summary.totalCurrentRevenue > 0 ? ((summary.totalCurrentMargin / summary.totalCurrentRevenue) * 100) : 0, 1)}%
@@ -531,6 +541,7 @@ export const CtpPriceIncreaseAnalysis = () => {
                   <TableCell className="text-right font-bold">
                     {fmt(summary.totalProposedRevenue > 0 ? ((summary.totalProposedMargin / summary.totalProposedRevenue) * 100) : 0, 1)}%
                   </TableCell>
+                  <TableCell></TableCell>
                   <TableCell></TableCell>
                 </TableRow>
               </TableBody>
