@@ -108,16 +108,18 @@ function RecipientsTab() {
         const rawRows: any[][] = XLSX.utils.sheet_to_json(ws, { header: 1 });
         console.log(`Sheet "${sheetName}" raw rows:`, rawRows.length, "first rows:", rawRows.slice(0, 5));
         
-        // Find header row - look for a row containing something email-like
+        // Find header row - look for a row containing something email-like or known column names
         let headerIdx = -1;
         for (let i = 0; i < Math.min(rawRows.length, 20); i++) {
           const row = rawRows[i];
           if (!Array.isArray(row)) continue;
-          const hasEmailLike = row.some(cell => {
-            const s = String(cell || "").toLowerCase().replace(/[\s\-_]/g, '');
-            return s.includes("email") || s.includes("mail") || s.includes("eposta");
-          });
-          if (hasEmailLike) {
+          const rowStrings = row.map(cell => String(cell || "").toLowerCase().replace(/[\s\-_]/g, ''));
+          const hasEmailLike = rowStrings.some(s => 
+            s.includes("email") || s.includes("mail") || s.includes("eposta") || s === "epošta"
+          );
+          // Also detect by known column patterns from Serbian business registries
+          const hasBusinessCols = rowStrings.some(s => s.includes("nazivprodukcije") || s.includes("pib") || s.includes("matičnibroj") || s.includes("mb"));
+          if (hasEmailLike || (hasBusinessCols && row.filter(c => c != null && String(c).trim()).length >= 5)) {
             headerIdx = i;
             break;
           }
@@ -189,21 +191,35 @@ function RecipientsTab() {
       return null;
     };
 
-    const emailCandidates = ["email", "e-mail", "e mail", "mail", "emailadresa", "emailaddress", "eposta", "e-pošta"];
-    const nameCandidates = ["company_name", "firma", "naziv", "name", "kompanija", "preduzece", "preduzeće", "nazivfirme", "naziv firme", "imefirme"];
+    const emailCandidates = ["email", "e-mail", "e mail", "mail", "emailadresa", "emailaddress", "eposta", "e-pošta", "Email", "E-mail"];
+    const nameCandidates = ["company_name", "firma", "naziv", "name", "kompanija", "preduzece", "preduzeće", "nazivfirme", "naziv firme", "imefirme", "naziv produkcije", "nazivprodukcije"];
     const contactCandidates = ["contact_person", "kontakt", "kontaktosoba", "kontakt_osoba", "kontakt osoba", "osoba"];
     const cityCandidates = ["city", "grad", "mesto", "mesto/grad", "sediste", "sedište"];
     const phoneCandidates = ["phone", "telefon", "tel", "fon", "broj telefona"];
-    const notesCandidates = ["notes", "napomena", "komentar", "beleška", "note"];
+    const notesCandidates = ["notes", "napomena", "komentar", "beleška", "note", "zapisnik"];
+
+    // Also try to find email by scanning cell values if column matching fails
+    const findEmailInRow = (row: any): string | null => {
+      // First try column name matching
+      const byCol = findCol(row, emailCandidates);
+      if (byCol) return String(byCol);
+      // Fallback: scan all values for something that looks like an email
+      for (const val of Object.values(row)) {
+        if (val && typeof val === 'string' && val.includes('@') && val.includes('.')) {
+          return val;
+        }
+      }
+      return null;
+    };
 
     const mapped = rows
       .filter((r) => {
-        const email = findCol(r, emailCandidates);
+        const email = findEmailInRow(r);
         return email && String(email).trim().includes("@");
       })
       .map((r) => ({
         company_name: findCol(r, nameCandidates) || "Nepoznato",
-        email: String(findCol(r, emailCandidates) || "").trim().toLowerCase(),
+        email: String(findEmailInRow(r) || "").trim().toLowerCase(),
         contact_person: findCol(r, contactCandidates) || null,
         city: findCol(r, cityCandidates) || null,
         phone: findCol(r, phoneCandidates) ? String(findCol(r, phoneCandidates)) : null,
