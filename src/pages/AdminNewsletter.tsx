@@ -35,7 +35,7 @@ function RecipientsTab() {
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const { data: recipients = [], isLoading } = useQuery({
-    queryKey: ["newsletter-recipients"],
+    queryKey: ["newsletter-recipients", "all"],
     queryFn: async () => {
       const { data, error } = await supabase
         .from("newsletter_recipients")
