@@ -90,7 +90,7 @@ const ClientPortal = () => {
 
   // Presence tracking ref
   const presenceChannelRef = useRef<ReturnType<typeof supabase.channel> | null>(null);
-  const heartbeatIntervalRef = useRef<NodeJS.Timeout | null>(null);
+  const heartbeatIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   // Check if user is a portal user
   useEffect(() => {
