@@ -92,8 +92,45 @@ function RecipientsTab() {
     if (!file) return;
     const data = await file.arrayBuffer();
     const wb = XLSX.read(data);
-    const ws = wb.Sheets[wb.SheetNames[0]];
-    const rows: any[] = XLSX.utils.sheet_to_json(ws);
+    
+    // Try all sheets to find one with data
+    let rows: any[] = [];
+    for (const sheetName of wb.SheetNames) {
+      const ws = wb.Sheets[sheetName];
+      // Try default parsing first
+      let parsed: any[] = XLSX.utils.sheet_to_json(ws);
+      if (parsed.length === 0) {
+        // Try with defval to handle empty cells, and range detection
+        parsed = XLSX.utils.sheet_to_json(ws, { defval: "" });
+      }
+      if (parsed.length > rows.length) {
+        rows = parsed;
+      }
+    }
+    
+    // If still empty, try raw parsing to find header row
+    if (rows.length === 0) {
+      const ws = wb.Sheets[wb.SheetNames[0]];
+      const rawRows: any[][] = XLSX.utils.sheet_to_json(ws, { header: 1 });
+      // Find the first row that looks like a header (has multiple non-empty cells)
+      const headerIdx = rawRows.findIndex(row => 
+        Array.isArray(row) && row.filter(cell => cell != null && String(cell).trim()).length >= 2
+      );
+      if (headerIdx >= 0 && headerIdx < rawRows.length - 1) {
+        const headers = rawRows[headerIdx].map((h: any) => String(h || "").trim());
+        for (let i = headerIdx + 1; i < rawRows.length; i++) {
+          const row = rawRows[i];
+          if (!Array.isArray(row)) continue;
+          const obj: any = {};
+          headers.forEach((h: string, ci: number) => {
+            if (h) obj[h] = row[ci] != null ? row[ci] : "";
+          });
+          if (Object.values(obj).some(v => v !== "")) {
+            rows.push(obj);
+          }
+        }
+      }
+    }
 
     // Helper to find a value from multiple possible column names (case-insensitive)
     const findCol = (row: any, candidates: string[]): string | null => {
