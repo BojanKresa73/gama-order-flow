@@ -32,6 +32,7 @@ function RecipientsTab() {
   const [addOpen, setAddOpen] = useState(false);
   const [editRecipient, setEditRecipient] = useState<any>(null);
   const [form, setForm] = useState({ company_name: "", email: "", contact_person: "", city: "", phone: "", notes: "" });
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const { data: recipients = [], isLoading } = useQuery({
     queryKey: ["newsletter-recipients"],
