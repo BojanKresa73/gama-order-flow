@@ -214,12 +214,12 @@ function RecipientsTab() {
 
     const mapped = rows
       .filter((r) => {
-        const email = findCol(r, emailCandidates);
+        const email = findEmailInRow(r);
         return email && String(email).trim().includes("@");
       })
       .map((r) => ({
         company_name: findCol(r, nameCandidates) || "Nepoznato",
-        email: String(findCol(r, emailCandidates) || "").trim().toLowerCase(),
+        email: String(findEmailInRow(r) || "").trim().toLowerCase(),
         contact_person: findCol(r, contactCandidates) || null,
         city: findCol(r, cityCandidates) || null,
         phone: findCol(r, phoneCandidates) ? String(findCol(r, phoneCandidates)) : null,
