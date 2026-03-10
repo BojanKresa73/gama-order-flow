@@ -214,7 +214,15 @@ function RecipientsTab() {
         })
         .filter(Boolean) as any[];
 
-      if (mapped.length === 0) {
+      // Deduplicate by email — keep last occurrence
+      const deduped = Object.values(
+        mapped.reduce((acc: Record<string, any>, item: any) => {
+          acc[item.email] = item;
+          return acc;
+        }, {})
+      ) as any[];
+
+      if (deduped.length === 0) {
         const availableCols = rows.length > 0 ? Object.keys(rows[0]).join(", ") : "nema kolona";
         console.error("Import failed. Rows:", rows.length, "Columns:", availableCols);
         toast({
