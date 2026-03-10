@@ -387,9 +387,17 @@ function ComposeTab() {
   const { data: recipients = [] } = useQuery({
     queryKey: ["newsletter-recipients", "active"],
     queryFn: async () => {
-      const { data, error } = await supabase.from("newsletter_recipients").select("*").eq("is_active", true).order("company_name").range(0, 4999);
-      if (error) throw error;
-      return data;
+      const PAGE_SIZE = 1000;
+      let allData: any[] = [];
+      let from = 0;
+      while (true) {
+        const { data, error } = await supabase.from("newsletter_recipients").select("*").eq("is_active", true).order("company_name").range(from, from + PAGE_SIZE - 1);
+        if (error) throw error;
+        allData = allData.concat(data || []);
+        if (!data || data.length < PAGE_SIZE) break;
+        from += PAGE_SIZE;
+      }
+      return allData;
     },
   });
 
