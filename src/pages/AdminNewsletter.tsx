@@ -191,12 +191,26 @@ function RecipientsTab() {
       return null;
     };
 
-    const emailCandidates = ["email", "e-mail", "e mail", "mail", "emailadresa", "emailaddress", "eposta", "e-pošta"];
-    const nameCandidates = ["company_name", "firma", "naziv", "name", "kompanija", "preduzece", "preduzeće", "nazivfirme", "naziv firme", "imefirme"];
+    const emailCandidates = ["email", "e-mail", "e mail", "mail", "emailadresa", "emailaddress", "eposta", "e-pošta", "Email", "E-mail"];
+    const nameCandidates = ["company_name", "firma", "naziv", "name", "kompanija", "preduzece", "preduzeće", "nazivfirme", "naziv firme", "imefirme", "naziv produkcije", "nazivprodukcije"];
     const contactCandidates = ["contact_person", "kontakt", "kontaktosoba", "kontakt_osoba", "kontakt osoba", "osoba"];
     const cityCandidates = ["city", "grad", "mesto", "mesto/grad", "sediste", "sedište"];
     const phoneCandidates = ["phone", "telefon", "tel", "fon", "broj telefona"];
-    const notesCandidates = ["notes", "napomena", "komentar", "beleška", "note"];
+    const notesCandidates = ["notes", "napomena", "komentar", "beleška", "note", "zapisnik"];
+
+    // Also try to find email by scanning cell values if column matching fails
+    const findEmailInRow = (row: any): string | null => {
+      // First try column name matching
+      const byCol = findCol(row, emailCandidates);
+      if (byCol) return String(byCol);
+      // Fallback: scan all values for something that looks like an email
+      for (const val of Object.values(row)) {
+        if (val && typeof val === 'string' && val.includes('@') && val.includes('.')) {
+          return val;
+        }
+      }
+      return null;
+    };
 
     const mapped = rows
       .filter((r) => {
