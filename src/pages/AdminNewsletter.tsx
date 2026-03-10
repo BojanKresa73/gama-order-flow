@@ -305,11 +305,12 @@ function RecipientsTab() {
           </TableHeader>
           <TableBody>
             {isLoading ? (
-              <TableRow><TableCell colSpan={5} className="text-center py-8"><Loader2 className="h-5 w-5 animate-spin mx-auto" /></TableCell></TableRow>
+              <TableRow><TableCell colSpan={6} className="text-center py-8"><Loader2 className="h-5 w-5 animate-spin mx-auto" /></TableCell></TableRow>
             ) : filtered.length === 0 ? (
-              <TableRow><TableCell colSpan={5} className="text-center py-8 text-muted-foreground">Nema primaoca</TableCell></TableRow>
-            ) : filtered.map((r: any) => (
+              <TableRow><TableCell colSpan={6} className="text-center py-8 text-muted-foreground">Nema primaoca</TableCell></TableRow>
+            ) : filtered.map((r: any, idx: number) => (
               <TableRow key={r.id}>
+                <TableCell className="text-muted-foreground">{idx + 1}</TableCell>
                 <TableCell className="font-medium">{r.company_name}</TableCell>
                 <TableCell>{r.email}</TableCell>
                 <TableCell className="hidden md:table-cell">{r.contact_person}</TableCell>
