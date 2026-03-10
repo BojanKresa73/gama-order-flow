@@ -214,7 +214,15 @@ function RecipientsTab() {
         })
         .filter(Boolean) as any[];
 
-      if (mapped.length === 0) {
+      // Deduplicate by email — keep last occurrence
+      const deduped = Object.values(
+        mapped.reduce((acc: Record<string, any>, item: any) => {
+          acc[item.email] = item;
+          return acc;
+        }, {})
+      ) as any[];
+
+      if (deduped.length === 0) {
         const availableCols = rows.length > 0 ? Object.keys(rows[0]).join(", ") : "nema kolona";
         console.error("Import failed. Rows:", rows.length, "Columns:", availableCols);
         toast({
@@ -227,8 +235,8 @@ function RecipientsTab() {
 
       // E) Batch insert
       let totalInserted = 0;
-      for (let i = 0; i < mapped.length; i += 50) {
-        const batch = mapped.slice(i, i + 50);
+      for (let i = 0; i < deduped.length; i += 50) {
+        const batch = deduped.slice(i, i + 50);
         const { error } = await supabase.from("newsletter_recipients").upsert(batch, { onConflict: "email" });
         if (error) {
           toast({ title: "Greška pri importu", description: error.message, variant: "destructive" });
