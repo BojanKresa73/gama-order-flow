@@ -91,191 +91,155 @@ function RecipientsTab() {
   const handleImport = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
-    
+
     try {
-      const data = new Uint8Array(await file.arrayBuffer());
-      
-      // Try multiple read strategies
-      let wb: XLSX.WorkBook | null = null;
-      const readAttempts = [
-        { type: "array" as const },
-        { type: "buffer" as const },
-        { raw: true, type: "array" as const },
-      ];
-      
-      for (const opts of readAttempts) {
-        try {
-          wb = XLSX.read(data, opts);
-          if (wb && wb.SheetNames.length > 0) break;
-        } catch { /* try next */ }
-      }
-      
+      const data = await file.arrayBuffer();
+      const wb = XLSX.read(new Uint8Array(data), { type: "array", cellDates: true, dense: false });
+
       if (!wb || wb.SheetNames.length === 0) {
         toast({ title: "Greška", description: "Ne mogu da pročitam Excel fajl", variant: "destructive" });
         return;
       }
-      
-      let rows: any[] = [];
-      let debugInfo = "";
-      
+
+      let rows: Record<string, any>[] = [];
+
       for (const sheetName of wb.SheetNames) {
-        const ws = wb.Sheets[sheetName];
-        if (!ws) continue;
-        
-        // Strategy 1: Raw array parsing
-        const rawRows: any[][] = XLSX.utils.sheet_to_json(ws, { header: 1, raw: false, defval: "" });
-        
-        // Debug: show what we got
-        console.log(`Sheet "${sheetName}": ${rawRows.length} raw rows`);
-        if (rawRows.length > 0) {
-          console.log("Row 0:", JSON.stringify(rawRows[0]));
-          if (rawRows.length > 1) console.log("Row 1:", JSON.stringify(rawRows[1]));
-          if (rawRows.length > 2) console.log("Row 2:", JSON.stringify(rawRows[2]));
-        }
-        
-        // Find header row
-        let headerIdx = -1;
-        for (let i = 0; i < Math.min(rawRows.length, 30); i++) {
-          const row = rawRows[i];
-          if (!Array.isArray(row) || row.length < 3) continue;
-          const cellTexts = row.map(cell => String(cell || "").toLowerCase().trim());
-          // Check for email-like column name
-          if (cellTexts.some(s => /^e[\-\s]?mail$/i.test(s.trim()) || s === "mail")) {
-            headerIdx = i;
-            break;
+        if (rows.length > 0) break;
+        const sheet = wb.Sheets[sheetName];
+        if (!sheet) continue;
+
+        // A) Fix !ref range — many exports have wrong range
+        const allCells = Object.keys(sheet).filter(k => !k.startsWith('!'));
+        if (allCells.length > 0) {
+          let minR = Infinity, minC = Infinity, maxR = 0, maxC = 0;
+          for (const cell of allCells) {
+            const addr = XLSX.utils.decode_cell(cell);
+            if (addr.r < minR) minR = addr.r;
+            if (addr.c < minC) minC = addr.c;
+            if (addr.r > maxR) maxR = addr.r;
+            if (addr.c > maxC) maxC = addr.c;
           }
+          sheet['!ref'] = XLSX.utils.encode_range({ s: { r: minR, c: minC }, e: { r: maxR, c: maxC } });
         }
-        
-        // Fallback: find row with known business columns
-        if (headerIdx === -1) {
-          for (let i = 0; i < Math.min(rawRows.length, 30); i++) {
-            const row = rawRows[i];
-            if (!Array.isArray(row) || row.length < 3) continue;
-            const cellTexts = row.map(cell => String(cell || "").toLowerCase().trim());
-            const hasPIB = cellTexts.some(s => s === "pib");
-            const hasMB = cellTexts.some(s => s === "mb");
-            if (hasPIB || hasMB) {
-              headerIdx = i;
+
+        // B) Strategy 1: Standard (header in first row)
+        rows = XLSX.utils.sheet_to_json<Record<string, any>>(sheet, { defval: "", raw: false });
+        console.log(`Sheet "${sheetName}" strategy1: ${rows.length} rows`);
+        if (rows.length > 0) {
+          console.log("Strategy1 columns:", Object.keys(rows[0]));
+        }
+
+        // B) Strategy 2: If empty, scan first 10 rows for header
+        if (rows.length === 0) {
+          const rawRows = XLSX.utils.sheet_to_json<any[]>(sheet, { header: 1, defval: "", raw: false });
+          console.log(`Sheet "${sheetName}" strategy2 rawRows: ${rawRows.length}`);
+          for (let headerIdx = 0; headerIdx < Math.min(rawRows.length, 10); headerIdx++) {
+            const headerRow = rawRows[headerIdx];
+            if (!headerRow || headerRow.filter((c: any) => c && String(c).trim()).length < 3) continue;
+            const headers = headerRow.map((h: any) => String(h || "").trim());
+            console.log(`Trying header at row ${headerIdx}:`, headers);
+            rows = rawRows.slice(headerIdx + 1)
+              .filter((row: any[]) => row.some((c: any) => c != null && String(c).trim() !== ""))
+              .map((row: any[]) => {
+                const obj: Record<string, any> = {};
+                headers.forEach((h: string, i: number) => { if (h) obj[h] = row[i] || ""; });
+                return obj;
+              });
+            if (rows.length > 0) {
+              console.log(`Found ${rows.length} rows with header at row ${headerIdx}`);
               break;
             }
           }
         }
-        
-        // Last fallback: first row with 5+ non-empty cells
-        if (headerIdx === -1) {
-          headerIdx = rawRows.findIndex(row =>
-            Array.isArray(row) && row.filter(cell => cell != null && String(cell).trim() !== "").length >= 5
-          );
-        }
-        
-        console.log(`Header detected at row: ${headerIdx}`);
-        
-        if (headerIdx >= 0 && headerIdx < rawRows.length - 1) {
-          const headers = rawRows[headerIdx].map((h: any) => String(h || "").trim());
-          console.log("Headers:", headers);
-          debugInfo = headers.filter(h => h).join(", ");
-          
-          const sheetRows: any[] = [];
-          for (let i = headerIdx + 1; i < rawRows.length; i++) {
-            const row = rawRows[i];
-            if (!Array.isArray(row)) continue;
-            const obj: any = {};
-            headers.forEach((h: string, ci: number) => {
-              if (h) obj[h] = row[ci] != null ? String(row[ci]).trim() : "";
-            });
-            if (Object.values(obj).some(v => v !== "" && v != null)) {
-              sheetRows.push(obj);
-            }
-          }
-          
-          if (sheetRows.length > rows.length) {
-            rows = sheetRows;
-          }
-        }
-        
-        // Strategy 2: Standard sheet_to_json
-        if (rows.length === 0) {
-          const parsed: any[] = XLSX.utils.sheet_to_json(ws, { defval: "", raw: false });
-          if (parsed.length > 0) {
-            debugInfo = Object.keys(parsed[0]).join(", ");
-            console.log(`Standard parse columns:`, debugInfo, "rows:", parsed.length);
-            rows = parsed;
-          }
-        }
       }
-      
+
       console.log("Total rows found:", rows.length);
       if (rows.length > 0) {
-        console.log("First row keys:", Object.keys(rows[0]));
-        console.log("First row:", rows[0]);
+        console.log("First row:", JSON.stringify(rows[0]));
       }
 
-    // Helper to find a value from multiple possible column names (case-insensitive)
-    const findCol = (row: any, candidates: string[]): string | null => {
-      for (const key of Object.keys(row)) {
-        const lower = key.toLowerCase().replace(/[\s\-_]/g, '');
-        for (const c of candidates) {
-          if (lower === c.toLowerCase().replace(/[\s\-_]/g, '')) return row[key];
+      // C) Flexible column finder — partial match
+      const findCol = (row: Record<string, any>, keys: string[]): string => {
+        for (const k of keys) {
+          const found = Object.keys(row).find(col =>
+            col.toLowerCase().trim() === k.toLowerCase() ||
+            col.toLowerCase().trim().includes(k.toLowerCase())
+          );
+          if (found && row[found] != null && String(row[found]).trim())
+            return String(row[found]).trim();
         }
-      }
-      return null;
-    };
+        return "";
+      };
 
-    const emailCandidates = ["email", "e-mail", "e mail", "mail", "emailadresa", "emailaddress", "eposta", "e-pošta", "Email", "E-mail"];
-    const nameCandidates = ["company_name", "firma", "naziv", "name", "kompanija", "preduzece", "preduzeće", "nazivfirme", "naziv firme", "imefirme", "naziv produkcije", "nazivprodukcije"];
-    const contactCandidates = ["contact_person", "kontakt", "kontaktosoba", "kontakt_osoba", "kontakt osoba", "osoba"];
-    const cityCandidates = ["city", "grad", "mesto", "mesto/grad", "sediste", "sedište"];
-    const phoneCandidates = ["phone", "telefon", "tel", "fon", "broj telefona"];
-    const notesCandidates = ["notes", "napomena", "komentar", "beleška", "note", "zapisnik"];
-
-    // Also try to find email by scanning cell values if column matching fails
-    const findEmailInRow = (row: any): string | null => {
-      // First try column name matching
-      const byCol = findCol(row, emailCandidates);
-      if (byCol) return String(byCol);
-      // Fallback: scan all values for something that looks like an email
-      for (const val of Object.values(row)) {
-        if (val && typeof val === 'string' && val.includes('@') && val.includes('.')) {
-          return val;
+      // Also scan all values for email pattern
+      const findEmail = (row: Record<string, any>): string => {
+        const byCol = findCol(row, ["email", "e-mail", "mail", "e mail", "eposta", "e-pošta"]);
+        if (byCol && byCol.includes("@")) return byCol;
+        for (const val of Object.values(row)) {
+          if (val && typeof val === "string" && val.includes("@") && val.includes(".")) {
+            return val.trim();
+          }
         }
+        return "";
+      };
+
+      const nameCandidates = ["naziv", "name", "firma", "kompanija", "preduzece", "preduzeće", "naziv firme", "naziv produkcije", "company"];
+      const contactCandidates = ["kontakt", "kontakt osoba", "osoba", "contact"];
+      const cityCandidates = ["grad", "city", "mesto", "sediste", "sedište"];
+      const phoneCandidates = ["telefon", "phone", "tel", "fon"];
+      const notesCandidates = ["napomena", "notes", "komentar", "beleška", "zapisnik"];
+
+      const mapped = rows
+        .map((r) => {
+          const email = findEmail(r);
+          const name = findCol(r, nameCandidates) || "Nepoznato";
+          const pib = findCol(r, ["pib"]);
+          const mb = findCol(r, ["mb", "matični broj", "maticni broj"]);
+
+          // D) Placeholder email for rows without email
+          const finalEmail = (email && email.includes("@"))
+            ? email.toLowerCase()
+            : pib ? `${pib}@placeholder.rs` : mb ? `${mb}@placeholder.rs` : "";
+
+          if (!finalEmail) return null;
+
+          return {
+            company_name: name,
+            email: finalEmail,
+            contact_person: findCol(r, contactCandidates) || null,
+            city: findCol(r, cityCandidates) || null,
+            phone: findCol(r, phoneCandidates) || null,
+            notes: findCol(r, notesCandidates) || null,
+          };
+        })
+        .filter(Boolean) as any[];
+
+      if (mapped.length === 0) {
+        const availableCols = rows.length > 0 ? Object.keys(rows[0]).join(", ") : "nema kolona";
+        console.error("Import failed. Rows:", rows.length, "Columns:", availableCols);
+        toast({
+          title: `Nema podataka za import (${rows.length} redova)`,
+          description: `Kolone: ${availableCols || "nema"}. Proveri Console (F12).`,
+          variant: "destructive",
+        });
+        return;
       }
-      return null;
-    };
 
-    const mapped = rows
-      .filter((r) => {
-        const email = findEmailInRow(r);
-        return email && String(email).trim().includes("@");
-      })
-      .map((r) => ({
-        company_name: findCol(r, nameCandidates) || "Nepoznato",
-        email: String(findEmailInRow(r) || "").trim().toLowerCase(),
-        contact_person: findCol(r, contactCandidates) || null,
-        city: findCol(r, cityCandidates) || null,
-        phone: findCol(r, phoneCandidates) ? String(findCol(r, phoneCandidates)) : null,
-        notes: findCol(r, notesCandidates) || null,
-      }));
+      // E) Batch insert
+      let totalInserted = 0;
+      for (let i = 0; i < mapped.length; i += 50) {
+        const batch = mapped.slice(i, i + 50);
+        const { error } = await supabase.from("newsletter_recipients").upsert(batch, { onConflict: "email" });
+        if (error) {
+          toast({ title: "Greška pri importu", description: error.message, variant: "destructive" });
+          return;
+        }
+        totalInserted += batch.length;
+      }
 
-    if (mapped.length === 0) {
-      const availableCols = rows.length > 0 ? Object.keys(rows[0]).join(", ") : "nema kolona";
-      const sampleValues = rows.length > 0 ? JSON.stringify(rows[0]).substring(0, 200) : "prazan fajl";
-      console.error("Import failed. Rows:", rows.length, "Columns:", availableCols, "Sample:", sampleValues);
-      toast({ 
-        title: `Nema email adresa (${rows.length} redova pronađeno)`, 
-        description: `Kolone: ${availableCols || "nema"}. Proveri Console (F12) za detalje.`, 
-        variant: "destructive" 
-      });
-      return;
-    }
-
-    const { error } = await supabase.from("newsletter_recipients").upsert(mapped, { onConflict: "email" });
-    if (error) {
-      toast({ title: "Greška pri importu", description: error.message, variant: "destructive" });
-    } else {
       qc.invalidateQueries({ queryKey: ["newsletter-recipients"] });
-      toast({ title: `Importovano ${mapped.length} primaoca` });
-    }
-    e.target.value = "";
+      toast({ title: `Importovano ${totalInserted} primaoca` });
+      e.target.value = "";
     } catch (err: any) {
       console.error("Import error:", err);
       toast({ title: "Greška pri čitanju fajla", description: err.message, variant: "destructive" });
