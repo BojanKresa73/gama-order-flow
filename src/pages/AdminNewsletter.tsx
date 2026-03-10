@@ -108,16 +108,18 @@ function RecipientsTab() {
         const rawRows: any[][] = XLSX.utils.sheet_to_json(ws, { header: 1 });
         console.log(`Sheet "${sheetName}" raw rows:`, rawRows.length, "first rows:", rawRows.slice(0, 5));
         
-        // Find header row - look for a row containing something email-like
+        // Find header row - look for a row containing something email-like or known column names
         let headerIdx = -1;
         for (let i = 0; i < Math.min(rawRows.length, 20); i++) {
           const row = rawRows[i];
           if (!Array.isArray(row)) continue;
-          const hasEmailLike = row.some(cell => {
-            const s = String(cell || "").toLowerCase().replace(/[\s\-_]/g, '');
-            return s.includes("email") || s.includes("mail") || s.includes("eposta");
-          });
-          if (hasEmailLike) {
+          const rowStrings = row.map(cell => String(cell || "").toLowerCase().replace(/[\s\-_]/g, ''));
+          const hasEmailLike = rowStrings.some(s => 
+            s.includes("email") || s.includes("mail") || s.includes("eposta") || s === "epošta"
+          );
+          // Also detect by known column patterns from Serbian business registries
+          const hasBusinessCols = rowStrings.some(s => s.includes("nazivprodukcije") || s.includes("pib") || s.includes("matičnibroj") || s.includes("mb"));
+          if (hasEmailLike || (hasBusinessCols && row.filter(c => c != null && String(c).trim()).length >= 5)) {
             headerIdx = i;
             break;
           }
