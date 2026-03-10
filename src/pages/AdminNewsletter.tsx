@@ -90,47 +90,93 @@ function RecipientsTab() {
   const handleImport = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
-    const data = await file.arrayBuffer();
-    const wb = XLSX.read(data);
     
-    // Try all sheets to find one with data
-    let rows: any[] = [];
-    for (const sheetName of wb.SheetNames) {
-      const ws = wb.Sheets[sheetName];
-      // Try default parsing first
-      let parsed: any[] = XLSX.utils.sheet_to_json(ws);
-      if (parsed.length === 0) {
-        // Try with defval to handle empty cells, and range detection
-        parsed = XLSX.utils.sheet_to_json(ws, { defval: "" });
-      }
-      if (parsed.length > rows.length) {
-        rows = parsed;
-      }
-    }
-    
-    // If still empty, try raw parsing to find header row
-    if (rows.length === 0) {
-      const ws = wb.Sheets[wb.SheetNames[0]];
-      const rawRows: any[][] = XLSX.utils.sheet_to_json(ws, { header: 1 });
-      // Find the first row that looks like a header (has multiple non-empty cells)
-      const headerIdx = rawRows.findIndex(row => 
-        Array.isArray(row) && row.filter(cell => cell != null && String(cell).trim()).length >= 2
-      );
-      if (headerIdx >= 0 && headerIdx < rawRows.length - 1) {
-        const headers = rawRows[headerIdx].map((h: any) => String(h || "").trim());
-        for (let i = headerIdx + 1; i < rawRows.length; i++) {
+    try {
+      const data = await file.arrayBuffer();
+      const wb = XLSX.read(data, { type: "array" });
+      
+      console.log("Sheets:", wb.SheetNames);
+      
+      // Try all sheets to find one with data
+      let rows: any[] = [];
+      let debugInfo = "";
+      
+      for (const sheetName of wb.SheetNames) {
+        const ws = wb.Sheets[sheetName];
+        
+        // First try raw array parsing to see ALL data
+        const rawRows: any[][] = XLSX.utils.sheet_to_json(ws, { header: 1 });
+        console.log(`Sheet "${sheetName}" raw rows:`, rawRows.length, "first rows:", rawRows.slice(0, 5));
+        
+        // Find header row - look for a row containing something email-like
+        let headerIdx = -1;
+        for (let i = 0; i < Math.min(rawRows.length, 20); i++) {
           const row = rawRows[i];
           if (!Array.isArray(row)) continue;
-          const obj: any = {};
-          headers.forEach((h: string, ci: number) => {
-            if (h) obj[h] = row[ci] != null ? row[ci] : "";
+          const hasEmailLike = row.some(cell => {
+            const s = String(cell || "").toLowerCase().replace(/[\s\-_]/g, '');
+            return s.includes("email") || s.includes("mail") || s.includes("eposta");
           });
-          if (Object.values(obj).some(v => v !== "")) {
-            rows.push(obj);
+          if (hasEmailLike) {
+            headerIdx = i;
+            break;
+          }
+        }
+        
+        // If no email header found, try the first row with 2+ non-empty cells
+        if (headerIdx === -1) {
+          headerIdx = rawRows.findIndex(row => 
+            Array.isArray(row) && row.filter(cell => cell != null && String(cell).trim()).length >= 2
+          );
+        }
+        
+        console.log(`Sheet "${sheetName}" detected header at row:`, headerIdx);
+        
+        if (headerIdx >= 0 && headerIdx < rawRows.length - 1) {
+          const headers = rawRows[headerIdx].map((h: any) => String(h || "").trim());
+          console.log(`Sheet "${sheetName}" headers:`, headers);
+          debugInfo = headers.join(", ");
+          
+          const sheetRows: any[] = [];
+          for (let i = headerIdx + 1; i < rawRows.length; i++) {
+            const row = rawRows[i];
+            if (!Array.isArray(row)) continue;
+            const obj: any = {};
+            headers.forEach((h: string, ci: number) => {
+              if (h) obj[h] = row[ci] != null ? row[ci] : "";
+            });
+            // Skip completely empty rows
+            if (Object.values(obj).some(v => v !== "" && v != null)) {
+              sheetRows.push(obj);
+            }
+          }
+          
+          if (sheetRows.length > rows.length) {
+            rows = sheetRows;
           }
         }
       }
-    }
+      
+      // Also try standard sheet_to_json as fallback
+      if (rows.length === 0) {
+        for (const sheetName of wb.SheetNames) {
+          const ws = wb.Sheets[sheetName];
+          const parsed: any[] = XLSX.utils.sheet_to_json(ws, { defval: "" });
+          if (parsed.length > 0) {
+            debugInfo = Object.keys(parsed[0]).join(", ");
+            console.log(`Fallback sheet "${sheetName}" columns:`, debugInfo, "rows:", parsed.length);
+          }
+          if (parsed.length > rows.length) {
+            rows = parsed;
+          }
+        }
+      }
+      
+      console.log("Total rows found:", rows.length);
+      if (rows.length > 0) {
+        console.log("First row keys:", Object.keys(rows[0]));
+        console.log("First row:", rows[0]);
+      }
 
     // Helper to find a value from multiple possible column names (case-insensitive)
     const findCol = (row: any, candidates: string[]): string | null => {
@@ -179,6 +225,10 @@ function RecipientsTab() {
       toast({ title: `Importovano ${mapped.length} primaoca` });
     }
     e.target.value = "";
+    } catch (err: any) {
+      console.error("Import error:", err);
+      toast({ title: "Greška pri čitanju fajla", description: err.message, variant: "destructive" });
+    }
   };
 
   const openEdit = (r: any) => {
