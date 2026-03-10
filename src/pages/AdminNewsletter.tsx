@@ -257,9 +257,14 @@ function RecipientsTab() {
       }));
 
     if (mapped.length === 0) {
-      // Show available columns to help debug
       const availableCols = rows.length > 0 ? Object.keys(rows[0]).join(", ") : "nema kolona";
-      toast({ title: "Nema validnih redova", description: `Pronađene kolone: ${availableCols}. Potrebna je kolona sa email adresama.`, variant: "destructive" });
+      const sampleValues = rows.length > 0 ? JSON.stringify(rows[0]).substring(0, 200) : "prazan fajl";
+      console.error("Import failed. Rows:", rows.length, "Columns:", availableCols, "Sample:", sampleValues);
+      toast({ 
+        title: `Nema email adresa (${rows.length} redova pronađeno)`, 
+        description: `Kolone: ${availableCols || "nema"}. Proveri Console (F12) za detalje.`, 
+        variant: "destructive" 
+      });
       return;
     }
 
