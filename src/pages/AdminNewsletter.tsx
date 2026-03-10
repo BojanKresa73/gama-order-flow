@@ -40,7 +40,8 @@ function RecipientsTab() {
       const { data, error } = await supabase
         .from("newsletter_recipients")
         .select("*")
-        .order("company_name");
+        .order("company_name")
+        .range(0, 4999);
       if (error) throw error;
       return data;
     },
