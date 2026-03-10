@@ -35,7 +35,7 @@ export function OnlineUsersProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     let channel: ReturnType<typeof supabase.channel> | null = null;
-    let heartbeatInterval: NodeJS.Timeout | null = null;
+    let heartbeatInterval: ReturnType<typeof setInterval> | null = null;
 
     const setupPresence = async () => {
       const { data: { user } } = await supabase.auth.getUser();
