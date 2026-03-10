@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
@@ -32,6 +32,7 @@ function RecipientsTab() {
   const [addOpen, setAddOpen] = useState(false);
   const [editRecipient, setEditRecipient] = useState<any>(null);
   const [form, setForm] = useState({ company_name: "", email: "", contact_person: "", city: "", phone: "", notes: "" });
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const { data: recipients = [], isLoading } = useQuery({
     queryKey: ["newsletter-recipients"],
@@ -274,8 +275,8 @@ function RecipientsTab() {
           </SelectContent>
         </Select>
         <div>
-          <input id="newsletter-import" type="file" accept=".xlsx,.xls,.csv" className="hidden" onChange={handleImport} />
-          <Button variant="outline" onClick={() => document.getElementById('newsletter-import')?.click()}>
+          <input ref={fileInputRef} type="file" accept=".xlsx,.xls,.csv" className="hidden" onChange={handleImport} />
+          <Button variant="outline" type="button" onClick={() => { console.log("Import button clicked"); fileInputRef.current?.click(); }}>
             <Upload className="h-4 w-4 mr-1" />Import Excel
           </Button>
         </div>
