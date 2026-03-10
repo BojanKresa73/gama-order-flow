@@ -93,52 +93,87 @@ function RecipientsTab() {
     if (!file) return;
     
     try {
-      const data = await file.arrayBuffer();
-      const wb = XLSX.read(data, { type: "array" });
+      const data = new Uint8Array(await file.arrayBuffer());
       
-      console.log("Sheets:", wb.SheetNames);
+      // Try multiple read strategies
+      let wb: XLSX.WorkBook | null = null;
+      const readAttempts = [
+        { type: "array" as const },
+        { type: "buffer" as const },
+        { raw: true, type: "array" as const },
+      ];
       
-      // Try all sheets to find one with data
+      for (const opts of readAttempts) {
+        try {
+          wb = XLSX.read(data, opts);
+          if (wb && wb.SheetNames.length > 0) break;
+        } catch { /* try next */ }
+      }
+      
+      if (!wb || wb.SheetNames.length === 0) {
+        toast({ title: "Greška", description: "Ne mogu da pročitam Excel fajl", variant: "destructive" });
+        return;
+      }
+      
       let rows: any[] = [];
       let debugInfo = "";
       
       for (const sheetName of wb.SheetNames) {
         const ws = wb.Sheets[sheetName];
+        if (!ws) continue;
         
-        // First try raw array parsing to see ALL data
-        const rawRows: any[][] = XLSX.utils.sheet_to_json(ws, { header: 1 });
-        console.log(`Sheet "${sheetName}" raw rows:`, rawRows.length, "first rows:", rawRows.slice(0, 5));
+        // Strategy 1: Raw array parsing
+        const rawRows: any[][] = XLSX.utils.sheet_to_json(ws, { header: 1, raw: false, defval: "" });
         
-        // Find header row - look for a row containing something email-like or known column names
+        // Debug: show what we got
+        console.log(`Sheet "${sheetName}": ${rawRows.length} raw rows`);
+        if (rawRows.length > 0) {
+          console.log("Row 0:", JSON.stringify(rawRows[0]));
+          if (rawRows.length > 1) console.log("Row 1:", JSON.stringify(rawRows[1]));
+          if (rawRows.length > 2) console.log("Row 2:", JSON.stringify(rawRows[2]));
+        }
+        
+        // Find header row
         let headerIdx = -1;
-        for (let i = 0; i < Math.min(rawRows.length, 20); i++) {
+        for (let i = 0; i < Math.min(rawRows.length, 30); i++) {
           const row = rawRows[i];
-          if (!Array.isArray(row)) continue;
-          const rowStrings = row.map(cell => String(cell || "").toLowerCase().replace(/[\s\-_]/g, ''));
-          const hasEmailLike = rowStrings.some(s => 
-            s.includes("email") || s.includes("mail") || s.includes("eposta") || s === "epošta"
-          );
-          // Also detect by known column patterns from Serbian business registries
-          const hasBusinessCols = rowStrings.some(s => s.includes("nazivprodukcije") || s.includes("pib") || s.includes("matičnibroj") || s.includes("mb"));
-          if (hasEmailLike || (hasBusinessCols && row.filter(c => c != null && String(c).trim()).length >= 5)) {
+          if (!Array.isArray(row) || row.length < 3) continue;
+          const cellTexts = row.map(cell => String(cell || "").toLowerCase().trim());
+          // Check for email-like column name
+          if (cellTexts.some(s => /^e[\-\s]?mail$/i.test(s.trim()) || s === "mail")) {
             headerIdx = i;
             break;
           }
         }
         
-        // If no email header found, try the first row with 2+ non-empty cells
+        // Fallback: find row with known business columns
         if (headerIdx === -1) {
-          headerIdx = rawRows.findIndex(row => 
-            Array.isArray(row) && row.filter(cell => cell != null && String(cell).trim()).length >= 2
+          for (let i = 0; i < Math.min(rawRows.length, 30); i++) {
+            const row = rawRows[i];
+            if (!Array.isArray(row) || row.length < 3) continue;
+            const cellTexts = row.map(cell => String(cell || "").toLowerCase().trim());
+            const hasPIB = cellTexts.some(s => s === "pib");
+            const hasMB = cellTexts.some(s => s === "mb");
+            if (hasPIB || hasMB) {
+              headerIdx = i;
+              break;
+            }
+          }
+        }
+        
+        // Last fallback: first row with 5+ non-empty cells
+        if (headerIdx === -1) {
+          headerIdx = rawRows.findIndex(row =>
+            Array.isArray(row) && row.filter(cell => cell != null && String(cell).trim() !== "").length >= 5
           );
         }
         
-        console.log(`Sheet "${sheetName}" detected header at row:`, headerIdx);
+        console.log(`Header detected at row: ${headerIdx}`);
         
         if (headerIdx >= 0 && headerIdx < rawRows.length - 1) {
           const headers = rawRows[headerIdx].map((h: any) => String(h || "").trim());
-          console.log(`Sheet "${sheetName}" headers:`, headers);
-          debugInfo = headers.join(", ");
+          console.log("Headers:", headers);
+          debugInfo = headers.filter(h => h).join(", ");
           
           const sheetRows: any[] = [];
           for (let i = headerIdx + 1; i < rawRows.length; i++) {
@@ -146,9 +181,8 @@ function RecipientsTab() {
             if (!Array.isArray(row)) continue;
             const obj: any = {};
             headers.forEach((h: string, ci: number) => {
-              if (h) obj[h] = row[ci] != null ? row[ci] : "";
+              if (h) obj[h] = row[ci] != null ? String(row[ci]).trim() : "";
             });
-            // Skip completely empty rows
             if (Object.values(obj).some(v => v !== "" && v != null)) {
               sheetRows.push(obj);
             }
@@ -158,18 +192,13 @@ function RecipientsTab() {
             rows = sheetRows;
           }
         }
-      }
-      
-      // Also try standard sheet_to_json as fallback
-      if (rows.length === 0) {
-        for (const sheetName of wb.SheetNames) {
-          const ws = wb.Sheets[sheetName];
-          const parsed: any[] = XLSX.utils.sheet_to_json(ws, { defval: "" });
+        
+        // Strategy 2: Standard sheet_to_json
+        if (rows.length === 0) {
+          const parsed: any[] = XLSX.utils.sheet_to_json(ws, { defval: "", raw: false });
           if (parsed.length > 0) {
             debugInfo = Object.keys(parsed[0]).join(", ");
-            console.log(`Fallback sheet "${sheetName}" columns:`, debugInfo, "rows:", parsed.length);
-          }
-          if (parsed.length > rows.length) {
+            console.log(`Standard parse columns:`, debugInfo, "rows:", parsed.length);
             rows = parsed;
           }
         }
