@@ -109,16 +109,12 @@ function getQuantityText(entry: any, orderKind: string, workOrder: any): string 
     if (entry.file_type === 'digital_product') {
       return String(entry.quantity || workOrder.run_quantity || 1);
     }
-    if (entry.file_type === 'digital_sheet') {
-      return String(entry.quantity || `${(entry.obim || 1) * (entry.qty || 1)} tab.`);
-    }
     if (workOrder.job_name && workOrder.run_quantity) {
       return String(workOrder.run_quantity);
     }
-    const obim = Number(entry.obim || 1);
+    // Show number of copies (komada), not sheets (tabaka)
     const qty = Number(entry.qty || entry.quantity || 1);
-    const totalSheets = entry.computed_total_sheets || (obim * qty);
-    return `${totalSheets} tab.`;
+    return `${qty} kom`;
   }
   
   if (orderKind === 'RAZNO') {
