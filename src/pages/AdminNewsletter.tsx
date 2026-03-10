@@ -35,7 +35,7 @@ function RecipientsTab() {
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const { data: recipients = [], isLoading } = useQuery({
-    queryKey: ["newsletter-recipients"],
+    queryKey: ["newsletter-recipients", "all"],
     queryFn: async () => {
       const { data, error } = await supabase
         .from("newsletter_recipients")
@@ -377,7 +377,7 @@ function ComposeTab() {
   const [builderKey, setBuilderKey] = useState(0);
 
   const { data: recipients = [] } = useQuery({
-    queryKey: ["newsletter-recipients"],
+    queryKey: ["newsletter-recipients", "active"],
     queryFn: async () => {
       const { data, error } = await supabase.from("newsletter_recipients").select("*").eq("is_active", true).order("company_name").range(0, 4999);
       if (error) throw error;
