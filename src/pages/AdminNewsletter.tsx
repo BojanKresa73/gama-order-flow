@@ -295,6 +295,7 @@ function RecipientsTab() {
         <Table>
           <TableHeader>
             <TableRow>
+              <TableHead className="w-[50px]">#</TableHead>
               <TableHead>Firma</TableHead>
               <TableHead>Email</TableHead>
               <TableHead className="hidden md:table-cell">Kontakt</TableHead>
