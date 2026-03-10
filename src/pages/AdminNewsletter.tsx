@@ -207,10 +207,12 @@ function RecipientsTab() {
             {cities.map((c) => <SelectItem key={c} value={c}>{c}</SelectItem>)}
           </SelectContent>
         </Select>
-        <label className="cursor-pointer">
-          <input type="file" accept=".xlsx,.xls,.csv" className="hidden" onChange={handleImport} />
-          <Button variant="outline" asChild><span><Upload className="h-4 w-4 mr-1" />Import Excel</span></Button>
-        </label>
+        <div>
+          <input id="newsletter-import" type="file" accept=".xlsx,.xls,.csv" className="hidden" onChange={handleImport} />
+          <Button variant="outline" onClick={() => document.getElementById('newsletter-import')?.click()}>
+            <Upload className="h-4 w-4 mr-1" />Import Excel
+          </Button>
+        </div>
         <Button onClick={openAdd}><Plus className="h-4 w-4 mr-1" />Dodaj</Button>
       </div>
 
