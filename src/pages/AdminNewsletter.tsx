@@ -225,6 +225,10 @@ function RecipientsTab() {
       toast({ title: `Importovano ${mapped.length} primaoca` });
     }
     e.target.value = "";
+    } catch (err: any) {
+      console.error("Import error:", err);
+      toast({ title: "Greška pri čitanju fajla", description: err.message, variant: "destructive" });
+    }
   };
 
   const openEdit = (r: any) => {
