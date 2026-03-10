@@ -20,6 +20,7 @@ function extractPiecesFromName(name: string): number | null {
 
 /**
  * Calculate price per piece for an item
+ * Formula: (broj tabaka × cena po tabaku) / broj komada
  * Uses pieces_count if set, otherwise tries to parse from name, otherwise uses qty
  */
 function calculatePricePerPiece(
@@ -27,19 +28,23 @@ function calculatePricePerPiece(
   pricePerSheet: number, 
   formatMultiplier: number
 ): { totalPieces: number; pricePerPiece: number } {
+  // Total price for item = sheets × price_per_sheet × format_multiplier
   const itemPrice = item.sheets * pricePerSheet * formatMultiplier;
   
-  // Priority: explicit piecesCount > parsed from name > default to qty
-  let totalPieces = item.qty;
+  // Determine total pieces (komada):
+  // Priority: explicit piecesCount > parsed from name > default to qty (tiraz)
+  let piecesPerCopy = 1;
   if (item.piecesCount && item.piecesCount > 0) {
-    totalPieces = item.qty * item.piecesCount;
+    piecesPerCopy = item.piecesCount;
   } else {
     const parsed = extractPiecesFromName(item.name);
     if (parsed && parsed > 0) {
-      totalPieces = item.qty * parsed;
+      piecesPerCopy = parsed;
     }
   }
   
+  const totalPieces = item.qty * piecesPerCopy;
+  // €/kom = total item price / total pieces
   const pricePerPiece = totalPieces > 0 ? itemPrice / totalPieces : 0;
   return { totalPieces, pricePerPiece };
 }
