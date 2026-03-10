@@ -95,19 +95,42 @@ function RecipientsTab() {
     const ws = wb.Sheets[wb.SheetNames[0]];
     const rows: any[] = XLSX.utils.sheet_to_json(ws);
 
+    // Helper to find a value from multiple possible column names (case-insensitive)
+    const findCol = (row: any, candidates: string[]): string | null => {
+      for (const key of Object.keys(row)) {
+        const lower = key.toLowerCase().replace(/[\s\-_]/g, '');
+        for (const c of candidates) {
+          if (lower === c.toLowerCase().replace(/[\s\-_]/g, '')) return row[key];
+        }
+      }
+      return null;
+    };
+
+    const emailCandidates = ["email", "e-mail", "e mail", "mail", "emailadresa", "emailaddress", "eposta", "e-pošta"];
+    const nameCandidates = ["company_name", "firma", "naziv", "name", "kompanija", "preduzece", "preduzeće", "nazivfirme", "naziv firme", "imefirme"];
+    const contactCandidates = ["contact_person", "kontakt", "kontaktosoba", "kontakt_osoba", "kontakt osoba", "osoba"];
+    const cityCandidates = ["city", "grad", "mesto", "mesto/grad", "sediste", "sedište"];
+    const phoneCandidates = ["phone", "telefon", "tel", "fon", "broj telefona"];
+    const notesCandidates = ["notes", "napomena", "komentar", "beleška", "note"];
+
     const mapped = rows
-      .filter((r) => r.email || r.Email || r.EMAIL)
+      .filter((r) => {
+        const email = findCol(r, emailCandidates);
+        return email && String(email).trim().includes("@");
+      })
       .map((r) => ({
-        company_name: r.company_name || r.firma || r.Firma || r.naziv || r.Naziv || r.name || r.Name || "Nepoznato",
-        email: (r.email || r.Email || r.EMAIL || "").trim().toLowerCase(),
-        contact_person: r.contact_person || r.kontakt || r.Kontakt || r.kontakt_osoba || null,
-        city: r.city || r.grad || r.Grad || r.mesto || r.Mesto || null,
-        phone: r.phone || r.telefon || r.Telefon || null,
-        notes: r.notes || r.napomena || r.Napomena || null,
+        company_name: findCol(r, nameCandidates) || "Nepoznato",
+        email: String(findCol(r, emailCandidates) || "").trim().toLowerCase(),
+        contact_person: findCol(r, contactCandidates) || null,
+        city: findCol(r, cityCandidates) || null,
+        phone: findCol(r, phoneCandidates) ? String(findCol(r, phoneCandidates)) : null,
+        notes: findCol(r, notesCandidates) || null,
       }));
 
     if (mapped.length === 0) {
-      toast({ title: "Nema validnih redova", description: "Excel mora imati kolonu 'email'", variant: "destructive" });
+      // Show available columns to help debug
+      const availableCols = rows.length > 0 ? Object.keys(rows[0]).join(", ") : "nema kolona";
+      toast({ title: "Nema validnih redova", description: `Pronađene kolone: ${availableCols}. Potrebna je kolona sa email adresama.`, variant: "destructive" });
       return;
     }
 
