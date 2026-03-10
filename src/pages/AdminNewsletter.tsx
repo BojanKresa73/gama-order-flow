@@ -235,8 +235,8 @@ function RecipientsTab() {
 
       // E) Batch insert
       let totalInserted = 0;
-      for (let i = 0; i < mapped.length; i += 50) {
-        const batch = mapped.slice(i, i + 50);
+      for (let i = 0; i < deduped.length; i += 50) {
+        const batch = deduped.slice(i, i + 50);
         const { error } = await supabase.from("newsletter_recipients").upsert(batch, { onConflict: "email" });
         if (error) {
           toast({ title: "Greška pri importu", description: error.message, variant: "destructive" });
