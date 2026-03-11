@@ -921,15 +921,25 @@ function HistoryTab() {
     queryFn: async () => {
       if (campaigns.length === 0) return [];
       const ids = campaigns.map((c: any) => c.id);
-      // Get status counts per campaign
-      const { data, error } = await supabase
-        .from("newsletter_sends")
-        .select("campaign_id, status")
-        .in("campaign_id", ids);
-      if (error) throw error;
+      // Paginate to get all sends (bypass 1000-row limit)
+      let allData: any[] = [];
+      const PAGE_SIZE = 1000;
+      let offset = 0;
+      while (true) {
+        const { data, error } = await supabase
+          .from("newsletter_sends")
+          .select("campaign_id, status")
+          .in("campaign_id", ids)
+          .range(offset, offset + PAGE_SIZE - 1);
+        if (error) throw error;
+        if (!data || data.length === 0) break;
+        allData = allData.concat(data);
+        if (data.length < PAGE_SIZE) break;
+        offset += PAGE_SIZE;
+      }
       // Aggregate
       const map = new Map<string, { sent: number; failed: number; pending: number }>();
-      for (const row of (data || [])) {
+      for (const row of allData) {
         if (!map.has(row.campaign_id)) map.set(row.campaign_id, { sent: 0, failed: 0, pending: 0 });
         const entry = map.get(row.campaign_id)!;
         if (row.status === "sent") entry.sent++;
