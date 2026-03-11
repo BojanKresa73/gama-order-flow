@@ -560,8 +560,13 @@ function ComposeTab() {
         recipient_id: r.id,
         recipient_email: r.email,
       }));
-      const { error: sendsErr } = await supabase.from("newsletter_sends").insert(sendRecords);
-      if (sendsErr) throw sendsErr;
+      // Batch insert in chunks of 500 to avoid Supabase row limit
+      const CHUNK_SIZE = 500;
+      for (let i = 0; i < sendRecords.length; i += CHUNK_SIZE) {
+        const chunk = sendRecords.slice(i, i + CHUNK_SIZE);
+        const { error: sendsErr } = await supabase.from("newsletter_sends").insert(chunk);
+        if (sendsErr) throw sendsErr;
+      }
 
       setSendingCampaignId(campaign.id);
 
