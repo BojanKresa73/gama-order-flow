@@ -1180,7 +1180,7 @@ function HistoryTab() {
                     <TableCell className="text-right">
                       {counts.pending > 0 ? <span className="text-yellow-600 font-medium">{counts.pending}</span> : "0"}
                     </TableCell>
-                    <TableCell className="text-right">
+                    <TableCell className="text-right space-x-1">
                       {hasRemaining && (
                         <Button
                           size="sm"
@@ -1190,6 +1190,28 @@ function HistoryTab() {
                         >
                           {resumingId === c.id ? <Loader2 className="h-3 w-3 animate-spin mr-1" /> : <Send className="h-3 w-3 mr-1" />}
                           Nastavi
+                        </Button>
+                      )}
+                      {c.status === "sent" && !hasRemaining && total < c.total_recipients && (
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          disabled={resumingId === c.id}
+                          onClick={(e) => { e.stopPropagation(); handleFillMissing(c); }}
+                        >
+                          {resumingId === c.id ? <Loader2 className="h-3 w-3 animate-spin mr-1" /> : <Users className="h-3 w-3 mr-1" />}
+                          Dopuni ({c.total_recipients - total})
+                        </Button>
+                      )}
+                      {c.status === "sent" && !hasRemaining && total === c.total_recipients && total < 1377 && (
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          disabled={resumingId === c.id}
+                          onClick={(e) => { e.stopPropagation(); handleFillMissing(c); }}
+                        >
+                          {resumingId === c.id ? <Loader2 className="h-3 w-3 animate-spin mr-1" /> : <Users className="h-3 w-3 mr-1" />}
+                          Dopuni nedostajuće
                         </Button>
                       )}
                     </TableCell>
