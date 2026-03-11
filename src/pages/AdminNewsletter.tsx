@@ -372,6 +372,8 @@ function ComposeTab() {
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [selectAll, setSelectAll] = useState(true);
   const [sending, setSending] = useState(false);
+  const [sendingCampaignId, setSendingCampaignId] = useState<string | null>(null);
+  const [sendProgress, setSendProgress] = useState<{ sent: number; failed: number; pending: number; total: number } | null>(null);
   const [campaignMode, setCampaignMode] = useState<"template" | "custom">("custom");
   const [selectedTheme, setSelectedTheme] = useState<EmailTheme>(EMAIL_THEMES[0]);
   const [showRecipientList, setShowRecipientList] = useState(false);
