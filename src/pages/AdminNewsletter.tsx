@@ -372,6 +372,8 @@ function ComposeTab() {
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [selectAll, setSelectAll] = useState(true);
   const [sending, setSending] = useState(false);
+  const [sendingCampaignId, setSendingCampaignId] = useState<string | null>(null);
+  const [sendProgress, setSendProgress] = useState<{ sent: number; failed: number; pending: number; total: number } | null>(null);
   const [campaignMode, setCampaignMode] = useState<"template" | "custom">("custom");
   const [selectedTheme, setSelectedTheme] = useState<EmailTheme>(EMAIL_THEMES[0]);
   const [showRecipientList, setShowRecipientList] = useState(false);
@@ -384,6 +386,26 @@ function ComposeTab() {
   const [loadedDraftId, setLoadedDraftId] = useState<string | null>(null);
   const [initialBlocks, setInitialBlocks] = useState<Block[] | undefined>(undefined);
   const [builderKey, setBuilderKey] = useState(0);
+
+  // Poll progress while sending
+  useEffect(() => {
+    if (!sendingCampaignId) return;
+    const poll = async () => {
+      const { data } = await supabase
+        .from("newsletter_sends")
+        .select("status")
+        .eq("campaign_id", sendingCampaignId);
+      if (data) {
+        const sent = data.filter((s: any) => s.status === "sent").length;
+        const failed = data.filter((s: any) => s.status === "failed").length;
+        const pending = data.filter((s: any) => s.status === "pending").length;
+        setSendProgress({ sent, failed, pending, total: data.length });
+      }
+    };
+    poll();
+    const interval = setInterval(poll, 2000);
+    return () => clearInterval(interval);
+  }, [sendingCampaignId]);
 
   const { data: recipients = [] } = useQuery({
     queryKey: ["newsletter-recipients", "active"],
@@ -524,6 +546,7 @@ function ComposeTab() {
     if (!confirmed) return;
 
     setSending(true);
+    setSendProgress({ sent: 0, failed: 0, pending: finalRecipients.length, total: finalRecipients.length });
     try {
       const { data: campaign, error: campErr } = await supabase
         .from("newsletter_campaigns")
@@ -539,6 +562,8 @@ function ComposeTab() {
       }));
       const { error: sendsErr } = await supabase.from("newsletter_sends").insert(sendRecords);
       if (sendsErr) throw sendsErr;
+
+      setSendingCampaignId(campaign.id);
 
       const { data, error } = await supabase.functions.invoke("send-newsletter", {
         body: { campaign_id: campaign.id },
@@ -558,6 +583,8 @@ function ComposeTab() {
       toast({ title: "Greška", description: err.message, variant: "destructive" });
     } finally {
       setSending(false);
+      setSendingCampaignId(null);
+      setSendProgress(null);
     }
   };
 
@@ -681,6 +708,27 @@ function ComposeTab() {
                 {sending ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <Send className="h-4 w-4 mr-2" />}
                 Pošalji ({finalRecipients.length})
               </Button>
+
+              {/* Live progress */}
+              {sending && sendProgress && (
+                <div className="space-y-2 p-3 rounded-lg border bg-muted/30">
+                  <div className="flex items-center justify-between text-sm font-medium">
+                    <span className="flex items-center gap-2">
+                      <Loader2 className="h-4 w-4 animate-spin text-primary" />
+                      Slanje u toku...
+                    </span>
+                    <span>{sendProgress.sent + sendProgress.failed} / {sendProgress.total}</span>
+                  </div>
+                  <div className="w-full bg-secondary rounded-full h-3 overflow-hidden">
+                    <div className="h-full rounded-full bg-primary transition-all duration-500 ease-out" style={{ width: `${sendProgress.total > 0 ? ((sendProgress.sent + sendProgress.failed) / sendProgress.total * 100) : 0}%` }} />
+                  </div>
+                  <div className="flex justify-between text-xs text-muted-foreground">
+                    <span className="flex items-center gap-1"><CheckCircle2 className="h-3 w-3 text-green-500" /> Poslato: {sendProgress.sent}</span>
+                    <span className="flex items-center gap-1"><XCircle className="h-3 w-3 text-destructive" /> Neuspelo: {sendProgress.failed}</span>
+                    <span className="flex items-center gap-1"><Clock className="h-3 w-3" /> Preostalo: {sendProgress.pending}</span>
+                  </div>
+                </div>
+              )}
             </CardContent>
           </Card>
         </div>
