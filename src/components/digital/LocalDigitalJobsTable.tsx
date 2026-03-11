@@ -93,13 +93,13 @@ export const LocalDigitalJobsTable = ({ jobs, onChange, printSides, clientRabatP
       const qty = job.qty || 1;
       const totalSheets = obim * qty;
       const totalPrice = totalSheets * pricePerSheet;
-      // Total pieces: explicit pieces_count > parsed from name > qty
+      // Total pieces: explicit pieces_count > parsed from name > default to qty
       let totalPieces = qty;
       if (job.pieces_count && job.pieces_count > 0) {
-        totalPieces = qty * job.pieces_count;
+        totalPieces = job.pieces_count;
       } else {
         const parsed = extractPiecesFromName(job.name || job.file_name || '');
-        if (parsed && parsed > 0) totalPieces = qty * parsed;
+        if (parsed && parsed > 0) totalPieces = parsed;
       }
       map.set(index, totalPieces > 0 ? totalPrice / totalPieces : 0);
     });

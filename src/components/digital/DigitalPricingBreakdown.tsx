@@ -33,17 +33,16 @@ function calculatePricePerPiece(
   
   // Determine total pieces (komada):
   // Priority: explicit piecesCount > parsed from name > default to qty (tiraz)
-  let piecesPerCopy = 1;
+  // pieces_count is the TOTAL number of pieces for this item, not per copy
+  let totalPieces = item.qty;
   if (item.piecesCount && item.piecesCount > 0) {
-    piecesPerCopy = item.piecesCount;
+    totalPieces = item.piecesCount;
   } else {
     const parsed = extractPiecesFromName(item.name);
     if (parsed && parsed > 0) {
-      piecesPerCopy = parsed;
+      totalPieces = parsed;
     }
   }
-  
-  const totalPieces = item.qty * piecesPerCopy;
   // €/kom = total item price / total pieces
   const pricePerPiece = totalPieces > 0 ? itemPrice / totalPieces : 0;
   return { totalPieces, pricePerPiece };
