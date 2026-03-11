@@ -75,7 +75,22 @@ Deno.serve(async (req) => {
       .single();
 
     if (campErr || !campaign) throw new Error("Campaign not found");
-    if (campaign.status === "sent") throw new Error("Campaign already sent");
+    if (campaign.status === "sent") {
+      // Allow resume - check if there are still pending/failed sends
+      const { count } = await supabase
+        .from("newsletter_sends")
+        .select("*", { count: "exact", head: true })
+        .eq("campaign_id", campaign_id)
+        .in("status", ["pending", "failed"]);
+      if (!count || count === 0) throw new Error("Campaign already fully sent");
+      
+      // Reset failed sends to pending for retry
+      await supabase
+        .from("newsletter_sends")
+        .update({ status: "pending", error_msg: null })
+        .eq("campaign_id", campaign_id)
+        .eq("status", "failed");
+    }
 
     // Get pending sends with recipient unsubscribe tokens
     const { data: sends, error: sendsErr } = await supabase
@@ -101,65 +116,81 @@ Deno.serve(async (req) => {
     // Unsubscribe URL base
     const unsubBaseUrl = `${supabaseUrl}/functions/v1/newsletter-unsubscribe`;
 
-    // Send emails in batches of 3 with delay between batches (anti-spam rate limiting)
-    const BATCH_SIZE = 3;
-    const BATCH_DELAY_MS = 1500; // 1.5s between batches ≈ 2 emails/sec
+    // Send emails one by one with delay (Resend free tier: 2 req/sec)
+    const DELAY_BETWEEN_EMAILS_MS = 1100; // 1.1s between each email = safe under 2/sec
 
-    for (let i = 0; i < sends.length; i += BATCH_SIZE) {
-      const batch = sends.slice(i, i + BATCH_SIZE);
+    for (let i = 0; i < sends.length; i++) {
+      const send = sends[i] as any;
+      
+      // Retry logic for rate limits
+      let maxAttempts = 3;
+      let attempt = 0;
+      let success = false;
 
-      await Promise.allSettled(
-        batch.map(async (send: any) => {
-          try {
-            const recipientData = send.newsletter_recipients;
-            const unsubToken = recipientData?.unsubscribe_token;
-            const unsubUrl = `${unsubBaseUrl}?token=${unsubToken}`;
+      while (attempt < maxAttempts && !success) {
+        attempt++;
+        try {
+          const recipientData = send.newsletter_recipients;
+          const unsubToken = recipientData?.unsubscribe_token;
+          const unsubUrl = `${unsubBaseUrl}?token=${unsubToken}`;
 
-            // Inject unsubscribe link into HTML before closing footer
-            const personalizedHtml = campaign.html_body.replace(
-              "<!-- UNSUB_PLACEHOLDER -->",
-              `<p style="color:rgba(255,255,255,0.5);font-size:11px;margin:8px 0 0;font-family:Arial,'Helvetica Neue',Helvetica,sans-serif;"><a href="${unsubUrl}" style="color:rgba(255,255,255,0.5);text-decoration:underline;">Odjavi se sa mailing liste</a></p>`
-            );
+          const personalizedHtml = campaign.html_body.replace(
+            "<!-- UNSUB_PLACEHOLDER -->",
+            `<p style="color:rgba(255,255,255,0.5);font-size:11px;margin:8px 0 0;font-family:Arial,'Helvetica Neue',Helvetica,sans-serif;"><a href="${unsubUrl}" style="color:rgba(255,255,255,0.5);text-decoration:underline;">Odjavi se sa mailing liste</a></p>`
+          );
 
-            const personalizedText = plainText + `\n\n---\nOdjavi se: ${unsubUrl}`;
+          const personalizedText = plainText + `\n\n---\nOdjavi se: ${unsubUrl}`;
 
-            const emailData: any = {
-              from: fromEmail,
-              to: [send.recipient_email],
-              subject: campaign.subject,
-              html: personalizedHtml,
-              text: personalizedText,
-              headers: {
-                "List-Unsubscribe": `<${unsubUrl}>`,
-                "List-Unsubscribe-Post": "List-Unsubscribe=One-Click",
-                "X-Entity-Ref-ID": send.id,
-                "Precedence": "bulk",
-              },
-            };
-            if (replyTo) emailData.reply_to = replyTo;
+          const emailData: any = {
+            from: fromEmail,
+            to: [send.recipient_email],
+            subject: campaign.subject,
+            html: personalizedHtml,
+            text: personalizedText,
+            headers: {
+              "List-Unsubscribe": `<${unsubUrl}>`,
+              "List-Unsubscribe-Post": "List-Unsubscribe=One-Click",
+              "X-Entity-Ref-ID": send.id,
+              "Precedence": "bulk",
+            },
+          };
+          if (replyTo) emailData.reply_to = replyTo;
 
-            const result = await resend.emails.send(emailData);
-            if (result.error) throw new Error(JSON.stringify(result.error));
+          const result = await resend.emails.send(emailData);
+          if (result.error) {
+            const errObj = result.error as any;
+            // If rate limited, wait and retry
+            if (errObj.statusCode === 429) {
+              console.log(`Rate limited on ${send.recipient_email}, attempt ${attempt}, waiting...`);
+              await sleep(2000 * attempt);
+              continue;
+            }
+            throw new Error(JSON.stringify(result.error));
+          }
 
-            await supabase
-              .from("newsletter_sends")
-              .update({ status: "sent", sent_at: new Date().toISOString() })
-              .eq("id", send.id);
+          await supabase
+            .from("newsletter_sends")
+            .update({ status: "sent", sent_at: new Date().toISOString() })
+            .eq("id", send.id);
 
-            sentCount++;
-          } catch (err) {
+          sentCount++;
+          success = true;
+        } catch (err) {
+          if (attempt >= maxAttempts) {
             await supabase
               .from("newsletter_sends")
               .update({ status: "failed", error_msg: (err as Error).message })
               .eq("id", send.id);
             failedCount++;
+          } else {
+            await sleep(2000 * attempt);
           }
-        })
-      );
+        }
+      }
 
-      // Rate limit: wait between batches
-      if (i + BATCH_SIZE < sends.length) {
-        await sleep(BATCH_DELAY_MS);
+      // Rate limit delay between emails
+      if (i < sends.length - 1) {
+        await sleep(DELAY_BETWEEN_EMAILS_MS);
       }
     }
 
