@@ -387,7 +387,26 @@ function ComposeTab() {
   const [initialBlocks, setInitialBlocks] = useState<Block[] | undefined>(undefined);
   const [builderKey, setBuilderKey] = useState(0);
 
-  const { data: recipients = [] } = useQuery({
+  // Poll progress while sending
+  useEffect(() => {
+    if (!sendingCampaignId) return;
+    const poll = async () => {
+      const { data } = await supabase
+        .from("newsletter_sends")
+        .select("status")
+        .eq("campaign_id", sendingCampaignId);
+      if (data) {
+        const sent = data.filter((s: any) => s.status === "sent").length;
+        const failed = data.filter((s: any) => s.status === "failed").length;
+        const pending = data.filter((s: any) => s.status === "pending").length;
+        setSendProgress({ sent, failed, pending, total: data.length });
+      }
+    };
+    poll();
+    const interval = setInterval(poll, 2000);
+    return () => clearInterval(interval);
+  }, [sendingCampaignId]);
+
     queryKey: ["newsletter-recipients", "active"],
     queryFn: async () => {
       const PAGE_SIZE = 1000;
