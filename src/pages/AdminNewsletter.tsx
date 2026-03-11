@@ -375,6 +375,7 @@ function ComposeTab() {
   const [campaignMode, setCampaignMode] = useState<"template" | "custom">("custom");
   const [selectedTheme, setSelectedTheme] = useState<EmailTheme>(EMAIL_THEMES[0]);
   const [showRecipientList, setShowRecipientList] = useState(false);
+  const [recipientSearch, setRecipientSearch] = useState("");
   const [currentBlocks, setCurrentBlocks] = useState<Block[]>([]);
   const [draftName, setDraftName] = useState("");
   const [showSaveDialog, setShowSaveDialog] = useState(false);
@@ -733,10 +734,22 @@ function ComposeTab() {
                       {cities.map((c) => <SelectItem key={c} value={c}>{c}</SelectItem>)}
                     </SelectContent>
                   </Select>
+                  <Input
+                    placeholder="Pretraži klijenta..."
+                    value={recipientSearch}
+                    onChange={(e) => setRecipientSearch(e.target.value)}
+                    className="mb-2"
+                  />
                   <div className="rounded-lg border overflow-auto max-h-[350px]">
                     <Table>
                       <TableBody>
-                        {filtered.map((r: any) => (
+                        {filtered
+                          .filter((r: any) => {
+                            if (!recipientSearch) return true;
+                            const s = recipientSearch.toLowerCase();
+                            return r.company_name?.toLowerCase().includes(s) || r.email?.toLowerCase().includes(s) || r.city?.toLowerCase().includes(s);
+                          })
+                          .map((r: any) => (
                           <TableRow key={r.id} className="cursor-pointer" onClick={() => toggleRecipient(r.id)}>
                             <TableCell className="w-[30px] py-2">
                               <Checkbox checked={selectedIds.has(r.id)} onCheckedChange={() => toggleRecipient(r.id)} />
