@@ -407,6 +407,7 @@ function ComposeTab() {
     return () => clearInterval(interval);
   }, [sendingCampaignId]);
 
+  const { data: recipients = [] } = useQuery({
     queryKey: ["newsletter-recipients", "active"],
     queryFn: async () => {
       const PAGE_SIZE = 1000;
