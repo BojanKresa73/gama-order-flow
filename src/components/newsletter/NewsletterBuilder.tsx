@@ -179,7 +179,7 @@ export function blocksToFullHtml(blocks: Block[], theme: EmailTheme = EMAIL_THEM
   </div>
   <!-- Footer -->
   <div style="background:${theme.primary};border-radius:0 0 12px 12px;padding:20px;text-align:center;">
-    <p style="color:rgba(255,255,255,0.7);font-size:12px;margin:0;font-family:Arial,'Helvetica Neue',Helvetica,sans-serif;">© ${new Date().getFullYear()} Gama United · Veljka Milićevića 2/10, Beograd</p>
+    <p style="color:rgba(255,255,255,0.7);font-size:12px;margin:0;font-family:Arial,'Helvetica Neue',Helvetica,sans-serif;">© ${new Date().getFullYear()} Gama United · Otona Župančiča 19, zgrada Grafičko-medijske škole, Novi Beograd</p>
   </div>
 </div>
 </body>
