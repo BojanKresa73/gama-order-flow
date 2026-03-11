@@ -564,6 +564,8 @@ function ComposeTab() {
       if (sendsErr) throw sendsErr;
 
       setSendingCampaignId(campaign.id);
+
+      const { data, error } = await supabase.functions.invoke("send-newsletter", {
         body: { campaign_id: campaign.id },
       });
       if (error) throw error;
@@ -581,6 +583,8 @@ function ComposeTab() {
       toast({ title: "Greška", description: err.message, variant: "destructive" });
     } finally {
       setSending(false);
+      setSendingCampaignId(null);
+      setSendProgress(null);
     }
   };
 
