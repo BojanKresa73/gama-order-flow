@@ -1074,6 +1074,7 @@ function HistoryTab() {
     } finally {
       setResumingId(null);
     }
+  };
 
   const statusBadge = (status: string) => {
     switch (status) {
