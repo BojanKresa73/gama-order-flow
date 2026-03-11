@@ -92,15 +92,27 @@ Deno.serve(async (req) => {
         .eq("status", "failed");
     }
 
-    // Get pending sends with recipient unsubscribe tokens
-    const { data: sends, error: sendsErr } = await supabase
-      .from("newsletter_sends")
-      .select("*, newsletter_recipients!inner(unsubscribe_token, email)")
-      .eq("campaign_id", campaign_id)
-      .eq("status", "pending");
+    // Get ALL pending sends with pagination (bypass 1000-row limit)
+    let sends: any[] = [];
+    const PAGE_SIZE = 500;
+    let offset = 0;
+    while (true) {
+      const { data: batch, error: batchErr } = await supabase
+        .from("newsletter_sends")
+        .select("*, newsletter_recipients!inner(unsubscribe_token, email)")
+        .eq("campaign_id", campaign_id)
+        .eq("status", "pending")
+        .range(offset, offset + PAGE_SIZE - 1);
 
-    if (sendsErr) throw sendsErr;
-    if (!sends || sends.length === 0) throw new Error("No pending sends");
+      if (batchErr) throw batchErr;
+      if (!batch || batch.length === 0) break;
+      sends = sends.concat(batch);
+      if (batch.length < PAGE_SIZE) break;
+      offset += PAGE_SIZE;
+    }
+
+    if (sends.length === 0) throw new Error("No pending sends");
+    console.log(`Total pending sends loaded: ${sends.length}`);
 
     // Update campaign status
     await supabase
