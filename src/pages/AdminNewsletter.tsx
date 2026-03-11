@@ -563,7 +563,7 @@ function ComposeTab() {
       const { error: sendsErr } = await supabase.from("newsletter_sends").insert(sendRecords);
       if (sendsErr) throw sendsErr;
 
-      const { data, error } = await supabase.functions.invoke("send-newsletter", {
+      setSendingCampaignId(campaign.id);
         body: { campaign_id: campaign.id },
       });
       if (error) throw error;
