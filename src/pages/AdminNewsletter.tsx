@@ -375,6 +375,7 @@ function ComposeTab() {
   const [campaignMode, setCampaignMode] = useState<"template" | "custom">("custom");
   const [selectedTheme, setSelectedTheme] = useState<EmailTheme>(EMAIL_THEMES[0]);
   const [showRecipientList, setShowRecipientList] = useState(false);
+  const [recipientSearch, setRecipientSearch] = useState("");
   const [currentBlocks, setCurrentBlocks] = useState<Block[]>([]);
   const [draftName, setDraftName] = useState("");
   const [showSaveDialog, setShowSaveDialog] = useState(false);
