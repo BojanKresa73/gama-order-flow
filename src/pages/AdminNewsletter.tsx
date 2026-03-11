@@ -1192,7 +1192,7 @@ function HistoryTab() {
                           Nastavi
                         </Button>
                       )}
-                      {c.status === "sent" && !hasRemaining && (
+                      {c.status === "sent" && !hasRemaining && total < (c.total_recipients || total) && (
                         <Button
                           size="sm"
                           variant="outline"
@@ -1200,7 +1200,7 @@ function HistoryTab() {
                           onClick={(e) => { e.stopPropagation(); handleFillMissing(c); }}
                         >
                           {resumingId === c.id ? <Loader2 className="h-3 w-3 animate-spin mr-1" /> : <Users className="h-3 w-3 mr-1" />}
-                          Dopuni nedostajuće
+                          Dopuni ({(c.total_recipients || total) - total})
                         </Button>
                       )}
                     </TableCell>
