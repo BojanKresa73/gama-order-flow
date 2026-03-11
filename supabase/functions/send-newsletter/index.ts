@@ -7,6 +7,31 @@ const corsHeaders = {
     "authorization, x-client-info, apikey, content-type",
 };
 
+function htmlToPlainText(html: string): string {
+  return html
+    .replace(/<style[^>]*>[\s\S]*?<\/style>/gi, "")
+    .replace(/<br\s*\/?>/gi, "\n")
+    .replace(/<\/p>/gi, "\n\n")
+    .replace(/<\/h[1-6]>/gi, "\n\n")
+    .replace(/<\/li>/gi, "\n")
+    .replace(/<li[^>]*>/gi, "• ")
+    .replace(/<hr[^>]*>/gi, "\n---\n")
+    .replace(/<a[^>]*href="([^"]*)"[^>]*>([\s\S]*?)<\/a>/gi, "$2 ($1)")
+    .replace(/<[^>]+>/g, "")
+    .replace(/&nbsp;/g, " ")
+    .replace(/&amp;/g, "&")
+    .replace(/&lt;/g, "<")
+    .replace(/&gt;/g, ">")
+    .replace(/&quot;/g, '"')
+    .replace(/&#39;/g, "'")
+    .replace(/\n{3,}/g, "\n\n")
+    .trim();
+}
+
+function sleep(ms: number) {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
@@ -52,10 +77,10 @@ Deno.serve(async (req) => {
     if (campErr || !campaign) throw new Error("Campaign not found");
     if (campaign.status === "sent") throw new Error("Campaign already sent");
 
-    // Get pending sends
+    // Get pending sends with recipient unsubscribe tokens
     const { data: sends, error: sendsErr } = await supabase
       .from("newsletter_sends")
-      .select("*")
+      .select("*, newsletter_recipients!inner(unsubscribe_token, email)")
       .eq("campaign_id", campaign_id)
       .eq("status", "pending");
 
@@ -69,20 +94,47 @@ Deno.serve(async (req) => {
       .eq("id", campaign_id);
 
     const resend = new Resend(resendApiKey);
+    const plainText = htmlToPlainText(campaign.html_body);
     let sentCount = 0;
     let failedCount = 0;
 
-    // Send emails in batches of 5
-    for (let i = 0; i < sends.length; i += 5) {
-      const batch = sends.slice(i, i + 5);
-      const results = await Promise.allSettled(
-        batch.map(async (send) => {
+    // Unsubscribe URL base
+    const unsubBaseUrl = `${supabaseUrl}/functions/v1/newsletter-unsubscribe`;
+
+    // Send emails in batches of 3 with delay between batches (anti-spam rate limiting)
+    const BATCH_SIZE = 3;
+    const BATCH_DELAY_MS = 1500; // 1.5s between batches ≈ 2 emails/sec
+
+    for (let i = 0; i < sends.length; i += BATCH_SIZE) {
+      const batch = sends.slice(i, i + BATCH_SIZE);
+
+      await Promise.allSettled(
+        batch.map(async (send: any) => {
           try {
+            const recipientData = send.newsletter_recipients;
+            const unsubToken = recipientData?.unsubscribe_token;
+            const unsubUrl = `${unsubBaseUrl}?token=${unsubToken}`;
+
+            // Inject unsubscribe link into HTML before closing footer
+            const personalizedHtml = campaign.html_body.replace(
+              "<!-- UNSUB_PLACEHOLDER -->",
+              `<p style="color:rgba(255,255,255,0.5);font-size:11px;margin:8px 0 0;font-family:Arial,'Helvetica Neue',Helvetica,sans-serif;"><a href="${unsubUrl}" style="color:rgba(255,255,255,0.5);text-decoration:underline;">Odjavi se sa mailing liste</a></p>`
+            );
+
+            const personalizedText = plainText + `\n\n---\nOdjavi se: ${unsubUrl}`;
+
             const emailData: any = {
               from: fromEmail,
               to: [send.recipient_email],
               subject: campaign.subject,
-              html: campaign.html_body,
+              html: personalizedHtml,
+              text: personalizedText,
+              headers: {
+                "List-Unsubscribe": `<${unsubUrl}>`,
+                "List-Unsubscribe-Post": "List-Unsubscribe=One-Click",
+                "X-Entity-Ref-ID": send.id,
+                "Precedence": "bulk",
+              },
             };
             if (replyTo) emailData.reply_to = replyTo;
 
@@ -104,6 +156,11 @@ Deno.serve(async (req) => {
           }
         })
       );
+
+      // Rate limit: wait between batches
+      if (i + BATCH_SIZE < sends.length) {
+        await sleep(BATCH_DELAY_MS);
+      }
     }
 
     // Update campaign totals
