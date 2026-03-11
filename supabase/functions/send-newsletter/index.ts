@@ -75,7 +75,22 @@ Deno.serve(async (req) => {
       .single();
 
     if (campErr || !campaign) throw new Error("Campaign not found");
-    if (campaign.status === "sent") throw new Error("Campaign already sent");
+    if (campaign.status === "sent") {
+      // Allow resume - check if there are still pending/failed sends
+      const { count } = await supabase
+        .from("newsletter_sends")
+        .select("*", { count: "exact", head: true })
+        .eq("campaign_id", campaign_id)
+        .in("status", ["pending", "failed"]);
+      if (!count || count === 0) throw new Error("Campaign already fully sent");
+      
+      // Reset failed sends to pending for retry
+      await supabase
+        .from("newsletter_sends")
+        .update({ status: "pending", error_msg: null })
+        .eq("campaign_id", campaign_id)
+        .eq("status", "failed");
+    }
 
     // Get pending sends with recipient unsubscribe tokens
     const { data: sends, error: sendsErr } = await supabase
