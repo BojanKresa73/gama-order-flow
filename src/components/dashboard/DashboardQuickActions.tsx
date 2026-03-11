@@ -1,6 +1,6 @@
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
-import { FileText, BarChart3, ChevronDown } from "lucide-react";
+import { FileText, BarChart3, ChevronDown, Mail } from "lucide-react";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -10,9 +10,10 @@ import {
 
 interface DashboardQuickActionsProps {
   canViewStats: boolean;
+  isSuper?: boolean;
 }
 
-export const DashboardQuickActions = ({ canViewStats }: DashboardQuickActionsProps) => {
+export const DashboardQuickActions = ({ canViewStats, isSuper }: DashboardQuickActionsProps) => {
   const navigate = useNavigate();
 
   return (
@@ -86,6 +87,12 @@ export const DashboardQuickActions = ({ canViewStats }: DashboardQuickActionsPro
               </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
+        )}
+        {isSuper && (
+          <Button variant="outline" onClick={() => navigate("/admin/newsletter")}>
+            <Mail className="h-4 w-4 mr-2" />
+            Newsletter
+          </Button>
         )}
       </div>
     </>
