@@ -892,6 +892,9 @@ function ComposeTab() {
 // ── History Tab ──
 function HistoryTab() {
   const [expandedId, setExpandedId] = useState<string | null>(null);
+  const [resumingId, setResumingId] = useState<string | null>(null);
+  const { toast } = useToast();
+  const qc = useQueryClient();
 
   const { data: campaigns = [], isLoading } = useQuery({
     queryKey: ["newsletter-campaigns"],
@@ -906,20 +909,82 @@ function HistoryTab() {
     },
   });
 
+  // Get real-time counts from newsletter_sends for all campaigns
+  const { data: sendCounts = [] } = useQuery({
+    queryKey: ["newsletter-send-counts"],
+    refetchInterval: 3000,
+    queryFn: async () => {
+      if (campaigns.length === 0) return [];
+      const ids = campaigns.map((c: any) => c.id);
+      // Get status counts per campaign
+      const { data, error } = await supabase
+        .from("newsletter_sends")
+        .select("campaign_id, status")
+        .in("campaign_id", ids);
+      if (error) throw error;
+      // Aggregate
+      const map = new Map<string, { sent: number; failed: number; pending: number }>();
+      for (const row of (data || [])) {
+        if (!map.has(row.campaign_id)) map.set(row.campaign_id, { sent: 0, failed: 0, pending: 0 });
+        const entry = map.get(row.campaign_id)!;
+        if (row.status === "sent") entry.sent++;
+        else if (row.status === "failed") entry.failed++;
+        else entry.pending++;
+      }
+      return Array.from(map.entries()).map(([id, counts]) => ({ campaign_id: id, ...counts }));
+    },
+    enabled: campaigns.length > 0,
+  });
+
+  const countsMap = new Map(sendCounts.map((c: any) => [c.campaign_id, c]));
+
   // Fetch sends for expanded campaign
   const { data: sends = [], isLoading: sendsLoading } = useQuery({
     queryKey: ["newsletter-sends", expandedId],
     enabled: !!expandedId,
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from("newsletter_sends")
-        .select("*")
-        .eq("campaign_id", expandedId!)
-        .order("sent_at", { ascending: false, nullsFirst: false });
-      if (error) throw error;
-      return data;
+      const PAGE_SIZE = 1000;
+      let allData: any[] = [];
+      let from = 0;
+      while (true) {
+        const { data, error } = await supabase
+          .from("newsletter_sends")
+          .select("*")
+          .eq("campaign_id", expandedId!)
+          .order("sent_at", { ascending: false, nullsFirst: false })
+          .range(from, from + PAGE_SIZE - 1);
+        if (error) throw error;
+        allData = allData.concat(data || []);
+        if (!data || data.length < PAGE_SIZE) break;
+        from += PAGE_SIZE;
+      }
+      return allData;
     },
   });
+
+  const handleResume = async (campaignId: string) => {
+    const counts = countsMap.get(campaignId);
+    const remaining = (counts?.pending || 0) + (counts?.failed || 0);
+    if (!window.confirm(`Nastaviti slanje za ${remaining} preostalih mailova?`)) return;
+    
+    setResumingId(campaignId);
+    try {
+      const { data, error } = await supabase.functions.invoke("send-newsletter", {
+        body: { campaign_id: campaignId },
+      });
+      if (error) throw error;
+      toast({
+        title: "Slanje završeno",
+        description: `Uspešno: ${data.sent}, Neuspešno: ${data.failed}`,
+      });
+      qc.invalidateQueries({ queryKey: ["newsletter-campaigns"] });
+      qc.invalidateQueries({ queryKey: ["newsletter-send-counts"] });
+    } catch (err: any) {
+      toast({ title: "Greška", description: err.message, variant: "destructive" });
+    } finally {
+      setResumingId(null);
+    }
+  };
 
   const statusBadge = (status: string) => {
     switch (status) {
@@ -939,9 +1004,9 @@ function HistoryTab() {
     }
   };
 
-  // Summary stats
-  const totalSent = campaigns.reduce((s: number, c: any) => s + (c.sent_count || 0), 0);
-  const totalFailed = campaigns.reduce((s: number, c: any) => s + (c.failed_count || 0), 0);
+  // Summary stats from real counts
+  const totalSent = sendCounts.reduce((s: number, c: any) => s + c.sent, 0);
+  const totalFailed = sendCounts.reduce((s: number, c: any) => s + c.failed, 0);
   const totalCampaigns = campaigns.length;
   const successRate = totalSent + totalFailed > 0 ? ((totalSent / (totalSent + totalFailed)) * 100).toFixed(1) : "—";
 
@@ -986,18 +1051,21 @@ function HistoryTab() {
               <TableHead>Status</TableHead>
               <TableHead className="text-right">Poslato</TableHead>
               <TableHead className="text-right">Neuspelo</TableHead>
-              <TableHead className="text-right">Uspešnost</TableHead>
+              <TableHead className="text-right">Čeka</TableHead>
+              <TableHead className="text-right">Akcija</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
             {isLoading ? (
-              <TableRow><TableCell colSpan={7} className="text-center py-8"><Loader2 className="h-5 w-5 animate-spin mx-auto" /></TableCell></TableRow>
+              <TableRow><TableCell colSpan={8} className="text-center py-8"><Loader2 className="h-5 w-5 animate-spin mx-auto" /></TableCell></TableRow>
             ) : campaigns.length === 0 ? (
-              <TableRow><TableCell colSpan={7} className="text-center py-8 text-muted-foreground">Nema poslatih newslettera</TableCell></TableRow>
+              <TableRow><TableCell colSpan={8} className="text-center py-8 text-muted-foreground">Nema poslatih newslettera</TableCell></TableRow>
             ) : campaigns.map((c: any) => {
               const isExpanded = expandedId === c.id;
-              const total = (c.sent_count || 0) + (c.failed_count || 0);
-              const rate = total > 0 ? ((c.sent_count || 0) / total * 100).toFixed(0) : "—";
+              const counts = countsMap.get(c.id) || { sent: 0, failed: 0, pending: 0 };
+              const hasRemaining = counts.pending > 0 || counts.failed > 0;
+              const total = counts.sent + counts.failed + counts.pending;
+              const rate = counts.sent > 0 && total > 0 ? ((counts.sent / total) * 100).toFixed(0) : "—";
               return (
                 <>
                   <TableRow 
@@ -1011,19 +1079,47 @@ function HistoryTab() {
                       {c.sent_at && <div className="text-xs text-muted-foreground">{new Date(c.sent_at).toLocaleTimeString("sr-Latn", { hour: "2-digit", minute: "2-digit" })}</div>}
                     </TableCell>
                     <TableCell className="font-medium max-w-[300px] truncate">{c.subject}</TableCell>
-                    <TableCell>{statusBadge(c.status)}</TableCell>
-                    <TableCell className="text-right font-medium">{c.sent_count || 0}<span className="text-muted-foreground">/{c.total_recipients || 0}</span></TableCell>
-                    <TableCell className="text-right">
-                      {c.failed_count > 0 ? <span className="text-destructive font-medium">{c.failed_count}</span> : "0"}
+                    <TableCell>{statusBadge(counts.pending > 0 ? "sending" : c.status)}</TableCell>
+                    <TableCell className="text-right font-medium">
+                      <span className="text-green-600">{counts.sent}</span>
+                      <span className="text-muted-foreground">/{total}</span>
                     </TableCell>
                     <TableCell className="text-right">
-                      {rate !== "—" ? <span className={Number(rate) >= 95 ? "text-green-600" : Number(rate) >= 80 ? "text-yellow-600" : "text-destructive"}>{rate}%</span> : "—"}
+                      {counts.failed > 0 ? <span className="text-destructive font-medium">{counts.failed}</span> : "0"}
+                    </TableCell>
+                    <TableCell className="text-right">
+                      {counts.pending > 0 ? <span className="text-yellow-600 font-medium">{counts.pending}</span> : "0"}
+                    </TableCell>
+                    <TableCell className="text-right">
+                      {hasRemaining && (
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          disabled={resumingId === c.id}
+                          onClick={(e) => { e.stopPropagation(); handleResume(c.id); }}
+                        >
+                          {resumingId === c.id ? <Loader2 className="h-3 w-3 animate-spin mr-1" /> : <Send className="h-3 w-3 mr-1" />}
+                          Nastavi
+                        </Button>
+                      )}
                     </TableCell>
                   </TableRow>
                   {isExpanded && (
                     <TableRow key={c.id + "-detail"}>
-                      <TableCell colSpan={7} className="bg-muted/30 p-0">
+                      <TableCell colSpan={8} className="bg-muted/30 p-0">
                         <div className="p-4 space-y-2">
+                          {/* Progress bar */}
+                          {total > 0 && (
+                            <div className="space-y-1">
+                              <div className="flex justify-between text-xs text-muted-foreground">
+                                <span>Progres: {counts.sent} od {total}</span>
+                                <span>{rate !== "—" ? `${rate}%` : ""}</span>
+                              </div>
+                              <div className="w-full bg-secondary rounded-full h-2 overflow-hidden">
+                                <div className="h-full rounded-full bg-primary transition-all duration-500" style={{ width: `${(counts.sent / total) * 100}%` }} />
+                              </div>
+                            </div>
+                          )}
                           <h4 className="text-sm font-medium flex items-center gap-2"><Mail className="h-4 w-4" />Detalji slanja</h4>
                           {sendsLoading ? (
                             <div className="flex justify-center py-4"><Loader2 className="h-4 w-4 animate-spin" /></div>
