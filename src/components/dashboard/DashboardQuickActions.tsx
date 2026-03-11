@@ -88,6 +88,12 @@ export const DashboardQuickActions = ({ canViewStats, isSuper }: DashboardQuickA
             </DropdownMenuContent>
           </DropdownMenu>
         )}
+        {isSuper && (
+          <Button variant="outline" onClick={() => navigate("/admin/newsletter")}>
+            <Mail className="h-4 w-4 mr-2" />
+            Newsletter
+          </Button>
+        )}
       </div>
     </>
   );

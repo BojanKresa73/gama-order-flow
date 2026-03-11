@@ -70,7 +70,7 @@ const Dashboard = () => {
             </p>
           </div>
           
-          <DashboardQuickActions canViewStats={canViewStats} />
+          <DashboardQuickActions canViewStats={canViewStats} isSuper={isSuper} />
         </div>
 
         {/* Dashboard Grid */}
