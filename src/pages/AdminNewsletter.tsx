@@ -1192,18 +1192,7 @@ function HistoryTab() {
                           Nastavi
                         </Button>
                       )}
-                      {c.status === "sent" && !hasRemaining && total < c.total_recipients && (
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          disabled={resumingId === c.id}
-                          onClick={(e) => { e.stopPropagation(); handleFillMissing(c); }}
-                        >
-                          {resumingId === c.id ? <Loader2 className="h-3 w-3 animate-spin mr-1" /> : <Users className="h-3 w-3 mr-1" />}
-                          Dopuni ({c.total_recipients - total})
-                        </Button>
-                      )}
-                      {c.status === "sent" && !hasRemaining && total === c.total_recipients && total < 1377 && (
+                      {c.status === "sent" && !hasRemaining && (
                         <Button
                           size="sm"
                           variant="outline"
