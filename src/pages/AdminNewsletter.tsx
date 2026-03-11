@@ -843,6 +843,8 @@ function ComposeTab() {
 
 // ── History Tab ──
 function HistoryTab() {
+  const [expandedId, setExpandedId] = useState<string | null>(null);
+
   const { data: campaigns = [], isLoading } = useQuery({
     queryKey: ["newsletter-campaigns"],
     queryFn: async () => {
@@ -851,6 +853,21 @@ function HistoryTab() {
         .select("*")
         .order("created_at", { ascending: false })
         .limit(50);
+      if (error) throw error;
+      return data;
+    },
+  });
+
+  // Fetch sends for expanded campaign
+  const { data: sends = [], isLoading: sendsLoading } = useQuery({
+    queryKey: ["newsletter-sends", expandedId],
+    enabled: !!expandedId,
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("newsletter_sends")
+        .select("*")
+        .eq("campaign_id", expandedId!)
+        .order("sent_at", { ascending: false, nullsFirst: false });
       if (error) throw error;
       return data;
     },
@@ -865,36 +882,141 @@ function HistoryTab() {
     }
   };
 
+  const sendStatusBadge = (status: string) => {
+    switch (status) {
+      case "sent": return <Badge variant="default" className="text-xs"><CheckCircle2 className="h-3 w-3 mr-1" />Uspešno</Badge>;
+      case "failed": return <Badge variant="destructive" className="text-xs"><XCircle className="h-3 w-3 mr-1" />Neuspelo</Badge>;
+      case "pending": return <Badge variant="outline" className="text-xs"><Clock className="h-3 w-3 mr-1" />Čeka</Badge>;
+      default: return <Badge variant="outline" className="text-xs">{status}</Badge>;
+    }
+  };
+
+  // Summary stats
+  const totalSent = campaigns.reduce((s: number, c: any) => s + (c.sent_count || 0), 0);
+  const totalFailed = campaigns.reduce((s: number, c: any) => s + (c.failed_count || 0), 0);
+  const totalCampaigns = campaigns.length;
+  const successRate = totalSent + totalFailed > 0 ? ((totalSent / (totalSent + totalFailed)) * 100).toFixed(1) : "—";
+
   return (
-    <div className="rounded-lg border overflow-auto">
-      <Table>
-        <TableHeader>
-          <TableRow>
-            <TableHead>Datum</TableHead>
-            <TableHead>Naslov</TableHead>
-            <TableHead>Status</TableHead>
-            <TableHead className="text-right">Poslato</TableHead>
-            <TableHead className="text-right">Neuspelo</TableHead>
-          </TableRow>
-        </TableHeader>
-        <TableBody>
-          {isLoading ? (
-            <TableRow><TableCell colSpan={5} className="text-center py-8"><Loader2 className="h-5 w-5 animate-spin mx-auto" /></TableCell></TableRow>
-          ) : campaigns.length === 0 ? (
-            <TableRow><TableCell colSpan={5} className="text-center py-8 text-muted-foreground">Nema poslatih newslettera</TableCell></TableRow>
-          ) : campaigns.map((c: any) => (
-            <TableRow key={c.id}>
-              <TableCell>{new Date(c.created_at).toLocaleDateString("sr-Latn")}</TableCell>
-              <TableCell className="font-medium">{c.subject}</TableCell>
-              <TableCell>{statusBadge(c.status)}</TableCell>
-              <TableCell className="text-right">{c.sent_count}/{c.total_recipients}</TableCell>
-              <TableCell className="text-right">
-                {c.failed_count > 0 ? <span className="text-destructive font-medium">{c.failed_count}</span> : "0"}
-              </TableCell>
+    <div className="space-y-4">
+      {/* Stats cards */}
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+        <Card>
+          <CardContent className="p-4 text-center">
+            <p className="text-2xl font-bold">{totalCampaigns}</p>
+            <p className="text-xs text-muted-foreground">Kampanja</p>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardContent className="p-4 text-center">
+            <p className="text-2xl font-bold text-primary">{totalSent}</p>
+            <p className="text-xs text-muted-foreground">Poslato ukupno</p>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardContent className="p-4 text-center">
+            <p className="text-2xl font-bold text-destructive">{totalFailed}</p>
+            <p className="text-xs text-muted-foreground">Neuspelo ukupno</p>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardContent className="p-4 text-center">
+            <p className="text-2xl font-bold">{successRate}%</p>
+            <p className="text-xs text-muted-foreground">Uspešnost</p>
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Campaigns table */}
+      <div className="rounded-lg border overflow-auto">
+        <Table>
+          <TableHeader>
+            <TableRow>
+              <TableHead className="w-[40px]"></TableHead>
+              <TableHead>Datum</TableHead>
+              <TableHead>Naslov</TableHead>
+              <TableHead>Status</TableHead>
+              <TableHead className="text-right">Poslato</TableHead>
+              <TableHead className="text-right">Neuspelo</TableHead>
+              <TableHead className="text-right">Uspešnost</TableHead>
             </TableRow>
-          ))}
-        </TableBody>
-      </Table>
+          </TableHeader>
+          <TableBody>
+            {isLoading ? (
+              <TableRow><TableCell colSpan={7} className="text-center py-8"><Loader2 className="h-5 w-5 animate-spin mx-auto" /></TableCell></TableRow>
+            ) : campaigns.length === 0 ? (
+              <TableRow><TableCell colSpan={7} className="text-center py-8 text-muted-foreground">Nema poslatih newslettera</TableCell></TableRow>
+            ) : campaigns.map((c: any) => {
+              const isExpanded = expandedId === c.id;
+              const total = (c.sent_count || 0) + (c.failed_count || 0);
+              const rate = total > 0 ? ((c.sent_count || 0) / total * 100).toFixed(0) : "—";
+              return (
+                <>
+                  <TableRow 
+                    key={c.id} 
+                    className="cursor-pointer hover:bg-muted/50"
+                    onClick={() => setExpandedId(isExpanded ? null : c.id)}
+                  >
+                    <TableCell className="text-muted-foreground">{isExpanded ? "▼" : "▶"}</TableCell>
+                    <TableCell>
+                      <div>{new Date(c.created_at).toLocaleDateString("sr-Latn")}</div>
+                      {c.sent_at && <div className="text-xs text-muted-foreground">{new Date(c.sent_at).toLocaleTimeString("sr-Latn", { hour: "2-digit", minute: "2-digit" })}</div>}
+                    </TableCell>
+                    <TableCell className="font-medium max-w-[300px] truncate">{c.subject}</TableCell>
+                    <TableCell>{statusBadge(c.status)}</TableCell>
+                    <TableCell className="text-right font-medium">{c.sent_count || 0}<span className="text-muted-foreground">/{c.total_recipients || 0}</span></TableCell>
+                    <TableCell className="text-right">
+                      {c.failed_count > 0 ? <span className="text-destructive font-medium">{c.failed_count}</span> : "0"}
+                    </TableCell>
+                    <TableCell className="text-right">
+                      {rate !== "—" ? <span className={Number(rate) >= 95 ? "text-green-600" : Number(rate) >= 80 ? "text-yellow-600" : "text-destructive"}>{rate}%</span> : "—"}
+                    </TableCell>
+                  </TableRow>
+                  {isExpanded && (
+                    <TableRow key={c.id + "-detail"}>
+                      <TableCell colSpan={7} className="bg-muted/30 p-0">
+                        <div className="p-4 space-y-2">
+                          <h4 className="text-sm font-medium flex items-center gap-2"><Mail className="h-4 w-4" />Detalji slanja</h4>
+                          {sendsLoading ? (
+                            <div className="flex justify-center py-4"><Loader2 className="h-4 w-4 animate-spin" /></div>
+                          ) : sends.length === 0 ? (
+                            <p className="text-sm text-muted-foreground py-2">Nema podataka o pojedinačnim slanjima</p>
+                          ) : (
+                            <div className="rounded border bg-background overflow-auto max-h-[300px]">
+                              <Table>
+                                <TableHeader>
+                                  <TableRow>
+                                    <TableHead>Email</TableHead>
+                                    <TableHead>Status</TableHead>
+                                    <TableHead>Vreme</TableHead>
+                                    <TableHead>Greška</TableHead>
+                                  </TableRow>
+                                </TableHeader>
+                                <TableBody>
+                                  {sends.map((s: any) => (
+                                    <TableRow key={s.id}>
+                                      <TableCell className="text-sm">{s.recipient_email}</TableCell>
+                                      <TableCell>{sendStatusBadge(s.status)}</TableCell>
+                                      <TableCell className="text-sm text-muted-foreground">
+                                        {s.sent_at ? new Date(s.sent_at).toLocaleString("sr-Latn", { day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" }) : "—"}
+                                      </TableCell>
+                                      <TableCell className="text-sm text-destructive max-w-[200px] truncate">{s.error_msg || ""}</TableCell>
+                                    </TableRow>
+                                  ))}
+                                </TableBody>
+                              </Table>
+                            </div>
+                          )}
+                        </div>
+                      </TableCell>
+                    </TableRow>
+                  )}
+                </>
+              );
+            })}
+          </TableBody>
+        </Table>
+      </div>
     </div>
   );
 }
