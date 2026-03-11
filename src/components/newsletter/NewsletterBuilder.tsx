@@ -164,11 +164,22 @@ function blockToHtml(block: Block, theme: EmailTheme): string {
 
 export function blocksToFullHtml(blocks: Block[], theme: EmailTheme = EMAIL_THEMES[0]): string {
   const bodyHtml = blocks.map(b => blockToHtml(b, theme)).join("\n");
+  const preheaderText = blocks.find(b => b.type === "text")?.content.text?.substring(0, 120) || "Gama United Newsletter";
   return `<!DOCTYPE html>
-<html>
-<head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1.0"></head>
-<body style="margin:0;padding:0;background-color:${theme.bg};font-family:Arial,'Helvetica Neue',Helvetica,sans-serif;">
-<div style="max-width:600px;margin:0 auto;padding:20px;">
+<html lang="sr" xmlns="http://www.w3.org/1999/xhtml" xmlns:v="urn:schemas-microsoft-com:vml" xmlns:o="urn:schemas-microsoft-com:office:office">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+<meta name="format-detection" content="telephone=no,address=no,email=no,date=no,url=no">
+<meta name="x-apple-disable-message-reformatting">
+<title>Gama United</title>
+<!--[if mso]><xml><o:OfficeDocumentSettings><o:PixelsPerInch>96</o:PixelsPerInch></o:OfficeDocumentSettings></xml><![endif]-->
+</head>
+<body style="margin:0;padding:0;background-color:${theme.bg};font-family:Arial,'Helvetica Neue',Helvetica,sans-serif;-webkit-text-size-adjust:100%;-ms-text-size-adjust:100%;">
+<!-- Preheader (hidden preview text) -->
+<div style="display:none;font-size:1px;color:${theme.bg};line-height:1px;max-height:0;max-width:0;opacity:0;overflow:hidden;">${preheaderText.replace(/"/g, '&quot;')}</div>
+<div role="article" aria-roledescription="email" aria-label="Gama United Newsletter" style="max-width:600px;margin:0 auto;padding:20px;">
   <!-- Header -->
   <div style="background:${theme.primary};border-radius:12px 12px 0 0;padding:24px;text-align:center;">
     <img src="https://ytophmlfbrnhmqtwpijn.supabase.co/storage/v1/object/public/newsletter-assets/gama-united-white.png" alt="Gama United" style="height:58px;display:inline-block;" />
@@ -179,7 +190,8 @@ export function blocksToFullHtml(blocks: Block[], theme: EmailTheme = EMAIL_THEM
   </div>
   <!-- Footer -->
   <div style="background:${theme.primary};border-radius:0 0 12px 12px;padding:20px;text-align:center;">
-    <p style="color:rgba(255,255,255,0.7);font-size:12px;margin:0;font-family:Arial,'Helvetica Neue',Helvetica,sans-serif;">© ${new Date().getFullYear()} Gama United · Otona Župančiča 19, zgrada Grafičko-medijske škole, Novi Beograd</p>
+    <p style="color:rgba(255,255,255,0.7);font-size:12px;margin:0;font-family:Arial,'Helvetica Neue',Helvetica,sans-serif;">\u00A9 ${new Date().getFullYear()} Gama United \u00B7 Otona \u017Dupan\u010Di\u010Da 19, zgrada Grafi\u010Dko-medijske \u0161kole, Novi Beograd</p>
+    <!-- UNSUB_PLACEHOLDER -->
   </div>
 </div>
 </body>
