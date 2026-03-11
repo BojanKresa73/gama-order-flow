@@ -708,6 +708,27 @@ function ComposeTab() {
                 {sending ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <Send className="h-4 w-4 mr-2" />}
                 Pošalji ({finalRecipients.length})
               </Button>
+
+              {/* Live progress */}
+              {sending && sendProgress && (
+                <div className="space-y-2 p-3 rounded-lg border bg-muted/30">
+                  <div className="flex items-center justify-between text-sm font-medium">
+                    <span className="flex items-center gap-2">
+                      <Loader2 className="h-4 w-4 animate-spin text-primary" />
+                      Slanje u toku...
+                    </span>
+                    <span>{sendProgress.sent + sendProgress.failed} / {sendProgress.total}</span>
+                  </div>
+                  <div className="w-full bg-secondary rounded-full h-3 overflow-hidden">
+                    <div className="h-full rounded-full bg-primary transition-all duration-500 ease-out" style={{ width: `${sendProgress.total > 0 ? ((sendProgress.sent + sendProgress.failed) / sendProgress.total * 100) : 0}%` }} />
+                  </div>
+                  <div className="flex justify-between text-xs text-muted-foreground">
+                    <span className="flex items-center gap-1"><CheckCircle2 className="h-3 w-3 text-green-500" /> Poslato: {sendProgress.sent}</span>
+                    <span className="flex items-center gap-1"><XCircle className="h-3 w-3 text-destructive" /> Neuspelo: {sendProgress.failed}</span>
+                    <span className="flex items-center gap-1"><Clock className="h-3 w-3" /> Preostalo: {sendProgress.pending}</span>
+                  </div>
+                </div>
+              )}
             </CardContent>
           </Card>
         </div>
