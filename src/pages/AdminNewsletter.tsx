@@ -1001,6 +1001,80 @@ function HistoryTab() {
     }
   };
 
+  // Fill missing recipients and send
+  const handleFillMissing = async (campaign: any) => {
+    try {
+      // Get all active recipients (paginated)
+      let allRecipients: any[] = [];
+      let offset = 0;
+      const PAGE = 500;
+      while (true) {
+        const { data, error } = await supabase.from("newsletter_recipients").select("id, email").eq("is_active", true).range(offset, offset + PAGE - 1);
+        if (error) throw error;
+        if (!data || data.length === 0) break;
+        allRecipients = allRecipients.concat(data);
+        if (data.length < PAGE) break;
+        offset += PAGE;
+      }
+
+      // Get already-sent recipient emails for this campaign (paginated)
+      let existingEmails = new Set<string>();
+      offset = 0;
+      while (true) {
+        const { data, error } = await supabase.from("newsletter_sends").select("recipient_email").eq("campaign_id", campaign.id).range(offset, offset + PAGE - 1);
+        if (error) throw error;
+        if (!data || data.length === 0) break;
+        data.forEach((r: any) => existingEmails.add(r.recipient_email));
+        if (data.length < PAGE) break;
+        offset += PAGE;
+      }
+
+      const missing = allRecipients.filter(r => !existingEmails.has(r.email));
+      if (missing.length === 0) {
+        toast({ title: "Svi primaoci su već uključeni u kampanju" });
+        return;
+      }
+
+      if (!window.confirm(`Pronađeno ${missing.length} primalaca koji nisu dobili mail. Dopuniti i poslati?`)) return;
+
+      setResumingId(campaign.id);
+
+      // Insert missing send records in batches
+      const CHUNK = 500;
+      for (let i = 0; i < missing.length; i += CHUNK) {
+        const chunk = missing.slice(i, i + CHUNK).map(r => ({
+          campaign_id: campaign.id,
+          recipient_id: r.id,
+          recipient_email: r.email,
+          status: "pending",
+        }));
+        const { error } = await supabase.from("newsletter_sends").insert(chunk);
+        if (error) throw error;
+      }
+
+      // Update campaign total
+      await supabase.from("newsletter_campaigns").update({ 
+        total_recipients: allRecipients.length,
+        status: "sending" 
+      }).eq("id", campaign.id);
+
+      // Trigger send
+      const { data, error } = await supabase.functions.invoke("send-newsletter", {
+        body: { campaign_id: campaign.id },
+      });
+      if (error) throw error;
+      toast({
+        title: "Dopuna završena",
+        description: `Novo poslato: ${data.sent}, Neuspešno: ${data.failed}`,
+      });
+      qc.invalidateQueries({ queryKey: ["newsletter-campaigns"] });
+      qc.invalidateQueries({ queryKey: ["newsletter-send-counts"] });
+    } catch (err: any) {
+      toast({ title: "Greška", description: err.message, variant: "destructive" });
+    } finally {
+      setResumingId(null);
+    }
+
   const statusBadge = (status: string) => {
     switch (status) {
       case "sent": return <Badge variant="default"><CheckCircle2 className="h-3 w-3 mr-1" />Poslat</Badge>;
