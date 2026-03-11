@@ -546,6 +546,7 @@ function ComposeTab() {
     if (!confirmed) return;
 
     setSending(true);
+    setSendProgress({ sent: 0, failed: 0, pending: finalRecipients.length, total: finalRecipients.length });
     try {
       const { data: campaign, error: campErr } = await supabase
         .from("newsletter_campaigns")
