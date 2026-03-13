@@ -114,6 +114,7 @@ const ChecklistView = ({ orderType, onNavigateToSearch }: ChecklistViewProps) =>
   const navigate = useNavigate();
   const [sortField, setSortField] = useState<ChecklistSortField>('created_at');
   const [sortDir, setSortDir] = useState<SortDir>('desc');
+  const [searchTerm, setSearchTerm] = useState("");
 
   const toggleSort = (field: ChecklistSortField) => {
     if (sortField === field) {
