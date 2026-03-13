@@ -27,6 +27,7 @@ import {
   CollapsibleTrigger,
 } from "@/components/ui/collapsible";
 import { CheckCircle, XCircle, Search, FileText, Calendar, User, Eye, ChevronRight, ChevronDown, Play, Pause, Square, ArrowUpDown, ArrowUp, ArrowDown } from "lucide-react";
+import { Input } from "@/components/ui/input";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { PriorityBadge } from "@/components/priority/PriorityBadge";
 import { InProgressIndicator } from "@/components/checklist/InProgressIndicator";
@@ -113,6 +114,7 @@ const ChecklistView = ({ orderType, onNavigateToSearch }: ChecklistViewProps) =>
   const navigate = useNavigate();
   const [sortField, setSortField] = useState<ChecklistSortField>('created_at');
   const [sortDir, setSortDir] = useState<SortDir>('desc');
+  const [searchTerm, setSearchTerm] = useState("");
 
   const toggleSort = (field: ChecklistSortField) => {
     if (sortField === field) {
@@ -651,8 +653,21 @@ const ChecklistView = ({ orderType, onNavigateToSearch }: ChecklistViewProps) =>
     }
   };
 
+  const filteredOrders = useMemo(() => {
+    if (!searchTerm.trim()) return workOrders;
+    const term = searchTerm.toLowerCase().trim();
+    return workOrders.filter(order => {
+      const orderNum = displayOrderNumber(order).toLowerCase();
+      if (orderNum.includes(term)) return true;
+      if (order.client_name.toLowerCase().includes(term)) return true;
+      if (order.created_by_name?.toLowerCase().includes(term)) return true;
+      if (order.file_entries?.some(f => f.filename.toLowerCase().includes(term))) return true;
+      return false;
+    });
+  }, [workOrders, searchTerm]);
+
   const sortedOrders = useMemo(() => {
-    const list = [...workOrders];
+    const list = [...filteredOrders];
     list.sort((a, b) => {
       const dir = sortDir === 'asc' ? 1 : -1;
       switch (sortField) {
@@ -677,7 +692,7 @@ const ChecklistView = ({ orderType, onNavigateToSearch }: ChecklistViewProps) =>
       }
     });
     return list;
-  }, [workOrders, sortField, sortDir]);
+  }, [filteredOrders, sortField, sortDir]);
 
   if (loading) {
     return <div className="p-4 text-center">Učitavanje...</div>;
@@ -1069,8 +1084,18 @@ const ChecklistView = ({ orderType, onNavigateToSearch }: ChecklistViewProps) =>
         <Button onClick={openSearchTab} size={isMobile ? "sm" : "default"} className="gap-2">
           <Search className="h-4 w-4" />
           <span className="hidden md:inline">Pretraga i Statistika</span>
-          <span className="md:hidden">Pretraga</span>
+          <span className="md:hidden">Statistika</span>
         </Button>
+      </div>
+
+      <div className="relative mb-4">
+        <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+        <Input
+          placeholder="Pretraži po broju naloga, klijentu, fajlu..."
+          value={searchTerm}
+          onChange={(e) => setSearchTerm(e.target.value)}
+          className="pl-9"
+        />
       </div>
 
       {workOrders.length === 0 ? (
