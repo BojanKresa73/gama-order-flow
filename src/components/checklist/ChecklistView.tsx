@@ -1084,8 +1084,18 @@ const ChecklistView = ({ orderType, onNavigateToSearch }: ChecklistViewProps) =>
         <Button onClick={openSearchTab} size={isMobile ? "sm" : "default"} className="gap-2">
           <Search className="h-4 w-4" />
           <span className="hidden md:inline">Pretraga i Statistika</span>
-          <span className="md:hidden">Pretraga</span>
+          <span className="md:hidden">Statistika</span>
         </Button>
+      </div>
+
+      <div className="relative mb-4">
+        <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+        <Input
+          placeholder="Pretraži po broju naloga, klijentu, fajlu..."
+          value={searchTerm}
+          onChange={(e) => setSearchTerm(e.target.value)}
+          className="pl-9"
+        />
       </div>
 
       {workOrders.length === 0 ? (
