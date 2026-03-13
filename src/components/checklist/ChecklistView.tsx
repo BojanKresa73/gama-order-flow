@@ -653,8 +653,21 @@ const ChecklistView = ({ orderType, onNavigateToSearch }: ChecklistViewProps) =>
     }
   };
 
+  const filteredOrders = useMemo(() => {
+    if (!searchTerm.trim()) return workOrders;
+    const term = searchTerm.toLowerCase().trim();
+    return workOrders.filter(order => {
+      const orderNum = displayOrderNumber(order).toLowerCase();
+      if (orderNum.includes(term)) return true;
+      if (order.client_name.toLowerCase().includes(term)) return true;
+      if (order.created_by_name?.toLowerCase().includes(term)) return true;
+      if (order.file_entries?.some(f => f.filename.toLowerCase().includes(term))) return true;
+      return false;
+    });
+  }, [workOrders, searchTerm]);
+
   const sortedOrders = useMemo(() => {
-    const list = [...workOrders];
+    const list = [...filteredOrders];
     list.sort((a, b) => {
       const dir = sortDir === 'asc' ? 1 : -1;
       switch (sortField) {
@@ -679,7 +692,7 @@ const ChecklistView = ({ orderType, onNavigateToSearch }: ChecklistViewProps) =>
       }
     });
     return list;
-  }, [workOrders, sortField, sortDir]);
+  }, [filteredOrders, sortField, sortDir]);
 
   if (loading) {
     return <div className="p-4 text-center">Učitavanje...</div>;
