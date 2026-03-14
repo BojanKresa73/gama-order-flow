@@ -1114,6 +1114,82 @@ const ChecklistView = ({ orderType, onNavigateToSearch }: ChecklistViewProps) =>
         />
       </div>
 
+      {/* Summary stats for CTP */}
+      {orderType === "ctp" && filteredOrders.length > 0 && (() => {
+        const totalPlates = filteredOrders.reduce((s, o) => s + o.total_plates, 0);
+        const uniqueClients = new Set(filteredOrders.map(o => o.client_name)).size;
+        const formatBreakdown: Record<string, number> = {};
+        filteredOrders.forEach(o => {
+          (o.file_entries || []).forEach(f => {
+            const fmt = f.plate_format_name || "Nepoznat";
+            formatBreakdown[fmt] = (formatBreakdown[fmt] || 0) + f.quantity;
+          });
+        });
+        const openCount = filteredOrders.filter(o => o.status === "open").length;
+        const closedCount = filteredOrders.filter(o => o.status === "closed").length;
+
+        return (
+          <div className="mb-4 rounded-lg border bg-card p-3 md:p-4">
+            <div className="flex flex-wrap gap-4 md:gap-6 items-start">
+              <div className="flex items-center gap-2">
+                <div className="rounded-md bg-primary/10 p-2">
+                  <Hash className="h-4 w-4 text-primary" />
+                </div>
+                <div>
+                  <p className="text-xs text-muted-foreground">Ukupno ploča</p>
+                  <p className="text-lg font-bold">{totalPlates.toLocaleString("sr")}</p>
+                </div>
+              </div>
+
+              <div className="flex items-center gap-2">
+                <div className="rounded-md bg-primary/10 p-2">
+                  <FileText className="h-4 w-4 text-primary" />
+                </div>
+                <div>
+                  <p className="text-xs text-muted-foreground">Naloga</p>
+                  <p className="text-lg font-bold">
+                    {filteredOrders.length}
+                    {statusFilter === "all" && (
+                      <span className="text-xs font-normal text-muted-foreground ml-1">
+                        ({openCount} otv. / {closedCount} zatv.)
+                      </span>
+                    )}
+                  </p>
+                </div>
+              </div>
+
+              <div className="flex items-center gap-2">
+                <div className="rounded-md bg-primary/10 p-2">
+                  <Users className="h-4 w-4 text-primary" />
+                </div>
+                <div>
+                  <p className="text-xs text-muted-foreground">Klijenata</p>
+                  <p className="text-lg font-bold">{uniqueClients}</p>
+                </div>
+              </div>
+
+              <div className="flex items-center gap-2">
+                <div className="rounded-md bg-primary/10 p-2">
+                  <Layers className="h-4 w-4 text-primary" />
+                </div>
+                <div>
+                  <p className="text-xs text-muted-foreground">Po formatu</p>
+                  <div className="flex flex-wrap gap-1.5 mt-0.5">
+                    {Object.entries(formatBreakdown)
+                      .sort((a, b) => b[1] - a[1])
+                      .map(([fmt, qty]) => (
+                        <Badge key={fmt} variant="secondary" className="text-xs font-medium">
+                          {fmt}: {qty}
+                        </Badge>
+                      ))}
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        );
+      })()}
+
       {workOrders.length === 0 ? (
         <div className="p-8 text-center text-muted-foreground">
           Nema radnih naloga
