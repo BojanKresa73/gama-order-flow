@@ -1129,21 +1129,21 @@ const ChecklistView = ({ orderType, onNavigateToSearch }: ChecklistViewProps) =>
         </div>
       ) : (
         // Desktop: Table layout with expandable rows
-        <Table>
+        <Table className="text-xs">
           <TableHeader>
             <TableRow>
-              <TableHead className="w-8"></TableHead>
-              <SortHead field="order_number" label="Broj Naloga" />
-              <SortHead field="client_name" label="Klijent" />
-              <SortHead field="created_by_name" label="Kreirao" />
-              <TableHead>Tip</TableHead>
-              <SortHead field="created_at" label="Datum Otvaranja" />
-              <SortHead field="closed_at" label="Datum Zatvaranja" />
-              <SortHead field="status" label="Status" />
-              {orderType === "ctp" && <TableHead>Format</TableHead>}
-              {orderType === "ctp" && <SortHead field="total_plates" label="Broj Ploča" />}
-              {orderType === "ctp" && <TableHead>Mašina</TableHead>}
-              <TableHead className="text-right">Akcije</TableHead>
+              <TableHead className="w-6 px-1"></TableHead>
+              <SortHead field="order_number" label="Br. Naloga" className="px-2" />
+              <SortHead field="client_name" label="Klijent" className="px-2" />
+              <SortHead field="created_by_name" label="Kreirao" className="px-2" />
+              <TableHead className="px-2">Tip</TableHead>
+              <SortHead field="created_at" label="Otvoreno" className="px-2" />
+              <SortHead field="closed_at" label="Zatvoreno" className="px-2" />
+              <SortHead field="status" label="Status" className="px-2" />
+              {orderType === "ctp" && <TableHead className="px-2">Format</TableHead>}
+              {orderType === "ctp" && <SortHead field="total_plates" label="Ploče" className="px-2" />}
+              {orderType === "ctp" && <TableHead className="px-2">Mašina</TableHead>}
+              <TableHead className="text-right px-2">Akcije</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
