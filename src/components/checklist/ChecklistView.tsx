@@ -871,7 +871,7 @@ const ChecklistView = ({ orderType, onNavigateToSearch }: ChecklistViewProps) =>
   const DesktopOrderRow = ({ order }: { order: WorkOrder }) => {
     const isExpanded = expandedOrderIds.has(order.id);
     const hasFiles = order.file_entries && order.file_entries.length > 0;
-    const columnCount = orderType === "ctp" ? 12 : 9;
+    const columnCount = orderType === "ctp" ? 13 : 9;
 
     return (
       <>
