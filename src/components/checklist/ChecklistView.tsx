@@ -744,6 +744,16 @@ const ChecklistView = ({ orderType, onNavigateToSearch }: ChecklistViewProps) =>
               {order.created_by_name || "-"}
             </div>
             {orderType === "ctp" && (() => {
+              const formats = [...new Set((order.file_entries || []).map(f => f.plate_format_name).filter(Boolean))];
+              return formats.length > 0 ? (
+                <div className="flex items-center gap-1">
+                  <span className="font-medium text-foreground text-xs">
+                    {formats.join(", ")}
+                  </span>
+                </div>
+              ) : null;
+            })()}
+            {orderType === "ctp" && (() => {
               const remaining = (order.file_entries || [])
                 .filter(f => f.status === "open")
                 .reduce((sum, f) => sum + f.quantity, 0);
@@ -871,7 +881,7 @@ const ChecklistView = ({ orderType, onNavigateToSearch }: ChecklistViewProps) =>
   const DesktopOrderRow = ({ order }: { order: WorkOrder }) => {
     const isExpanded = expandedOrderIds.has(order.id);
     const hasFiles = order.file_entries && order.file_entries.length > 0;
-    const columnCount = orderType === "ctp" ? 12 : 9;
+    const columnCount = orderType === "ctp" ? 13 : 9;
 
     return (
       <>
@@ -907,6 +917,14 @@ const ChecklistView = ({ orderType, onNavigateToSearch }: ChecklistViewProps) =>
               : "-"}
           </TableCell>
           <TableCell>{getStatusBadge(order.status)}</TableCell>
+          {orderType === "ctp" && (
+            <TableCell className="text-xs">
+              {(() => {
+                const formats = [...new Set((order.file_entries || []).map(f => f.plate_format_name).filter(Boolean))];
+                return formats.length > 0 ? formats.join(", ") : "-";
+              })()}
+            </TableCell>
+          )}
           {orderType === "ctp" && (() => {
             const remaining = (order.file_entries || [])
               .filter(f => f.status === "open")
@@ -1122,6 +1140,7 @@ const ChecklistView = ({ orderType, onNavigateToSearch }: ChecklistViewProps) =>
               <SortHead field="created_at" label="Datum Otvaranja" />
               <SortHead field="closed_at" label="Datum Zatvaranja" />
               <SortHead field="status" label="Status" />
+              {orderType === "ctp" && <TableHead>Format</TableHead>}
               {orderType === "ctp" && <SortHead field="total_plates" label="Broj Ploča" />}
               {orderType === "ctp" && <TableHead>Mašina</TableHead>}
               <TableHead className="text-right">Akcije</TableHead>
