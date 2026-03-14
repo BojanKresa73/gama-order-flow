@@ -1130,6 +1130,7 @@ const ChecklistView = ({ orderType, onNavigateToSearch }: ChecklistViewProps) =>
               <SortHead field="created_at" label="Datum Otvaranja" />
               <SortHead field="closed_at" label="Datum Zatvaranja" />
               <SortHead field="status" label="Status" />
+              {orderType === "ctp" && <TableHead>Format</TableHead>}
               {orderType === "ctp" && <SortHead field="total_plates" label="Broj Ploča" />}
               {orderType === "ctp" && <TableHead>Mašina</TableHead>}
               <TableHead className="text-right">Akcije</TableHead>
