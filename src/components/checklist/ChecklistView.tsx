@@ -886,39 +886,39 @@ const ChecklistView = ({ orderType, onNavigateToSearch }: ChecklistViewProps) =>
     return (
       <>
         <TableRow className="hover:bg-muted/50">
-          <TableCell className="w-8">
+          <TableCell className="w-6 px-1">
             {hasFiles ? (
               <button
                 onClick={() => toggleExpanded(order.id)}
-                className="p-1 hover:bg-muted rounded"
+                className="p-0.5 hover:bg-muted rounded"
               >
                 {isExpanded ? (
-                  <ChevronDown className="h-4 w-4" />
+                  <ChevronDown className="h-3.5 w-3.5" />
                 ) : (
-                  <ChevronRight className="h-4 w-4" />
+                  <ChevronRight className="h-3.5 w-3.5" />
                 )}
               </button>
             ) : (
-              <span className="w-6 inline-block" />
+              <span className="w-4 inline-block" />
             )}
           </TableCell>
-          <TableCell className="font-medium">
+          <TableCell className="font-medium px-2 whitespace-nowrap">
             {displayOrderNumber(order)}
           </TableCell>
-          <TableCell>{order.client_name}</TableCell>
-          <TableCell className="text-muted-foreground">{order.created_by_name || "-"}</TableCell>
-          <TableCell>{getTypeBadge(order.type, order.kind)}</TableCell>
-          <TableCell>
+          <TableCell className="px-2">{order.client_name}</TableCell>
+          <TableCell className="text-muted-foreground px-2">{order.created_by_name || "-"}</TableCell>
+          <TableCell className="px-2">{getTypeBadge(order.type, order.kind)}</TableCell>
+          <TableCell className="px-2 whitespace-nowrap">
             {format(new Date(order.created_at), "dd.MM.yyyy HH:mm")}
           </TableCell>
-          <TableCell>
+          <TableCell className="px-2 whitespace-nowrap">
             {order.closed_at
               ? format(new Date(order.closed_at), "dd.MM.yyyy HH:mm")
               : "-"}
           </TableCell>
-          <TableCell>{getStatusBadge(order.status)}</TableCell>
+          <TableCell className="px-2">{getStatusBadge(order.status)}</TableCell>
           {orderType === "ctp" && (
-            <TableCell className="text-xs">
+            <TableCell className="px-2 whitespace-nowrap">
               {(() => {
                 const formats = [...new Set((order.file_entries || []).map(f => f.plate_format_name).filter(Boolean))];
                 return formats.length > 0 ? formats.join(", ") : "-";
@@ -931,7 +931,7 @@ const ChecklistView = ({ orderType, onNavigateToSearch }: ChecklistViewProps) =>
               .reduce((sum, f) => sum + f.quantity, 0);
             const total = order.total_plates;
             return (
-              <TableCell className="font-semibold">
+              <TableCell className="font-semibold px-2">
                 <span>{total}</span>
                 {order.status === "open" && remaining < total && (
                   <span className="text-muted-foreground font-normal">
@@ -942,14 +942,14 @@ const ChecklistView = ({ orderType, onNavigateToSearch }: ChecklistViewProps) =>
             );
           })()}
           {orderType === "ctp" && (
-            <TableCell>
+            <TableCell className="px-2">
               <div className="space-y-1">
                 <div className="flex items-center gap-1">
                   <Select
                     value={order.machine_id || ""}
                     onValueChange={(val) => updateMachine(order.id, val)}
                   >
-                    <SelectTrigger className="w-[110px] h-8 text-xs">
+                    <SelectTrigger className="w-[90px] h-7 text-xs">
                       <SelectValue placeholder="—" />
                     </SelectTrigger>
                     <SelectContent>
@@ -967,7 +967,7 @@ const ChecklistView = ({ orderType, onNavigateToSearch }: ChecklistViewProps) =>
                           <TooltipTrigger asChild>
                             <button
                               onClick={() => toggleJobSession(order)}
-                              className={`p-1.5 rounded-full transition-all ${
+                              className={`p-1 rounded-full transition-all ${
                                 isRunning
                                   ? "bg-green-500/20 text-green-600 hover:bg-green-500/30 ring-2 ring-green-500/40 animate-pulse"
                                   : isPaused
@@ -975,7 +975,7 @@ const ChecklistView = ({ orderType, onNavigateToSearch }: ChecklistViewProps) =>
                                   : "bg-muted text-muted-foreground hover:bg-muted/80"
                               }`}
                             >
-                              {isRunning ? <Pause className="h-3.5 w-3.5" /> : <Play className="h-3.5 w-3.5" />}
+                              {isRunning ? <Pause className="h-3 w-3" /> : <Play className="h-3 w-3" />}
                             </button>
                           </TooltipTrigger>
                           <TooltipContent>
@@ -991,19 +991,14 @@ const ChecklistView = ({ orderType, onNavigateToSearch }: ChecklistViewProps) =>
                   const session = getSessionForOrder(order.id);
                   if (!eta && !session) return null;
                   return (
-                    <div className="text-xs text-muted-foreground">
+                    <div className="text-[10px] text-muted-foreground">
                       {eta && (
                         <span className="font-medium text-foreground">{formatEta(eta.totalSeconds)}</span>
                       )}
                       {session && (
-                        <span className={`ml-1 text-[10px] ${session.status === "running" ? "text-green-600" : "text-yellow-600"}`}>
+                        <span className={`ml-1 ${session.status === "running" ? "text-green-600" : "text-yellow-600"}`}>
                           ({session.status === "running" ? "radi" : "pauz."} {Math.round(Number(session.total_active_seconds) / 60)}m)
                         </span>
-                      )}
-                      {eta && eta.breakdown.length > 1 && (
-                        <div className="text-[10px] leading-tight mt-0.5">
-                          {eta.breakdown.map(b => `${b.group}: ${b.plates}pl`).join(", ")}
-                        </div>
                       )}
                     </div>
                   );
@@ -1011,22 +1006,24 @@ const ChecklistView = ({ orderType, onNavigateToSearch }: ChecklistViewProps) =>
               </div>
             </TableCell>
           )}
-          <TableCell className="text-right">
-            <div className="flex gap-2 justify-end items-center">
+          <TableCell className="text-right px-2">
+            <div className="flex gap-1 justify-end items-center">
               {isOrderInProgress(order) && (
-                <InProgressIndicator className="mr-1" />
+                <InProgressIndicator className="mr-0.5" />
               )}
               <Button
                 size="sm"
                 variant="ghost"
+                className="h-7 w-7 p-0"
                 onClick={() => navigate(`/work-orders/${order.id}`)}
                 title="Pogledaj nalog"
               >
-                <Eye className="h-4 w-4" />
+                <Eye className="h-3.5 w-3.5" />
               </Button>
               {order.status === "open" && (
                 <Button
                   size="sm"
+                  className="h-7 text-xs px-2"
                   onClick={() => closeWorkOrder(order.id)}
                 >
                   Zatvori Nalog
@@ -1036,10 +1033,11 @@ const ChecklistView = ({ orderType, onNavigateToSearch }: ChecklistViewProps) =>
                 <Button
                   size="sm"
                   variant="outline"
+                  className="h-7 text-xs px-2"
                   onClick={() => sendDeliveryNote(order.id)}
                 >
-                  <FileText className="h-4 w-4 mr-2" />
-                  Pošalji Otpremnicu
+                  <FileText className="h-3 w-3 mr-1" />
+                  Otpremnica
                 </Button>
               )}
             </div>
@@ -1129,21 +1127,21 @@ const ChecklistView = ({ orderType, onNavigateToSearch }: ChecklistViewProps) =>
         </div>
       ) : (
         // Desktop: Table layout with expandable rows
-        <Table>
+        <Table className="text-xs">
           <TableHeader>
             <TableRow>
-              <TableHead className="w-8"></TableHead>
-              <SortHead field="order_number" label="Broj Naloga" />
-              <SortHead field="client_name" label="Klijent" />
-              <SortHead field="created_by_name" label="Kreirao" />
-              <TableHead>Tip</TableHead>
-              <SortHead field="created_at" label="Datum Otvaranja" />
-              <SortHead field="closed_at" label="Datum Zatvaranja" />
-              <SortHead field="status" label="Status" />
-              {orderType === "ctp" && <TableHead>Format</TableHead>}
-              {orderType === "ctp" && <SortHead field="total_plates" label="Broj Ploča" />}
-              {orderType === "ctp" && <TableHead>Mašina</TableHead>}
-              <TableHead className="text-right">Akcije</TableHead>
+              <TableHead className="w-6 px-1"></TableHead>
+              <SortHead field="order_number" label="Br. Naloga" className="px-2" />
+              <SortHead field="client_name" label="Klijent" className="px-2" />
+              <SortHead field="created_by_name" label="Kreirao" className="px-2" />
+              <TableHead className="px-2">Tip</TableHead>
+              <SortHead field="created_at" label="Otvoreno" className="px-2" />
+              <SortHead field="closed_at" label="Zatvoreno" className="px-2" />
+              <SortHead field="status" label="Status" className="px-2" />
+              {orderType === "ctp" && <TableHead className="px-2">Format</TableHead>}
+              {orderType === "ctp" && <SortHead field="total_plates" label="Ploče" className="px-2" />}
+              {orderType === "ctp" && <TableHead className="px-2">Mašina</TableHead>}
+              <TableHead className="text-right px-2">Akcije</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
