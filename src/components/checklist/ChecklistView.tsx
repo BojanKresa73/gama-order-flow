@@ -744,6 +744,16 @@ const ChecklistView = ({ orderType, onNavigateToSearch }: ChecklistViewProps) =>
               {order.created_by_name || "-"}
             </div>
             {orderType === "ctp" && (() => {
+              const formats = [...new Set((order.file_entries || []).map(f => f.plate_format_name).filter(Boolean))];
+              return formats.length > 0 ? (
+                <div className="flex items-center gap-1">
+                  <span className="font-medium text-foreground text-xs">
+                    {formats.join(", ")}
+                  </span>
+                </div>
+              ) : null;
+            })()}
+            {orderType === "ctp" && (() => {
               const remaining = (order.file_entries || [])
                 .filter(f => f.status === "open")
                 .reduce((sum, f) => sum + f.quantity, 0);
