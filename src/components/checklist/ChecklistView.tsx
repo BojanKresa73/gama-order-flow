@@ -886,29 +886,29 @@ const ChecklistView = ({ orderType, onNavigateToSearch }: ChecklistViewProps) =>
     return (
       <>
         <TableRow className="hover:bg-muted/50">
-          <TableCell className="w-8">
+          <TableCell className="w-6 px-1">
             {hasFiles ? (
               <button
                 onClick={() => toggleExpanded(order.id)}
-                className="p-1 hover:bg-muted rounded"
+                className="p-0.5 hover:bg-muted rounded"
               >
                 {isExpanded ? (
-                  <ChevronDown className="h-4 w-4" />
+                  <ChevronDown className="h-3.5 w-3.5" />
                 ) : (
-                  <ChevronRight className="h-4 w-4" />
+                  <ChevronRight className="h-3.5 w-3.5" />
                 )}
               </button>
             ) : (
-              <span className="w-6 inline-block" />
+              <span className="w-4 inline-block" />
             )}
           </TableCell>
-          <TableCell className="font-medium">
+          <TableCell className="font-medium px-2 whitespace-nowrap">
             {displayOrderNumber(order)}
           </TableCell>
-          <TableCell>{order.client_name}</TableCell>
-          <TableCell className="text-muted-foreground">{order.created_by_name || "-"}</TableCell>
-          <TableCell>{getTypeBadge(order.type, order.kind)}</TableCell>
-          <TableCell>
+          <TableCell className="px-2">{order.client_name}</TableCell>
+          <TableCell className="text-muted-foreground px-2">{order.created_by_name || "-"}</TableCell>
+          <TableCell className="px-2">{getTypeBadge(order.type, order.kind)}</TableCell>
+          <TableCell className="px-2 whitespace-nowrap">
             {format(new Date(order.created_at), "dd.MM.yyyy HH:mm")}
           </TableCell>
           <TableCell>
