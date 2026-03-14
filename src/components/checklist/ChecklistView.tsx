@@ -907,6 +907,14 @@ const ChecklistView = ({ orderType, onNavigateToSearch }: ChecklistViewProps) =>
               : "-"}
           </TableCell>
           <TableCell>{getStatusBadge(order.status)}</TableCell>
+          {orderType === "ctp" && (
+            <TableCell className="text-xs">
+              {(() => {
+                const formats = [...new Set((order.file_entries || []).map(f => f.plate_format_name).filter(Boolean))];
+                return formats.length > 0 ? formats.join(", ") : "-";
+              })()}
+            </TableCell>
+          )}
           {orderType === "ctp" && (() => {
             const remaining = (order.file_entries || [])
               .filter(f => f.status === "open")
