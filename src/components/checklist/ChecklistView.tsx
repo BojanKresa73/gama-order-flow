@@ -911,14 +911,14 @@ const ChecklistView = ({ orderType, onNavigateToSearch }: ChecklistViewProps) =>
           <TableCell className="px-2 whitespace-nowrap">
             {format(new Date(order.created_at), "dd.MM.yyyy HH:mm")}
           </TableCell>
-          <TableCell>
+          <TableCell className="px-2 whitespace-nowrap">
             {order.closed_at
               ? format(new Date(order.closed_at), "dd.MM.yyyy HH:mm")
               : "-"}
           </TableCell>
-          <TableCell>{getStatusBadge(order.status)}</TableCell>
+          <TableCell className="px-2">{getStatusBadge(order.status)}</TableCell>
           {orderType === "ctp" && (
-            <TableCell className="text-xs">
+            <TableCell className="px-2 whitespace-nowrap">
               {(() => {
                 const formats = [...new Set((order.file_entries || []).map(f => f.plate_format_name).filter(Boolean))];
                 return formats.length > 0 ? formats.join(", ") : "-";
@@ -931,7 +931,7 @@ const ChecklistView = ({ orderType, onNavigateToSearch }: ChecklistViewProps) =>
               .reduce((sum, f) => sum + f.quantity, 0);
             const total = order.total_plates;
             return (
-              <TableCell className="font-semibold">
+              <TableCell className="font-semibold px-2">
                 <span>{total}</span>
                 {order.status === "open" && remaining < total && (
                   <span className="text-muted-foreground font-normal">
