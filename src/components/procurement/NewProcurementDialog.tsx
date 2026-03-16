@@ -194,6 +194,7 @@ export function NewProcurementDialog({
               <Input
                 type="date"
                 value={expectedArrival}
+                min={new Date().toISOString().split("T")[0]}
                 onChange={(e) => setExpectedArrival(e.target.value)}
               />
             </div>

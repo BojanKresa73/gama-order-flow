@@ -232,6 +232,7 @@ export function ProcurementOrdersList({ orders, onUpdate }: ProcurementOrdersLis
                       <Input
                         type="date"
                         value={editValues.expected_arrival_date}
+                        min={new Date().toISOString().split("T")[0]}
                         onChange={(e) => setEditValues({ ...editValues, expected_arrival_date: e.target.value })}
                       />
                     </div>
@@ -240,6 +241,7 @@ export function ProcurementOrdersList({ orders, onUpdate }: ProcurementOrdersLis
                       <Input
                         type="date"
                         value={editValues.actual_arrival_date}
+                        min={new Date().toISOString().split("T")[0]}
                         onChange={(e) => setEditValues({ ...editValues, actual_arrival_date: e.target.value })}
                       />
                     </div>
