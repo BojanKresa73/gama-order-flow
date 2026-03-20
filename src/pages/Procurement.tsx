@@ -3,7 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { ArrowLeft, Package, Plus, TrendingUp, Ship, Calendar } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ProcurementOrdersList } from "@/components/procurement/ProcurementOrdersList";
@@ -13,8 +13,8 @@ import { NewProcurementDialog } from "@/components/procurement/NewProcurementDia
 const Procurement = () => {
   const navigate = useNavigate();
   const [dialogOpen, setDialogOpen] = useState(false);
+  const [editingOrder, setEditingOrder] = useState<any | null>(null);
 
-  // Fetch procurement orders
   const { data: orders, refetch: refetchOrders } = useQuery({
     queryKey: ["procurement-orders"],
     queryFn: async () => {
@@ -34,7 +34,6 @@ const Procurement = () => {
     },
   });
 
-  // Fetch plate formats for the form
   const { data: plateFormats } = useQuery({
     queryKey: ["plate-formats"],
     queryFn: async () => {
@@ -48,12 +47,21 @@ const Procurement = () => {
     },
   });
 
-  // Calculate stats
   const activeOrders = orders?.filter((o) => o.status !== "arrived" && o.status !== "cancelled") || [];
   const pendingPlates = activeOrders.reduce((sum, order) => {
     const items = order.procurement_order_items || [];
     return sum + items.reduce((s: number, i: any) => s + (i.quantity || 0), 0);
   }, 0);
+
+  const handleEdit = (order: any) => {
+    setEditingOrder(order);
+    setDialogOpen(true);
+  };
+
+  const handleDialogClose = (open: boolean) => {
+    setDialogOpen(open);
+    if (!open) setEditingOrder(null);
+  };
 
   return (
     <div className="min-h-screen bg-background">
@@ -69,7 +77,7 @@ const Procurement = () => {
                 <p className="text-sm text-muted-foreground">Planiranje i praćenje narudžbina</p>
               </div>
             </div>
-            <Button onClick={() => setDialogOpen(true)} className="gap-2">
+            <Button onClick={() => { setEditingOrder(null); setDialogOpen(true); }} className="gap-2">
               <Plus className="h-4 w-4" />
               Nova narudžbina
             </Button>
@@ -78,7 +86,6 @@ const Procurement = () => {
       </header>
 
       <main className="container mx-auto px-4 py-6">
-        {/* Quick Stats */}
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
           <Card>
             <CardContent className="pt-4">
@@ -132,7 +139,6 @@ const Procurement = () => {
           </Card>
         </div>
 
-        {/* Main Content Tabs */}
         <Tabs defaultValue="forecast" className="space-y-4">
           <TabsList className="grid w-full grid-cols-2 max-w-md">
             <TabsTrigger value="forecast">
@@ -150,16 +156,17 @@ const Procurement = () => {
           </TabsContent>
 
           <TabsContent value="orders">
-            <ProcurementOrdersList orders={orders || []} onUpdate={refetchOrders} />
+            <ProcurementOrdersList orders={orders || []} onUpdate={refetchOrders} onEdit={handleEdit} />
           </TabsContent>
         </Tabs>
       </main>
 
       <NewProcurementDialog
         open={dialogOpen}
-        onOpenChange={setDialogOpen}
+        onOpenChange={handleDialogClose}
         plateFormats={plateFormats || []}
         onSuccess={refetchOrders}
+        editOrder={editingOrder}
       />
     </div>
   );
