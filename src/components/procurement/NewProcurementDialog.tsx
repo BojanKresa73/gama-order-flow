@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useMutation } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import {
@@ -27,9 +27,11 @@ interface NewProcurementDialogProps {
   onOpenChange: (open: boolean) => void;
   plateFormats: any[];
   onSuccess: () => void;
+  editOrder?: any | null;
 }
 
 interface OrderItem {
+  id?: string;
   plate_format_id: string;
   quantity: number;
   price_per_m2: number;
@@ -40,77 +42,156 @@ export function NewProcurementDialog({
   onOpenChange,
   plateFormats,
   onSuccess,
+  editOrder,
 }: NewProcurementDialogProps) {
   const { toast } = useToast();
   const [supplierName, setSupplierName] = useState("");
   const [orderDate, setOrderDate] = useState(new Date().toISOString().split("T")[0]);
   const [expectedArrival, setExpectedArrival] = useState("");
   const [transportCost, setTransportCost] = useState<number>(0);
+  const [otherCosts, setOtherCosts] = useState<number>(0);
   const [notes, setNotes] = useState("");
   const [items, setItems] = useState<OrderItem[]>([
     { plate_format_id: "", quantity: 0, price_per_m2: 0 },
   ]);
+
+  const isEditing = !!editOrder;
+
+  useEffect(() => {
+    if (editOrder && open) {
+      setSupplierName(editOrder.supplier_name || "");
+      setOrderDate(editOrder.order_date || new Date().toISOString().split("T")[0]);
+      setExpectedArrival(editOrder.expected_arrival_date || "");
+      setTransportCost(editOrder.transport_cost || 0);
+      setOtherCosts(editOrder.other_costs || 0);
+      setNotes(editOrder.notes || "");
+      const existingItems = (editOrder.procurement_order_items || []).map((item: any) => ({
+        id: item.id,
+        plate_format_id: item.plate_format_id || "",
+        quantity: item.quantity || 0,
+        price_per_m2: item.price_per_m2 || 0,
+      }));
+      setItems(existingItems.length > 0 ? existingItems : [{ plate_format_id: "", quantity: 0, price_per_m2: 0 }]);
+    } else if (!editOrder && open) {
+      resetForm();
+    }
+  }, [editOrder, open]);
 
   const resetForm = () => {
     setSupplierName("");
     setOrderDate(new Date().toISOString().split("T")[0]);
     setExpectedArrival("");
     setTransportCost(0);
+    setOtherCosts(0);
     setNotes("");
     setItems([{ plate_format_id: "", quantity: 0, price_per_m2: 0 }]);
   };
 
-  const createMutation = useMutation({
+  const parseDimensions = (formatName: string): { width: number; height: number } => {
+    const match = formatName.match(/(\d+)[x×](\d+)/i);
+    if (match) {
+      let w = parseInt(match[1]);
+      let h = parseInt(match[2]);
+      if (w < 200 && h < 200) {
+        w *= 10;
+        h *= 10;
+      }
+      return { width: w, height: h };
+    }
+    return { width: 1000, height: 700 };
+  };
+
+  const saveMutation = useMutation({
     mutationFn: async () => {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error("Niste prijavljeni");
 
-      // Validate
       if (!supplierName.trim()) throw new Error("Unesite naziv dobavljača");
       const validItems = items.filter((i) => i.plate_format_id && i.quantity > 0);
       if (validItems.length === 0) throw new Error("Dodajte bar jednu stavku");
 
-      // Create order
-      const { data: order, error: orderError } = await supabase
-        .from("procurement_orders")
-        .insert({
-          supplier_name: supplierName.trim(),
-          order_date: orderDate,
-          expected_arrival_date: expectedArrival || null,
-          transport_cost: transportCost,
-          notes: notes.trim() || null,
-          created_by: user.id,
-        })
-        .select()
-        .single();
+      if (isEditing) {
+        // Update order
+        const { error: orderError } = await supabase
+          .from("procurement_orders")
+          .update({
+            supplier_name: supplierName.trim(),
+            order_date: orderDate,
+            expected_arrival_date: expectedArrival || null,
+            transport_cost: transportCost,
+            other_costs: otherCosts,
+            notes: notes.trim() || null,
+          })
+          .eq("id", editOrder.id);
 
-      if (orderError) throw orderError;
+        if (orderError) throw orderError;
 
-      // Get format dimensions and insert items
-      const itemsToInsert = validItems.map((item) => {
-        const format = plateFormats.find((f) => f.id === item.plate_format_id);
-        // Parse dimensions from format name (e.g., "70x100" -> 700x1000mm)
-        const dims = parseDimensions(format?.format_name || "");
-        return {
-          procurement_order_id: order.id,
-          plate_format_id: item.plate_format_id,
-          quantity: item.quantity,
-          price_per_m2: item.price_per_m2,
-          width_mm: dims.width,
-          height_mm: dims.height,
-        };
-      });
+        // Delete old items and re-insert
+        const { error: deleteError } = await supabase
+          .from("procurement_order_items")
+          .delete()
+          .eq("procurement_order_id", editOrder.id);
 
-      const { error: itemsError } = await supabase
-        .from("procurement_order_items")
-        .insert(itemsToInsert);
+        if (deleteError) throw deleteError;
 
-      if (itemsError) throw itemsError;
+        const itemsToInsert = validItems.map((item) => {
+          const format = plateFormats.find((f) => f.id === item.plate_format_id);
+          const dims = parseDimensions(format?.format_name || "");
+          return {
+            procurement_order_id: editOrder.id,
+            plate_format_id: item.plate_format_id,
+            quantity: item.quantity,
+            price_per_m2: item.price_per_m2,
+            width_mm: dims.width,
+            height_mm: dims.height,
+          };
+        });
 
-      return order;
+        const { error: itemsError } = await supabase
+          .from("procurement_order_items")
+          .insert(itemsToInsert);
+
+        if (itemsError) throw itemsError;
+      } else {
+        // Create order
+        const { data: order, error: orderError } = await supabase
+          .from("procurement_orders")
+          .insert({
+            supplier_name: supplierName.trim(),
+            order_date: orderDate,
+            expected_arrival_date: expectedArrival || null,
+            transport_cost: transportCost,
+            other_costs: otherCosts,
+            notes: notes.trim() || null,
+            created_by: user.id,
+          })
+          .select()
+          .single();
+
+        if (orderError) throw orderError;
+
+        const itemsToInsert = validItems.map((item) => {
+          const format = plateFormats.find((f) => f.id === item.plate_format_id);
+          const dims = parseDimensions(format?.format_name || "");
+          return {
+            procurement_order_id: order.id,
+            plate_format_id: item.plate_format_id,
+            quantity: item.quantity,
+            price_per_m2: item.price_per_m2,
+            width_mm: dims.width,
+            height_mm: dims.height,
+          };
+        });
+
+        const { error: itemsError } = await supabase
+          .from("procurement_order_items")
+          .insert(itemsToInsert);
+
+        if (itemsError) throw itemsError;
+      }
     },
     onSuccess: () => {
-      toast({ title: "Narudžbina kreirana" });
+      toast({ title: isEditing ? "Narudžbina ažurirana" : "Narudžbina kreirana" });
       resetForm();
       onOpenChange(false);
       onSuccess();
@@ -119,23 +200,6 @@ export function NewProcurementDialog({
       toast({ title: "Greška", description: error.message, variant: "destructive" });
     },
   });
-
-  const parseDimensions = (formatName: string): { width: number; height: number } => {
-    // Try to parse "WxH" format (e.g., "70x100" or "650x500")
-    const match = formatName.match(/(\d+)[x×](\d+)/i);
-    if (match) {
-      let w = parseInt(match[1]);
-      let h = parseInt(match[2]);
-      // If dimensions are small, assume cm and convert to mm
-      if (w < 200 && h < 200) {
-        w *= 10;
-        h *= 10;
-      }
-      return { width: w, height: h };
-    }
-    // Default fallback
-    return { width: 1000, height: 700 };
-  };
 
   const addItem = () => {
     setItems([...items, { plate_format_id: "", quantity: 0, price_per_m2: 0 }]);
@@ -161,13 +225,13 @@ export function NewProcurementDialog({
     return areaM2 * item.price_per_m2;
   };
 
-  const grandTotal = items.reduce((sum, item) => sum + calculateItemTotal(item), 0) + transportCost;
+  const grandTotal = items.reduce((sum, item) => sum + calculateItemTotal(item), 0) + transportCost + otherCosts;
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle>Nova narudžbina ploča</DialogTitle>
+          <DialogTitle>{isEditing ? "Izmeni narudžbinu" : "Nova narudžbina ploča"}</DialogTitle>
         </DialogHeader>
 
         <div className="space-y-6">
@@ -194,7 +258,6 @@ export function NewProcurementDialog({
               <Input
                 type="date"
                 value={expectedArrival}
-                min={new Date().toISOString().split("T")[0]}
                 onChange={(e) => setExpectedArrival(e.target.value)}
               />
             </div>
@@ -205,6 +268,15 @@ export function NewProcurementDialog({
                 step="0.01"
                 value={transportCost}
                 onChange={(e) => setTransportCost(parseFloat(e.target.value) || 0)}
+              />
+            </div>
+            <div>
+              <Label>Ostali troškovi (€)</Label>
+              <Input
+                type="number"
+                step="0.01"
+                value={otherCosts}
+                onChange={(e) => setOtherCosts(parseFloat(e.target.value) || 0)}
               />
             </div>
           </div>
@@ -250,7 +322,7 @@ export function NewProcurementDialog({
                     />
                   </div>
                   <div className="col-span-2">
-                    <Label className="text-xs">€/m²</Label>
+                    <Label className="text-xs">$/m²</Label>
                     <Input
                       type="number"
                       step="0.01"
@@ -260,7 +332,7 @@ export function NewProcurementDialog({
                     />
                   </div>
                   <div className="col-span-2 text-right text-sm font-medium pb-2">
-                    {calculateItemTotal(item).toFixed(2)} €
+                    {calculateItemTotal(item).toFixed(2)} $
                   </div>
                   <div className="col-span-1 pb-2">
                     <Button
@@ -279,8 +351,8 @@ export function NewProcurementDialog({
 
             {/* Total */}
             <div className="flex justify-between items-center mt-4 pt-4 border-t text-lg font-bold">
-              <span>Ukupno (sa transportom):</span>
-              <span>{grandTotal.toFixed(2)} €</span>
+              <span>Ukupno (sa troškovima):</span>
+              <span>{grandTotal.toFixed(2)} $</span>
             </div>
           </div>
 
@@ -300,8 +372,8 @@ export function NewProcurementDialog({
           <Button variant="outline" onClick={() => onOpenChange(false)}>
             Otkaži
           </Button>
-          <Button onClick={() => createMutation.mutate()} disabled={createMutation.isPending}>
-            {createMutation.isPending ? "Čuvam..." : "Sačuvaj"}
+          <Button onClick={() => saveMutation.mutate()} disabled={saveMutation.isPending}>
+            {saveMutation.isPending ? "Čuvam..." : isEditing ? "Sačuvaj izmene" : "Sačuvaj"}
           </Button>
         </DialogFooter>
       </DialogContent>
