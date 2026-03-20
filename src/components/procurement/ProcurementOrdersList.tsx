@@ -43,7 +43,7 @@ const STATUS_LABELS: Record<string, { label: string; variant: "default" | "secon
   cancelled: { label: "Otkazano", variant: "destructive" },
 };
 
-export function ProcurementOrdersList({ orders, onUpdate }: ProcurementOrdersListProps) {
+export function ProcurementOrdersList({ orders, onUpdate, onEdit }: ProcurementOrdersListProps) {
   const { toast } = useToast();
   const [expandedOrders, setExpandedOrders] = useState<Set<string>>(new Set());
   const [editingOrder, setEditingOrder] = useState<string | null>(null);
