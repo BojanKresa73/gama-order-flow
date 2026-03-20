@@ -197,7 +197,7 @@ export function ProcurementOrdersList({ orders, onUpdate, onEdit }: ProcurementO
                       </Button>
                     </>
                   ) : (
-                    <Button size="sm" variant="ghost" onClick={() => startEdit(order)}>
+                    <Button size="sm" variant="ghost" onClick={() => onEdit ? onEdit(order) : startEdit(order)}>
                       <Edit2 className="h-4 w-4" />
                     </Button>
                   )}
