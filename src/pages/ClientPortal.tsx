@@ -433,6 +433,7 @@ const ClientPortal = () => {
                   </span>
                 </div>
               )}
+              <PortalUserGuide />
               <PushNotificationToggle />
               {portalUser && (
                 <EmailNotificationToggle
