@@ -471,6 +471,9 @@ const ClientPortal = () => {
             <CardTitle>Vaši radni nalozi</CardTitle>
           </CardHeader>
           <CardContent>
+            {/* Order Statistics */}
+            <PortalOrderStats orders={workOrders} />
+
             {/* Filters */}
             <div className="flex flex-col md:flex-row gap-4 mb-6">
               <div className="flex-1">
