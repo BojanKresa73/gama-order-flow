@@ -37,6 +37,8 @@ import { ClientOrderCard } from "@/components/portal/ClientOrderCard";
 import { PortalNotificationBell } from "@/components/portal/PortalNotificationBell";
 import { PushNotificationToggle } from "@/components/portal/PushNotificationToggle";
 import { EmailNotificationToggle } from "@/components/portal/EmailNotificationToggle";
+import { PortalUserGuide } from "@/components/portal/PortalUserGuide";
+import { PortalOrderStats } from "@/components/portal/PortalOrderStats";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { Badge } from "@/components/ui/badge";
 
