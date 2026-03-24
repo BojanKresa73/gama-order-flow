@@ -12,8 +12,6 @@ let updateToastShown = false;
 const updateSW = registerSW({
   immediate: true,
   onNeedRefresh() {
-    // Don't force reload - let the user finish their work.
-    // Show a manual prompt instead.
     if (!updateToastShown) {
       updateToastShown = true;
       toast("Dostupna je nova verzija aplikacije.", {
@@ -21,15 +19,28 @@ const updateSW = registerSW({
         duration: Infinity,
         action: {
           label: "Osveži",
-          onClick: () => updateSW(true),
+          onClick: () => {
+            updateSW(true).then(() => {
+              window.location.reload();
+            }).catch(() => {
+              window.location.reload();
+            });
+          },
         },
       });
     }
-
     console.log("New app version available. Refresh to update.");
   },
   onOfflineReady() {
     console.log("App ready for offline use.");
+  },
+  onRegisteredSW(swUrl, registration) {
+    // Check for updates every 30 minutes
+    if (registration) {
+      setInterval(() => {
+        registration.update();
+      }, 30 * 60 * 1000);
+    }
   },
 });
 // Register push notification service worker (separate from PWA SW)
