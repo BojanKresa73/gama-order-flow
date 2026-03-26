@@ -1,0 +1,1 @@
+UPDATE work_orders SET status = 'open', closed_at = NULL WHERE id = 'cd249c78-2d6c-44c3-b727-d193c0a72c2a';
