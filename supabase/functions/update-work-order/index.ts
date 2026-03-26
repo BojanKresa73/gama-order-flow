@@ -68,8 +68,11 @@ Deno.serve(async (req) => {
       'FILMOVANJE': 'FILMOVANJE',
       'DIGITAL': 'DIGITALA',
       'DIGITALA': 'DIGITALA',
-      'OTHER': 'OSTALO',
-      'OSTALO': 'OSTALO',
+      'OTHER': 'RAZNO',
+      'OSTALO': 'RAZNO',
+      'RAZNO': 'RAZNO',
+      'ROLNA': 'ROLNA',
+      'PLOCA': 'PLOCA',
     };
     const normalizedKind = kindMap[payload.kind.toUpperCase()] || 'CTP';
 
