@@ -22,6 +22,18 @@ function urlBase64ToUint8Array(base64String: string): Uint8Array {
   return outputArray;
 }
 
+async function getPortalServiceWorkerRegistration() {
+  let registration = await navigator.serviceWorker.getRegistration("/portal/");
+
+  if (!registration) {
+    registration = await navigator.serviceWorker.register("/push-sw.js", {
+      scope: "/portal/",
+    });
+  }
+
+  return registration;
+}
+
 export function usePortalPushSubscription() {
   const [isSubscribed, setIsSubscribed] = useState(false);
   const [isSupported, setIsSupported] = useState(false);
@@ -39,7 +51,7 @@ export function usePortalPushSubscription() {
 
   async function checkExistingSubscription() {
     try {
-      const registration = await navigator.serviceWorker.ready;
+      const registration = await getPortalServiceWorkerRegistration();
       const sub = await registration.pushManager.getSubscription();
       setIsSubscribed(!!sub);
     } catch {
@@ -55,7 +67,7 @@ export function usePortalPushSubscription() {
       setPermission(perm);
       if (perm !== "granted") return false;
 
-      const registration = await navigator.serviceWorker.ready;
+      const registration = await getPortalServiceWorkerRegistration();
       
       const subscription = await registration.pushManager.subscribe({
         userVisibleOnly: true,
@@ -94,7 +106,7 @@ export function usePortalPushSubscription() {
 
   async function unsubscribe() {
     try {
-      const registration = await navigator.serviceWorker.ready;
+      const registration = await getPortalServiceWorkerRegistration();
       const sub = await registration.pushManager.getSubscription();
       if (sub) await sub.unsubscribe();
 
