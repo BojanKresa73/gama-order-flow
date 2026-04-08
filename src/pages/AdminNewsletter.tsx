@@ -326,9 +326,9 @@ function RecipientsTab() {
           </TableHeader>
           <TableBody>
             {isLoading ? (
-              <TableRow><TableCell colSpan={6} className="text-center py-8"><Loader2 className="h-5 w-5 animate-spin mx-auto" /></TableCell></TableRow>
+              <TableRow><TableCell colSpan={7} className="text-center py-8"><Loader2 className="h-5 w-5 animate-spin mx-auto" /></TableCell></TableRow>
             ) : filtered.length === 0 ? (
-              <TableRow><TableCell colSpan={6} className="text-center py-8 text-muted-foreground">Nema primaoca</TableCell></TableRow>
+              <TableRow><TableCell colSpan={7} className="text-center py-8 text-muted-foreground">Nema primaoca</TableCell></TableRow>
             ) : filtered.map((r: any, idx: number) => (
               <TableRow key={r.id}>
                 <TableCell className="text-muted-foreground">{idx + 1}</TableCell>
@@ -337,6 +337,7 @@ function RecipientsTab() {
                 <TableCell className="hidden md:table-cell">{r.contact_person}</TableCell>
                 <TableCell className="hidden md:table-cell">{r.city}</TableCell>
                 <TableCell className="hidden lg:table-cell">{r.list_name ? <Badge variant="secondary">{r.list_name}</Badge> : <span className="text-muted-foreground">—</span>}</TableCell>
+                <TableCell>
                   <div className="flex gap-1">
                     <Button variant="ghost" size="icon" onClick={() => openEdit(r)}><Edit className="h-4 w-4" /></Button>
                     <Button variant="ghost" size="icon" onClick={() => deleteMutation.mutate(r.id)}><Trash2 className="h-4 w-4 text-destructive" /></Button>
