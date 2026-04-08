@@ -1,0 +1,1 @@
+ALTER TABLE public.newsletter_recipients ADD COLUMN list_name text DEFAULT NULL;
