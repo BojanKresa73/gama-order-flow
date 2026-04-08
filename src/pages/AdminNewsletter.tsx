@@ -73,10 +73,10 @@ function RecipientsTab() {
     mutationFn: async (data: any) => {
       const payload = { ...data, list_name: data.list_name || null };
       if (editRecipient) {
-        const { error } = await supabase.from("newsletter_recipients").update(data).eq("id", editRecipient.id);
+        const { error } = await supabase.from("newsletter_recipients").update(payload).eq("id", editRecipient.id);
         if (error) throw error;
       } else {
-        const { error } = await supabase.from("newsletter_recipients").insert(data);
+        const { error } = await supabase.from("newsletter_recipients").insert(payload);
         if (error) throw error;
       }
     },
