@@ -466,8 +466,13 @@ function ComposeTab() {
     },
   });
 
+  const lists = [...new Set(recipients.map((r: any) => r.list_name).filter(Boolean))].sort();
   const cities = [...new Set(recipients.map((r: any) => r.city).filter(Boolean))].sort();
-  const filtered = recipients.filter((r: any) => cityFilter === "all" || r.city === cityFilter);
+  const filtered = recipients.filter((r: any) => {
+    const matchCity = cityFilter === "all" || r.city === cityFilter;
+    const matchList = sendListFilter === "all" || (sendListFilter === "__none__" ? !r.list_name : r.list_name === sendListFilter);
+    return matchCity && matchList;
+  });
   const finalRecipients = selectAll ? filtered : filtered.filter((r: any) => selectedIds.has(r.id));
 
   const toggleRecipient = (id: string) => {
