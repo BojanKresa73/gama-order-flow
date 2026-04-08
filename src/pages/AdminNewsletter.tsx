@@ -268,7 +268,7 @@ function RecipientsTab() {
 
   const openEdit = (r: any) => {
     setEditRecipient(r);
-    setForm({ company_name: r.company_name, email: r.email, contact_person: r.contact_person || "", city: r.city || "", phone: r.phone || "", notes: r.notes || "" });
+    setForm({ company_name: r.company_name, email: r.email, contact_person: r.contact_person || "", city: r.city || "", phone: r.phone || "", notes: r.notes || "", list_name: r.list_name || "" });
     setAddOpen(true);
   };
 
