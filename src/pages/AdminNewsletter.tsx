@@ -779,15 +779,25 @@ function ComposeTab() {
               </div>
             </CardHeader>
             <CardContent>
+              {/* List filter - always visible */}
+              <div className="mb-3">
+                <Select value={sendListFilter} onValueChange={setSendListFilter}>
+                  <SelectTrigger className="w-full"><SelectValue placeholder="Sve liste" /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">Sve liste</SelectItem>
+                    {lists.map((l) => <SelectItem key={l} value={l}>{l}</SelectItem>)}
+                    <SelectItem value="__none__">Bez liste</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
               {selectAll ? (
                 <div className="text-center py-6">
                   <Users className="h-10 w-10 mx-auto text-muted-foreground mb-3" />
-                  <p className="font-medium text-sm">Slanje svim klijentima</p>
+                  <p className="font-medium text-sm">
+                    {sendListFilter !== "all" ? `Slanje klijentima: ${sendListFilter === "__none__" ? "bez liste" : sendListFilter}` : "Slanje svim klijentima"}
+                  </p>
                   <p className="text-xs text-muted-foreground mt-1">
                     Kampanja će biti poslata na <span className="font-semibold">{filtered.length}</span> email adresa
-                    {cities.length > 0 && (
-                      <> u gradovima: {cities.slice(0, 5).join(", ")}{cities.length > 5 ? `, +${cities.length - 5}` : ""}</>
-                    )}
                   </p>
                   <button
                     onClick={() => { setSelectAll(false); setShowRecipientList(true); }}
