@@ -1798,6 +1798,7 @@ export type Database = {
           email: string
           id: string
           is_active: boolean
+          list_name: string | null
           notes: string | null
           phone: string | null
           unsubscribe_token: string
@@ -1811,6 +1812,7 @@ export type Database = {
           email: string
           id?: string
           is_active?: boolean
+          list_name?: string | null
           notes?: string | null
           phone?: string | null
           unsubscribe_token?: string
@@ -1824,6 +1826,7 @@ export type Database = {
           email?: string
           id?: string
           is_active?: boolean
+          list_name?: string | null
           notes?: string | null
           phone?: string | null
           unsubscribe_token?: string

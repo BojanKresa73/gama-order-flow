@@ -29,9 +29,10 @@ function RecipientsTab() {
   const qc = useQueryClient();
   const [search, setSearch] = useState("");
   const [cityFilter, setCityFilter] = useState("all");
+  const [listFilter, setListFilter] = useState("all");
   const [addOpen, setAddOpen] = useState(false);
   const [editRecipient, setEditRecipient] = useState<any>(null);
-  const [form, setForm] = useState({ company_name: "", email: "", contact_person: "", city: "", phone: "", notes: "" });
+  const [form, setForm] = useState({ company_name: "", email: "", contact_person: "", city: "", phone: "", notes: "", list_name: "" });
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const { data: recipients = [], isLoading } = useQuery({
@@ -55,6 +56,7 @@ function RecipientsTab() {
     },
   });
 
+  const lists = [...new Set(recipients.map((r: any) => r.list_name).filter(Boolean))].sort();
   const cities = [...new Set(recipients.map((r: any) => r.city).filter(Boolean))].sort();
 
   const filtered = recipients.filter((r: any) => {
@@ -63,16 +65,18 @@ function RecipientsTab() {
       r.email?.toLowerCase().includes(search.toLowerCase()) ||
       r.contact_person?.toLowerCase().includes(search.toLowerCase());
     const matchCity = cityFilter === "all" || r.city === cityFilter;
-    return matchSearch && matchCity;
+    const matchList = listFilter === "all" || (listFilter === "__none__" ? !r.list_name : r.list_name === listFilter);
+    return matchSearch && matchCity && matchList;
   });
 
   const saveMutation = useMutation({
     mutationFn: async (data: any) => {
+      const payload = { ...data, list_name: data.list_name || null };
       if (editRecipient) {
-        const { error } = await supabase.from("newsletter_recipients").update(data).eq("id", editRecipient.id);
+        const { error } = await supabase.from("newsletter_recipients").update(payload).eq("id", editRecipient.id);
         if (error) throw error;
       } else {
-        const { error } = await supabase.from("newsletter_recipients").insert(data);
+        const { error } = await supabase.from("newsletter_recipients").insert(payload);
         if (error) throw error;
       }
     },
@@ -81,7 +85,7 @@ function RecipientsTab() {
       toast({ title: editRecipient ? "Primaoc ažuriran" : "Primaoc dodat" });
       setAddOpen(false);
       setEditRecipient(null);
-      setForm({ company_name: "", email: "", contact_person: "", city: "", phone: "", notes: "" });
+      setForm({ company_name: "", email: "", contact_person: "", city: "", phone: "", notes: "", list_name: "" });
     },
     onError: (e: any) => toast({ title: "Greška", description: e.message, variant: "destructive" }),
   });
@@ -265,13 +269,13 @@ function RecipientsTab() {
 
   const openEdit = (r: any) => {
     setEditRecipient(r);
-    setForm({ company_name: r.company_name, email: r.email, contact_person: r.contact_person || "", city: r.city || "", phone: r.phone || "", notes: r.notes || "" });
+    setForm({ company_name: r.company_name, email: r.email, contact_person: r.contact_person || "", city: r.city || "", phone: r.phone || "", notes: r.notes || "", list_name: r.list_name || "" });
     setAddOpen(true);
   };
 
   const openAdd = () => {
     setEditRecipient(null);
-    setForm({ company_name: "", email: "", contact_person: "", city: "", phone: "", notes: "" });
+    setForm({ company_name: "", email: "", contact_person: "", city: "", phone: "", notes: "", list_name: "" });
     setAddOpen(true);
   };
 
@@ -287,6 +291,14 @@ function RecipientsTab() {
           <SelectContent>
             <SelectItem value="all">Svi gradovi</SelectItem>
             {cities.map((c) => <SelectItem key={c} value={c}>{c}</SelectItem>)}
+          </SelectContent>
+        </Select>
+        <Select value={listFilter} onValueChange={setListFilter}>
+          <SelectTrigger className="w-[180px]"><SelectValue placeholder="Sve liste" /></SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">Sve liste</SelectItem>
+            <SelectItem value="__none__">Bez liste</SelectItem>
+            {lists.map((l) => <SelectItem key={l} value={l}>{l}</SelectItem>)}
           </SelectContent>
         </Select>
         <div>
@@ -309,14 +321,15 @@ function RecipientsTab() {
               <TableHead>Email</TableHead>
               <TableHead className="hidden md:table-cell">Kontakt</TableHead>
               <TableHead className="hidden md:table-cell">Grad</TableHead>
+              <TableHead className="hidden lg:table-cell">Lista</TableHead>
               <TableHead className="w-[100px]"></TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
             {isLoading ? (
-              <TableRow><TableCell colSpan={6} className="text-center py-8"><Loader2 className="h-5 w-5 animate-spin mx-auto" /></TableCell></TableRow>
+              <TableRow><TableCell colSpan={7} className="text-center py-8"><Loader2 className="h-5 w-5 animate-spin mx-auto" /></TableCell></TableRow>
             ) : filtered.length === 0 ? (
-              <TableRow><TableCell colSpan={6} className="text-center py-8 text-muted-foreground">Nema primaoca</TableCell></TableRow>
+              <TableRow><TableCell colSpan={7} className="text-center py-8 text-muted-foreground">Nema primaoca</TableCell></TableRow>
             ) : filtered.map((r: any, idx: number) => (
               <TableRow key={r.id}>
                 <TableCell className="text-muted-foreground">{idx + 1}</TableCell>
@@ -324,6 +337,7 @@ function RecipientsTab() {
                 <TableCell>{r.email}</TableCell>
                 <TableCell className="hidden md:table-cell">{r.contact_person}</TableCell>
                 <TableCell className="hidden md:table-cell">{r.city}</TableCell>
+                <TableCell className="hidden lg:table-cell">{r.list_name ? <Badge variant="secondary">{r.list_name}</Badge> : <span className="text-muted-foreground">—</span>}</TableCell>
                 <TableCell>
                   <div className="flex gap-1">
                     <Button variant="ghost" size="icon" onClick={() => openEdit(r)}><Edit className="h-4 w-4" /></Button>
@@ -345,6 +359,7 @@ function RecipientsTab() {
             <div><Label>Kontakt osoba</Label><Input value={form.contact_person} onChange={(e) => setForm({ ...form, contact_person: e.target.value })} /></div>
             <div><Label>Grad</Label><Input value={form.city} onChange={(e) => setForm({ ...form, city: e.target.value })} /></div>
             <div><Label>Telefon</Label><Input value={form.phone} onChange={(e) => setForm({ ...form, phone: e.target.value })} /></div>
+            <div><Label>Lista</Label><Input placeholder="npr. Email lista" value={form.list_name} onChange={(e) => setForm({ ...form, list_name: e.target.value })} /></div>
             <div><Label>Napomena</Label><Textarea value={form.notes} onChange={(e) => setForm({ ...form, notes: e.target.value })} /></div>
           </div>
           <DialogFooter>
