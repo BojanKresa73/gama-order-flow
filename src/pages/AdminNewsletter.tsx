@@ -71,6 +71,7 @@ function RecipientsTab() {
 
   const saveMutation = useMutation({
     mutationFn: async (data: any) => {
+      const payload = { ...data, list_name: data.list_name || null };
       if (editRecipient) {
         const { error } = await supabase.from("newsletter_recipients").update(data).eq("id", editRecipient.id);
         if (error) throw error;
