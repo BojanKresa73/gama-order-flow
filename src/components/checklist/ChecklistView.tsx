@@ -1117,6 +1117,11 @@ const ChecklistView = ({ orderType, onNavigateToSearch }: ChecklistViewProps) =>
       {/* Summary stats for CTP */}
       {orderType === "ctp" && filteredOrders.length > 0 && (() => {
         const totalPlates = filteredOrders.reduce((s, o) => s + o.total_plates, 0);
+        const remainingPlates = filteredOrders.reduce((s, o) => {
+          return s + (o.file_entries || [])
+            .filter(f => f.status === "open")
+            .reduce((sum, f) => sum + f.quantity, 0);
+        }, 0);
         const uniqueClients = new Set(filteredOrders.map(o => o.client_name)).size;
         const formatBreakdown: Record<string, number> = {};
         filteredOrders.forEach(o => {
@@ -1137,7 +1142,14 @@ const ChecklistView = ({ orderType, onNavigateToSearch }: ChecklistViewProps) =>
                 </div>
                 <div>
                   <p className="text-xs text-muted-foreground">Ukupno ploča</p>
-                  <p className="text-lg font-bold">{totalPlates.toLocaleString("sr")}</p>
+                  <p className="text-lg font-bold">
+                    {totalPlates.toLocaleString("sr")}
+                    {remainingPlates < totalPlates && (
+                      <span className="text-sm font-normal text-muted-foreground ml-1">
+                        (preostalo: {remainingPlates.toLocaleString("sr")})
+                      </span>
+                    )}
+                  </p>
                 </div>
               </div>
 
