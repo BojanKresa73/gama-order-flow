@@ -384,6 +384,7 @@ function ComposeTab() {
   const [subject, setSubject] = useState("");
   const [htmlBody, setHtmlBody] = useState("");
   const [cityFilter, setCityFilter] = useState("all");
+  const [sendListFilter, setSendListFilter] = useState("all");
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [selectAll, setSelectAll] = useState(true);
   const [sending, setSending] = useState(false);
