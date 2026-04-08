@@ -384,6 +384,7 @@ function ComposeTab() {
   const [subject, setSubject] = useState("");
   const [htmlBody, setHtmlBody] = useState("");
   const [cityFilter, setCityFilter] = useState("all");
+  const [sendListFilter, setSendListFilter] = useState("all");
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [selectAll, setSelectAll] = useState(true);
   const [sending, setSending] = useState(false);
@@ -465,8 +466,13 @@ function ComposeTab() {
     },
   });
 
+  const lists = [...new Set(recipients.map((r: any) => r.list_name).filter(Boolean))].sort();
   const cities = [...new Set(recipients.map((r: any) => r.city).filter(Boolean))].sort();
-  const filtered = recipients.filter((r: any) => cityFilter === "all" || r.city === cityFilter);
+  const filtered = recipients.filter((r: any) => {
+    const matchCity = cityFilter === "all" || r.city === cityFilter;
+    const matchList = sendListFilter === "all" || (sendListFilter === "__none__" ? !r.list_name : r.list_name === sendListFilter);
+    return matchCity && matchList;
+  });
   const finalRecipients = selectAll ? filtered : filtered.filter((r: any) => selectedIds.has(r.id));
 
   const toggleRecipient = (id: string) => {
@@ -773,15 +779,25 @@ function ComposeTab() {
               </div>
             </CardHeader>
             <CardContent>
+              {/* List filter - always visible */}
+              <div className="mb-3">
+                <Select value={sendListFilter} onValueChange={setSendListFilter}>
+                  <SelectTrigger className="w-full"><SelectValue placeholder="Sve liste" /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">Sve liste</SelectItem>
+                    {lists.map((l) => <SelectItem key={l} value={l}>{l}</SelectItem>)}
+                    <SelectItem value="__none__">Bez liste</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
               {selectAll ? (
                 <div className="text-center py-6">
                   <Users className="h-10 w-10 mx-auto text-muted-foreground mb-3" />
-                  <p className="font-medium text-sm">Slanje svim klijentima</p>
+                  <p className="font-medium text-sm">
+                    {sendListFilter !== "all" ? `Slanje klijentima: ${sendListFilter === "__none__" ? "bez liste" : sendListFilter}` : "Slanje svim klijentima"}
+                  </p>
                   <p className="text-xs text-muted-foreground mt-1">
                     Kampanja će biti poslata na <span className="font-semibold">{filtered.length}</span> email adresa
-                    {cities.length > 0 && (
-                      <> u gradovima: {cities.slice(0, 5).join(", ")}{cities.length > 5 ? `, +${cities.length - 5}` : ""}</>
-                    )}
                   </p>
                   <button
                     onClick={() => { setSelectAll(false); setShowRecipientList(true); }}
