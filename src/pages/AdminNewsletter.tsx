@@ -32,7 +32,7 @@ function RecipientsTab() {
   const [listFilter, setListFilter] = useState("all");
   const [addOpen, setAddOpen] = useState(false);
   const [editRecipient, setEditRecipient] = useState<any>(null);
-  const [form, setForm] = useState({ company_name: "", email: "", contact_person: "", city: "", phone: "", notes: "" });
+  const [form, setForm] = useState({ company_name: "", email: "", contact_person: "", city: "", phone: "", notes: "", list_name: "" });
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const { data: recipients = [], isLoading } = useQuery({
