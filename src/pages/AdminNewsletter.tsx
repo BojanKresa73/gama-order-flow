@@ -320,6 +320,7 @@ function RecipientsTab() {
               <TableHead>Email</TableHead>
               <TableHead className="hidden md:table-cell">Kontakt</TableHead>
               <TableHead className="hidden md:table-cell">Grad</TableHead>
+              <TableHead className="hidden lg:table-cell">Lista</TableHead>
               <TableHead className="w-[100px]"></TableHead>
             </TableRow>
           </TableHeader>
