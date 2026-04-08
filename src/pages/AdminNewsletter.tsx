@@ -84,7 +84,7 @@ function RecipientsTab() {
       toast({ title: editRecipient ? "Primaoc ažuriran" : "Primaoc dodat" });
       setAddOpen(false);
       setEditRecipient(null);
-      setForm({ company_name: "", email: "", contact_person: "", city: "", phone: "", notes: "" });
+      setForm({ company_name: "", email: "", contact_person: "", city: "", phone: "", notes: "", list_name: "" });
     },
     onError: (e: any) => toast({ title: "Greška", description: e.message, variant: "destructive" }),
   });
