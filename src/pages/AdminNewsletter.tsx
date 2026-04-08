@@ -29,6 +29,7 @@ function RecipientsTab() {
   const qc = useQueryClient();
   const [search, setSearch] = useState("");
   const [cityFilter, setCityFilter] = useState("all");
+  const [listFilter, setListFilter] = useState("all");
   const [addOpen, setAddOpen] = useState(false);
   const [editRecipient, setEditRecipient] = useState<any>(null);
   const [form, setForm] = useState({ company_name: "", email: "", contact_person: "", city: "", phone: "", notes: "" });
