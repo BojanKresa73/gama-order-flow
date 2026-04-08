@@ -292,8 +292,14 @@ function RecipientsTab() {
             {cities.map((c) => <SelectItem key={c} value={c}>{c}</SelectItem>)}
           </SelectContent>
         </Select>
-        <div>
-          <input ref={fileInputRef} type="file" accept=".xlsx,.xls,.csv" className="hidden" onChange={handleImport} />
+        <Select value={listFilter} onValueChange={setListFilter}>
+          <SelectTrigger className="w-[180px]"><SelectValue placeholder="Sve liste" /></SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">Sve liste</SelectItem>
+            <SelectItem value="__none__">Bez liste</SelectItem>
+            {lists.map((l) => <SelectItem key={l} value={l}>{l}</SelectItem>)}
+          </SelectContent>
+        </Select>
           <Button variant="outline" type="button" onClick={() => { console.log("Import button clicked"); fileInputRef.current?.click(); }}>
             <Upload className="h-4 w-4 mr-1" />Import Excel
           </Button>
