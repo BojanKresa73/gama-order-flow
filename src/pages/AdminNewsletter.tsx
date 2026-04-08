@@ -56,6 +56,7 @@ function RecipientsTab() {
     },
   });
 
+  const lists = [...new Set(recipients.map((r: any) => r.list_name).filter(Boolean))].sort();
   const cities = [...new Set(recipients.map((r: any) => r.city).filter(Boolean))].sort();
 
   const filtered = recipients.filter((r: any) => {
@@ -64,7 +65,8 @@ function RecipientsTab() {
       r.email?.toLowerCase().includes(search.toLowerCase()) ||
       r.contact_person?.toLowerCase().includes(search.toLowerCase());
     const matchCity = cityFilter === "all" || r.city === cityFilter;
-    return matchSearch && matchCity;
+    const matchList = listFilter === "all" || (listFilter === "__none__" ? !r.list_name : r.list_name === listFilter);
+    return matchSearch && matchCity && matchList;
   });
 
   const saveMutation = useMutation({
