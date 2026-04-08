@@ -300,6 +300,8 @@ function RecipientsTab() {
             {lists.map((l) => <SelectItem key={l} value={l}>{l}</SelectItem>)}
           </SelectContent>
         </Select>
+        <div>
+          <input ref={fileInputRef} type="file" accept=".xlsx,.xls,.csv" className="hidden" onChange={handleImport} />
           <Button variant="outline" type="button" onClick={() => { console.log("Import button clicked"); fileInputRef.current?.click(); }}>
             <Upload className="h-4 w-4 mr-1" />Import Excel
           </Button>
