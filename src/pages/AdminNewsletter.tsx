@@ -358,6 +358,7 @@ function RecipientsTab() {
             <div><Label>Kontakt osoba</Label><Input value={form.contact_person} onChange={(e) => setForm({ ...form, contact_person: e.target.value })} /></div>
             <div><Label>Grad</Label><Input value={form.city} onChange={(e) => setForm({ ...form, city: e.target.value })} /></div>
             <div><Label>Telefon</Label><Input value={form.phone} onChange={(e) => setForm({ ...form, phone: e.target.value })} /></div>
+            <div><Label>Lista</Label><Input placeholder="npr. Email lista" value={form.list_name} onChange={(e) => setForm({ ...form, list_name: e.target.value })} /></div>
             <div><Label>Napomena</Label><Textarea value={form.notes} onChange={(e) => setForm({ ...form, notes: e.target.value })} /></div>
           </div>
           <DialogFooter>
