@@ -112,7 +112,11 @@ function getQuantityText(entry: any, orderKind: string, workOrder: any): string 
     if (workOrder.job_name && workOrder.run_quantity) {
       return String(workOrder.run_quantity);
     }
-    // Show number of copies (komada), not sheets (tabaka)
+    // Show pieces_count (actual finished pieces) when available, otherwise fall back to qty (tiraž)
+    const pieces = Number(entry.pieces_count || 0);
+    if (pieces > 0) {
+      return `${pieces} kom`;
+    }
     const qty = Number(entry.qty || entry.quantity || 1);
     return `${qty} kom`;
   }
