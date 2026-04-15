@@ -242,7 +242,6 @@ export function ProcurementOrdersList({ orders, onUpdate, onEdit }: ProcurementO
                       <Input
                         type="date"
                         value={editValues.actual_arrival_date}
-                        min={new Date().toISOString().split("T")[0]}
                         onChange={(e) => setEditValues({ ...editValues, actual_arrival_date: e.target.value })}
                       />
                     </div>
