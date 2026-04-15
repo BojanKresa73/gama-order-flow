@@ -83,6 +83,7 @@ export function NewProcurementDialog({
     setSupplierName("");
     setOrderDate(new Date().toISOString().split("T")[0]);
     setExpectedArrival("");
+    setActualArrival("");
     setTransportCost(0);
     setOtherCosts(0);
     setNotes("");
