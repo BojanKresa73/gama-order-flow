@@ -48,6 +48,7 @@ export function NewProcurementDialog({
   const [supplierName, setSupplierName] = useState("");
   const [orderDate, setOrderDate] = useState(new Date().toISOString().split("T")[0]);
   const [expectedArrival, setExpectedArrival] = useState("");
+  const [actualArrival, setActualArrival] = useState("");
   const [transportCost, setTransportCost] = useState<number>(0);
   const [otherCosts, setOtherCosts] = useState<number>(0);
   const [notes, setNotes] = useState("");
@@ -62,6 +63,7 @@ export function NewProcurementDialog({
       setSupplierName(editOrder.supplier_name || "");
       setOrderDate(editOrder.order_date || new Date().toISOString().split("T")[0]);
       setExpectedArrival(editOrder.expected_arrival_date || "");
+      setActualArrival(editOrder.actual_arrival_date || "");
       setTransportCost(editOrder.transport_cost || 0);
       setOtherCosts(editOrder.other_costs || 0);
       setNotes(editOrder.notes || "");
@@ -81,6 +83,7 @@ export function NewProcurementDialog({
     setSupplierName("");
     setOrderDate(new Date().toISOString().split("T")[0]);
     setExpectedArrival("");
+    setActualArrival("");
     setTransportCost(0);
     setOtherCosts(0);
     setNotes("");
@@ -118,6 +121,7 @@ export function NewProcurementDialog({
             supplier_name: supplierName.trim(),
             order_date: orderDate,
             expected_arrival_date: expectedArrival || null,
+            actual_arrival_date: actualArrival || null,
             transport_cost: transportCost,
             other_costs: otherCosts,
             notes: notes.trim() || null,
@@ -160,6 +164,7 @@ export function NewProcurementDialog({
             supplier_name: supplierName.trim(),
             order_date: orderDate,
             expected_arrival_date: expectedArrival || null,
+            actual_arrival_date: actualArrival || null,
             transport_cost: transportCost,
             other_costs: otherCosts,
             notes: notes.trim() || null,
@@ -259,6 +264,14 @@ export function NewProcurementDialog({
                 type="date"
                 value={expectedArrival}
                 onChange={(e) => setExpectedArrival(e.target.value)}
+              />
+            </div>
+            <div>
+              <Label>Stvarni dolazak</Label>
+              <Input
+                type="date"
+                value={actualArrival}
+                onChange={(e) => setActualArrival(e.target.value)}
               />
             </div>
             <div>
