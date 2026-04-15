@@ -48,6 +48,7 @@ export function NewProcurementDialog({
   const [supplierName, setSupplierName] = useState("");
   const [orderDate, setOrderDate] = useState(new Date().toISOString().split("T")[0]);
   const [expectedArrival, setExpectedArrival] = useState("");
+  const [actualArrival, setActualArrival] = useState("");
   const [transportCost, setTransportCost] = useState<number>(0);
   const [otherCosts, setOtherCosts] = useState<number>(0);
   const [notes, setNotes] = useState("");
