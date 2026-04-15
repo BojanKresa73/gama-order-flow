@@ -125,6 +125,7 @@ export function NewProcurementDialog({
             transport_cost: transportCost,
             other_costs: otherCosts,
             notes: notes.trim() || null,
+            ...(actualArrival ? { status: "arrived" } : {}),
           })
           .eq("id", editOrder.id);
 
@@ -169,6 +170,7 @@ export function NewProcurementDialog({
             other_costs: otherCosts,
             notes: notes.trim() || null,
             created_by: user.id,
+            ...(actualArrival ? { status: "arrived" } : {}),
           })
           .select()
           .single();
