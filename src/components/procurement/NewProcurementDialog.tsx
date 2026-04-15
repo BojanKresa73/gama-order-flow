@@ -267,6 +267,14 @@ export function NewProcurementDialog({
               />
             </div>
             <div>
+              <Label>Stvarni dolazak</Label>
+              <Input
+                type="date"
+                value={actualArrival}
+                onChange={(e) => setActualArrival(e.target.value)}
+              />
+            </div>
+            <div>
               <Label>Transport (€)</Label>
               <Input
                 type="number"
