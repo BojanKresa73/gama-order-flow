@@ -94,10 +94,11 @@ export function ProcurementOrdersList({ orders, onUpdate, onEdit }: ProcurementO
     if (!editingOrder) return;
     
     // Convert empty date strings to null for proper database handling
+    const hasActualArrival = editValues.actual_arrival_date && editValues.actual_arrival_date.trim() !== "";
     const valuesToSave = {
-      status: editValues.status,
+      status: hasActualArrival ? "arrived" : editValues.status,
       expected_arrival_date: editValues.expected_arrival_date && editValues.expected_arrival_date.trim() !== "" ? editValues.expected_arrival_date.trim() : null,
-      actual_arrival_date: editValues.actual_arrival_date && editValues.actual_arrival_date.trim() !== "" ? editValues.actual_arrival_date.trim() : null,
+      actual_arrival_date: hasActualArrival ? editValues.actual_arrival_date.trim() : null,
       transport_cost: editValues.transport_cost || 0,
       other_costs: editValues.other_costs || 0,
     };
