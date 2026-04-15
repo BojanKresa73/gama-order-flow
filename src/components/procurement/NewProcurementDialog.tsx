@@ -164,6 +164,7 @@ export function NewProcurementDialog({
             supplier_name: supplierName.trim(),
             order_date: orderDate,
             expected_arrival_date: expectedArrival || null,
+            actual_arrival_date: actualArrival || null,
             transport_cost: transportCost,
             other_costs: otherCosts,
             notes: notes.trim() || null,
