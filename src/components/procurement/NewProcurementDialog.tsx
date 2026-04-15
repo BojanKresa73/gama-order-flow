@@ -63,6 +63,7 @@ export function NewProcurementDialog({
       setSupplierName(editOrder.supplier_name || "");
       setOrderDate(editOrder.order_date || new Date().toISOString().split("T")[0]);
       setExpectedArrival(editOrder.expected_arrival_date || "");
+      setActualArrival(editOrder.actual_arrival_date || "");
       setTransportCost(editOrder.transport_cost || 0);
       setOtherCosts(editOrder.other_costs || 0);
       setNotes(editOrder.notes || "");
