@@ -44,3 +44,6 @@ verify_jwt = true
 
 [functions.email-client-delivery-report]
 verify_jwt = true
+
+[functions.send-newsletter-batch]
+verify_jwt = false
