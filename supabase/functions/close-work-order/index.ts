@@ -639,6 +639,10 @@ const handler = async (req: Request): Promise<Response> => {
     if (!workOrder.client_id) {
       throw new AppError('CLIENT_REQUIRED', 'Nalog nema klijenta');
     }
+
+    if (workOrder.order_type === 'digital') {
+      await ensureDigitalComputations(supabase, work_order_id);
+    }
     
     // Get items using unified helper
     const items = await getOrderItems(supabase, work_order_id);
