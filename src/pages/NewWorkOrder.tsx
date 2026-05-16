@@ -16,6 +16,50 @@ import { FilmJobsSummary } from "@/components/film/FilmJobsSummary";
 import { LocalDigitalJobsTable, LocalDigitalJob } from "@/components/digital/LocalDigitalJobsTable";
 import { useFilmSettings } from "@/hooks/useFilmSettings";
 import { AddCtpFilesModal } from "@/components/work-orders/AddCtpFilesModal";
+import { calculateGroupedPricing } from "@/lib/digitalGroupedPricing";
+import { calculateItemClicks } from "@/lib/digitalCalculations";
+
+const extractPiecesFromName = (name: string): number | null => {
+  const match = name.match(/(\d+)\s*kom\b/i);
+  return match ? parseInt(match[1], 10) : null;
+};
+
+const prepareDigitalJobsForSave = (jobs: LocalDigitalJob[], prepHours = 0): LocalDigitalJob[] => {
+  const pricing = calculateGroupedPricing(jobs, prepHours);
+  const groupPriceMap = new Map<string, number>();
+
+  for (const group of pricing.groups) {
+    groupPriceMap.set(`${group.coverage}|${group.format}`, group.pricePerSheetBase * group.formatMultiplier);
+  }
+
+  return jobs.map((job) => {
+    const obim = Math.max(1, Number(job.obim) || 1);
+    const qty = Math.max(1, Number(job.qty) || 1);
+    const format = job.machine_sheet_format || "488x330";
+    const printSides = job.print_sides || "4/4";
+    const computed = calculateItemClicks(obim, qty, format, printSides);
+    const pricePerSheet = groupPriceMap.get(`${printSides}|${format}`) || 0;
+    const parsedPieces = extractPiecesFromName(job.name || job.file_name || "");
+
+    return {
+      ...job,
+      obim,
+      qty,
+      machine_sheet_format: format,
+      print_sides: printSides,
+      pieces_count: job.pieces_count || parsedPieces || null,
+      computed_total_sheets: computed.totalSheets,
+      computed_color_clicks: computed.colorClicks,
+      computed_mono_clicks: computed.monoClicks,
+      computed_sheets_per_copy: obim,
+      computed_nup: 1,
+      computed_price_per_sheet: pricePerSheet,
+      computed_line_total: job.is_test_print ? 0 : computed.totalSheets * pricePerSheet,
+      sheets_for_production: computed.totalSheets,
+      sheets_for_test: job.test_sheets || 0,
+    };
+  });
+};
 
 const NewWorkOrder = () => {
   const { id } = useParams<{ id: string }>();
