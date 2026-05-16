@@ -39,13 +39,42 @@ type UiItem = {
 };
 
 async function ensureDigitalComputations(sb: any, orderId: string): Promise<void> {
-  const { error: rpcError } = await sb.rpc('recompute_digital_work_order_items', {
-    p_work_order_id: orderId,
-  });
+  const { data: jobs, error: fetchError } = await sb
+    .from('digital_jobs')
+    .select('id, obim, qty, print_sides, machine_sheet_format')
+    .eq('work_order_id', orderId);
 
-  if (rpcError) {
-    console.error('[ensureDigitalComputations] RPC failed:', rpcError);
-    throw new AppError('DIGITAL_COMPUTE_FAILED', `Greška pri izračunavanju digitalnih stavki: ${rpcError.message}`);
+  if (fetchError) {
+    throw new AppError('DIGITAL_COMPUTE_FAILED', `Greška pri učitavanju digitalnih stavki: ${fetchError.message}`);
+  }
+
+  for (const job of jobs || []) {
+    const obim = Math.max(1, Number(job.obim) || 1);
+    const qty = Math.max(1, Number(job.qty) || 1);
+    const totalSheets = obim * qty;
+    const multiplier = job.machine_sheet_format === '760x330' ? 1.5 : 1;
+    const printSides = job.print_sides || '4/4';
+    const colorSides = printSides === '4/4' ? 2 : (printSides === '4/0' || printSides === '4/1' ? 1 : 0);
+    const monoSides = printSides === '1/1' ? 2 : (printSides === '1/0' || printSides === '4/1' ? 1 : 0);
+
+    const { error: updateError } = await sb
+      .from('digital_jobs')
+      .update({
+        obim,
+        qty,
+        computed_nup: 1,
+        computed_sheets_per_copy: obim,
+        computed_total_sheets: totalSheets,
+        computed_color_clicks: totalSheets * colorSides * multiplier,
+        computed_mono_clicks: totalSheets * monoSides * multiplier,
+        sheets_for_production: totalSheets,
+        updated_at: new Date().toISOString(),
+      })
+      .eq('id', job.id);
+
+    if (updateError) {
+      throw new AppError('DIGITAL_COMPUTE_FAILED', `Greška pri izračunavanju stavke: ${updateError.message}`);
+    }
   }
 }
 
