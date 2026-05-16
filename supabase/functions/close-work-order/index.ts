@@ -38,6 +38,29 @@ type UiItem = {
   status?: string;
 };
 
+async function ensureDigitalComputations(sb: any, orderId: string): Promise<void> {
+  const { error } = await sb
+    .from('digital_jobs')
+    .update({
+      computed_nup: 1,
+      computed_sheets_per_copy: sb.rpc ? undefined : undefined,
+    })
+    .eq('id', '00000000-0000-0000-0000-000000000000');
+
+  if (error) {
+    console.warn('[ensureDigitalComputations] noop update warning:', error.message);
+  }
+
+  const { error: rpcError } = await sb.rpc('recompute_digital_work_order_items', {
+    p_work_order_id: orderId,
+  });
+
+  if (rpcError) {
+    console.error('[ensureDigitalComputations] RPC failed:', rpcError);
+    throw new AppError('DIGITAL_COMPUTE_FAILED', `Greška pri izračunavanju digitalnih stavki: ${rpcError.message}`);
+  }
+}
+
 async function getOrderItems(sb: any, orderId: string): Promise<UiItem[]> {
   // Get work order type
   const { data: order, error: orderError } = await sb
