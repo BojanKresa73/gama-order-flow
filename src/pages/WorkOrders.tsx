@@ -188,11 +188,12 @@ const WorkOrders = () => {
       }
     }
     if (order.order_type === 'digital') {
-      const { data: digitalJobs, error: digitalError } = await supabase.from('digital_jobs').select('id, file_name, computed_total_sheets').eq('work_order_id', order.id);
+      const { data: digitalJobs, error: digitalError } = await supabase.from('digital_jobs').select('id, file_name, computed_total_sheets, obim, qty').eq('work_order_id', order.id);
       if (digitalError) return { valid: false, error: "Greška pri učitavanju digitalnih stavki." };
       if (!digitalJobs?.length) return { valid: false, error: "Nalog mora da ima bar jednu digitalnu stavku." };
       for (const job of digitalJobs) {
-        if (!job.computed_total_sheets || job.computed_total_sheets <= 0) return { valid: false, error: `Stavka "${job.file_name}" nema izračunat broj tabaka.` };
+        const calculatedSheets = (job.obim || 1) * (job.qty || 0);
+        if ((!job.computed_total_sheets || job.computed_total_sheets <= 0) && calculatedSheets <= 0) return { valid: false, error: `Stavka "${job.file_name}" nema ispravno unet broj tabaka.` };
       }
     }
     if (order.order_type === 'ctp') {
