@@ -55,8 +55,6 @@ const prepareDigitalJobsForSave = (jobs: LocalDigitalJob[], prepHours = 0): Loca
       computed_nup: 1,
       computed_price_per_sheet: pricePerSheet,
       computed_line_total: job.is_test_print ? 0 : computed.totalSheets * pricePerSheet,
-      sheets_for_production: computed.totalSheets,
-      sheets_for_test: job.test_sheets || 0,
     };
   });
 };
