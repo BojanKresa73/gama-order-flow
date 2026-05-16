@@ -309,7 +309,7 @@ const NewWorkOrder = () => {
             print_sides: item.print_sides,
             paper_type: item.paper_type || "",
             machine_sheet_format: item.machine_sheet_format || "488x330",
-            pieces_count: item.pieces_count || null,
+            pieces_count: item.pieces_count || extractPiecesFromName(item.name || item.file_name || "") || null,
             test_sheets: item.test_sheets || 0,
             include_test_in_clicks: item.include_test_in_clicks || false,
             finishing: item.finishing || "",
