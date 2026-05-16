@@ -16,6 +16,48 @@ import { FilmJobsSummary } from "@/components/film/FilmJobsSummary";
 import { LocalDigitalJobsTable, LocalDigitalJob } from "@/components/digital/LocalDigitalJobsTable";
 import { useFilmSettings } from "@/hooks/useFilmSettings";
 import { AddCtpFilesModal } from "@/components/work-orders/AddCtpFilesModal";
+import { calculateGroupedPricing } from "@/lib/digitalGroupedPricing";
+import { calculateItemClicks } from "@/lib/digitalCalculations";
+
+const extractPiecesFromName = (name: string): number | null => {
+  const match = name.match(/(\d+)\s*kom\b/i);
+  return match ? parseInt(match[1], 10) : null;
+};
+
+const prepareDigitalJobsForSave = (jobs: LocalDigitalJob[], prepHours = 0): LocalDigitalJob[] => {
+  const pricing = calculateGroupedPricing(jobs.filter((job) => job.__status !== 'deleted'), prepHours);
+  const groupPriceMap = new Map<string, number>();
+
+  for (const group of pricing.groups) {
+    groupPriceMap.set(`${group.coverage}|${group.format}`, group.pricePerSheetBase * group.formatMultiplier);
+  }
+
+  return jobs.map((job) => {
+    const obim = Math.max(1, Number(job.obim) || 1);
+    const qty = Math.max(1, Number(job.qty) || 1);
+    const format = job.machine_sheet_format || "488x330";
+    const printSides = job.print_sides || "4/4";
+    const computed = calculateItemClicks(obim, qty, format, printSides);
+    const pricePerSheet = groupPriceMap.get(`${printSides}|${format}`) || 0;
+    const parsedPieces = extractPiecesFromName(job.name || job.file_name || "");
+
+    return {
+      ...job,
+      obim,
+      qty,
+      machine_sheet_format: format,
+      print_sides: printSides,
+      pieces_count: job.pieces_count || parsedPieces || null,
+      computed_total_sheets: computed.totalSheets,
+      computed_color_clicks: Math.round(computed.colorClicks),
+      computed_mono_clicks: Math.round(computed.monoClicks),
+      computed_sheets_per_copy: obim,
+      computed_nup: 1,
+      computed_price_per_sheet: pricePerSheet,
+      computed_line_total: job.is_test_print ? 0 : computed.totalSheets * pricePerSheet,
+    };
+  });
+};
 
 const NewWorkOrder = () => {
   const { id } = useParams<{ id: string }>();
@@ -265,6 +307,10 @@ const NewWorkOrder = () => {
             print_sides: item.print_sides,
             paper_type: item.paper_type || "",
             machine_sheet_format: item.machine_sheet_format || "488x330",
+            pieces_count: item.pieces_count || extractPiecesFromName(item.name || item.file_name || "") || null,
+            test_sheets: item.test_sheets || 0,
+            include_test_in_clicks: item.include_test_in_clicks || false,
+            finishing: item.finishing || "",
             is_test_print: item.is_test_print,
             computed_nup: item.computed_nup || undefined,
             computed_sheets_per_copy: item.computed_sheets_per_copy || undefined,
@@ -335,6 +381,10 @@ const NewWorkOrder = () => {
 
       // If in edit mode, call update edge function
       if (isEditMode && id) {
+        const digitalJobsForSave = orderType === "digital"
+          ? prepareDigitalJobsForSave(digitalJobs, formData.prep_hours)
+          : digitalJobs;
+
         // Prepare diff payload for update
         const itemsDiff: any = {};
         
@@ -347,9 +397,9 @@ const NewWorkOrder = () => {
           itemsDiff.updated = filmJobs.filter(it => it.id && it.__status === 'updated');
           itemsDiff.deleted = filmJobs.filter(it => it.id && it.__status === 'deleted').map(it => it.id);
         } else if (orderType === "digital") {
-          itemsDiff.created = digitalJobs.filter(it => !it.id && it.__status !== 'deleted');
-          itemsDiff.updated = digitalJobs.filter(it => it.id && it.__status === 'updated');
-          itemsDiff.deleted = digitalJobs.filter(it => it.id && it.__status === 'deleted').map(it => it.id);
+          itemsDiff.created = digitalJobsForSave.filter(it => !it.id && it.__status !== 'deleted');
+          itemsDiff.updated = digitalJobsForSave.filter(it => it.id && it.__status === 'updated');
+          itemsDiff.deleted = digitalJobsForSave.filter(it => it.id && it.__status === 'deleted').map(it => it.id);
         }
 
         const { data: updateResponse, error: updateError } = await supabase.functions.invoke(
@@ -567,7 +617,7 @@ const NewWorkOrder = () => {
 
       // Insert digital jobs for digital work orders
       if (orderType === "digital" && digitalJobs.length > 0) {
-        const digitalItems = digitalJobs
+        const digitalItems = prepareDigitalJobsForSave(digitalJobs, formData.prep_hours)
           .filter(job => job.file_name || job.name)
           .map((job, index) => ({
             work_order_id: workOrder.id,
@@ -582,6 +632,7 @@ const NewWorkOrder = () => {
             print_sides: job.print_sides || '4/4',
             paper_type: job.paper_type || null,
             machine_sheet_format: job.machine_sheet_format || '488x330',
+            pieces_count: job.pieces_count || null,
             test_sheets: job.test_sheets || 0,
             include_test_in_clicks: job.include_test_in_clicks || false,
             finishing: job.finishing || null,

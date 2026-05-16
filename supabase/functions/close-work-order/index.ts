@@ -38,6 +38,45 @@ type UiItem = {
   status?: string;
 };
 
+async function ensureDigitalComputations(sb: any, orderId: string): Promise<void> {
+  const { data: jobs, error: fetchError } = await sb
+    .from('digital_jobs')
+    .select('id, obim, qty, print_sides, machine_sheet_format')
+    .eq('work_order_id', orderId);
+
+  if (fetchError) {
+    throw new AppError('DIGITAL_COMPUTE_FAILED', `Greška pri učitavanju digitalnih stavki: ${fetchError.message}`);
+  }
+
+  for (const job of jobs || []) {
+    const obim = Math.max(1, Number(job.obim) || 1);
+    const qty = Math.max(1, Number(job.qty) || 1);
+    const totalSheets = obim * qty;
+    const multiplier = job.machine_sheet_format === '760x330' ? 1.5 : 1;
+    const printSides = job.print_sides || '4/4';
+    const colorSides = printSides === '4/4' ? 2 : (printSides === '4/0' || printSides === '4/1' ? 1 : 0);
+    const monoSides = printSides === '1/1' ? 2 : (printSides === '1/0' || printSides === '4/1' ? 1 : 0);
+
+    const { error: updateError } = await sb
+      .from('digital_jobs')
+      .update({
+        obim,
+        qty,
+        computed_nup: 1,
+        computed_sheets_per_copy: obim,
+        computed_total_sheets: totalSheets,
+        computed_color_clicks: Math.round(totalSheets * colorSides * multiplier),
+        computed_mono_clicks: Math.round(totalSheets * monoSides * multiplier),
+        updated_at: new Date().toISOString(),
+      })
+      .eq('id', job.id);
+
+    if (updateError) {
+      throw new AppError('DIGITAL_COMPUTE_FAILED', `Greška pri izračunavanju stavke: ${updateError.message}`);
+    }
+  }
+}
+
 async function getOrderItems(sb: any, orderId: string): Promise<UiItem[]> {
   // Get work order type
   const { data: order, error: orderError } = await sb
@@ -598,6 +637,10 @@ const handler = async (req: Request): Promise<Response> => {
     // Validate that order can be closed
     if (!workOrder.client_id) {
       throw new AppError('CLIENT_REQUIRED', 'Nalog nema klijenta');
+    }
+
+    if (workOrder.order_type === 'digital') {
+      await ensureDigitalComputations(supabase, work_order_id);
     }
     
     // Get items using unified helper
