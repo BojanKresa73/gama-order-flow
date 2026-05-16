@@ -67,7 +67,6 @@ async function ensureDigitalComputations(sb: any, orderId: string): Promise<void
         computed_total_sheets: totalSheets,
         computed_color_clicks: totalSheets * colorSides * multiplier,
         computed_mono_clicks: totalSheets * monoSides * multiplier,
-        sheets_for_production: totalSheets,
         updated_at: new Date().toISOString(),
       })
       .eq('id', job.id);
