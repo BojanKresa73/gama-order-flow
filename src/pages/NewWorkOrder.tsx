@@ -383,6 +383,10 @@ const NewWorkOrder = () => {
 
       // If in edit mode, call update edge function
       if (isEditMode && id) {
+        const digitalJobsForSave = orderType === "digital"
+          ? prepareDigitalJobsForSave(digitalJobs, formData.prep_hours)
+          : digitalJobs;
+
         // Prepare diff payload for update
         const itemsDiff: any = {};
         
@@ -395,9 +399,9 @@ const NewWorkOrder = () => {
           itemsDiff.updated = filmJobs.filter(it => it.id && it.__status === 'updated');
           itemsDiff.deleted = filmJobs.filter(it => it.id && it.__status === 'deleted').map(it => it.id);
         } else if (orderType === "digital") {
-          itemsDiff.created = digitalJobs.filter(it => !it.id && it.__status !== 'deleted');
-          itemsDiff.updated = digitalJobs.filter(it => it.id && it.__status === 'updated');
-          itemsDiff.deleted = digitalJobs.filter(it => it.id && it.__status === 'deleted').map(it => it.id);
+          itemsDiff.created = digitalJobsForSave.filter(it => !it.id && it.__status !== 'deleted');
+          itemsDiff.updated = digitalJobsForSave.filter(it => it.id && it.__status === 'updated');
+          itemsDiff.deleted = digitalJobsForSave.filter(it => it.id && it.__status === 'deleted').map(it => it.id);
         }
 
         const { data: updateResponse, error: updateError } = await supabase.functions.invoke(
@@ -615,7 +619,7 @@ const NewWorkOrder = () => {
 
       // Insert digital jobs for digital work orders
       if (orderType === "digital" && digitalJobs.length > 0) {
-        const digitalItems = digitalJobs
+        const digitalItems = prepareDigitalJobsForSave(digitalJobs, formData.prep_hours)
           .filter(job => job.file_name || job.name)
           .map((job, index) => ({
             work_order_id: workOrder.id,
@@ -630,6 +634,7 @@ const NewWorkOrder = () => {
             print_sides: job.print_sides || '4/4',
             paper_type: job.paper_type || null,
             machine_sheet_format: job.machine_sheet_format || '488x330',
+            pieces_count: job.pieces_count || null,
             test_sheets: job.test_sheets || 0,
             include_test_in_clicks: job.include_test_in_clicks || false,
             finishing: job.finishing || null,
