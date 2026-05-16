@@ -25,7 +25,7 @@ const extractPiecesFromName = (name: string): number | null => {
 };
 
 const prepareDigitalJobsForSave = (jobs: LocalDigitalJob[], prepHours = 0): LocalDigitalJob[] => {
-  const pricing = calculateGroupedPricing(jobs, prepHours);
+  const pricing = calculateGroupedPricing(jobs.filter((job) => job.__status !== 'deleted'), prepHours);
   const groupPriceMap = new Map<string, number>();
 
   for (const group of pricing.groups) {
