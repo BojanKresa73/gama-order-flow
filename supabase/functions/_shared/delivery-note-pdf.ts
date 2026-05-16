@@ -112,10 +112,16 @@ function getQuantityText(entry: any, orderKind: string, workOrder: any): string 
     if (workOrder.job_name && workOrder.run_quantity) {
       return String(workOrder.run_quantity);
     }
-    // Show pieces_count (actual finished pieces) when available, otherwise fall back to qty (tiraž)
+    // Priority: explicit pieces_count > parsed from filename (e.g. "vizitke 200 kom") > qty (tiraž tabaka)
     const pieces = Number(entry.pieces_count || 0);
     if (pieces > 0) {
       return `${pieces} kom`;
+    }
+    const nameForParse = String(entry.file_name || entry.filename || entry.name || '');
+    const parsedMatch = nameForParse.match(/(\d+)\s*kom\b/i);
+    if (parsedMatch) {
+      const parsed = parseInt(parsedMatch[1], 10);
+      if (parsed > 0) return `${parsed} kom`;
     }
     const qty = Number(entry.qty || entry.quantity || 1);
     return `${qty} kom`;
