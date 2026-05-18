@@ -817,8 +817,8 @@ const handler = async (req: Request): Promise<Response> => {
       format_name: item.details || '',
       quantity: item.qty,
       total_meters: item.unit === 'm' ? item.total : undefined,
-      total_sheets: item.unit === 'tab' ? item.total : undefined,
-      pages: item.unit === 'tab' ? undefined : undefined, // Pages info not in unified format yet
+      total_sheets: workOrder.order_type === 'digital' ? item.total : undefined,
+      pages: undefined,
       note: item.note
     }));
 
@@ -868,6 +868,8 @@ const handler = async (req: Request): Promise<Response> => {
       const fileEntriesForPdf = pdfItems.map(item => ({
         filename: item.filename,
         quantity: item.quantity,
+        pieces_count: workOrder.order_type === 'digital' ? item.quantity : undefined,
+        file_type: workOrder.order_type === 'digital' ? 'digital_sheet' : undefined,
         plate_formats: item.format_name ? { format_name: item.format_name } : null
       }));
       deliveryNotePdfBytes = await generateDeliveryNotePDF(workOrder, fileEntriesForPdf);
