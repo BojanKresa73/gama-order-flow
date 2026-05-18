@@ -109,9 +109,6 @@ function getQuantityText(entry: any, orderKind: string, workOrder: any): string 
     if (entry.file_type === 'digital_product') {
       return String(entry.quantity || workOrder.run_quantity || 1);
     }
-    if (workOrder.job_name && workOrder.run_quantity) {
-      return String(workOrder.run_quantity);
-    }
     // Priority: explicit pieces_count > parsed from filename (e.g. "vizitke 200 kom") > qty (tiraž tabaka)
     const pieces = Number(entry.pieces_count || 0);
     if (pieces > 0) {
