@@ -117,7 +117,7 @@ async function getOrderItems(sb: any, orderId: string): Promise<UiItem[]> {
   if (order.order_type === 'digital') {
     const { data, error } = await sb
       .from('digital_jobs')
-      .select('id, file_name, finished_w_mm, finished_h_mm, qty, pages, computed_total_sheets')
+      .select('id, file_name, name, finished_w_mm, finished_h_mm, qty, pages, computed_total_sheets, pieces_count, print_sides, machine_sheet_format')
       .eq('work_order_id', orderId)
       .order('order_index');
 
@@ -126,14 +126,21 @@ async function getOrderItems(sb: any, orderId: string): Promise<UiItem[]> {
       return [];
     }
 
-    return (data || []).map((item: any) => ({
-      id: item.id,
-      label: item.file_name || 'Bez naziva',
-      qty: item.qty,
-      unit: 'tab',
-      total: item.computed_total_sheets || 0,
-      details: `${item.finished_w_mm}×${item.finished_h_mm} mm, ${item.pages} str`,
-    }));
+    return (data || []).map((item: any) => {
+      const nameForParse = String(item.name || item.file_name || '');
+      const parsedPieces = nameForParse.match(/(\d+)\s*kom\b/i)?.[1];
+      const pieces = Number(item.pieces_count || parsedPieces || item.qty || 1);
+
+      return {
+        id: item.id,
+        label: item.file_name || item.name || 'Bez naziva',
+        qty: pieces,
+        unit: 'kom',
+        total: item.computed_total_sheets || 0,
+        details: item.machine_sheet_format || `${item.finished_w_mm}×${item.finished_h_mm} mm, ${item.pages} str`,
+        note: item.print_sides || undefined,
+      };
+    });
   }
 
   if (order.order_type === 'ctp') {
@@ -810,8 +817,8 @@ const handler = async (req: Request): Promise<Response> => {
       format_name: item.details || '',
       quantity: item.qty,
       total_meters: item.unit === 'm' ? item.total : undefined,
-      total_sheets: item.unit === 'tab' ? item.total : undefined,
-      pages: item.unit === 'tab' ? undefined : undefined, // Pages info not in unified format yet
+      total_sheets: workOrder.order_type === 'digital' ? item.total : undefined,
+      pages: undefined,
       note: item.note
     }));
 
@@ -861,6 +868,8 @@ const handler = async (req: Request): Promise<Response> => {
       const fileEntriesForPdf = pdfItems.map(item => ({
         filename: item.filename,
         quantity: item.quantity,
+        pieces_count: workOrder.order_type === 'digital' ? item.quantity : undefined,
+        file_type: workOrder.order_type === 'digital' ? 'digital_sheet' : undefined,
         plate_formats: item.format_name ? { format_name: item.format_name } : null
       }));
       deliveryNotePdfBytes = await generateDeliveryNotePDF(workOrder, fileEntriesForPdf);
