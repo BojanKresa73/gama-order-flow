@@ -117,7 +117,7 @@ async function getOrderItems(sb: any, orderId: string): Promise<UiItem[]> {
   if (order.order_type === 'digital') {
     const { data, error } = await sb
       .from('digital_jobs')
-      .select('id, file_name, finished_w_mm, finished_h_mm, qty, pages, computed_total_sheets')
+      .select('id, file_name, name, finished_w_mm, finished_h_mm, qty, pages, computed_total_sheets, pieces_count, print_sides, machine_sheet_format')
       .eq('work_order_id', orderId)
       .order('order_index');
 
@@ -126,14 +126,21 @@ async function getOrderItems(sb: any, orderId: string): Promise<UiItem[]> {
       return [];
     }
 
-    return (data || []).map((item: any) => ({
-      id: item.id,
-      label: item.file_name || 'Bez naziva',
-      qty: item.qty,
-      unit: 'tab',
-      total: item.computed_total_sheets || 0,
-      details: `${item.finished_w_mm}×${item.finished_h_mm} mm, ${item.pages} str`,
-    }));
+    return (data || []).map((item: any) => {
+      const nameForParse = String(item.name || item.file_name || '');
+      const parsedPieces = nameForParse.match(/(\d+)\s*kom\b/i)?.[1];
+      const pieces = Number(item.pieces_count || parsedPieces || item.qty || 1);
+
+      return {
+        id: item.id,
+        label: item.file_name || item.name || 'Bez naziva',
+        qty: pieces,
+        unit: 'kom',
+        total: item.computed_total_sheets || 0,
+        details: item.machine_sheet_format || `${item.finished_w_mm}×${item.finished_h_mm} mm, ${item.pages} str`,
+        note: item.print_sides || undefined,
+      };
+    });
   }
 
   if (order.order_type === 'ctp') {
