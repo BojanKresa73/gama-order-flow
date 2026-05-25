@@ -226,7 +226,7 @@ Deno.serve(async (req) => {
 
     await sendMail({
       to: recipientEmail,
-      subject: `[PREGLED] Najava korekcije cena CTP ploča — ${target.name}`,
+      subject: `[PREGLED v${Date.now().toString().slice(-6)}] Najava korekcije cena CTP ploča — ${target.name}`,
       html,
     });
 
