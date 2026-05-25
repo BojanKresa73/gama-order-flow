@@ -614,7 +614,7 @@ export const CtpPriceIncreaseAnalysis = () => {
                 ))}
                 {/* Total row */}
                 <TableRow className="bg-muted/50 font-bold border-t-2">
-                  <TableCell colSpan={2} className="font-bold">UKUPNO</TableCell>
+                  <TableCell colSpan={3} className="font-bold">UKUPNO</TableCell>
                   <TableCell className="text-right font-bold">
                     {clientData.reduce((s, c) => s + c.totalPlates, 0).toLocaleString("sr-RS")}
                   </TableCell>
