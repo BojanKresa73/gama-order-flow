@@ -22,41 +22,44 @@ Deno.serve(async (req) => {
       Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!,
     );
 
-    // Fetch CTP file entries with client + plate prices info
-    const { data: entries, error } = await sb
-      .from("file_entries")
-      .select(`
-        quantity,
-        work_order:work_orders!inner(id, client_id, order_type, deleted_at, invalidated_at),
-        client:work_orders!inner(client:clients!inner(id, name, email))
-      `)
-      .eq("file_type", "CTP")
-      .range(0, 49999);
+    // Fetch all CTP file entries (paginate to bypass 1000-row limit)
+    const allEntries: any[] = [];
+    let from = 0;
+    const pageSize = 1000;
+    while (true) {
+      const { data, error } = await sb
+        .from("file_entries")
+        .select(`
+          quantity,
+          work_order:work_orders!inner(id, client_id, order_type, deleted_at, invalidated_at)
+        `)
+        .eq("file_type", "CTP")
+        .range(from, from + pageSize - 1);
+      if (error) throw error;
+      if (!data || data.length === 0) break;
+      allEntries.push(...data);
+      if (data.length < pageSize) break;
+      from += pageSize;
+    }
 
-    if (error) throw error;
-
-    // Get clients with prices
-    const { data: pricedRows } = await sb
-      .from("client_plate_prices")
-      .select("client_id");
+    const { data: pricedRows } = await sb.from("client_plate_prices").select("client_id");
     const pricedSet = new Set((pricedRows || []).map((r: any) => r.client_id));
 
-    // Get all clients
     const { data: clients } = await sb.from("clients").select("id, name, email");
     const clientMap = new Map((clients || []).map((c: any) => [c.id, c]));
 
-    // Aggregate
     const agg = new Map<string, { plates: number; orders: Set<string> }>();
-    for (const e of entries || []) {
-      const wo: any = (e as any).work_order;
+    for (const e of allEntries) {
+      const wo: any = e.work_order;
       if (!wo || wo.deleted_at || wo.invalidated_at || wo.order_type !== "ctp") continue;
       const cid = wo.client_id;
-      if (pricedSet.has(cid)) continue;
+      if (!cid || pricedSet.has(cid)) continue;
       if (!agg.has(cid)) agg.set(cid, { plates: 0, orders: new Set() });
       const a = agg.get(cid)!;
-      a.plates += (e as any).quantity || 0;
+      a.plates += e.quantity || 0;
       a.orders.add(wo.id);
     }
+
 
     const rows = [...agg.entries()]
       .map(([cid, v]) => {
