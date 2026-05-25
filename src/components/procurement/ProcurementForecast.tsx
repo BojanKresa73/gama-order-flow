@@ -106,7 +106,13 @@ export function ProcurementForecast({ plateFormats, orders }: ProcurementForecas
       });
     }
 
-    return plateFormats.map((format) => {
+    const EXCLUDED_FORMATS = ["730x605", "740x605", "510x400", "450x370"];
+    const isExcluded = (name: string) => {
+      const normalized = (name || "").toLowerCase().replace(/×/g, "x").replace(/\s/g, "");
+      return EXCLUDED_FORMATS.includes(normalized);
+    };
+
+    return plateFormats.filter((f) => !isExcluded(f.format_name)).map((format) => {
       // Get monthly data for this format
       const monthlyStats = monthlyStatsByFormat.get(format.id);
       
