@@ -59,23 +59,7 @@ export const CtpPriceIncreaseAnalysis = () => {
   const { data: consumptionData, isLoading: loadingConsumption } = useQuery({
     queryKey: ["price-increase-consumption"],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from("file_entries")
-        .select(`
-          quantity,
-          plate_format_id,
-          work_order:work_orders!inner (
-            client_id,
-            order_type,
-            status,
-            deleted_at,
-            invalidated_at
-          )
-        `)
-        .eq("file_type", "CTP")
-        .range(0, 49999);
-      if (error) throw error;
-      return data as Array<{
+      type Row = {
         quantity: number | null;
         plate_format_id: string | null;
         work_order: {
@@ -85,7 +69,34 @@ export const CtpPriceIncreaseAnalysis = () => {
           deleted_at: string | null;
           invalidated_at: string | null;
         };
-      }>;
+      };
+      const PAGE = 1000;
+      let from = 0;
+      const all: Row[] = [];
+      // Supabase max-rows cap is 1000 — paginate manually
+      while (true) {
+        const { data, error } = await supabase
+          .from("file_entries")
+          .select(`
+            quantity,
+            plate_format_id,
+            work_order:work_orders!inner (
+              client_id,
+              order_type,
+              status,
+              deleted_at,
+              invalidated_at
+            )
+          `)
+          .eq("file_type", "CTP")
+          .range(from, from + PAGE - 1);
+        if (error) throw error;
+        const batch = (data ?? []) as unknown as Row[];
+        all.push(...batch);
+        if (batch.length < PAGE) break;
+        from += PAGE;
+      }
+      return all;
     },
     staleTime: 60000,
   });
