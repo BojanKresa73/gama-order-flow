@@ -11,7 +11,13 @@ import SearchAndStats from "@/components/checklist/SearchAndStats";
 
 const Checklist = () => {
   const [loading, setLoading] = useState(true);
-  const [activeTab, setActiveTab] = useState("ctp");
+  const [activeTab, setActiveTab] = useState<string>(() => {
+    try { return sessionStorage.getItem("checklist:activeTab") || "ctp"; } catch { return "ctp"; }
+  });
+
+  useEffect(() => {
+    try { sessionStorage.setItem("checklist:activeTab", activeTab); } catch {}
+  }, [activeTab]);
   const navigate = useNavigate();
 
   useEffect(() => {

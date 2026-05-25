@@ -53,18 +53,43 @@ const SearchAndStats = () => {
   const [workOrders, setWorkOrders] = useState<WorkOrder[]>([]);
   const [workers, setWorkers] = useState<Worker[]>([]);
   const [loading, setLoading] = useState(true);
-  const [activeTab, setActiveTab] = useState("ctp");
+  const [activeTab, setActiveTab] = useState<string>(() => {
+    try { return sessionStorage.getItem("searchAndStats:activeTab") || "ctp"; } catch { return "ctp"; }
+  });
 
-  // Filter states
-  const [searchTerm, setSearchTerm] = useState("");
-  const [selectedClient, setSelectedClient] = useState("all");
-  const [selectedFormat, setSelectedFormat] = useState("all");
-  const [selectedStatus, setSelectedStatus] = useState("all");
-  const [selectedInvoiceStatus, setSelectedInvoiceStatus] = useState("all");
-  const [selectedCreatedBy, setSelectedCreatedBy] = useState("all");
-  const [selectedClosedBy, setSelectedClosedBy] = useState("all");
-  const [dateFrom, setDateFrom] = useState("");
-  const [dateTo, setDateTo] = useState("");
+  // Filter states – persisted in sessionStorage so they survive navigation back from order details
+  const SS_KEY = "searchAndStats:filters";
+  const initialFilters = (() => {
+    try {
+      const raw = sessionStorage.getItem(SS_KEY);
+      if (raw) return JSON.parse(raw);
+    } catch {}
+    return {} as Record<string, string>;
+  })();
+
+  const [searchTerm, setSearchTerm] = useState(initialFilters.searchTerm || "");
+  const [selectedClient, setSelectedClient] = useState(initialFilters.selectedClient || "all");
+  const [selectedFormat, setSelectedFormat] = useState(initialFilters.selectedFormat || "all");
+  const [selectedStatus, setSelectedStatus] = useState(initialFilters.selectedStatus || "all");
+  const [selectedInvoiceStatus, setSelectedInvoiceStatus] = useState(initialFilters.selectedInvoiceStatus || "all");
+  const [selectedCreatedBy, setSelectedCreatedBy] = useState(initialFilters.selectedCreatedBy || "all");
+  const [selectedClosedBy, setSelectedClosedBy] = useState(initialFilters.selectedClosedBy || "all");
+  const [dateFrom, setDateFrom] = useState(initialFilters.dateFrom || "");
+  const [dateTo, setDateTo] = useState(initialFilters.dateTo || "");
+
+  // Persist tab + filters
+  useEffect(() => {
+    try { sessionStorage.setItem("searchAndStats:activeTab", activeTab); } catch {}
+  }, [activeTab]);
+
+  useEffect(() => {
+    try {
+      sessionStorage.setItem(SS_KEY, JSON.stringify({
+        searchTerm, selectedClient, selectedFormat, selectedStatus,
+        selectedInvoiceStatus, selectedCreatedBy, selectedClosedBy, dateFrom, dateTo,
+      }));
+    } catch {}
+  }, [searchTerm, selectedClient, selectedFormat, selectedStatus, selectedInvoiceStatus, selectedCreatedBy, selectedClosedBy, dateFrom, dateTo]);
 
   useEffect(() => {
     fetchAllWorkOrders();
