@@ -139,81 +139,83 @@ Deno.serve(async (req) => {
     const html = `<!DOCTYPE html>
 <html lang="sr">
 <head><meta charset="utf-8"><title>Najava korekcije cena CTP ploča</title></head>
-<body style="margin:0;padding:0;background:#f4f4f5;font-family:Arial,Helvetica,sans-serif;color:#1f2937;">
-  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#f4f4f5;padding:24px 0;">
+<body style="margin:0;padding:0;background:#eef4fb;font-family:'Segoe UI',Tahoma,Geneva,Verdana,sans-serif;color:#1f2937;-webkit-font-smoothing:antialiased;">
+  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#eef4fb;padding:32px 16px;">
     <tr><td align="center">
-      <table role="presentation" width="640" cellpadding="0" cellspacing="0" style="background:#ffffff;border-radius:12px;overflow:hidden;box-shadow:0 2px 8px rgba(0,0,0,0.06);">
+      <table role="presentation" width="640" cellpadding="0" cellspacing="0" style="background:#ffffff;border-radius:16px;overflow:hidden;box-shadow:0 10px 40px rgba(30,64,124,0.12);max-width:640px;">
         <tr>
-          <td style="background:#111827;padding:28px 32px;color:#ffffff;">
-            <div style="font-size:13px;letter-spacing:2px;text-transform:uppercase;color:#9ca3af;margin-bottom:6px;">Gama United</div>
-            <div style="font-size:22px;font-weight:700;">Najava korekcije cena CTP ploča</div>
-            <div style="font-size:14px;color:#d1d5db;margin-top:6px;">Primena od ${EFFECTIVE_DATE}</div>
+          <td align="center" style="background:linear-gradient(135deg,#1e40af 0%,#2563eb 50%,#3b82f6 100%);padding:40px 32px 32px;">
+            <img src="https://ytophmlfbrnhmqtwpijn.supabase.co/storage/v1/object/public/newsletter-assets/gama-united-white.png" alt="Gama United" style="height:58px;display:inline-block;margin-bottom:18px;" />
+            <div style="font-size:22px;font-weight:700;color:#ffffff;letter-spacing:-0.3px;">Najava korekcije cena CTP ploča</div>
+            <div style="font-size:14px;color:rgba(255,255,255,0.85);margin-top:8px;letter-spacing:1px;text-transform:uppercase;">Primena od ${EFFECTIVE_DATE}</div>
           </td>
         </tr>
-        <tr><td style="padding:32px;">
-          <p style="margin:0 0 16px;font-size:15px;line-height:1.6;">Poštovani partneri iz <strong>${target.name}</strong>,</p>
+        <tr><td style="padding:36px 40px 32px;">
+          <p style="margin:0 0 16px;font-size:15px;line-height:1.65;">Poštovani partneri iz <strong>${target.name}</strong>,</p>
 
-          <p style="margin:0 0 16px;font-size:15px;line-height:1.6;">
+          <p style="margin:0 0 16px;font-size:15px;line-height:1.65;">
             Pre svega, želimo da Vam se iskreno zahvalimo na dugogodišnjoj saradnji i poverenju koje nam ukazujete.
             Vaša podrška je razlog zašto kontinuirano ulažemo u nove mašine, tehnologiju, edukaciju ljudi i digitalizaciju
             procesa — sve sa ciljem da Vam pružimo bržu, precizniju i pouzdaniju uslugu. Posebno cenimo što naše napore u
             unapređenju primećujete i podržavate.
           </p>
 
-          <p style="margin:0 0 16px;font-size:15px;line-height:1.6;">
+          <p style="margin:0 0 16px;font-size:15px;line-height:1.65;">
             Nažalost, u periodu <strong>od februara do maja 2026.</strong> primili smo <strong>tri uzastopna povećanja
             nabavnih cena CTP ploča</strong> od strane naših dobavljača, kao posledica geopolitičkih okolnosti, rasta cena
             sirovina i poremećaja u lancima snabdevanja. Do sada smo te troškove apsorbovali u potpunosti, ne želeći da
             opteretimo naše klijente — međutim, dalje održavanje postojećih cena više nije ekonomski održivo.
           </p>
 
-          <p style="margin:0 0 20px;font-size:15px;line-height:1.6;">
+          <p style="margin:0 0 20px;font-size:15px;line-height:1.65;">
             Iz tog razloga, sa žaljenjem Vas obaveštavamo da od <strong>${EFFECTIVE_DATE}</strong> godine
             <strong>korigujemo cene CTP ploča u proseku za ${fmt(avgIncreasePct, 1)}%</strong> za Vašu kompaniju.
             Procenat je izračunat na osnovu Vaše stvarne potrošnje i predstavlja minimum potreban da održimo kvalitet
             usluge i kontinuitet isporuke koji ste navikli.
           </p>
 
-          <div style="background:#fff7ed;border-left:4px solid #f59e0b;padding:16px 20px;border-radius:6px;margin:0 0 24px;">
-            <div style="font-size:13px;color:#92400e;text-transform:uppercase;letter-spacing:1px;margin-bottom:4px;">Prosečno povećanje za Vašu kompaniju</div>
-            <div style="font-size:32px;font-weight:700;color:#b45309;">+${fmt(avgIncreasePct, 1)}%</div>
-            <div style="font-size:13px;color:#78350f;margin-top:4px;">na osnovu ${fmt(totalPlates, 0)} ploča iz Vaše istorije porudžbina</div>
+          <div style="background:linear-gradient(135deg,#dbeafe 0%,#eff6ff 100%);border-left:4px solid #2563eb;padding:18px 22px;border-radius:8px;margin:0 0 28px;">
+            <div style="font-size:12px;color:#1e40af;text-transform:uppercase;letter-spacing:1.5px;margin-bottom:6px;font-weight:600;">Prosečno povećanje za Vašu kompaniju</div>
+            <div style="font-size:32px;font-weight:700;color:#1e3a8a;">+${fmt(avgIncreasePct, 1)}%</div>
+            <div style="font-size:13px;color:#1e40af;margin-top:4px;">na osnovu ${fmt(totalPlates, 0)} ploča iz Vaše istorije porudžbina</div>
           </div>
 
-          <h3 style="font-size:16px;margin:0 0 12px;color:#111827;">Pregled novih cena po formatima</h3>
+          <h3 style="font-size:16px;margin:0 0 12px;color:#1e3a8a;">Pregled novih cena po formatima</h3>
           <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="border-collapse:collapse;font-size:14px;margin-bottom:24px;">
             <thead>
-              <tr style="background:#f9fafb;">
-                <th style="padding:10px 12px;text-align:left;border-bottom:2px solid #e5e7eb;font-weight:600;">Format</th>
-                <th style="padding:10px 12px;text-align:right;border-bottom:2px solid #e5e7eb;font-weight:600;">Stara cena</th>
-                <th style="padding:10px 12px;text-align:right;border-bottom:2px solid #e5e7eb;font-weight:600;">Nova cena</th>
-                <th style="padding:10px 12px;text-align:right;border-bottom:2px solid #e5e7eb;font-weight:600;">Rast</th>
+              <tr style="background:#eff6ff;">
+                <th style="padding:11px 12px;text-align:left;border-bottom:2px solid #bfdbfe;font-weight:600;color:#1e40af;">Format</th>
+                <th style="padding:11px 12px;text-align:right;border-bottom:2px solid #bfdbfe;font-weight:600;color:#1e40af;">Stara cena</th>
+                <th style="padding:11px 12px;text-align:right;border-bottom:2px solid #bfdbfe;font-weight:600;color:#1e40af;">Nova cena</th>
+                <th style="padding:11px 12px;text-align:right;border-bottom:2px solid #bfdbfe;font-weight:600;color:#1e40af;">Rast</th>
               </tr>
             </thead>
             <tbody>${formatRowsHtml}</tbody>
           </table>
 
-          <p style="margin:0 0 16px;font-size:15px;line-height:1.6;">
-            Želimo da naglasimo da je naš pristup raspodele korekcije <strong>fer i transparentan</strong> —
-            klijenti sa većim obimom porudžbina imaju manji procentualni rast, dok je za manje porudžbine rast
-            nešto veći, što odražava realnu strukturu troškova.
-          </p>
-
-          <p style="margin:0 0 16px;font-size:15px;line-height:1.6;">
+          <p style="margin:0 0 16px;font-size:15px;line-height:1.65;">
             I dalje ostajemo posvećeni da Vam pružimo najbolji odnos kvaliteta, brzine i cene na tržištu.
             Verujemo da ćete imati razumevanja za ovu neophodnu korekciju i nadamo se nastavku uspešne saradnje.
           </p>
 
-          <p style="margin:0 0 8px;font-size:15px;line-height:1.6;">
+          <p style="margin:0 0 8px;font-size:15px;line-height:1.65;">
             Ukoliko imate bilo kakvih pitanja ili želite detaljniji pregled cena, stojimo Vam na raspolaganju.
           </p>
 
-          <p style="margin:24px 0 0;font-size:15px;line-height:1.6;">
-            Srdačan pozdrav,<br>
-            <strong>Gama United</strong>
-          </p>
+          <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin-top:28px;border-top:1px solid #dbeafe;padding-top:20px;">
+            <tr><td style="font-size:14px;line-height:1.6;color:#1f2937;">
+              Srdačan pozdrav,<br>
+              <strong style="color:#1e3a8a;font-size:15px;">Bojan Kresović</strong><br>
+              <span style="color:#475569;">Direktor, Gama United d.o.o.</span><br>
+              <span style="color:#475569;">📞 063 237 226</span><br>
+              <span style="color:#475569;">✉ <a href="mailto:bojan.kresovic@gmail.com" style="color:#2563eb;text-decoration:none;">bojan.kresovic@gmail.com</a></span>
+            </td></tr>
+            <tr><td style="padding-top:14px;font-size:13px;color:#64748b;line-height:1.6;">
+              <strong style="color:#1e40af;">Računovodstvo:</strong> <a href="mailto:natalija.kresovic@gamaunited.rs" style="color:#2563eb;text-decoration:none;">natalija.kresovic@gamaunited.rs</a>
+            </td></tr>
+          </table>
         </td></tr>
-        <tr><td style="background:#f9fafb;padding:20px 32px;font-size:12px;color:#6b7280;text-align:center;border-top:1px solid #e5e7eb;">
+        <tr><td style="background:#f1f5f9;padding:20px 32px;font-size:12px;color:#64748b;text-align:center;border-top:1px solid #e2e8f0;">
           Gama United d.o.o. · Otona Župančiča · Beograd<br>
           Ova najava se odnosi isključivo na CTP ploče. Cene ostalih usluga ostaju nepromenjene.
         </td></tr>
