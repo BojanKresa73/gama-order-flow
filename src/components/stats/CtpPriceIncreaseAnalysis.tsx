@@ -510,6 +510,7 @@ export const CtpPriceIncreaseAnalysis = () => {
               <TableHeader>
                 <TableRow>
                   <TableHead className="w-8">#</TableHead>
+                  <TableHead className="w-12 text-center" title="Izuzmi iz povećanja (npr. ugovor)">Izuzet</TableHead>
                   <TableHead>Klijent</TableHead>
                   <TableHead className="text-right">Ploča ukupno</TableHead>
                   <TableHead className="text-right">m²</TableHead>
