@@ -197,7 +197,23 @@ export const CtpPriceIncreaseAnalysis = () => {
     if (sortedClients.length === 0) return null;
 
     const maxM2 = sortedClients[0][1];
-    const costDeltaPerM2 = NEW_COST - OLD_COST; // 0.30 €/m²
+    const baseCostDelta = NEW_COST - OLD_COST; // 0.30 €/m²
+
+    // Only clients with at least one configured price can absorb the redistribution
+    const payingClients = sortedClients.filter(([cid]) => {
+      if (excludedClients.has(cid)) return false;
+      const fmts = clientFormatPlates[cid] || {};
+      return Object.keys(fmts).some(fid => {
+        const p = priceMap.get(`${cid}-${fid}`);
+        return p && Number(p.price_eur) > 0;
+      });
+    });
+    const totalAllM2 = sortedClients.reduce((s, [, m2]) => s + m2, 0);
+    const totalPayingM2 = payingClients.reduce((s, [, m2]) => s + m2, 0);
+    // Effective surcharge per m² for non-excluded clients (covers excluded clients' share too)
+    const effectiveCostDelta = totalPayingM2 > 0
+      ? baseCostDelta * (totalAllM2 / totalPayingM2)
+      : baseCostDelta;
 
     // Calculate per-client analysis
     const clientAnalyses: ClientAnalysis[] = [];
@@ -206,16 +222,14 @@ export const CtpPriceIncreaseAnalysis = () => {
       const client = clientMap.get(clientId);
       if (!client) continue;
 
+      const isExcluded = excludedClients.has(clientId);
+
       // Volume ratio: 1.0 for highest, approaches 0 for lowest
       const volumeRatio = totalM2 / maxM2;
-      
-      // Spread factor for distributing the cost increase
-      // High volume → lower multiplier, low volume → higher multiplier
       const rawFactor = 1 + spreadFactor * (1 - volumeRatio);
       const normFactor = 1 + spreadFactor * 0.5;
-      const clientMultiplier = rawFactor / normFactor;
+      const clientMultiplier = isExcluded ? 0 : rawFactor / normFactor;
 
-      // Determine tier
       const tier: "high" | "medium" | "low" = volumeRatio > 0.3 ? "high" : volumeRatio > 0.05 ? "medium" : "low";
 
       const formatEntries = clientFormatPlates[clientId] || {};
@@ -229,19 +243,19 @@ export const CtpPriceIncreaseAnalysis = () => {
       for (const [formatId, qty] of Object.entries(formatEntries)) {
         totalPlates += qty;
         const fname = formatMap.get(formatId) || "?";
-        const area = formatArea(fname); // m² per plate
+        const area = formatArea(fname);
         const price = priceMap.get(`${clientId}-${formatId}`);
         const currentPriceEur = price ? Number(price.price_eur) : 0;
         const currentPriceMono = price?.price_eur_mono ? Number(price.price_eur_mono) : null;
-        
+
         const entryRevenue = qty * currentPriceEur;
         const entryCost = qty * area * OLD_COST;
         currentRevenue += entryRevenue;
         currentCost += entryCost;
 
-        // Only increase by the MATERIAL cost delta per plate, weighted by spread
-        // materialDelta = area × 0.30 €/m² × clientMultiplier
-        const materialDeltaPerPlate = area * costDeltaPerM2 * clientMultiplier;
+        // For excluded clients: clientMultiplier = 0 → no increase.
+        // For others: use effectiveCostDelta to cover excluded clients' uncovered cost.
+        const materialDeltaPerPlate = area * effectiveCostDelta * clientMultiplier;
 
         const proposedPrice = currentPriceEur > 0 
           ? Math.round((currentPriceEur + materialDeltaPerPlate) * 100) / 100 
