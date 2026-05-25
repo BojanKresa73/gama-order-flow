@@ -54,7 +54,17 @@ interface ClientAnalysis {
 }
 
 export const CtpPriceIncreaseAnalysis = () => {
-  const [spreadFactor, setSpreadFactor] = useState(2.0); // How much to spread the increase (1 = even, higher = more spread)
+  const [spreadFactor, setSpreadFactor] = useState(2.0);
+  const [excludedClients, setExcludedClients] = useState<Set<string>>(new Set());
+
+  const toggleExcluded = (clientId: string) => {
+    setExcludedClients(prev => {
+      const next = new Set(prev);
+      if (next.has(clientId)) next.delete(clientId);
+      else next.add(clientId);
+      return next;
+    });
+  };
 
   // Fetch all-time file_entries for CTP orders
   const { data: consumptionData, isLoading: loadingConsumption } = useQuery({
