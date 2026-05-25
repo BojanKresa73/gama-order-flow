@@ -11,6 +11,7 @@ import { Label } from "@/components/ui/label";
 import { Slider } from "@/components/ui/slider";
 import { TrendingUp, Calculator, Info, ArrowUpRight, ArrowDownRight } from "lucide-react";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import { Checkbox } from "@/components/ui/checkbox";
 
 const OLD_COST = 2.4;
 const NEW_COST = 2.8;
