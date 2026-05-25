@@ -593,7 +593,7 @@ export const CtpPriceIncreaseAnalysis = () => {
                 </TableRow>
               </TableBody>
             </Table>
-          </ScrollArea>
+          </div>
         </CardContent>
       </Card>
     </div>
