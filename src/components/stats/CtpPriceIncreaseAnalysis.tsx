@@ -533,7 +533,18 @@ export const CtpPriceIncreaseAnalysis = () => {
                       onClick={() => setExpandedClient(expandedClient === client.clientId ? null : client.clientId)}
                     >
                       <TableCell>{idx + 1}</TableCell>
-                      <TableCell className="font-medium">{client.clientName}</TableCell>
+                      <TableCell className="text-center" onClick={(e) => e.stopPropagation()}>
+                        <Checkbox
+                          checked={excludedClients.has(client.clientId)}
+                          onCheckedChange={() => toggleExcluded(client.clientId)}
+                        />
+                      </TableCell>
+                      <TableCell className="font-medium">
+                        {client.clientName}
+                        {excludedClients.has(client.clientId) && (
+                          <Badge variant="outline" className="ml-2 border-amber-500 text-amber-700 dark:text-amber-400">Ugovor — bez rasta</Badge>
+                        )}
+                      </TableCell>
                       <TableCell className="text-right">{client.totalPlates.toLocaleString("sr-RS")}</TableCell>
                       <TableCell className="text-right">{fmt(client.totalM2, 1)}</TableCell>
                       <TableCell className="text-right">{client.totalPlates > 0 ? fmt(client.currentRevenue / client.totalPlates) : "—"}</TableCell>
