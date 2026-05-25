@@ -469,7 +469,7 @@ export const CtpPriceIncreaseAnalysis = () => {
           <CardDescription>Kliknite na klijenta za pregled cena po formatima</CardDescription>
         </CardHeader>
         <CardContent>
-          <ScrollArea className="h-[600px]">
+          <div className="w-full">
             <Table>
               <TableHeader>
                 <TableRow>
