@@ -122,11 +122,29 @@ export function getCoverageSides(printSides: string): { colorSides: number; mono
   }
 }
 
-// Get price per sheet from pricing table based on total sheets and coverage
+// Progressive (cumulative) pricing: each tier price applies only to sheets within that tier's range.
+// Example for 200 sheets 4/0: 10*1.00 + 10*0.85 + 30*0.77 + 50*0.68 + 100*0.47 = 122.60
+export function calculateProgressivePrice(totalSheets: number, coverage: string): number {
+  if (totalSheets <= 0) return 0;
+  let remaining = totalSheets;
+  let prevMax = 0;
+  let total = 0;
+  for (const tier of PRICE_TABLE) {
+    const tierCapacity = tier.maxQty === Infinity ? remaining : tier.maxQty - prevMax;
+    const sheetsInTier = Math.min(remaining, tierCapacity);
+    const price = tier.prices[coverage as keyof typeof tier.prices] || 0;
+    total += sheetsInTier * price;
+    remaining -= sheetsInTier;
+    prevMax = tier.maxQty;
+    if (remaining <= 0) break;
+  }
+  return total;
+}
+
+// Get effective (average) price per sheet for display purposes
 export function getPricePerSheet(totalSheets: number, coverage: string): number {
-  const tier = PRICE_TABLE.find(t => totalSheets >= t.minQty && totalSheets <= t.maxQty);
-  if (!tier) return 0;
-  return tier.prices[coverage as keyof typeof tier.prices] || 0;
+  if (totalSheets <= 0) return 0;
+  return calculateProgressivePrice(totalSheets, coverage) / totalSheets;
 }
 
 // Calculate total sheets for an item
@@ -152,8 +170,8 @@ export function calculateItemClicks(
   };
 }
 
-// Calculate price for a single item using total sheets for pricing bracket
-// Price is per sheet, with 1.5x multiplier for 760x330 format
+// Calculate price for a single item using progressive tier pricing
+// 1.5x multiplier applied for 760x330 format
 export function calculateItemPrice(
   obim: number,
   qty: number,
@@ -162,8 +180,7 @@ export function calculateItemPrice(
 ): number {
   const totalSheets = calculateTotalSheets(obim, qty);
   const formatMultiplier = format === "760x330" ? 1.5 : 1.0;
-  const pricePerSheet = getPricePerSheet(totalSheets, printSides);
-  return totalSheets * pricePerSheet * formatMultiplier;
+  return calculateProgressivePrice(totalSheets, printSides) * formatMultiplier;
 }
 
 // Legacy function for backward compatibility
