@@ -580,7 +580,7 @@ export const CtpPriceIncreaseAnalysis = () => {
                     {/* Expanded format details */}
                     {expandedClient === client.clientId && client.formats.length > 0 && (
                       <TableRow key={`${client.clientId}-detail`}>
-                        <TableCell colSpan={12} className="bg-muted/30 p-4">
+                        <TableCell colSpan={13} className="bg-muted/30 p-4">
                           <Table>
                             <TableHeader>
                               <TableRow>
