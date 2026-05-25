@@ -13,7 +13,7 @@ import { TrendingUp, Calculator, Info, ArrowUpRight, ArrowDownRight } from "luci
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 
 const OLD_COST = 2.4;
-const NEW_COST = 2.7;
+const NEW_COST = 2.8;
 
 // Map format name → area in m²
 function formatArea(formatName: string): number {
