@@ -101,8 +101,7 @@ Deno.serve(async (req) => {
       </div>
     `;
 
-    const config = getEmailConfig();
-    await sendEmail(config, {
+    await sendMail({
       to: [recipient],
       subject: "CTP klijenti bez definisanih cena ploča",
       html,
