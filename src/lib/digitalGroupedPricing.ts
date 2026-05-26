@@ -193,21 +193,27 @@ export function calculateGroupedPricing(jobs: DigitalJobItem[], prepHours: numbe
   let totalSheets = 0;
   
   for (const group of groupMap.values()) {
-    // Get tier based on total sheets for tier (with 1.5x for 760x330)
+    // Get tier (for display) based on total sheets for tier (with 1.5x for 760x330)
     const tierInfo = getTierForQuantity(group.totalSheetsForTier);
     const pricePerSheetBase = getPriceForTier(group.totalSheetsForTier, group.coverage);
-    
-    // For 760x330, apply 1.5x multiplier to price
-    // Note: We already used 1.5x for tier calculation, now also for final price
-    const groupTotal = group.totalSheets * pricePerSheetBase * group.formatMultiplier;
-    
+
+    // Progressive (cumulative) tier pricing — each tier price applies only
+    // to the sheets within that tier's range. Matches gamaunited.rs calculator.
+    // For 760x330 the tier is computed on sheets*1.5 and the result is
+    // already in "488x330-equivalent" pricing, so no extra formatMultiplier here.
+    const groupTotal = calculateProgressivePrice(group.totalSheetsForTier, group.coverage);
+
+    // Effective average price per (physical) sheet, for display in €/kom
+    const effectivePerSheet = group.totalSheets > 0 ? groupTotal / group.totalSheets : 0;
+
     group.tier = { ...tierInfo, pricePerSheet: pricePerSheetBase };
-    group.pricePerSheetBase = pricePerSheetBase;
+    group.pricePerSheetBase = effectivePerSheet;
+    group.formatMultiplier = 1; // already baked into groupTotal via sheetsForTier
     group.groupTotal = groupTotal;
-    
+
     totalAmount += groupTotal;
     totalSheets += group.totalSheets;
-    
+
     groups.push(group);
   }
   
