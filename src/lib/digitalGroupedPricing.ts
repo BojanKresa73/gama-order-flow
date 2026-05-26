@@ -8,7 +8,8 @@ import {
   getCoverageSides,
   COLOR_CLICK_COST_BASE,
   MONO_CLICK_COST_BASE,
-  getSheetMultiplier
+  getSheetMultiplier,
+  calculateProgressivePrice
 } from './digitalCalculations';
 
 export interface DigitalJobItem {
