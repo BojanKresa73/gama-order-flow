@@ -145,7 +145,7 @@ Deno.serve(async (req) => {
         <td style="padding:10px 12px;border-bottom:1px solid #eaeaea;font-weight:500;">${r.name} mm</td>
         <td style="padding:10px 12px;border-bottom:1px solid #eaeaea;text-align:right;">${fmt(r.oldPrice, 2)} €</td>
         <td style="padding:10px 12px;border-bottom:1px solid #eaeaea;text-align:right;color:#15803d;font-weight:600;">${fmt(r.newPrice, 2)} €</td>
-        <td style="padding:10px 12px;border-bottom:1px solid #eaeaea;text-align:right;color:#b45309;font-weight:600;">+${fmt(r.pct, 1)}%</td>
+        <td style="padding:10px 12px;border-bottom:1px solid #eaeaea;text-align:right;color:#b45309;font-weight:600;">+${fmt(r.pct, 2)}%</td>
       </tr>
     `).join("");
 
