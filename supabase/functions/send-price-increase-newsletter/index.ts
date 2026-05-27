@@ -33,7 +33,7 @@ Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
 
   try {
-    const { clientName = "Birograf Comp", recipientEmail = "bojan.kresovic@gmail.com", overridePct } = await req.json().catch(() => ({}));
+    const { clientName = "Birograf Comp", recipientEmail = "bojan.kresovic@gmail.com", overridePct, cleanSubject = false } = await req.json().catch(() => ({}));
 
     const supabase = createClient(
       Deno.env.get("SUPABASE_URL")!,
@@ -243,7 +243,9 @@ Deno.serve(async (req) => {
 
     await sendMail({
       to: recipientEmail,
-      subject: `[PREGLED v${Date.now().toString().slice(-6)}] Najava korekcije cena CTP ploča — ${target.name}`,
+      subject: cleanSubject
+        ? `Najava korekcije cena CTP ploča — ${target.name}`
+        : `[PREGLED v${Date.now().toString().slice(-6)}] Najava korekcije cena CTP ploča — ${target.name}`,
       html,
     });
 

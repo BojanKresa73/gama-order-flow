@@ -9,9 +9,12 @@ import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Slider } from "@/components/ui/slider";
-import { TrendingUp, Calculator, Info, ArrowUpRight, ArrowDownRight } from "lucide-react";
+import { TrendingUp, Calculator, Info, ArrowUpRight, ArrowDownRight, Send, Loader2 } from "lucide-react";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { Checkbox } from "@/components/ui/checkbox";
+import { Button } from "@/components/ui/button";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
+import { toast } from "@/hooks/use-toast";
 
 const OLD_COST = 2.4;
 const NEW_COST = 2.8;
@@ -61,6 +64,8 @@ interface ClientAnalysis {
 export const CtpPriceIncreaseAnalysis = () => {
   const [spreadFactor, setSpreadFactor] = useState(2.0);
   const [excludedClients, setExcludedClients] = useState<Set<string>>(new Set());
+  const [isSending, setIsSending] = useState(false);
+  const [sendProgress, setSendProgress] = useState<{ done: number; total: number } | null>(null);
 
   const toggleExcluded = (clientId: string) => {
     setExcludedClients(prev => {
@@ -123,7 +128,7 @@ export const CtpPriceIncreaseAnalysis = () => {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("clients")
-        .select("id, name, has_mono_pricing");
+        .select("id, name, has_mono_pricing, email, notification_email, notification_email_2, notification_email_3");
       if (error) throw error;
       return data;
     },
@@ -384,6 +389,70 @@ export const CtpPriceIncreaseAnalysis = () => {
   const fmt = (n: number, d = 2) =>
     n.toLocaleString("sr-RS", { minimumFractionDigits: d, maximumFractionDigits: d });
 
+  // Build email lookup per clientId
+  const clientEmailMap = useMemo(() => {
+    const m = new Map<string, string[]>();
+    for (const c of clients ?? []) {
+      const emails = [c.notification_email, c.notification_email_2, c.notification_email_3, c.email]
+        .map(e => (e || "").trim())
+        .filter(e => /.+@.+\..+/.test(e));
+      // dedupe, preserve order
+      const unique = Array.from(new Set(emails));
+      if (unique.length > 0) m.set(c.id, unique);
+    }
+    return m;
+  }, [clients]);
+
+  // Recipients to send to: not excluded, has currentRevenue > 0, has at least one email
+  const recipients = useMemo(() => {
+    return clientData
+      .filter(c => !excludedClients.has(c.clientId) && c.currentRevenue > 0)
+      .map(c => ({
+        clientId: c.clientId,
+        clientName: c.clientName,
+        emails: clientEmailMap.get(c.clientId) ?? [],
+        pct: c.proposedIncreasePct,
+      }));
+  }, [clientData, excludedClients, clientEmailMap]);
+
+  const recipientsWithEmail = recipients.filter(r => r.emails.length > 0);
+  const recipientsMissingEmail = recipients.filter(r => r.emails.length === 0);
+
+  const handleBulkSend = async () => {
+    setIsSending(true);
+    setSendProgress({ done: 0, total: recipientsWithEmail.length });
+    let okCount = 0;
+    let failCount = 0;
+    const failed: string[] = [];
+    for (let i = 0; i < recipientsWithEmail.length; i++) {
+      const r = recipientsWithEmail[i];
+      try {
+        const { error } = await supabase.functions.invoke("send-price-increase-newsletter", {
+          body: {
+            clientName: r.clientName,
+            recipientEmail: r.emails[0],
+            overridePct: Number(r.pct.toFixed(2)),
+            cleanSubject: true,
+          },
+        });
+        if (error) throw error;
+        okCount++;
+      } catch (e) {
+        failCount++;
+        failed.push(r.clientName);
+        console.error("Send failed for", r.clientName, e);
+      }
+      setSendProgress({ done: i + 1, total: recipientsWithEmail.length });
+    }
+    setIsSending(false);
+    setSendProgress(null);
+    toast({
+      title: failCount === 0 ? "Newsletter poslat" : "Slanje završeno sa greškama",
+      description: `Uspešno: ${okCount} · Greške: ${failCount}${failed.length ? ` (${failed.slice(0, 3).join(", ")}${failed.length > 3 ? "…" : ""})` : ""}`,
+      variant: failCount === 0 ? "default" : "destructive",
+    });
+  };
+
   return (
     <div className="space-y-6">
       {/* Summary Cards */}
@@ -524,8 +593,63 @@ export const CtpPriceIncreaseAnalysis = () => {
       {/* Per-client table */}
       <Card className="rounded-2xl shadow-sm">
         <CardHeader>
-          <CardTitle>Detaljan pregled po klijentima</CardTitle>
-          <CardDescription>Kliknite na klijenta za pregled cena po formatima</CardDescription>
+          <div className="flex items-start justify-between gap-4 flex-wrap">
+            <div>
+              <CardTitle>Detaljan pregled po klijentima</CardTitle>
+              <CardDescription>Kliknite na klijenta za pregled cena po formatima</CardDescription>
+            </div>
+            <AlertDialog>
+              <AlertDialogTrigger asChild>
+                <Button disabled={isSending || recipientsWithEmail.length === 0} className="gap-2">
+                  {isSending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
+                  {isSending && sendProgress
+                    ? `Slanje… ${sendProgress.done}/${sendProgress.total}`
+                    : `Pošalji newsletter svima (${recipientsWithEmail.length})`}
+                </Button>
+              </AlertDialogTrigger>
+              <AlertDialogContent className="max-w-2xl">
+                <AlertDialogHeader>
+                  <AlertDialogTitle>Slanje newslettera o povećanju cena</AlertDialogTitle>
+                  <AlertDialogDescription asChild>
+                    <div className="space-y-3 text-sm">
+                      <p>
+                        Newsletter će biti poslat <strong>{recipientsWithEmail.length}</strong> klijenata.
+                        Izuzeti klijenti (<strong>{excludedClients.size}</strong>) se preskaču.
+                      </p>
+                      {recipientsMissingEmail.length > 0 && (
+                        <p className="text-amber-700 dark:text-amber-400">
+                          ⚠ {recipientsMissingEmail.length} klijenata nema email i biće preskočeni:{" "}
+                          {recipientsMissingEmail.slice(0, 5).map(r => r.clientName).join(", ")}
+                          {recipientsMissingEmail.length > 5 ? "…" : ""}
+                        </p>
+                      )}
+                      <div className="max-h-64 overflow-y-auto border rounded-md p-2 bg-muted/30">
+                        <table className="w-full text-xs">
+                          <thead className="text-left text-muted-foreground">
+                            <tr><th className="py-1">Klijent</th><th>Email</th><th className="text-right">Rast %</th></tr>
+                          </thead>
+                          <tbody>
+                            {recipientsWithEmail.map(r => (
+                              <tr key={r.clientId} className="border-t border-border/50">
+                                <td className="py-1 pr-2 font-medium">{r.clientName}</td>
+                                <td className="py-1 pr-2 text-muted-foreground">{r.emails[0]}</td>
+                                <td className="py-1 text-right">+{r.pct.toFixed(2)}%</td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      </div>
+                      <p className="text-muted-foreground">Subject: <em>Najava korekcije cena CTP ploča — [Ime klijenta]</em></p>
+                    </div>
+                  </AlertDialogDescription>
+                </AlertDialogHeader>
+                <AlertDialogFooter>
+                  <AlertDialogCancel>Otkaži</AlertDialogCancel>
+                  <AlertDialogAction onClick={handleBulkSend}>Pošalji svima</AlertDialogAction>
+                </AlertDialogFooter>
+              </AlertDialogContent>
+            </AlertDialog>
+          </div>
         </CardHeader>
         <CardContent>
           <div className="w-full">
