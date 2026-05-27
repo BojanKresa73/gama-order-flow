@@ -288,6 +288,24 @@ export const CtpPriceIncreaseAnalysis = () => {
       const newCost = totalM2 * NEW_COST;
 
       if (currentRevenue > 0) {
+        // Apply per-client override (rescale every format so weighted avg matches the target %).
+        const override = CLIENT_INCREASE_OVERRIDES.find(o =>
+          client.name.toLowerCase().includes(o.match.toLowerCase())
+        );
+        if (override) {
+          let scaledProposed = 0;
+          for (const f of formatDetails) {
+            const newP = Math.round(f.currentPrice * (1 + override.pct / 100) * 100) / 100;
+            f.proposedPrice = newP;
+            f.increasePct = ((newP - f.currentPrice) / f.currentPrice) * 100;
+            if (f.currentPriceMono !== null && f.currentPriceMono > 0) {
+              f.proposedPriceMono = Math.round(f.currentPriceMono * (1 + override.pct / 100) * 100) / 100;
+            }
+            scaledProposed += f.plates * newP;
+          }
+          proposedRevenue = scaledProposed;
+        }
+
         clientAnalyses.push({
           clientId,
           clientName: client.name,
