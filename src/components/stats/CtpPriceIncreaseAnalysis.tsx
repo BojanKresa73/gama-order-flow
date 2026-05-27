@@ -9,9 +9,12 @@ import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Slider } from "@/components/ui/slider";
-import { TrendingUp, Calculator, Info, ArrowUpRight, ArrowDownRight } from "lucide-react";
+import { TrendingUp, Calculator, Info, ArrowUpRight, ArrowDownRight, Send, Loader2 } from "lucide-react";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { Checkbox } from "@/components/ui/checkbox";
+import { Button } from "@/components/ui/button";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
+import { toast } from "@/hooks/use-toast";
 
 const OLD_COST = 2.4;
 const NEW_COST = 2.8;
