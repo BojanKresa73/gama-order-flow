@@ -161,10 +161,11 @@ Deno.serve(async (req) => {
           </p>
 
           <p style="margin:0 0 16px;font-size:15px;line-height:1.65;">
-            Nažalost, u periodu <strong>od februara do maja 2026.</strong> primili smo <strong>tri uzastopna povećanja
-            nabavnih cena CTP ploča</strong> od strane naših dobavljača, kao posledica geopolitičkih okolnosti, rasta cena
-            sirovina i poremećaja u lancima snabdevanja. Do sada smo te troškove apsorbovali u potpunosti, ne želeći da
-            opteretimo naše klijente — međutim, dalje održavanje postojećih cena više nije ekonomski održivo.
+            Želimo da Vas transparentno informišemo da smo u periodu <strong>od februara do maja 2026.</strong> primili
+            <strong>tri uzastopna povećanja nabavnih cena CTP ploča</strong> od strane naših dobavljača, kao posledica
+            geopolitičkih okolnosti, rasta cena sirovina i poremećaja u lancima snabdevanja. Do sada smo te troškove
+            apsorbovali u potpunosti, ne želeći da opteretimo naše klijente — međutim, dalje održavanje postojećih cena
+            više nije ekonomski održivo.
           </p>
 
           <p style="margin:0 0 20px;font-size:15px;line-height:1.65;">
