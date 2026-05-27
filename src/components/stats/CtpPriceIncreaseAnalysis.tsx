@@ -452,6 +452,8 @@ export const CtpPriceIncreaseAnalysis = () => {
       variant: failCount === 0 ? "default" : "destructive",
     });
   };
+
+  return (
     <div className="space-y-6">
       {/* Summary Cards */}
       <Card className="rounded-2xl shadow-sm border-orange-200 dark:border-orange-800">
