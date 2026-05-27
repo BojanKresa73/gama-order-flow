@@ -33,7 +33,7 @@ Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
 
   try {
-    const { clientName = "Birograf Comp", recipientEmail = "bojan.kresovic@gmail.com" } = await req.json().catch(() => ({}));
+    const { clientName = "Birograf Comp", recipientEmail = "bojan.kresovic@gmail.com", overridePct } = await req.json().catch(() => ({}));
 
     const supabase = createClient(
       Deno.env.get("SUPABASE_URL")!,
@@ -125,7 +125,7 @@ Deno.serve(async (req) => {
       formatRows.push({ name: fname, qty, oldPrice, newPrice, pct });
     }
     formatRows.sort((a, b) => b.qty - a.qty);
-    const avgIncreasePct = currentRevenue > 0 ? ((proposedRevenue - currentRevenue) / currentRevenue) * 100 : 0;
+    const avgIncreasePct = typeof overridePct === "number" ? overridePct : (currentRevenue > 0 ? ((proposedRevenue - currentRevenue) / currentRevenue) * 100 : 0);
 
     const formatRowsHtml = formatRows.map(r => `
       <tr>
