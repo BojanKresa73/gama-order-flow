@@ -126,7 +126,7 @@ export const CtpPriceIncreaseAnalysis = () => {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("clients")
-        .select("id, name, has_mono_pricing");
+        .select("id, name, has_mono_pricing, email, notification_email, notification_email_2, notification_email_3");
       if (error) throw error;
       return data;
     },
