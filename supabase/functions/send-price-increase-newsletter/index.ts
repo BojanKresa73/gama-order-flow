@@ -243,7 +243,9 @@ Deno.serve(async (req) => {
 
     await sendMail({
       to: recipientEmail,
-      subject: `[PREGLED v${Date.now().toString().slice(-6)}] Najava korekcije cena CTP ploča — ${target.name}`,
+      subject: cleanSubject
+        ? `Najava korekcije cena CTP ploča — ${target.name}`
+        : `[PREGLED v${Date.now().toString().slice(-6)}] Najava korekcije cena CTP ploča — ${target.name}`,
       html,
     });
 
