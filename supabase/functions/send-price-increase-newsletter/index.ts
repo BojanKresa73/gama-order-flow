@@ -33,7 +33,7 @@ Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
 
   try {
-    const { clientName = "Birograf Comp", recipientEmail = "bojan.kresovic@gmail.com", overridePct } = await req.json().catch(() => ({}));
+    const { clientName = "Birograf Comp", recipientEmail = "bojan.kresovic@gmail.com", overridePct, cleanSubject = false } = await req.json().catch(() => ({}));
 
     const supabase = createClient(
       Deno.env.get("SUPABASE_URL")!,
