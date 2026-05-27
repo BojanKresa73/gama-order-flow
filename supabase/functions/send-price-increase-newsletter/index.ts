@@ -125,6 +125,19 @@ Deno.serve(async (req) => {
       formatRows.push({ name: fname, qty, oldPrice, newPrice, pct });
     }
     formatRows.sort((a, b) => b.qty - a.qty);
+
+    // If overridePct provided, scale every format's increase so the weighted average matches it.
+    if (typeof overridePct === "number" && currentRevenue > 0) {
+      let scaledProposed = 0;
+      for (const r of formatRows) {
+        const newPriceExact = r.oldPrice * (1 + overridePct / 100);
+        r.newPrice = Math.round(newPriceExact * 100) / 100;
+        r.pct = ((r.newPrice - r.oldPrice) / r.oldPrice) * 100;
+        scaledProposed += r.qty * r.newPrice;
+      }
+      proposedRevenue = scaledProposed;
+    }
+
     const avgIncreasePct = typeof overridePct === "number" ? overridePct : (currentRevenue > 0 ? ((proposedRevenue - currentRevenue) / currentRevenue) * 100 : 0);
 
     const formatRowsHtml = formatRows.map(r => `
@@ -172,15 +185,15 @@ Deno.serve(async (req) => {
           </p>
 
           <p style="margin:0 0 20px;font-size:15px;line-height:1.65;">
-            Iz tog razloga, sa žaljenjem Vas obaveštavamo da od <strong>${EFFECTIVE_DATE}</strong> godine
-            <strong>korigujemo cene CTP ploča u proseku za ${fmt(avgIncreasePct, 1)}%</strong> za Vašu kompaniju.
+            Iz tog razloga, obaveštavamo Vas da od <strong>${EFFECTIVE_DATE}</strong> godine
+            <strong>korigujemo cene CTP ploča u proseku za ${fmt(avgIncreasePct, 2)}%</strong> za Vašu kompaniju.
             Procenat je izračunat na osnovu Vaše stvarne potrošnje i predstavlja minimum potreban da održimo kvalitet
             usluge i kontinuitet isporuke koji ste navikli.
           </p>
 
           <div style="background:linear-gradient(135deg,#dbeafe 0%,#eff6ff 100%);border-left:4px solid #2563eb;padding:18px 22px;border-radius:8px;margin:0 0 28px;">
             <div style="font-size:12px;color:#1e40af;text-transform:uppercase;letter-spacing:1.5px;margin-bottom:6px;font-weight:600;">Prosečno povećanje za Vašu kompaniju</div>
-            <div style="font-size:32px;font-weight:700;color:#1e3a8a;">+${fmt(avgIncreasePct, 1)}%</div>
+            <div style="font-size:32px;font-weight:700;color:#1e3a8a;">+${fmt(avgIncreasePct, 2)}%</div>
             <div style="font-size:13px;color:#1e40af;margin-top:4px;">na osnovu ${fmt(totalPlates, 0)} ploča iz Vaše istorije porudžbina</div>
           </div>
 

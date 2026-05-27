@@ -16,6 +16,11 @@ import { Checkbox } from "@/components/ui/checkbox";
 const OLD_COST = 2.4;
 const NEW_COST = 2.8;
 
+// Per-client override of the proposed avg increase (%). Substring, case-insensitive.
+const CLIENT_INCREASE_OVERRIDES: Array<{ match: string; pct: number }> = [
+  { match: "službeni glasnik", pct: 9.55 },
+];
+
 // Map format name → area in m²
 function formatArea(formatName: string): number {
   const cleaned = formatName.replace("×", "x");
@@ -283,6 +288,24 @@ export const CtpPriceIncreaseAnalysis = () => {
       const newCost = totalM2 * NEW_COST;
 
       if (currentRevenue > 0) {
+        // Apply per-client override (rescale every format so weighted avg matches the target %).
+        const override = CLIENT_INCREASE_OVERRIDES.find(o =>
+          client.name.toLowerCase().includes(o.match.toLowerCase())
+        );
+        if (override) {
+          let scaledProposed = 0;
+          for (const f of formatDetails) {
+            const newP = Math.round(f.currentPrice * (1 + override.pct / 100) * 100) / 100;
+            f.proposedPrice = newP;
+            f.increasePct = ((newP - f.currentPrice) / f.currentPrice) * 100;
+            if (f.currentPriceMono !== null && f.currentPriceMono > 0) {
+              f.proposedPriceMono = Math.round(f.currentPriceMono * (1 + override.pct / 100) * 100) / 100;
+            }
+            scaledProposed += f.plates * newP;
+          }
+          proposedRevenue = scaledProposed;
+        }
+
         clientAnalyses.push({
           clientId,
           clientName: client.name,
