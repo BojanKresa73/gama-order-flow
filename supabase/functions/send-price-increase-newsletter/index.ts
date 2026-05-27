@@ -185,15 +185,15 @@ Deno.serve(async (req) => {
           </p>
 
           <p style="margin:0 0 20px;font-size:15px;line-height:1.65;">
-            Iz tog razloga, sa žaljenjem Vas obaveštavamo da od <strong>${EFFECTIVE_DATE}</strong> godine
-            <strong>korigujemo cene CTP ploča u proseku za ${fmt(avgIncreasePct, 1)}%</strong> za Vašu kompaniju.
+            Iz tog razloga, obaveštavamo Vas da od <strong>${EFFECTIVE_DATE}</strong> godine
+            <strong>korigujemo cene CTP ploča u proseku za ${fmt(avgIncreasePct, 2)}%</strong> za Vašu kompaniju.
             Procenat je izračunat na osnovu Vaše stvarne potrošnje i predstavlja minimum potreban da održimo kvalitet
             usluge i kontinuitet isporuke koji ste navikli.
           </p>
 
           <div style="background:linear-gradient(135deg,#dbeafe 0%,#eff6ff 100%);border-left:4px solid #2563eb;padding:18px 22px;border-radius:8px;margin:0 0 28px;">
             <div style="font-size:12px;color:#1e40af;text-transform:uppercase;letter-spacing:1.5px;margin-bottom:6px;font-weight:600;">Prosečno povećanje za Vašu kompaniju</div>
-            <div style="font-size:32px;font-weight:700;color:#1e3a8a;">+${fmt(avgIncreasePct, 1)}%</div>
+            <div style="font-size:32px;font-weight:700;color:#1e3a8a;">+${fmt(avgIncreasePct, 2)}%</div>
             <div style="font-size:13px;color:#1e40af;margin-top:4px;">na osnovu ${fmt(totalPlates, 0)} ploča iz Vaše istorije porudžbina</div>
           </div>
 
