@@ -593,8 +593,63 @@ export const CtpPriceIncreaseAnalysis = () => {
       {/* Per-client table */}
       <Card className="rounded-2xl shadow-sm">
         <CardHeader>
-          <CardTitle>Detaljan pregled po klijentima</CardTitle>
-          <CardDescription>Kliknite na klijenta za pregled cena po formatima</CardDescription>
+          <div className="flex items-start justify-between gap-4 flex-wrap">
+            <div>
+              <CardTitle>Detaljan pregled po klijentima</CardTitle>
+              <CardDescription>Kliknite na klijenta za pregled cena po formatima</CardDescription>
+            </div>
+            <AlertDialog>
+              <AlertDialogTrigger asChild>
+                <Button disabled={isSending || recipientsWithEmail.length === 0} className="gap-2">
+                  {isSending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
+                  {isSending && sendProgress
+                    ? `Slanje… ${sendProgress.done}/${sendProgress.total}`
+                    : `Pošalji newsletter svima (${recipientsWithEmail.length})`}
+                </Button>
+              </AlertDialogTrigger>
+              <AlertDialogContent className="max-w-2xl">
+                <AlertDialogHeader>
+                  <AlertDialogTitle>Slanje newslettera o povećanju cena</AlertDialogTitle>
+                  <AlertDialogDescription asChild>
+                    <div className="space-y-3 text-sm">
+                      <p>
+                        Newsletter će biti poslat <strong>{recipientsWithEmail.length}</strong> klijenata.
+                        Izuzeti klijenti (<strong>{excludedClients.size}</strong>) se preskaču.
+                      </p>
+                      {recipientsMissingEmail.length > 0 && (
+                        <p className="text-amber-700 dark:text-amber-400">
+                          ⚠ {recipientsMissingEmail.length} klijenata nema email i biće preskočeni:{" "}
+                          {recipientsMissingEmail.slice(0, 5).map(r => r.clientName).join(", ")}
+                          {recipientsMissingEmail.length > 5 ? "…" : ""}
+                        </p>
+                      )}
+                      <div className="max-h-64 overflow-y-auto border rounded-md p-2 bg-muted/30">
+                        <table className="w-full text-xs">
+                          <thead className="text-left text-muted-foreground">
+                            <tr><th className="py-1">Klijent</th><th>Email</th><th className="text-right">Rast %</th></tr>
+                          </thead>
+                          <tbody>
+                            {recipientsWithEmail.map(r => (
+                              <tr key={r.clientId} className="border-t border-border/50">
+                                <td className="py-1 pr-2 font-medium">{r.clientName}</td>
+                                <td className="py-1 pr-2 text-muted-foreground">{r.emails[0]}</td>
+                                <td className="py-1 text-right">+{r.pct.toFixed(2)}%</td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      </div>
+                      <p className="text-muted-foreground">Subject: <em>Najava korekcije cena CTP ploča — [Ime klijenta]</em></p>
+                    </div>
+                  </AlertDialogDescription>
+                </AlertDialogHeader>
+                <AlertDialogFooter>
+                  <AlertDialogCancel>Otkaži</AlertDialogCancel>
+                  <AlertDialogAction onClick={handleBulkSend}>Pošalji svima</AlertDialogAction>
+                </AlertDialogFooter>
+              </AlertDialogContent>
+            </AlertDialog>
+          </div>
         </CardHeader>
         <CardContent>
           <div className="w-full">
