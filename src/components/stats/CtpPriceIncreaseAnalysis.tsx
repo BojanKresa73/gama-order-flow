@@ -64,6 +64,8 @@ interface ClientAnalysis {
 export const CtpPriceIncreaseAnalysis = () => {
   const [spreadFactor, setSpreadFactor] = useState(2.0);
   const [excludedClients, setExcludedClients] = useState<Set<string>>(new Set());
+  const [isSending, setIsSending] = useState(false);
+  const [sendProgress, setSendProgress] = useState<{ done: number; total: number } | null>(null);
 
   const toggleExcluded = (clientId: string) => {
     setExcludedClients(prev => {
