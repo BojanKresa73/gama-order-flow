@@ -389,7 +389,69 @@ export const CtpPriceIncreaseAnalysis = () => {
   const fmt = (n: number, d = 2) =>
     n.toLocaleString("sr-RS", { minimumFractionDigits: d, maximumFractionDigits: d });
 
-  return (
+  // Build email lookup per clientId
+  const clientEmailMap = useMemo(() => {
+    const m = new Map<string, string[]>();
+    for (const c of clients ?? []) {
+      const emails = [c.notification_email, c.notification_email_2, c.notification_email_3, c.email]
+        .map(e => (e || "").trim())
+        .filter(e => /.+@.+\..+/.test(e));
+      // dedupe, preserve order
+      const unique = Array.from(new Set(emails));
+      if (unique.length > 0) m.set(c.id, unique);
+    }
+    return m;
+  }, [clients]);
+
+  // Recipients to send to: not excluded, has currentRevenue > 0, has at least one email
+  const recipients = useMemo(() => {
+    return clientData
+      .filter(c => !excludedClients.has(c.clientId) && c.currentRevenue > 0)
+      .map(c => ({
+        clientId: c.clientId,
+        clientName: c.clientName,
+        emails: clientEmailMap.get(c.clientId) ?? [],
+        pct: c.proposedIncreasePct,
+      }));
+  }, [clientData, excludedClients, clientEmailMap]);
+
+  const recipientsWithEmail = recipients.filter(r => r.emails.length > 0);
+  const recipientsMissingEmail = recipients.filter(r => r.emails.length === 0);
+
+  const handleBulkSend = async () => {
+    setIsSending(true);
+    setSendProgress({ done: 0, total: recipientsWithEmail.length });
+    let okCount = 0;
+    let failCount = 0;
+    const failed: string[] = [];
+    for (let i = 0; i < recipientsWithEmail.length; i++) {
+      const r = recipientsWithEmail[i];
+      try {
+        const { error } = await supabase.functions.invoke("send-price-increase-newsletter", {
+          body: {
+            clientName: r.clientName,
+            recipientEmail: r.emails[0],
+            overridePct: Number(r.pct.toFixed(2)),
+            cleanSubject: true,
+          },
+        });
+        if (error) throw error;
+        okCount++;
+      } catch (e) {
+        failCount++;
+        failed.push(r.clientName);
+        console.error("Send failed for", r.clientName, e);
+      }
+      setSendProgress({ done: i + 1, total: recipientsWithEmail.length });
+    }
+    setIsSending(false);
+    setSendProgress(null);
+    toast({
+      title: failCount === 0 ? "Newsletter poslat" : "Slanje završeno sa greškama",
+      description: `Uspešno: ${okCount} · Greške: ${failCount}${failed.length ? ` (${failed.slice(0, 3).join(", ")}${failed.length > 3 ? "…" : ""})` : ""}`,
+      variant: failCount === 0 ? "default" : "destructive",
+    });
+  };
     <div className="space-y-6">
       {/* Summary Cards */}
       <Card className="rounded-2xl shadow-sm border-orange-200 dark:border-orange-800">
