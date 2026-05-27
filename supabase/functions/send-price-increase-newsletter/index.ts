@@ -125,6 +125,19 @@ Deno.serve(async (req) => {
       formatRows.push({ name: fname, qty, oldPrice, newPrice, pct });
     }
     formatRows.sort((a, b) => b.qty - a.qty);
+
+    // If overridePct provided, scale every format's increase so the weighted average matches it.
+    if (typeof overridePct === "number" && currentRevenue > 0) {
+      let scaledProposed = 0;
+      for (const r of formatRows) {
+        const newPriceExact = r.oldPrice * (1 + overridePct / 100);
+        r.newPrice = Math.round(newPriceExact * 100) / 100;
+        r.pct = ((r.newPrice - r.oldPrice) / r.oldPrice) * 100;
+        scaledProposed += r.qty * r.newPrice;
+      }
+      proposedRevenue = scaledProposed;
+    }
+
     const avgIncreasePct = typeof overridePct === "number" ? overridePct : (currentRevenue > 0 ? ((proposedRevenue - currentRevenue) / currentRevenue) * 100 : 0);
 
     const formatRowsHtml = formatRows.map(r => `
