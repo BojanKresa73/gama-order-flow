@@ -16,6 +16,11 @@ import { Checkbox } from "@/components/ui/checkbox";
 const OLD_COST = 2.4;
 const NEW_COST = 2.8;
 
+// Per-client override of the proposed avg increase (%). Substring, case-insensitive.
+const CLIENT_INCREASE_OVERRIDES: Array<{ match: string; pct: number }> = [
+  { match: "službeni glasnik", pct: 9.55 },
+];
+
 // Map format name → area in m²
 function formatArea(formatName: string): number {
   const cleaned = formatName.replace("×", "x");
