@@ -81,7 +81,7 @@ async function getOrderItems(sb: any, orderId: string): Promise<UiItem[]> {
   // Get work order type
   const { data: order, error: orderError } = await sb
     .from('work_orders')
-    .select('id, order_type')
+    .select('id, order_type, job_name, run_quantity')
     .eq('id', orderId)
     .single();
 
@@ -89,6 +89,18 @@ async function getOrderItems(sb: any, orderId: string): Promise<UiItem[]> {
     console.error('[getOrderItems] Error fetching work order:', orderError);
     return [];
   }
+
+  // RAZNO / Ostalo: synthetic item from work order itself
+  if (order.order_type === 'other') {
+    return [{
+      id: order.id,
+      label: order.job_name || 'Usluga',
+      qty: Number(order.run_quantity) || 1,
+      unit: 'kom',
+      details: '',
+    }];
+  }
+
 
   // Fetch items based on order type
   if (order.order_type === 'film') {
