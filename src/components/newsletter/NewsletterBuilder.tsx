@@ -244,6 +244,7 @@ const BLOCK_ICONS: Record<BlockType, any> = {
   button: RectangleHorizontal,
   divider: Minus,
   contact: Phone,
+  rawHtml: Code,
 };
 
 const BLOCK_LABELS: Record<BlockType, string> = {
@@ -253,7 +254,9 @@ const BLOCK_LABELS: Record<BlockType, string> = {
   button: "Dugme",
   divider: "Razdvajač",
   contact: "Kontakt / Telefon",
+  rawHtml: "HTML (ceo dokument)",
 };
+
 
 // ── Text Formatting Toolbar ──
 function TextFormattingToolbar({ content, onChange }: { content: Record<string, string>; onChange: (c: Record<string, string>) => void }) {
@@ -371,10 +374,24 @@ function BlockEditor({ block, onChange }: { block: Block; onChange: (c: Record<s
       );
     case "divider":
       return <p className="text-sm text-muted-foreground">Horizontalna linija — bez podešavanja</p>;
+    case "rawHtml":
+      return (
+        <div className="space-y-2">
+          <p className="text-xs text-muted-foreground">Ovaj blok šalje ceo HTML dokument kao newsletter (preskače standardni header/footer). <code>&lt;!-- UNSUB_PLACEHOLDER --&gt;</code> se automatski zamenjuje linkom za odjavu.</p>
+          <Textarea
+            value={c.html || ""}
+            onChange={(e) => onChange({ ...c, html: e.target.value })}
+            placeholder="<!DOCTYPE html>..."
+            className="font-mono text-xs"
+            rows={14}
+          />
+        </div>
+      );
     default:
       return null;
   }
 }
+
 
 function ImageBlockEditor({ content, onChange }: { content: Record<string, string>; onChange: (c: Record<string, string>) => void }) {
   const { toast } = useToast();
@@ -512,7 +529,9 @@ export default function NewsletterBuilder({ onHtmlChange, theme = EMAIL_THEMES[0
       button: { text: "Kliknite ovde", url: "https://gamaunited.rs" },
       divider: {},
       contact: { label: "Kontakt", phone: "" },
+      rawHtml: { html: "<!-- Zalepi ovde ceo HTML dokument -->" },
     };
+
     emitBlocks([...blocks, { id: generateId(), type, content: defaults[type] }]);
   };
 
