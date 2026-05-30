@@ -86,7 +86,7 @@ export const REDIZAJN_V2_HTML = `<!DOCTYPE html>
                   </td>
                   <td class="hide-mobile" width="12">&nbsp;</td>
                   <td class="hide-mobile" style="border-radius:10px;border:1px solid rgba(255,255,255,0.32);">
-                    <a href="https://gamaunited.rs/#portal" target="_blank" style="display:inline-block;padding:14px 22px;color:#ffffff;text-decoration:none;font-size:15px;line-height:20px;font-weight:700;border-radius:10px;">
+                    <a href="https://gamaunited.rs/portal-za-klijente" target="_blank" style="display:inline-block;padding:14px 22px;color:#ffffff;text-decoration:none;font-size:15px;line-height:20px;font-weight:700;border-radius:10px;">
                       Klijentski portal
                     </a>
                   </td>
@@ -182,7 +182,7 @@ export const REDIZAJN_V2_HTML = `<!DOCTYPE html>
                     <table role="presentation" cellpadding="0" cellspacing="0" border="0" style="margin-top:10px;">
                       <tr>
                         <td style="border-radius:10px;background:#e63946;">
-                          <a class="button" href="https://gamaunited.rs/#portal" target="_blank" style="display:inline-block;padding:14px 24px;color:#ffffff;text-decoration:none;font-size:15px;line-height:20px;font-weight:800;border-radius:10px;">
+                          <a class="button" href="https://gamaunited.rs/portal-za-klijente" target="_blank" style="display:inline-block;padding:14px 24px;color:#ffffff;text-decoration:none;font-size:15px;line-height:20px;font-weight:800;border-radius:10px;">
                             Prijavite se za Portal nalog
                           </a>
                         </td>
@@ -249,13 +249,13 @@ export const REDIZAJN_V2_HTML = `<!DOCTYPE html>
                     <table role="presentation" cellpadding="0" cellspacing="0" border="0">
                       <tr>
                         <td style="border-radius:10px;background:#101846;">
-                          <a class="button" href="https://gamaunited.rs/#uputstva" target="_blank" style="display:inline-block;padding:13px 22px;color:#ffffff;text-decoration:none;font-size:14px;line-height:19px;font-weight:800;border-radius:10px;">
+                          <a class="button" href="https://gamaunited.rs/uputstva" target="_blank" style="display:inline-block;padding:13px 22px;color:#ffffff;text-decoration:none;font-size:14px;line-height:19px;font-weight:800;border-radius:10px;">
                             Pogledajte uputstva
                           </a>
                         </td>
                         <td class="hide-mobile" width="10">&nbsp;</td>
                         <td class="hide-mobile" style="border-radius:10px;background:#ffffff;border:1px solid #d0d5dd;">
-                          <a href="https://gamaunited.rs/#edukacija" target="_blank" style="display:inline-block;padding:12px 20px;color:#101846;text-decoration:none;font-size:14px;line-height:19px;font-weight:800;border-radius:10px;">
+                          <a href="https://gamaunited.rs/edukacija" target="_blank" style="display:inline-block;padding:12px 20px;color:#101846;text-decoration:none;font-size:14px;line-height:19px;font-weight:800;border-radius:10px;">
                             Edukacija
                           </a>
                         </td>
@@ -309,7 +309,7 @@ export const REDIZAJN_V2_HTML = `<!DOCTYPE html>
                     <table role="presentation" align="center" cellpadding="0" cellspacing="0" border="0">
                       <tr>
                         <td style="border-radius:10px;background:#ffffff;">
-                          <a class="button" href="https://gamaunited.rs/#kontakt" target="_blank" style="display:inline-block;padding:14px 24px;color:#101846;text-decoration:none;font-size:15px;line-height:20px;font-weight:800;border-radius:10px;">
+                          <a class="button" href="https://gamaunited.rs/kontakt" target="_blank" style="display:inline-block;padding:14px 24px;color:#101846;text-decoration:none;font-size:15px;line-height:20px;font-weight:800;border-radius:10px;">
                             Kontaktirajte nas
                           </a>
                         </td>
