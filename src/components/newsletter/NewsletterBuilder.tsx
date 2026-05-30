@@ -5,14 +5,16 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
-import { Plus, Trash2, ArrowUp, ArrowDown, Eye, Type, Image, RectangleHorizontal, Phone, Minus, Upload, Loader2, Palette, AlignLeft, AlignCenter, AlignRight, Bold, Italic } from "lucide-react";
+import { Plus, Trash2, ArrowUp, ArrowDown, Eye, Type, Image, RectangleHorizontal, Phone, Minus, Upload, Loader2, Palette, AlignLeft, AlignCenter, AlignRight, Bold, Italic, Code } from "lucide-react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
+import { REDIZAJN_V2_HTML } from "./templates/redizajnHtml";
 
-type BlockType = "heading" | "text" | "image" | "button" | "divider" | "contact";
+type BlockType = "heading" | "text" | "image" | "button" | "divider" | "contact" | "rawHtml";
+
 
 interface Block {
   id: string;
@@ -114,10 +116,17 @@ const TEMPLATES: { name: string; blocks: Block[] }[] = [
     ],
   },
   {
+    name: "Redizajn sajta v2 (full HTML)",
+    blocks: [
+      { id: "rd2-1", type: "rawHtml", content: { html: REDIZAJN_V2_HTML } },
+    ],
+  },
+  {
     name: "Prazan šablon",
     blocks: [...DEFAULT_BLOCKS],
   },
 ];
+
 
 function generateId() {
   return Math.random().toString(36).substring(2, 9);
@@ -179,10 +188,20 @@ function blockToHtml(block: Block, theme: EmailTheme): string {
       return `<hr style="border:none;border-top:1px solid #e0e0e0;margin:24px 0;" />`;
     case "contact":
       return `<div style="background:${theme.primary};border-radius:8px;padding:20px;text-align:center;margin:16px 0;"><p style="color:#ffffff;margin:0 0 8px;font-size:14px;font-family:Arial,'Helvetica Neue',Helvetica,sans-serif;">${c.label || "Kontakt"}</p><p style="color:#ffffff;margin:0;font-size:22px;font-weight:700;font-family:Arial,'Helvetica Neue',Helvetica,sans-serif;">${c.phone || ""}</p></div>`;
+    case "rawHtml":
+      return c.html || "";
     default:
       return "";
   }
 }
+
+export function blocksToFullHtml(blocks: Block[], theme: EmailTheme = EMAIL_THEMES[0]): string {
+  // Raw HTML mode: if first block is a full-document rawHtml, return it as-is.
+  // Send function will still replace <!-- UNSUB_PLACEHOLDER --> per recipient.
+  if (blocks.length > 0 && blocks[0].type === "rawHtml" && blocks[0].content.html) {
+    return blocks[0].content.html;
+  }
+
 
 export function blocksToFullHtml(blocks: Block[], theme: EmailTheme = EMAIL_THEMES[0]): string {
   const bodyHtml = blocks.map(b => blockToHtml(b, theme)).join("\n");
