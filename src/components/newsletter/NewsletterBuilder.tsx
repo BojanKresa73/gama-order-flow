@@ -202,8 +202,6 @@ export function blocksToFullHtml(blocks: Block[], theme: EmailTheme = EMAIL_THEM
     return blocks[0].content.html;
   }
 
-
-export function blocksToFullHtml(blocks: Block[], theme: EmailTheme = EMAIL_THEMES[0]): string {
   const bodyHtml = blocks.map(b => blockToHtml(b, theme)).join("\n");
   const preheaderText = blocks.find(b => b.type === "text")?.content.text?.substring(0, 120) || "Gama United Newsletter";
   return `<!DOCTYPE html>
