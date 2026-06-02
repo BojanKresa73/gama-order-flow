@@ -15,7 +15,7 @@ export default defineConfig(({ mode }) => ({
     mode === "development" && componentTagger(),
     VitePWA({
       registerType: "prompt",
-      includeAssets: ["favicon.ico", "pwa-icon-192.png", "pwa-icon-512.png"],
+      includeAssets: ["favicon.png", "pwa-icon-192.png", "pwa-icon-512.png", "pwa-icon-maskable-512.png"],
       manifest: {
         name: "Gama Order Flow",
         short_name: "Gama",
@@ -30,17 +30,19 @@ export default defineConfig(({ mode }) => ({
             src: "/pwa-icon-192.png",
             sizes: "192x192",
             type: "image/png",
+            purpose: "any",
           },
           {
             src: "/pwa-icon-512.png",
             sizes: "512x512",
             type: "image/png",
+            purpose: "any",
           },
           {
-            src: "/pwa-icon-512.png",
+            src: "/pwa-icon-maskable-512.png",
             sizes: "512x512",
             type: "image/png",
-            purpose: "any maskable",
+            purpose: "maskable",
           },
         ],
       },
