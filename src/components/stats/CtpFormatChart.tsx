@@ -5,7 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { CtpFiltersState } from "@/pages/CtpStats";
 import { buildCtpRpcParams } from "@/lib/ctpRpcHelpers";
-import { Bar, BarChart, CartesianGrid, Legend, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
+import { Bar, BarChart, CartesianGrid, Cell, LabelList, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
 
 interface CtpFormatChartProps {
   filters: CtpFiltersState;
@@ -17,7 +17,7 @@ const COLORS = [
   "hsl(var(--chart-3))",
   "hsl(var(--chart-4))",
   "hsl(var(--chart-5))",
-  "hsl(var(--muted))",
+  "hsl(var(--muted-foreground))",
 ];
 
 export const CtpFormatChart = ({ filters }: CtpFormatChartProps) => {
@@ -31,20 +31,23 @@ export const CtpFormatChart = ({ filters }: CtpFormatChartProps) => {
     staleTime: 30000,
   });
 
-  const chartData = useMemo(() => {
-    if (!rawFormats || rawFormats.length === 0) return null;
+  const { rows, total } = useMemo(() => {
+    if (!rawFormats || rawFormats.length === 0) return { rows: [], total: 0 };
 
     const top6 = rawFormats.slice(0, 6);
     const rest = rawFormats.slice(6);
-    const restTotal = rest.reduce((sum, f) => sum + f.total, 0);
+    const restTotal = rest.reduce((sum, f) => sum + Number(f.total || 0), 0);
 
-    const dataObj: Record<string, number> = {};
-    top6.forEach(f => { dataObj[f.format_name] = f.total; });
-    if (restTotal > 0) dataObj["Drugo"] = restTotal;
+    const all = [
+      ...top6.map(f => ({ name: f.format_name, value: Number(f.total || 0) })),
+      ...(restTotal > 0 ? [{ name: "Drugo", value: restTotal }] : []),
+    ].sort((a, b) => b.value - a.value);
 
-    const formatKeys = [...top6.map(f => f.format_name), ...(restTotal > 0 ? ["Drugo"] : [])];
-
-    return { chartData: [{ name: "Ukupno", ...dataObj }], formatKeys };
+    const sum = all.reduce((s, r) => s + r.value, 0);
+    return {
+      rows: all.map(r => ({ ...r, pct: sum > 0 ? (r.value / sum) * 100 : 0 })),
+      total: sum,
+    };
   }, [rawFormats]);
 
   if (isLoading) {
@@ -58,13 +61,24 @@ export const CtpFormatChart = ({ filters }: CtpFormatChartProps) => {
 
   return (
     <Card className="rounded-2xl shadow-sm">
-      <CardHeader><CardTitle>Ploče po formatima (u periodu)</CardTitle></CardHeader>
+      <CardHeader>
+        <CardTitle>Ploče po formatima (u periodu)</CardTitle>
+      </CardHeader>
       <CardContent>
-        <ResponsiveContainer width="100%" height={300}>
-          <BarChart data={chartData?.chartData}>
-            <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
-            <XAxis dataKey="name" className="text-xs" tick={{ fill: "hsl(var(--muted-foreground))" }} />
-            <YAxis className="text-xs" tick={{ fill: "hsl(var(--muted-foreground))" }} />
+        <ResponsiveContainer width="100%" height={Math.max(300, rows.length * 44)}>
+          <BarChart data={rows} layout="vertical" margin={{ top: 8, right: 64, left: 8, bottom: 8 }}>
+            <CartesianGrid strokeDasharray="3 3" className="stroke-muted" horizontal={false} />
+            <XAxis
+              type="number"
+              tick={{ fill: "hsl(var(--muted-foreground))", fontSize: 12 }}
+              tickFormatter={(v) => v.toLocaleString("sr-RS")}
+            />
+            <YAxis
+              type="category"
+              dataKey="name"
+              width={90}
+              tick={{ fill: "hsl(var(--foreground))", fontSize: 12 }}
+            />
             <Tooltip
               contentStyle={{
                 backgroundColor: "hsl(var(--card))",
@@ -72,11 +86,25 @@ export const CtpFormatChart = ({ filters }: CtpFormatChartProps) => {
                 borderRadius: "8px",
               }}
               labelStyle={{ color: "hsl(var(--foreground))" }}
+              formatter={(value: number, _name, props: any) => [
+                `${value.toLocaleString("sr-RS")} ploča (${props.payload.pct.toFixed(1)}%)`,
+                props.payload.name,
+              ]}
             />
-            <Legend wrapperStyle={{ paddingTop: "20px" }} iconType="square" align="right" verticalAlign="top" />
-            {chartData?.formatKeys.map((format, index) => (
-              <Bar key={format} dataKey={format} stackId="a" fill={COLORS[index % COLORS.length]} />
-            ))}
+            <Bar dataKey="value" radius={[6, 6, 6, 6]}>
+              {rows.map((_, index) => (
+                <Cell key={index} fill={COLORS[index % COLORS.length]} />
+              ))}
+              <LabelList
+                dataKey="value"
+                position="right"
+                formatter={(v: number) => {
+                  const pct = total > 0 ? ((v / total) * 100).toFixed(1) : "0";
+                  return `${v.toLocaleString("sr-RS")} • ${pct}%`;
+                }}
+                style={{ fill: "hsl(var(--foreground))", fontSize: 12, fontWeight: 500 }}
+              />
+            </Bar>
           </BarChart>
         </ResponsiveContainer>
       </CardContent>
