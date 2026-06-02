@@ -115,6 +115,12 @@ All colors MUST be HSL.
       0 0 0 3px hsl(var(--ring) / 0.30),
       var(--glass-shadow-md);
 
+    /* Unified focus ring tokens - same on inputs, buttons, tabs */
+    --glass-focus-ring-color: var(--ring);
+    --glass-focus-ring-width: 3px;
+    --glass-focus-ring-offset: 2px;
+    --glass-focus-ring-opacity: 0.45;
+
     --font-sans: 'Inter', ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, 'Noto Sans', sans-serif;
 
     --font-serif: 'Lora', ui-serif, Georgia, Cambria, 'Times New Roman', Times, serif;
@@ -311,6 +317,28 @@ All colors MUST be HSL.
     transform: none;
     backdrop-filter: blur(10px) saturate(140%);
     -webkit-backdrop-filter: blur(10px) saturate(140%);
+  }
+
+  /* Unified focus ring - apply to ANY interactive (input, button, tab, etc.) */
+  .glass-focus {
+    outline: none;
+  }
+  .glass-focus:focus-visible,
+  .glass-focus[data-state="active"]:focus-visible {
+    outline: none;
+    box-shadow:
+      0 0 0 var(--glass-focus-ring-offset) hsl(var(--background)),
+      0 0 0 calc(var(--glass-focus-ring-offset) + var(--glass-focus-ring-width)) hsl(var(--glass-focus-ring-color) / var(--glass-focus-ring-opacity)),
+      var(--glass-shadow-md);
+  }
+  /* Inputs (focus-within so wrappers also light up) */
+  .glass-focus:where(input, textarea, select):focus-visible,
+  .glass-inset.glass-focus:focus-within {
+    box-shadow:
+      0 0 0 var(--glass-focus-ring-offset) hsl(var(--background)),
+      0 0 0 calc(var(--glass-focus-ring-offset) + var(--glass-focus-ring-width)) hsl(var(--glass-focus-ring-color) / var(--glass-focus-ring-opacity)),
+      var(--glass-shadow-inset);
+    border-color: hsl(var(--glass-focus-ring-color) / 0.55);
   }
 
   /* Backwards compat */
