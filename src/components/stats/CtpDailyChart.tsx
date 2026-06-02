@@ -46,7 +46,7 @@ export const CtpDailyChart = ({ filters }: CtpDailyChartProps) => {
       <CardHeader><CardTitle>Ploče po danima</CardTitle></CardHeader>
       <CardContent>
         <ResponsiveContainer width="100%" height={300}>
-          <AreaChart data={chartData}>
+          <BarChart data={chartData}>
             <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
             <XAxis dataKey="dateFormatted" className="text-xs" tick={{ fill: "hsl(var(--muted-foreground))" }} />
             <YAxis className="text-xs" tick={{ fill: "hsl(var(--muted-foreground))" }} />
@@ -58,8 +58,8 @@ export const CtpDailyChart = ({ filters }: CtpDailyChartProps) => {
               }}
               labelStyle={{ color: "hsl(var(--foreground))" }}
             />
-            <Area type="monotone" dataKey="plates" stroke="hsl(var(--primary))" fill="hsl(var(--primary))" fillOpacity={0.2} />
-          </AreaChart>
+            <Bar dataKey="plates" fill="hsl(var(--primary))" radius={[4, 4, 0, 0]} />
+          </BarChart>
         </ResponsiveContainer>
       </CardContent>
     </Card>
