@@ -214,14 +214,77 @@ All colors MUST be HSL.
     @apply bg-background text-foreground;
     overflow-x: hidden;
     background-color: hsl(var(--background));
+    /* iOS multi-hue color wash: blue → indigo → pink → mint */
     background-image:
-      radial-gradient(at 8% 5%, hsl(199 95% 75% / 0.55) 0px, transparent 50%),
-      radial-gradient(at 92% 10%, hsl(210 90% 80% / 0.50) 0px, transparent 50%),
-      radial-gradient(at 85% 92%, hsl(190 85% 78% / 0.45) 0px, transparent 50%),
-      radial-gradient(at 12% 90%, hsl(205 90% 82% / 0.50) 0px, transparent 50%),
-      radial-gradient(at 50% 50%, hsl(195 80% 90% / 0.30) 0px, transparent 60%);
+      radial-gradient(at 6% 4%, hsl(212 100% 78% / 0.55) 0px, transparent 55%),
+      radial-gradient(at 94% 8%, hsl(265 90% 82% / 0.50) 0px, transparent 55%),
+      radial-gradient(at 90% 92%, hsl(335 95% 82% / 0.45) 0px, transparent 55%),
+      radial-gradient(at 10% 88%, hsl(170 80% 78% / 0.50) 0px, transparent 55%),
+      radial-gradient(at 50% 50%, hsl(220 90% 92% / 0.30) 0px, transparent 60%);
     background-attachment: fixed;
     min-height: 100vh;
+  }
+}
+
+@layer utilities {
+  /* iOS color tokens (system palette) */
+  :root {
+    --ios-blue: 212 100% 50%;
+    --ios-indigo: 240 70% 60%;
+    --ios-purple: 280 70% 60%;
+    --ios-pink: 335 90% 60%;
+    --ios-orange: 25 100% 55%;
+    --ios-yellow: 45 100% 55%;
+    --ios-green: 145 65% 48%;
+    --ios-teal: 180 70% 50%;
+    --ios-mint: 165 75% 60%;
+
+    --ios-gradient-cool: linear-gradient(135deg, hsl(var(--ios-blue)) 0%, hsl(var(--ios-indigo)) 50%, hsl(var(--ios-purple)) 100%);
+    --ios-gradient-sunset: linear-gradient(135deg, hsl(var(--ios-pink)) 0%, hsl(var(--ios-orange)) 50%, hsl(var(--ios-yellow)) 100%);
+    --ios-gradient-fresh: linear-gradient(135deg, hsl(var(--ios-teal)) 0%, hsl(var(--ios-mint)) 50%, hsl(var(--ios-green)) 100%);
+    --ios-gradient-spectrum: linear-gradient(135deg, hsl(var(--ios-blue)) 0%, hsl(var(--ios-purple)) 35%, hsl(var(--ios-pink)) 70%, hsl(var(--ios-orange)) 100%);
+  }
+
+  .bg-ios-cool { background-image: var(--ios-gradient-cool); }
+  .bg-ios-sunset { background-image: var(--ios-gradient-sunset); }
+  .bg-ios-fresh { background-image: var(--ios-gradient-fresh); }
+  .bg-ios-spectrum { background-image: var(--ios-gradient-spectrum); }
+
+  .text-ios-spectrum {
+    background-image: var(--ios-gradient-spectrum);
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+  }
+  .text-ios-cool {
+    background-image: var(--ios-gradient-cool);
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+  }
+
+  /* Animated iOS gradient border */
+  .border-ios-gradient {
+    position: relative;
+    isolation: isolate;
+  }
+  .border-ios-gradient::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    border-radius: inherit;
+    padding: 1.5px;
+    background: var(--ios-gradient-spectrum);
+    background-size: 200% 200%;
+    -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+    -webkit-mask-composite: xor;
+            mask-composite: exclude;
+    animation: ios-hue-shift 8s ease infinite;
+    pointer-events: none;
+  }
+  @keyframes ios-hue-shift {
+    0%, 100% { background-position: 0% 50%; }
+    50% { background-position: 100% 50%; }
   }
 }
 
