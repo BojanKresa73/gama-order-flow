@@ -220,6 +220,20 @@ All colors MUST be HSL.
 }
 
 @layer components {
+  .glass-surface,
+  .glass-surface-sm,
+  .glass-surface-lg,
+  .glass-inset,
+  .glass-button {
+    transition:
+      box-shadow 240ms cubic-bezier(0.22, 1, 0.36, 1),
+      transform 220ms cubic-bezier(0.22, 1, 0.36, 1),
+      background-color 220ms ease,
+      border-color 220ms ease,
+      opacity 200ms ease;
+    will-change: box-shadow, transform;
+  }
+
   .glass-surface {
     background-color: hsl(var(--glass-bg));
     border: 1px solid hsl(var(--glass-border));
@@ -251,6 +265,54 @@ All colors MUST be HSL.
   .glass-button {
     box-shadow: var(--glass-shadow-button);
   }
+
+  /* Unified interaction states - applied to any interactive glass element */
+  .glass-surface:where(button, a, [role="button"], [data-state]):hover:not(:disabled):not([data-disabled]),
+  .glass-surface-sm:where(button, a, [role="button"], [data-state]):hover:not(:disabled):not([data-disabled]),
+  .glass-surface-lg:where(button, a, [role="button"], [data-state]):hover:not(:disabled):not([data-disabled]),
+  .glass-button:hover:not(:disabled):not([data-disabled]) {
+    box-shadow: var(--glass-shadow-hover);
+    background-color: hsl(var(--glass-bg-strong));
+    transform: translateY(-1px);
+  }
+
+  .glass-surface:where(button, a, [role="button"], [data-state]):active:not(:disabled):not([data-disabled]),
+  .glass-surface-sm:where(button, a, [role="button"], [data-state]):active:not(:disabled):not([data-disabled]),
+  .glass-surface-lg:where(button, a, [role="button"], [data-state]):active:not(:disabled):not([data-disabled]),
+  .glass-button:active:not(:disabled):not([data-disabled]) {
+    box-shadow: var(--glass-shadow-active);
+    transform: translateY(0) scale(0.985);
+    transition-duration: 90ms;
+  }
+
+  .glass-inset:focus-within,
+  .glass-surface:where(button, a, [role="button"]):focus-visible,
+  .glass-surface-sm:where(button, a, [role="button"]):focus-visible,
+  .glass-surface-lg:where(button, a, [role="button"]):focus-visible,
+  .glass-button:focus-visible {
+    outline: none;
+    box-shadow: var(--glass-shadow-focus);
+  }
+
+  .glass-surface:disabled,
+  .glass-surface[data-disabled],
+  .glass-surface-sm:disabled,
+  .glass-surface-sm[data-disabled],
+  .glass-surface-lg:disabled,
+  .glass-surface-lg[data-disabled],
+  .glass-inset:disabled,
+  .glass-inset[data-disabled],
+  .glass-button:disabled,
+  .glass-button[data-disabled] {
+    box-shadow: var(--glass-shadow-disabled);
+    background-color: hsl(0 0% 100% / 0.35);
+    opacity: 0.6;
+    cursor: not-allowed;
+    transform: none;
+    backdrop-filter: blur(10px) saturate(140%);
+    -webkit-backdrop-filter: blur(10px) saturate(140%);
+  }
+
   /* Backwards compat */
   .glass { @apply glass-surface; }
   .glass-strong { @apply glass-surface-lg; }
