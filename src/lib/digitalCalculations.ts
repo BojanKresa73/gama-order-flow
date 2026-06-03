@@ -96,6 +96,10 @@ export function getSheetMultiplier(format: string): number {
   return 1.0; // Default 488x330
 }
 
+export function getPricingSheetCount(totalSheets: number, format: string): number {
+  return Math.round(totalSheets * getSheetMultiplier(format));
+}
+
 // Get A4 factor for pricing
 // 488×330 = 2 A4
 // 760×330 = 3 A4
@@ -212,8 +216,7 @@ export function calculateItemPrice(
   printSides: string
 ): number {
   const totalSheets = calculateTotalSheets(obim, qty);
-  const formatMultiplier = format === "760x330" ? 1.5 : 1.0;
-  return calculateProgressivePrice(totalSheets, printSides) * formatMultiplier;
+  return calculateProgressivePrice(getPricingSheetCount(totalSheets, format), printSides);
 }
 
 // Legacy function for backward compatibility
