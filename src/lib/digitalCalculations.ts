@@ -97,7 +97,7 @@ export function getSheetMultiplier(format: string): number {
 }
 
 export function getPricingSheetCount(totalSheets: number, format: string): number {
-  return totalSheets * getSheetMultiplier(format);
+  return Math.round(totalSheets * getSheetMultiplier(format));
 }
 
 // Get A4 factor for pricing
