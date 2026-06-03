@@ -2,13 +2,14 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Separator } from "@/components/ui/separator";
 import { Badge } from "@/components/ui/badge";
-import { 
+import {
   calculateGroupedPricing, 
   formatTierLabel,
   PREP_HOUR_RATE,
   type DigitalJobItem,
   type GroupedPricingItem
 } from "@/lib/digitalGroupedPricing";
+import { getProgressiveBreakdown } from "@/lib/digitalCalculations";
 
 /**
  * Extract pieces count from item name (e.g., "flajer 27 kom" → 27)
