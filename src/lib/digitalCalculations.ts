@@ -141,6 +141,39 @@ export function calculateProgressivePrice(totalSheets: number, coverage: string)
   return total;
 }
 
+// Per-tier progressive breakdown for display: returns the segments used
+export interface ProgressiveSegment {
+  minQty: number;
+  maxQty: number;
+  sheetsInTier: number;
+  pricePerSheet: number;
+  subtotal: number;
+}
+export function getProgressiveBreakdown(totalSheets: number, coverage: string): ProgressiveSegment[] {
+  const segments: ProgressiveSegment[] = [];
+  if (totalSheets <= 0) return segments;
+  let remaining = totalSheets;
+  let prevMax = 0;
+  for (const tier of PRICE_TABLE) {
+    const tierCapacity = tier.maxQty === Infinity ? remaining : tier.maxQty - prevMax;
+    const sheetsInTier = Math.min(remaining, tierCapacity);
+    const price = tier.prices[coverage as keyof typeof tier.prices] || 0;
+    if (sheetsInTier > 0) {
+      segments.push({
+        minQty: tier.minQty,
+        maxQty: tier.maxQty,
+        sheetsInTier,
+        pricePerSheet: price,
+        subtotal: sheetsInTier * price,
+      });
+    }
+    remaining -= sheetsInTier;
+    prevMax = tier.maxQty;
+    if (remaining <= 0) break;
+  }
+  return segments;
+}
+
 // Get effective (average) price per sheet for display purposes
 export function getPricePerSheet(totalSheets: number, coverage: string): number {
   if (totalSheets <= 0) return 0;
