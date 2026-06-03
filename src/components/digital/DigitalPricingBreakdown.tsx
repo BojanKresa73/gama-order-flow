@@ -141,28 +141,26 @@ export const DigitalPricingBreakdown = ({
               </TableBody>
             </Table>
 
-            {/* Group calculation */}
+            {/* Group calculation - progressive tier breakdown */}
             <div className="bg-muted/30 rounded-lg p-4 space-y-2">
-              <div className="flex justify-between text-sm">
-                <span>Kategorija cena (na osnovu {group.format === '760x330' ? group.totalSheetsForTier : group.totalSheets} tabaka):</span>
-                <span className="font-medium">{formatTierLabel(group.tier)}</span>
+              <div className="text-sm font-medium mb-2">
+                Progresivni obračun po segmentima ({group.format === '760x330' ? `${group.totalSheetsForTier} ekv. tabaka` : `${group.totalSheets} tabaka`}):
               </div>
-              <div className="flex justify-between text-sm">
-                <span>Cena po tabaku ({group.coverage}):</span>
-                <span className="font-medium">{group.pricePerSheetBase.toFixed(2)} €</span>
-              </div>
-              {group.format === '760x330' && (
-                <div className="flex justify-between text-sm">
-                  <span>Množilac za format 760×330:</span>
-                  <span className="font-medium">× 1.5</span>
+              {getProgressiveBreakdown(group.totalSheetsForTier, group.coverage).map((seg, i) => (
+                <div key={i} className="flex justify-between text-sm pl-2">
+                  <span className="text-muted-foreground">
+                    Segment {seg.minQty}–{seg.maxQty === Infinity ? '∞' : seg.maxQty}: {seg.sheetsInTier} × {seg.pricePerSheet.toFixed(2)} €
+                  </span>
+                  <span className="font-medium">{seg.subtotal.toFixed(2)} €</span>
                 </div>
-              )}
+              ))}
               <Separator className="my-2" />
+              <div className="flex justify-between text-xs text-muted-foreground">
+                <span>Prosečna cena po tabaku ({group.coverage}):</span>
+                <span>{group.pricePerSheetBase.toFixed(3)} €</span>
+              </div>
               <div className="flex justify-between font-semibold">
-                <span>
-                  {group.totalSheets} × {group.pricePerSheetBase.toFixed(2)} €
-                  {group.format === '760x330' ? ' × 1.5' : ''}
-                </span>
+                <span>Ukupno za grupu {group.coverage} {group.format}:</span>
                 <span className="text-primary">{group.groupTotal.toFixed(2)} €</span>
               </div>
             </div>
