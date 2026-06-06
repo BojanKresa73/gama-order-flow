@@ -47,3 +47,6 @@ verify_jwt = true
 
 [functions.send-newsletter-batch]
 verify_jwt = false
+
+[functions.send-price-increase-excel]
+verify_jwt = false
