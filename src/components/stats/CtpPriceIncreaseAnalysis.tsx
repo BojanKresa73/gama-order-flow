@@ -356,6 +356,31 @@ export const CtpPriceIncreaseAnalysis = () => {
     };
   }, [consumptionData, clients, formats, prices, spreadFactor]);
 
+  // Hooks must run before any early return — keep hook order stable
+  const clientEmailMap = useMemo(() => {
+    const m = new Map<string, string[]>();
+    for (const c of clients ?? []) {
+      const emails = [c.notification_email, c.notification_email_2, c.notification_email_3, c.email]
+        .map(e => (e || "").trim())
+        .filter(e => /.+@.+\..+/.test(e));
+      const unique = Array.from(new Set(emails));
+      if (unique.length > 0) m.set(c.id, unique);
+    }
+    return m;
+  }, [clients]);
+
+  const clientData = analysis?.clients ?? [];
+  const recipients = useMemo(() => {
+    return clientData
+      .filter(c => !excludedClients.has(c.clientId) && c.currentRevenue > 0)
+      .map(c => ({
+        clientId: c.clientId,
+        clientName: c.clientName,
+        emails: clientEmailMap.get(c.clientId) ?? [],
+        pct: c.proposedIncreasePct,
+      }));
+  }, [clientData, excludedClients, clientEmailMap]);
+
   if (isLoading) {
     return (
       <Card className="rounded-2xl shadow-sm">
@@ -384,36 +409,10 @@ export const CtpPriceIncreaseAnalysis = () => {
     );
   }
 
-  const { summary, clients: clientData } = analysis;
+  const { summary } = analysis;
 
   const fmt = (n: number, d = 2) =>
     n.toLocaleString("sr-RS", { minimumFractionDigits: d, maximumFractionDigits: d });
-
-  // Build email lookup per clientId
-  const clientEmailMap = useMemo(() => {
-    const m = new Map<string, string[]>();
-    for (const c of clients ?? []) {
-      const emails = [c.notification_email, c.notification_email_2, c.notification_email_3, c.email]
-        .map(e => (e || "").trim())
-        .filter(e => /.+@.+\..+/.test(e));
-      // dedupe, preserve order
-      const unique = Array.from(new Set(emails));
-      if (unique.length > 0) m.set(c.id, unique);
-    }
-    return m;
-  }, [clients]);
-
-  // Recipients to send to: not excluded, has currentRevenue > 0, has at least one email
-  const recipients = useMemo(() => {
-    return clientData
-      .filter(c => !excludedClients.has(c.clientId) && c.currentRevenue > 0)
-      .map(c => ({
-        clientId: c.clientId,
-        clientName: c.clientName,
-        emails: clientEmailMap.get(c.clientId) ?? [],
-        pct: c.proposedIncreasePct,
-      }));
-  }, [clientData, excludedClients, clientEmailMap]);
 
   const recipientsWithEmail = recipients.filter(r => r.emails.length > 0);
   const recipientsMissingEmail = recipients.filter(r => r.emails.length === 0);
