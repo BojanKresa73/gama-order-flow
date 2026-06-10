@@ -960,3 +960,30 @@ function SummaryRow({ label, value }: { label: string; value: string }) {
     </div>
   );
 }
+
+function BreakdownRow({
+  label,
+  total,
+  children,
+}: {
+  label: string;
+  total: number;
+  children: React.ReactNode;
+}) {
+  return (
+    <Collapsible className="rounded-md border border-border/60 bg-background/50">
+      <CollapsibleTrigger className="w-full flex items-center justify-between px-2 py-1.5 text-xs hover:bg-muted/40 transition-colors group">
+        <span className="flex items-center gap-1.5 truncate pr-2">
+          <ChevronDown className="h-3 w-3 shrink-0 transition-transform group-data-[state=closed]:-rotate-90" />
+          <span className="truncate text-left">{label}</span>
+        </span>
+        <span className="tabular-nums font-medium">{total.toFixed(2)} €</span>
+      </CollapsibleTrigger>
+      <CollapsibleContent>
+        <div className="px-2.5 pb-2 pt-1 space-y-0.5 border-t border-border/40 bg-muted/20">
+          {children}
+        </div>
+      </CollapsibleContent>
+    </Collapsible>
+  );
+}
