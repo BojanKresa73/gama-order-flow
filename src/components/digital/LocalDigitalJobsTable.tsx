@@ -244,6 +244,46 @@ export const LocalDigitalJobsTable = ({ jobs, onChange, printSides, clientRabatP
   };
 
 
+  const handleExternalSubmit = (payload: ExternalServicePayload) => {
+    if (editExternalIndex !== null) {
+      const updated = [...jobs];
+      const job = updated[editExternalIndex];
+      updated[editExternalIndex] = {
+        ...job,
+        external_note: payload.external_note,
+        external_price: payload.external_price,
+        name: payload.external_note,
+        file_name: payload.external_note,
+        __status: job.id ? 'updated' : job.__status,
+      };
+      onChange(updated);
+      setEditExternalIndex(null);
+    } else {
+      const newJob: LocalDigitalJob = {
+        name: payload.external_note,
+        file_name: payload.external_note,
+        finished_w_mm: 0,
+        finished_h_mm: 0,
+        pages: 1,
+        obim: 1,
+        qty: 1,
+        is_test_print: false,
+        print_sides: "4/4",
+        machine_sheet_format: "488x330",
+        is_external_service: true,
+        external_price: payload.external_price,
+        external_note: payload.external_note,
+      };
+      onChange([...jobs, newJob]);
+    }
+  };
+
+  const handleEditExternal = (index: number) => {
+    setEditExternalIndex(index);
+    setShowExternalDialog(true);
+  };
+
+
   return (
     <div className="space-y-4">
       <DigitalJobsSummary jobs={jobs} clientRabatProcenat={clientRabatProcenat} prepHours={prepHours} />
