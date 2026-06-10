@@ -166,7 +166,7 @@ function ProductsTab() {
     name: "",
     description: "",
     active: true,
-    display_order: (data.at(-1)?.display_order ?? 0) + 10,
+    display_order: (data[data.length - 1]?.display_order ?? 0) + 10,
     default_paper: "Kunzdruk 135g",
     default_print_sides: "4/4",
     default_machine_sheet_format: "488x330",
@@ -440,7 +440,7 @@ function FinishingsTab() {
     pricing_model: "per_copy",
     has_variants: false,
     active: true,
-    display_order: (data.at(-1)?.display_order ?? 0) + 10,
+    display_order: (data[data.length - 1]?.display_order ?? 0) + 10,
     description: "",
   });
 
@@ -679,7 +679,7 @@ function PricesDialog({
       max_qty: null,
       notes: null,
       active: true,
-      display_order: (list.at(-1)?.display_order ?? 0) + 10,
+      display_order: (list[list.length - 1]?.display_order ?? 0) + 10,
     };
     setRows([...list, tmp]);
   };
