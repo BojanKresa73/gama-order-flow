@@ -791,6 +791,7 @@ export type Database = {
           has_cover: boolean
           id: string
           include_test_in_clicks: boolean
+          is_external_service: boolean
           is_test_print: boolean
           item_status: string
           lamination: string | null
@@ -843,6 +844,7 @@ export type Database = {
           has_cover?: boolean
           id?: string
           include_test_in_clicks?: boolean
+          is_external_service?: boolean
           is_test_print?: boolean
           item_status?: string
           lamination?: string | null
@@ -895,6 +897,7 @@ export type Database = {
           has_cover?: boolean
           id?: string
           include_test_in_clicks?: boolean
+          is_external_service?: boolean
           is_test_print?: boolean
           item_status?: string
           lamination?: string | null
