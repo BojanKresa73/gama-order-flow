@@ -167,9 +167,15 @@ export interface BuiltProduct {
 export function buildProductJobs(
   draft: ProductDraft,
   finishingTypes: DigitalFinishingType[],
-  finishingPrices: DigitalFinishingPrice[]
+  finishingPrices: DigitalFinishingPrice[],
+  preserveGroupId?: string
 ): BuiltProduct {
   const jobs: LocalDigitalJob[] = [];
+  const groupId =
+    preserveGroupId ||
+    (typeof crypto !== "undefined" && "randomUUID" in crypto
+      ? crypto.randomUUID()
+      : `pg_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`);
 
   const interiorPages = draft.has_cover
     ? Math.max(0, draft.page_count - 4) // assume 4-page cover when separate
@@ -213,6 +219,7 @@ export function buildProductJobs(
       cover_print_sides: draft.cover_print_sides,
       cover_lamination: draft.cover_lamination,
       binding_code: draft.binding_code,
+      product_group_id: groupId,
     });
   }
 
@@ -232,6 +239,7 @@ export function buildProductJobs(
       machine_sheet_format: draft.machine_sheet_format,
       pieces_count: draft.qty,
       product_code: draft.product_code,
+      product_group_id: groupId,
       has_cover: false, // cover-of-cover not allowed
     });
   }
@@ -300,3 +308,45 @@ export function buildProductJobs(
 
   return { jobs, finishings: finishingLines, finishingsTotal };
 }
+
+/**
+ * Reconstruct a ProductDraft from the interior LocalDigitalJob (the one that
+ * carries product_code + stashed finishings). Used when editing an existing
+ * product group.
+ */
+export function reconstructDraftFromJob(job: LocalDigitalJob): ProductDraft {
+  // Filter out the auto-added cover lamination finishing — it's re-derived
+  // from cover_lamination, not stored as an explicit user pick.
+  const userFinishings = (job.finishings ?? [])
+    .filter(
+      (f) =>
+        !(
+          job.has_cover &&
+          job.cover_lamination &&
+          job.cover_lamination !== "none" &&
+          f.code === "plastifikacija" &&
+          f.variant === job.cover_lamination
+        )
+    )
+    .map((f) => ({ code: f.code, variant: f.variant, qty: f.qty }));
+
+  return {
+    product_code: job.product_code || "katalog",
+    name: job.name || job.file_name || "",
+    qty: job.qty || 1,
+    page_count: job.page_count || 1,
+    page_format: job.page_format || "A4",
+    page_width_mm: job.page_width_mm || job.finished_w_mm || 210,
+    page_height_mm: job.page_height_mm || job.finished_h_mm || 297,
+    machine_sheet_format: job.machine_sheet_format || "488x330",
+    paper_type: job.paper_type || "",
+    print_sides: job.print_sides || "4/4",
+    has_cover: !!job.has_cover,
+    cover_paper: job.cover_paper,
+    cover_print_sides: job.cover_print_sides,
+    cover_lamination: job.cover_lamination || "none",
+    binding_code: job.binding_code || "none",
+    finishings: userFinishings,
+  };
+}
+

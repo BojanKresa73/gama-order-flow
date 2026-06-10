@@ -69,7 +69,9 @@ import type { LocalDigitalJob } from "./LocalDigitalJobsTable";
 interface DigitalProductDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  onAdd: (jobs: LocalDigitalJob[]) => void;
+  onAdd: (jobs: LocalDigitalJob[], editGroupId?: string) => void;
+  initialDraft?: ProductDraft | null;
+  editGroupId?: string | null;
 }
 
 const DEFAULT_DRAFT: ProductDraft = {
@@ -103,14 +105,26 @@ export const DigitalProductDialog = ({
   open,
   onOpenChange,
   onAdd,
+  initialDraft,
+  editGroupId,
 }: DigitalProductDialogProps) => {
   const { data: paperTypes } = useDigitalPaperTypes();
   const { data: products } = useDigitalProductTypes();
   const { data: finishingTypes } = useDigitalFinishingTypes();
   const { data: finishingPrices } = useDigitalFinishingPrices();
 
-  const [draft, setDraft] = useState<ProductDraft>(DEFAULT_DRAFT);
+  const isEdit = !!editGroupId;
+  const [draft, setDraft] = useState<ProductDraft>(initialDraft ?? DEFAULT_DRAFT);
   const [tab, setTab] = useState<"product" | "material" | "finishings">("product");
+
+  // Reset/load draft whenever the dialog opens
+  useEffect(() => {
+    if (open) {
+      setDraft(initialDraft ?? DEFAULT_DRAFT);
+      setTab("product");
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open, editGroupId]);
 
   useEffect(() => {
     if (!products) return;
@@ -249,10 +263,15 @@ export const DigitalProductDialog = ({
 
   const handleAdd = () => {
     if (!finishingTypes || !finishingPrices) return;
-    const built = buildProductJobs(draft, finishingTypes, finishingPrices);
-    onAdd(built.jobs);
+    const built = buildProductJobs(
+      draft,
+      finishingTypes,
+      finishingPrices,
+      editGroupId ?? undefined
+    );
+    onAdd(built.jobs, editGroupId ?? undefined);
     onOpenChange(false);
-    setDraft(DEFAULT_DRAFT);
+    if (!isEdit) setDraft(DEFAULT_DRAFT);
     setTab("product");
   };
 
@@ -262,7 +281,9 @@ export const DigitalProductDialog = ({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-5xl max-h-[92vh] overflow-hidden flex flex-col p-0">
         <DialogHeader className="px-6 pt-6 pb-3 border-b">
-          <DialogTitle className="text-lg">Dodaj proizvod (digitalna štampa)</DialogTitle>
+          <DialogTitle className="text-lg">
+            {isEdit ? "Izmeni proizvod" : "Dodaj proizvod"} (digitalna štampa)
+          </DialogTitle>
           <DialogDescription className="text-xs">
             Konfiguriši proizvod kroz korake — sistem generiše stavke naloga sa cenom.
           </DialogDescription>
@@ -1030,7 +1051,8 @@ export const DigitalProductDialog = ({
             Otkaži
           </Button>
           <Button onClick={handleAdd}>
-            Dodaj na nalog{grandTotal > 0 ? ` — ${grandTotal.toFixed(2)} €` : ""}
+            {isEdit ? "Sačuvaj izmene" : "Dodaj na nalog"}
+            {grandTotal > 0 ? ` — ${grandTotal.toFixed(2)} €` : ""}
           </Button>
         </DialogFooter>
 

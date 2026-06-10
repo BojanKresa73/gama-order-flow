@@ -1,11 +1,12 @@
 import { useState, useMemo } from "react";
-import { Plus, Trash2, FileUp, Package } from "lucide-react";
+import { Plus, Trash2, FileUp, Package, Pencil } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { AddDigitalJobsModal } from "./AddDigitalJobsModal";
 import { DigitalJobsSummary } from "./DigitalJobsSummary";
 import { DigitalProductDialog } from "./DigitalProductDialog";
+import { reconstructDraftFromJob, type ProductDraft } from "@/lib/digitalProductPricing";
 import {
   Table,
   TableBody,
@@ -67,6 +68,7 @@ export interface LocalDigitalJob {
   cover_print_sides?: string;
   cover_lamination?: string;
   binding_code?: string;
+  product_group_id?: string;
   finishings?: Array<{
     code: string;
     name?: string;
@@ -92,6 +94,8 @@ interface LocalDigitalJobsTableProps {
 export const LocalDigitalJobsTable = ({ jobs, onChange, printSides, clientRabatProcenat, prepHours = 0 }: LocalDigitalJobsTableProps) => {
   const [showAddFilesModal, setShowAddFilesModal] = useState(false);
   const [showProductDialog, setShowProductDialog] = useState(false);
+  const [editGroupId, setEditGroupId] = useState<string | null>(null);
+  const [editDraft, setEditDraft] = useState<ProductDraft | null>(null);
   const { data: paperTypes } = useDigitalPaperTypes();
   const { isSuper, isAdmin } = useAuthz();
   const canSeePrices = isSuper || isAdmin;
@@ -192,6 +196,46 @@ export const LocalDigitalJobsTable = ({ jobs, onChange, printSides, clientRabatP
     });
     onChange([...jobs, ...jobsWithDefaults]);
   };
+
+  const handleEditProduct = (job: LocalDigitalJob) => {
+    if (!job.product_group_id) return;
+    // Find the "interior" job in the group — the one with finishings stashed,
+    // falling back to the first member.
+    const groupJobs = jobs.filter((j) => j.product_group_id === job.product_group_id);
+    const interior = groupJobs.find((j) => (j.finishings?.length ?? 0) > 0) || groupJobs[0];
+    setEditDraft(reconstructDraftFromJob(interior));
+    setEditGroupId(job.product_group_id);
+    setShowProductDialog(true);
+  };
+
+  const handleProductSubmit = (newJobs: LocalDigitalJob[], groupId?: string) => {
+    if (groupId) {
+      // Edit: replace all jobs sharing this group_id, preserving deleted ids for diff.
+      const oldGroup = jobs.filter((j) => j.product_group_id === groupId);
+      const oldIds = oldGroup.map((j) => j.id).filter(Boolean) as string[];
+      // Carry the first existing id (and __status='updated') onto the new interior
+      // so the row updates in place instead of being recreated.
+      if (oldIds[0] && newJobs[0]) {
+        newJobs[0] = { ...newJobs[0], id: oldIds[0], __status: 'updated' };
+      }
+      if (oldIds[1] && newJobs[1]) {
+        newJobs[1] = { ...newJobs[1], id: oldIds[1], __status: 'updated' };
+      }
+      // Mark any leftover old ids as deleted (e.g., cover removed during edit).
+      const carriedIds = new Set(newJobs.map((j) => j.id).filter(Boolean) as string[]);
+      const deletedTombstones: LocalDigitalJob[] = oldGroup
+        .filter((j) => j.id && !carriedIds.has(j.id))
+        .map((j) => ({ ...j, __status: 'deleted' as const }));
+
+      const others = jobs.filter((j) => j.product_group_id !== groupId);
+      onChange([...others, ...newJobs, ...deletedTombstones]);
+    } else {
+      onChange([...jobs, ...newJobs]);
+    }
+    setEditGroupId(null);
+    setEditDraft(null);
+  };
+
 
   return (
     <div className="space-y-4">
@@ -342,15 +386,29 @@ export const LocalDigitalJobsTable = ({ jobs, onChange, printSides, clientRabatP
                     </TableCell>
                   )}
                   <TableCell className="py-2">
-                    <Button
-                      type="button"
-                      variant="ghost"
-                      size="sm"
-                      className="h-6 w-6 p-0"
-                      onClick={() => handleDelete(index)}
-                    >
-                      <Trash2 className="h-4 w-4 text-destructive" />
-                    </Button>
+                    <div className="flex items-center gap-1">
+                      {job.product_code && job.product_group_id && (
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="sm"
+                          className="h-6 w-6 p-0"
+                          onClick={() => handleEditProduct(job)}
+                          title="Izmeni proizvod"
+                        >
+                          <Pencil className="h-3.5 w-3.5" />
+                        </Button>
+                      )}
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="sm"
+                        className="h-6 w-6 p-0"
+                        onClick={() => handleDelete(index)}
+                      >
+                        <Trash2 className="h-4 w-4 text-destructive" />
+                      </Button>
+                    </div>
                   </TableCell>
                 </TableRow>
               ))}
@@ -367,8 +425,16 @@ export const LocalDigitalJobsTable = ({ jobs, onChange, printSides, clientRabatP
 
       <DigitalProductDialog
         open={showProductDialog}
-        onOpenChange={setShowProductDialog}
-        onAdd={(newJobs) => onChange([...jobs, ...newJobs])}
+        onOpenChange={(o) => {
+          setShowProductDialog(o);
+          if (!o) {
+            setEditGroupId(null);
+            setEditDraft(null);
+          }
+        }}
+        onAdd={handleProductSubmit}
+        initialDraft={editDraft}
+        editGroupId={editGroupId}
       />
     </div>
   );
