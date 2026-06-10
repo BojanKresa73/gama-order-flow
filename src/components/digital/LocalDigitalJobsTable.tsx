@@ -94,6 +94,8 @@ interface LocalDigitalJobsTableProps {
 export const LocalDigitalJobsTable = ({ jobs, onChange, printSides, clientRabatProcenat, prepHours = 0 }: LocalDigitalJobsTableProps) => {
   const [showAddFilesModal, setShowAddFilesModal] = useState(false);
   const [showProductDialog, setShowProductDialog] = useState(false);
+  const [editGroupId, setEditGroupId] = useState<string | null>(null);
+  const [editDraft, setEditDraft] = useState<ProductDraft | null>(null);
   const { data: paperTypes } = useDigitalPaperTypes();
   const { isSuper, isAdmin } = useAuthz();
   const canSeePrices = isSuper || isAdmin;
