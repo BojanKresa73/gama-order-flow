@@ -222,7 +222,7 @@ export function calculateItemPrice(
 // Legacy function for backward compatibility
 export function parseSheetFormat(format: string): { width: number; height: number } {
   if (format === '700x330' || format === '330x700') {
-    return { width: 760, height: 330 };
+    return { width: 700, height: 330 };
   }
   return { width: 488, height: 330 };
 }
