@@ -189,11 +189,19 @@ export function buildProductJobs(
 
   // ----- Interior job -----
   if (interiorPages > 0) {
-    // Sheets per copy = ceil(pages / pagesPerSheet / sides)
     const sidesFactor = draft.print_sides.includes("/0") ? 1 : 2;
+    // Booklet (klamovanje / šivenje) uses spread imposition: each physical sheet
+    // carries 2 pages side-by-side per face → 2 * sidesFactor pages per sheet,
+    // regardless of geometric n-up (the extra width is waste/bleed).
+    const hasBookletBinding = draft.finishings.some((f) =>
+      isBookletBinding(f.variant)
+    );
+    const pagesPerPhysicalSheet = hasBookletBinding
+      ? 2 * sidesFactor
+      : nUp * sidesFactor;
     const sheetsPerCopy = Math.max(
       1,
-      Math.ceil(interiorPages / (nUp * sidesFactor))
+      Math.ceil(interiorPages / pagesPerPhysicalSheet)
     );
 
     jobs.push({
