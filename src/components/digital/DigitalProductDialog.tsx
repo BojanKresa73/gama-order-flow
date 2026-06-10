@@ -164,6 +164,22 @@ export const DigitalProductDialog = ({
     return buildProductJobs(draft, finishingTypes, finishingPrices);
   }, [draft, finishingTypes, finishingPrices]);
 
+  const printPricing = useMemo(() => {
+    if (preview.jobs.length === 0) return null;
+    try {
+      return calculateGroupedPricing(preview.jobs as any, 0);
+    } catch {
+      return null;
+    }
+  }, [preview.jobs]);
+
+  const printTotal = printPricing?.totalWithPrep ?? 0;
+  const paperCost = printPricing?.totalPaperCost ?? 0;
+  const clickCost = printPricing?.totalClickCost ?? 0;
+  const grandTotal = printTotal + preview.finishingsTotal;
+  const pricePerPiece = draft.qty > 0 ? grandTotal / draft.qty : 0;
+
+
   const handleAdd = () => {
     if (!finishingTypes || !finishingPrices) return;
     const built = buildProductJobs(draft, finishingTypes, finishingPrices);
