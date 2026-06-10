@@ -1051,7 +1051,8 @@ export const DigitalProductDialog = ({
             Otkaži
           </Button>
           <Button onClick={handleAdd}>
-            Dodaj na nalog{grandTotal > 0 ? ` — ${grandTotal.toFixed(2)} €` : ""}
+            {isEdit ? "Sačuvaj izmene" : "Dodaj na nalog"}
+            {grandTotal > 0 ? ` — ${grandTotal.toFixed(2)} €` : ""}
           </Button>
         </DialogFooter>
 
