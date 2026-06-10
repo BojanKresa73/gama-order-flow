@@ -81,6 +81,15 @@ export default function AdminSection() {
         <Button
           variant="outline"
           className="h-20 flex-col gap-2"
+          onClick={() => nav("/admin/digital-catalog")}
+        >
+          <Layers className="h-6 w-6" />
+          <span className="font-semibold">Digital šifarnik</span>
+        </Button>
+
+        <Button
+          variant="outline"
+          className="h-20 flex-col gap-2"
           onClick={handleBackup}
           disabled={isBackingUp}
         >
