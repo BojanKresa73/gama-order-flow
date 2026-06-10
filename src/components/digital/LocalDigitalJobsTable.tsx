@@ -1,10 +1,11 @@
 import { useState, useMemo } from "react";
-import { Plus, Trash2, FileUp } from "lucide-react";
+import { Plus, Trash2, FileUp, Package } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { AddDigitalJobsModal } from "./AddDigitalJobsModal";
 import { DigitalJobsSummary } from "./DigitalJobsSummary";
+import { DigitalProductDialog } from "./DigitalProductDialog";
 import {
   Table,
   TableBody,
@@ -90,6 +91,7 @@ interface LocalDigitalJobsTableProps {
 
 export const LocalDigitalJobsTable = ({ jobs, onChange, printSides, clientRabatProcenat, prepHours = 0 }: LocalDigitalJobsTableProps) => {
   const [showAddFilesModal, setShowAddFilesModal] = useState(false);
+  const [showProductDialog, setShowProductDialog] = useState(false);
   const { data: paperTypes } = useDigitalPaperTypes();
   const { isSuper, isAdmin } = useAuthz();
   const canSeePrices = isSuper || isAdmin;
