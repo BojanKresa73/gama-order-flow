@@ -84,6 +84,7 @@ export const DigitalJobsSummary = ({ jobs, clientRabatProcenat = 0, prepHours = 
         ["Priprema (€):", prepCost.toFixed(2)],
         ["Ukupno (€):", totalWithPrep.toFixed(2)],
         ["Papir (€):", totalPaperCost.toFixed(2)],
+        ["Klikovi (€):", totalClickCost.toFixed(2)],
         ["RUC (€):", ruc.toFixed(2)],
         ["RUC (%):", rucPercent.toFixed(1) + "%"]
       );
