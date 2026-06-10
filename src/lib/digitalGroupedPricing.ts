@@ -248,12 +248,13 @@ export function calculateGroupedPricing(jobs: DigitalJobItem[], prepHours: numbe
   const totalPaperCost = calculatePaperCost(jobs);
   const clickCosts = calculateClickCosts(jobs);
   const totalClickCost = clickCosts.totalCost;
-  const totalCost = totalPaperCost + totalClickCost;
+  // External services are pass-through: same amount added to revenue and cost
+  const totalCost = totalPaperCost + totalClickCost + externalServicesTotal;
   const prepCost = prepHours * PREP_HOUR_RATE;
-  const totalWithPrep = totalAmount + prepCost;
+  const totalWithPrep = totalAmount + prepCost + externalServicesTotal;
   const ruc = totalWithPrep - totalCost;
   const rucPercent = totalWithPrep > 0 ? (ruc / totalWithPrep) * 100 : 0;
-  
+
   return {
     groups,
     totalAmount,
@@ -266,7 +267,8 @@ export function calculateGroupedPricing(jobs: DigitalJobItem[], prepHours: numbe
     ruc,
     rucPercent,
     prepCost,
-    totalWithPrep
+    totalWithPrep,
+    externalServicesTotal,
   };
 }
 
