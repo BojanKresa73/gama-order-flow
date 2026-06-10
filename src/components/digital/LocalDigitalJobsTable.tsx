@@ -197,7 +197,15 @@ export const LocalDigitalJobsTable = ({ jobs, onChange, printSides, clientRabatP
     <div className="space-y-4">
       <DigitalJobsSummary jobs={jobs} clientRabatProcenat={clientRabatProcenat} prepHours={prepHours} />
       
-      <div className="flex gap-2">
+      <div className="flex gap-2 flex-wrap">
+        <Button
+          type="button"
+          onClick={() => setShowProductDialog(true)}
+          size="sm"
+        >
+          <Package className="h-4 w-4 mr-2" />
+          Dodaj proizvod
+        </Button>
         <Button
           type="button"
           onClick={handleAdd}
@@ -205,7 +213,7 @@ export const LocalDigitalJobsTable = ({ jobs, onChange, printSides, clientRabatP
           size="sm"
         >
           <Plus className="h-4 w-4 mr-2" />
-          Dodaj stavku
+          Brzi unos
         </Button>
         <Button
           type="button"
@@ -355,6 +363,12 @@ export const LocalDigitalJobsTable = ({ jobs, onChange, printSides, clientRabatP
         open={showAddFilesModal}
         onOpenChange={setShowAddFilesModal}
         onAddJobs={handleAddJobs}
+      />
+
+      <DigitalProductDialog
+        open={showProductDialog}
+        onOpenChange={setShowProductDialog}
+        onAdd={(newJobs) => onChange([...jobs, ...newJobs])}
       />
     </div>
   );
