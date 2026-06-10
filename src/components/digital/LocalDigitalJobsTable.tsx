@@ -40,7 +40,7 @@ export interface LocalDigitalJob {
   is_test_print: boolean;
   print_sides: string; // "4/4", "4/0", "4/1", "1/0", "1/1"
   paper_type?: string;
-  machine_sheet_format?: string; // "488x330" or "760x330"
+  machine_sheet_format?: string; // "488x330" or "700x330"
   pieces_per_sheet_override?: number | null;
   pieces_count?: number | null; // Number of pieces (flyers, cards) imposed per copy
   test_sheets?: number;

@@ -52,7 +52,7 @@ async function ensureDigitalComputations(sb: any, orderId: string): Promise<void
     const obim = Math.max(1, Number(job.obim) || 1);
     const qty = Math.max(1, Number(job.qty) || 1);
     const totalSheets = obim * qty;
-    const multiplier = job.machine_sheet_format === '760x330' ? 1.5 : 1;
+    const multiplier = job.machine_sheet_format === '700x330' ? 1.5 : 1;
     const printSides = job.print_sides || '4/4';
     const colorSides = printSides === '4/4' ? 2 : (printSides === '4/0' || printSides === '4/1' ? 1 : 0);
     const monoSides = printSides === '1/1' ? 2 : (printSides === '1/0' || printSides === '4/1' ? 1 : 0);

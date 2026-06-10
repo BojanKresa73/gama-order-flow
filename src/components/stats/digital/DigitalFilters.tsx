@@ -19,7 +19,7 @@ interface DigitalFiltersProps {
 }
 
 const PRINT_SIDES_OPTIONS = ["4/0", "4/4", "4/1", "1/0", "1/1"];
-const SHEET_FORMAT_OPTIONS = ["330x488", "330x760"];
+const SHEET_FORMAT_OPTIONS = ["330x488", "330x700"];
 
 export function DigitalFilters({ filters, onFiltersChange }: DigitalFiltersProps) {
   const [localFilters, setLocalFilters] = useState(filters);

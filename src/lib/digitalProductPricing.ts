@@ -28,7 +28,7 @@ export const PAGE_FORMAT_PRESETS: PageFormatPreset[] = [
 
 export const MACHINE_SHEET_DIMS: Record<string, { w: number; h: number }> = {
   "488x330": { w: 488, h: 330 },
-  "760x330": { w: 760, h: 330 },
+  "700x330": { w: 700, h: 330 },
 };
 
 // Binding variants that require booklet imposition (2 pages side-by-side on a spread).
@@ -69,7 +69,7 @@ export function minSheetForBooklet(
   pageW: number,
   pageH: number
 ): string | null {
-  const ordered = ["488x330", "760x330"];
+  const ordered = ["488x330", "700x330"];
   for (const f of ordered) {
     if (spreadFitsOnSheet(pageW, pageH, f)) return f;
   }

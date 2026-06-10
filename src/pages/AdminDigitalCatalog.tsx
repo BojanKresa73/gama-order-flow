@@ -334,7 +334,7 @@ function ProductDialog({
             <SelectTrigger><SelectValue placeholder="—" /></SelectTrigger>
             <SelectContent>
               <SelectItem value="488x330">488x330</SelectItem>
-              <SelectItem value="760x330">760x330</SelectItem>
+              <SelectItem value="700x330">700x330</SelectItem>
             </SelectContent>
           </Select>
         </div>

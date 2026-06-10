@@ -1,5 +1,5 @@
 // Simplified Digital Sheet Logic
-// Each row = imposed sheet file, only 488×330 and 760×330 formats
+// Each row = imposed sheet file, only 488×330 and 700×330 formats
 
 export interface DigitalSettings {
   sheet_width_mm: number;
@@ -24,7 +24,7 @@ export interface DigitalJob {
   is_test_print: boolean;
   print_sides: string; // "4/4", "4/0", "4/1", "1/0", "1/1"
   paper_type?: string;
-  machine_sheet_format?: string; // "488x330" or "760x330"
+  machine_sheet_format?: string; // "488x330" or "700x330"
   pieces_per_sheet_override?: number | null;
   test_sheets?: number;
   include_test_in_clicks?: boolean;
@@ -49,13 +49,13 @@ export interface ComputedDigitalJob {
 }
 
 // Sheet formats
-export const SHEET_FORMATS = ["488x330", "760x330"] as const;
+export const SHEET_FORMATS = ["488x330", "700x330"] as const;
 
 // Print modes / coverage options
 export const PRINT_MODES = ["4/4", "4/0", "4/1", "1/0", "1/1"] as const;
 
 // Pricing table per SHEET (488x330) by tirage range and coverage
-// For 760x330 format, multiply by 1.5
+// For 700x330 format, multiply by 1.5
 export const PRICE_TABLE = [
   { minQty: 1, maxQty: 10, prices: { "4/0": 0.82, "4/4": 1.38, "4/1": 1.06, "1/0": 0.29, "1/1": 0.45 } },
   { minQty: 11, maxQty: 20, prices: { "4/0": 0.77, "4/4": 1.28, "4/1": 0.99, "1/0": 0.27, "1/1": 0.42 } },
@@ -90,9 +90,9 @@ export const MONO_CLICK_COST_BASE = 0.016; // €/click
 
 // Get sheet multiplier for click calculation (A3 equivalents)
 // 488×330 = 1.0 (base A3)
-// 760×330 = 1.5 (50% more)
+// 700×330 = 1.5 (50% more)
 export function getSheetMultiplier(format: string): number {
-  if (format === "760x330") return 1.5;
+  if (format === "700x330") return 1.5;
   return 1.0; // Default 488x330
 }
 
@@ -102,9 +102,9 @@ export function getPricingSheetCount(totalSheets: number, format: string): numbe
 
 // Get A4 factor for pricing
 // 488×330 = 2 A4
-// 760×330 = 3 A4
+// 700×330 = 3 A4
 export function getA4Factor(format: string): number {
-  if (format === "760x330") return 3;
+  if (format === "700x330") return 3;
   return 2; // Default 488x330
 }
 
@@ -208,7 +208,7 @@ export function calculateItemClicks(
 }
 
 // Calculate price for a single item using progressive tier pricing
-// 1.5x multiplier applied for 760x330 format
+// 1.5x multiplier applied for 700x330 format
 export function calculateItemPrice(
   obim: number,
   qty: number,
@@ -221,8 +221,8 @@ export function calculateItemPrice(
 
 // Legacy function for backward compatibility
 export function parseSheetFormat(format: string): { width: number; height: number } {
-  if (format === '760x330' || format === '330x760') {
-    return { width: 760, height: 330 };
+  if (format === '700x330' || format === '330x700') {
+    return { width: 700, height: 330 };
   }
   return { width: 488, height: 330 };
 }
@@ -301,7 +301,7 @@ export function aggregateByPaperType(jobs: (DigitalJob & Partial<ComputedDigital
 // Get paper price per sheet for a given paper type and format
 export function getPaperPricePerSheet(paperType: string, format: string): number {
   const basePrice = PAPER_PRICE_TABLE[paperType] ?? 0;
-  const paperMultiplier = format === "760x330" ? 1.5 : 1.0;
+  const paperMultiplier = format === "700x330" ? 1.5 : 1.0;
   return basePrice * paperMultiplier;
 }
 
