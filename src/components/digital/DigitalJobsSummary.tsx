@@ -30,7 +30,10 @@ export const DigitalJobsSummary = ({ jobs, clientRabatProcenat = 0, prepHours = 
     prepCost,
     totalWithPrep
   } = pricing;
-  const amountWithDiscount = totalWithPrep * (1 - clientRabatProcenat / 100);
+  // Aggregate finishings across all jobs (each product stashes finishings on first job)
+  const finishingsTotal = jobs.reduce((sum, j) => sum + (j.finishings_total || 0), 0);
+  const grandTotal = totalWithPrep + finishingsTotal;
+  const amountWithDiscount = grandTotal * (1 - clientRabatProcenat / 100);
 
   const handleExportXLSX = () => {
     const worksheetData: (string | number)[][] = [
@@ -130,9 +133,15 @@ export const DigitalJobsSummary = ({ jobs, clientRabatProcenat = 0, prepHours = 
                     <div className="text-xl font-bold text-blue-600">€{prepCost.toFixed(2)}</div>
                   </div>
                 )}
+                {finishingsTotal > 0 && (
+                  <div>
+                    <div className="text-sm text-muted-foreground">Dorade</div>
+                    <div className="text-xl font-bold text-amber-600">€{finishingsTotal.toFixed(2)}</div>
+                  </div>
+                )}
                 <div>
                   <div className="text-sm text-muted-foreground">Ukupno</div>
-                  <div className="text-2xl font-bold text-primary">€{totalWithPrep.toFixed(2)}</div>
+                  <div className="text-2xl font-bold text-primary">€{grandTotal.toFixed(2)}</div>
                 </div>
                 <div>
                   <div className="text-sm text-muted-foreground">Papir</div>
