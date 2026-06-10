@@ -733,67 +733,180 @@ export const DigitalProductDialog = ({
               )}
             </div>
 
-            {preview.finishings.length > 0 && (
+            {(printPricing || preview.finishings.length > 0) && (
               <>
                 <Separator />
                 <div>
                   <h4 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-2">
-                    Dorade
+                    Kalkulacija (klik za detalje)
                   </h4>
-                  <div className="space-y-1">
+                  <div className="space-y-1.5">
+                    {/* PRINT per group */}
+                    {printPricing?.groups.map((g, i) => {
+                      const segments = getProgressiveBreakdown(
+                        g.totalSheetsForTier,
+                        g.coverage
+                      );
+                      return (
+                        <BreakdownRow
+                          key={`g-${i}`}
+                          label={`Štampa ${g.coverage} ${g.format}`}
+                          total={g.groupTotal}
+                        >
+                          <div className="text-[11px] text-muted-foreground mb-1">
+                            Σ tabaka: <b>{g.totalSheets}</b>
+                            {g.format === "760x330"
+                              ? ` (ekv. ${g.totalSheetsForTier} × 488×330)`
+                              : ""}
+                          </div>
+                          {g.items.map((it, k) => (
+                            <div
+                              key={k}
+                              className="flex justify-between text-[11px]"
+                            >
+                              <span className="truncate pr-2">
+                                {it.name}: {it.obim} × {it.qty} ={" "}
+                                <b>{it.sheets}</b> tab.
+                              </span>
+                            </div>
+                          ))}
+                          <Separator className="my-1" />
+                          <div className="text-[11px] font-medium mb-0.5">
+                            Progresivni segmenti:
+                          </div>
+                          {segments.map((s, k) => (
+                            <div
+                              key={k}
+                              className="flex justify-between text-[11px]"
+                            >
+                              <span className="text-muted-foreground">
+                                {s.minQty}–
+                                {s.maxQty === Infinity ? "∞" : s.maxQty}:{" "}
+                                {s.sheetsInTier} × {s.pricePerSheet.toFixed(2)} €
+                              </span>
+                              <span className="tabular-nums">
+                                {s.subtotal.toFixed(2)} €
+                              </span>
+                            </div>
+                          ))}
+                        </BreakdownRow>
+                      );
+                    })}
+
+                    {/* PAPER */}
+                    {printPricing && (
+                      <BreakdownRow label="Trošak papira" total={paperCost}>
+                        <div className="text-[11px] text-muted-foreground mb-1">
+                          Tabaka × cena/tab × {`{1.0 | 1.5}`} za 760×330
+                        </div>
+                        {preview.jobs.map((j, k) => {
+                          const sheets = (j.obim || 1) * (j.qty || 0);
+                          const base = PAPER_PRICE_TABLE[j.paper_type || ""] ?? 0;
+                          const mult =
+                            j.machine_sheet_format === "760x330" ? 1.5 : 1.0;
+                          const cost = sheets * base * mult;
+                          return (
+                            <div
+                              key={k}
+                              className="flex justify-between text-[11px]"
+                            >
+                              <span className="truncate pr-2">
+                                {j.name}: {sheets} × {base.toFixed(2)}
+                                {mult !== 1 ? ` × ${mult}` : ""} ({j.paper_type})
+                              </span>
+                              <span className="tabular-nums">
+                                {cost.toFixed(2)} €
+                              </span>
+                            </div>
+                          );
+                        })}
+                      </BreakdownRow>
+                    )}
+
+                    {/* CLICKS */}
+                    {printPricing && (
+                      <BreakdownRow label="Trošak klikova" total={clickCost}>
+                        <div className="text-[11px] text-muted-foreground mb-1">
+                          Color: {COLOR_CLICK_COST_BASE.toFixed(3)} €/klik · Mono:{" "}
+                          {MONO_CLICK_COST_BASE.toFixed(3)} €/klik
+                        </div>
+                        {preview.jobs.map((j, k) => {
+                          const sheets = (j.obim || 1) * (j.qty || 0);
+                          const m = getSheetMultiplier(
+                            j.machine_sheet_format || "488x330"
+                          );
+                          const { colorSides, monoSides } = getCoverageSides(
+                            j.print_sides || "4/4"
+                          );
+                          const cc = sheets * colorSides * m;
+                          const mc = sheets * monoSides * m;
+                          const cost =
+                            cc * COLOR_CLICK_COST_BASE +
+                            mc * MONO_CLICK_COST_BASE;
+                          return (
+                            <div key={k} className="text-[11px]">
+                              <div className="flex justify-between">
+                                <span className="truncate pr-2">
+                                  {j.name} ({j.print_sides})
+                                </span>
+                                <span className="tabular-nums">
+                                  {cost.toFixed(2)} €
+                                </span>
+                              </div>
+                              <div className="text-muted-foreground pl-2">
+                                {sheets} × {colorSides}C + {monoSides}M
+                                {m !== 1 ? ` × ${m}` : ""} = {cc}C / {mc}M
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </BreakdownRow>
+                    )}
+
+                    {/* FINISHINGS */}
                     {preview.finishings.map((f, i) => (
-                      <div key={i} className="flex justify-between text-xs">
-                        <span className="text-muted-foreground truncate pr-2">
-                          {f.name}
-                          {f.variant ? ` — ${f.variant}` : ""}
-                        </span>
-                        <span className="font-medium tabular-nums">
-                          {f.total.toFixed(2)} €
-                        </span>
-                      </div>
+                      <BreakdownRow
+                        key={`f-${i}`}
+                        label={`${f.name}${f.variant ? ` — ${f.variant}` : ""}`}
+                        total={f.total}
+                      >
+                        <div className="text-[11px] text-muted-foreground mb-1">
+                          Model: <b>{f.pricing_model}</b>
+                        </div>
+                        <div className="text-[11px] space-y-0.5">
+                          {f.fixed_cost > 0 && (
+                            <div className="flex justify-between">
+                              <span>Fiksno</span>
+                              <span className="tabular-nums">
+                                {f.fixed_cost.toFixed(2)} €
+                              </span>
+                            </div>
+                          )}
+                          {f.unit_price > 0 && f.pricing_model !== "fixed" && (
+                            <div className="flex justify-between">
+                              <span>
+                                {f.qty} × {f.unit_price.toFixed(3)} €
+                              </span>
+                              <span className="tabular-nums">
+                                {(f.qty * f.unit_price).toFixed(2)} €
+                              </span>
+                            </div>
+                          )}
+                          <Separator className="my-1" />
+                          <div className="flex justify-between font-medium">
+                            <span>Ukupno</span>
+                            <span className="tabular-nums">
+                              {f.total.toFixed(2)} €
+                            </span>
+                          </div>
+                        </div>
+                      </BreakdownRow>
                     ))}
-                  </div>
-                  <Separator className="my-2" />
-                  <div className="flex justify-between text-sm font-semibold">
-                    <span>Ukupno dorade</span>
-                    <span className="text-primary tabular-nums">
-                      {preview.finishingsTotal.toFixed(2)} €
-                    </span>
                   </div>
                 </div>
               </>
             )}
 
-            {printPricing && (
-              <>
-                <Separator />
-                <div>
-                  <h4 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-2">
-                    Kalkulacija
-                  </h4>
-                  <div className="space-y-1 text-xs">
-                    {printPricing.groups.map((g, i) => (
-                      <div key={i} className="flex justify-between">
-                        <span className="text-muted-foreground truncate pr-2">
-                          Štampa {g.coverage} {g.format} ({g.totalSheets} tab.)
-                        </span>
-                        <span className="font-medium tabular-nums">
-                          {g.groupTotal.toFixed(2)} €
-                        </span>
-                      </div>
-                    ))}
-                    <div className="flex justify-between">
-                      <span className="text-muted-foreground">Trošak papira</span>
-                      <span className="tabular-nums">{paperCost.toFixed(2)} €</span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span className="text-muted-foreground">Trošak klikova</span>
-                      <span className="tabular-nums">{clickCost.toFixed(2)} €</span>
-                    </div>
-                  </div>
-                </div>
-              </>
-            )}
 
             <Separator />
 
