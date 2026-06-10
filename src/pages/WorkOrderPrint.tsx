@@ -103,7 +103,7 @@ const DigitalPricingPrintSection = ({ items, prepHours = 0 }: { items: any[]; pr
                 <th>Obim</th>
                 <th>Tiraž</th>
                 <th>Tabaka</th>
-                {group.format === '760x330' && <th>× 1.5</th>}
+                {group.format === '700x330' && <th>× 1.5</th>}
               </tr>
             </thead>
             <tbody>
@@ -127,7 +127,7 @@ const DigitalPricingPrintSection = ({ items, prepHours = 0 }: { items: any[]; pr
                     <td>{item.obim}</td>
                     <td>{item.qty}</td>
                     <td>{item.sheets}</td>
-                    {group.format === '760x330' && <td>{item.sheetsForTier}</td>}
+                    {group.format === '700x330' && <td>{item.sheetsForTier}</td>}
                   </tr>
                 );
               })}
@@ -136,7 +136,7 @@ const DigitalPricingPrintSection = ({ items, prepHours = 0 }: { items: any[]; pr
               <tr>
                 <td colSpan={3}><strong>Ukupno {group.coverage} {group.format}</strong></td>
                 <td><strong>{group.totalSheets} tab.</strong></td>
-                {group.format === '760x330' && <td><strong>{group.totalSheetsForTier}</strong></td>}
+                {group.format === '700x330' && <td><strong>{group.totalSheetsForTier}</strong></td>}
               </tr>
             </tfoot>
           </table>
@@ -147,7 +147,7 @@ const DigitalPricingPrintSection = ({ items, prepHours = 0 }: { items: any[]; pr
               <span>{group.pricePerSheetBase.toFixed(2)} €</span>
             </div>
             <div className="calc-row total">
-              <span>{group.totalSheets} × {group.pricePerSheetBase.toFixed(2)} €{group.format === '760x330' ? ' × 1.5' : ''}</span>
+              <span>{group.totalSheets} × {group.pricePerSheetBase.toFixed(2)} €{group.format === '700x330' ? ' × 1.5' : ''}</span>
               <span className="price-value">{group.groupTotal.toFixed(2)} €</span>
             </div>
           </div>

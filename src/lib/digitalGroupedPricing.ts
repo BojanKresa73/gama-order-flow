@@ -1,5 +1,5 @@
 // Grouped Digital Pricing Logic
-// Groups items by coverage (4/0, 4/4, etc.) + format (488x330, 760x330)
+// Groups items by coverage (4/0, 4/4, etc.) + format (488x330, 700x330)
 // Then calculates pricing based on aggregated sheet count per group
 
 import { 
@@ -45,7 +45,7 @@ export interface GroupedPricingItem {
   obim: number;
   qty: number;
   sheets: number;
-  sheetsForTier: number; // For 760x330, this is sheets * 1.5
+  sheetsForTier: number; // For 700x330, this is sheets * 1.5
   piecesCount?: number | null; // Number of pieces per copy (for price per piece calculation)
 }
 
@@ -54,7 +54,7 @@ export interface PricingGroup {
   format: string;          // e.g., "488x330"
   items: GroupedPricingItem[];
   totalSheets: number;
-  totalSheetsForTier: number; // For tier calculation (760x330 = sheets * 1.5)
+  totalSheetsForTier: number; // For tier calculation (700x330 = sheets * 1.5)
   tier: { minQty: number; maxQty: number; pricePerSheet: number };
   pricePerSheetBase: number; // Price per 488x330 sheet
   formatMultiplier: number;  // 1.0 or 1.5
@@ -116,7 +116,7 @@ function calculatePaperCost(jobs: DigitalJobItem[]): number {
     const format = job.machine_sheet_format || '488x330';
     
     const basePaperPrice = PAPER_PRICE_TABLE[paperType] ?? 0;
-    const paperMultiplier = format === '760x330' ? 1.5 : 1.0;
+    const paperMultiplier = format === '700x330' ? 1.5 : 1.0;
     
     total += sheets * basePaperPrice * paperMultiplier;
   }
@@ -175,8 +175,8 @@ export function calculateGroupedPricing(jobs: DigitalJobItem[], prepHours: numbe
     const qty = job.qty || 0;
     const sheets = obim * qty;
     
-    // For 760x330, multiply sheets by 1.5 for tier calculation
-    const formatMultiplier = format === '760x330' ? 1.5 : 1.0;
+    // For 700x330, multiply sheets by 1.5 for tier calculation
+    const formatMultiplier = format === '700x330' ? 1.5 : 1.0;
     const sheetsForTier = Math.round(sheets * formatMultiplier);
     
     const itemName = job.name || job.file_name || 'Bez naziva';
@@ -214,13 +214,13 @@ export function calculateGroupedPricing(jobs: DigitalJobItem[], prepHours: numbe
   let totalSheets = 0;
   
   for (const group of groupMap.values()) {
-    // Get tier (for display) based on total sheets for tier (with 1.5x for 760x330)
+    // Get tier (for display) based on total sheets for tier (with 1.5x for 700x330)
     const tierInfo = getTierForQuantity(group.totalSheetsForTier);
     const pricePerSheetBase = getPriceForTier(group.totalSheetsForTier, group.coverage);
 
     // Progressive (cumulative) tier pricing — each tier price applies only
     // to the sheets within that tier's range. Matches gamaunited.rs calculator.
-    // For 760x330 the tier is computed on sheets*1.5 and the result is
+    // For 700x330 the tier is computed on sheets*1.5 and the result is
     // already in "488x330-equivalent" pricing, so no extra formatMultiplier here.
     const groupTotal = calculateProgressivePrice(group.totalSheetsForTier, group.coverage);
 

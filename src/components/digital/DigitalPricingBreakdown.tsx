@@ -103,7 +103,7 @@ export const DigitalPricingBreakdown = ({
                   <TableHead className="text-center">Tiraž</TableHead>
                   <TableHead className="text-right">Tabaka</TableHead>
                   <TableHead className="text-right">€/kom</TableHead>
-                  {group.format === '760x330' && (
+                  {group.format === '700x330' && (
                     <TableHead className="text-right">× 1.5</TableHead>
                   )}
                 </TableRow>
@@ -127,7 +127,7 @@ export const DigitalPricingBreakdown = ({
                       <TableCell className="text-right text-sm font-medium text-muted-foreground">
                         €{perPieceInfo.pricePerPiece.toFixed(3)}
                       </TableCell>
-                      {group.format === '760x330' && (
+                      {group.format === '700x330' && (
                         <TableCell className="text-right text-muted-foreground">
                           {item.sheetsForTier}
                         </TableCell>
@@ -140,7 +140,7 @@ export const DigitalPricingBreakdown = ({
                 <TableRow className="bg-muted/50 font-semibold">
                   <TableCell colSpan={4}>Ukupno {group.coverage} {group.format}</TableCell>
                   <TableCell></TableCell>
-                  {group.format === '760x330' && (
+                  {group.format === '700x330' && (
                     <TableCell className="text-right">{group.totalSheetsForTier}</TableCell>
                   )}
                 </TableRow>
@@ -150,7 +150,7 @@ export const DigitalPricingBreakdown = ({
             {/* Group calculation - progressive tier breakdown */}
             <div className="bg-muted/30 rounded-lg p-4 space-y-2">
               <div className="text-sm font-medium mb-2">
-                Progresivni obračun po segmentima ({group.format === '760x330' ? `${group.totalSheetsForTier} ekv. tabaka` : `${group.totalSheets} tabaka`}):
+                Progresivni obračun po segmentima ({group.format === '700x330' ? `${group.totalSheetsForTier} ekv. tabaka` : `${group.totalSheets} tabaka`}):
               </div>
               {getProgressiveBreakdown(group.totalSheetsForTier, group.coverage).map((seg, i) => (
                 <div key={i} className="flex justify-between text-sm pl-2">

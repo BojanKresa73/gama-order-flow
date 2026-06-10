@@ -863,7 +863,7 @@ export const DigitalProductDialog = ({
                         >
                           <div className="text-[11px] text-muted-foreground mb-1">
                             Σ tabaka: <b>{g.totalSheets}</b>
-                            {g.format === "760x330"
+                            {g.format === "700x330"
                               ? ` (ekv. ${g.totalSheetsForTier} × 488×330)`
                               : ""}
                           </div>
@@ -911,7 +911,7 @@ export const DigitalProductDialog = ({
                           const sheets = (j.obim || 1) * (j.qty || 0);
                           const base = PAPER_PRICE_TABLE[j.paper_type || ""] ?? 0;
                           const mult =
-                            j.machine_sheet_format === "760x330" ? 1.5 : 1.0;
+                            j.machine_sheet_format === "700x330" ? 1.5 : 1.0;
                           const cost = sheets * base * mult;
                           return (
                             <div
