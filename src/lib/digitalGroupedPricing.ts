@@ -155,8 +155,13 @@ function calculateClickCosts(jobs: DigitalJobItem[]): { colorClicks: number; mon
  * Then calculates price tier based on aggregated sheets per group
  */
 export function calculateGroupedPricing(jobs: DigitalJobItem[], prepHours: number = 0): GroupedPricingResult {
-  // Filter out test prints for pricing
-  const billableJobs = jobs.filter(j => !j.is_test_print);
+  // Filter out test prints and external services for sheet/click pricing
+  const billableJobs = jobs.filter(j => !j.is_test_print && !j.is_external_service);
+
+  // External services: pass-through amount added to revenue and cost
+  const externalServicesTotal = jobs
+    .filter(j => j.is_external_service)
+    .reduce((sum, j) => sum + (Number(j.external_price) || 0), 0);
   
   // Group by coverage + format
   const groupMap = new Map<string, PricingGroup>();
