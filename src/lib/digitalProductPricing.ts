@@ -167,9 +167,15 @@ export interface BuiltProduct {
 export function buildProductJobs(
   draft: ProductDraft,
   finishingTypes: DigitalFinishingType[],
-  finishingPrices: DigitalFinishingPrice[]
+  finishingPrices: DigitalFinishingPrice[],
+  preserveGroupId?: string
 ): BuiltProduct {
   const jobs: LocalDigitalJob[] = [];
+  const groupId =
+    preserveGroupId ||
+    (typeof crypto !== "undefined" && "randomUUID" in crypto
+      ? crypto.randomUUID()
+      : `pg_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`);
 
   const interiorPages = draft.has_cover
     ? Math.max(0, draft.page_count - 4) // assume 4-page cover when separate
