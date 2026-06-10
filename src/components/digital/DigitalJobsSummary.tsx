@@ -106,87 +106,123 @@ export const DigitalJobsSummary = ({ jobs, clientRabatProcenat = 0, prepHours = 
 
   if (jobs.length === 0) return null;
 
+  // Total pieces: sum qty per product group (avoid double-counting cover+interior)
+  const seenGroups = new Set<string>();
+  let totalPieces = 0;
+  for (const j of jobs) {
+    const key = j.product_group_id || `__solo_${j.id || Math.random()}`;
+    if (seenGroups.has(key)) continue;
+    seenGroups.add(key);
+    const groupJobs = j.product_group_id
+      ? jobs.filter((x) => x.product_group_id === j.product_group_id)
+      : [j];
+    totalPieces += Math.max(...groupJobs.map((g) => g.qty || 0));
+  }
+
+  const totalCost = totalPaperCost + totalClickCost;
+  const revenue = grandTotal;
+  const revenuePerPiece = totalPieces > 0 ? revenue / totalPieces : 0;
+  const costPerPiece = totalPieces > 0 ? totalCost / totalPieces : 0;
+  const rucPerPiece = totalPieces > 0 ? ruc / totalPieces : 0;
+
   return (
     <Card>
-      <CardContent className="pt-6">
-        <div className="flex items-center justify-between">
-          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4 flex-1">
+      <CardContent className="pt-6 space-y-4">
+        {/* Header row: quantity + export */}
+        <div className="flex items-start justify-between gap-4 pb-3 border-b">
+          <div className="flex gap-8">
             <div>
-              <div className="text-sm text-muted-foreground">Ukupno tabaka</div>
+              <div className="text-xs uppercase tracking-wide text-muted-foreground">Tabaka</div>
               <div className="text-2xl font-bold">{totalSheets}</div>
             </div>
             <div>
-              <div className="text-sm text-muted-foreground">Klikovi</div>
-              <div className="text-lg font-semibold">
-                <span className="text-primary">Color: {totalColorClicks}</span>
-                <span className="mx-2">|</span>
-                <span className="text-muted-foreground">Mono: {totalMonoClicks}</span>
-              </div>
-              {canSeePrices && (
-                <div className="text-xs text-muted-foreground mt-0.5">
-                  Trošak: €{totalClickCost.toFixed(2)}
-                </div>
-              )}
+              <div className="text-xs uppercase tracking-wide text-muted-foreground">Komada</div>
+              <div className="text-2xl font-bold">{totalPieces}</div>
             </div>
-            {canSeePrices && (
-              <>
-                <div>
-                  <div className="text-sm text-muted-foreground">Štampa</div>
-                  <div className="text-xl font-bold text-primary">€{totalAmount.toFixed(2)}</div>
-                </div>
-                {prepCost > 0 && (
-                  <div>
-                    <div className="text-sm text-muted-foreground">Priprema</div>
-                    <div className="text-xl font-bold text-blue-600">€{prepCost.toFixed(2)}</div>
-                  </div>
-                )}
-                {finishingsTotal > 0 && (
-                  <div>
-                    <div className="text-sm text-muted-foreground">Dorade</div>
-                    <div className="text-xl font-bold text-amber-600">€{finishingsTotal.toFixed(2)}</div>
-                  </div>
-                )}
-                <div>
-                  <div className="text-sm text-muted-foreground">Ukupno</div>
-                  <div className="text-2xl font-bold text-primary">€{grandTotal.toFixed(2)}</div>
-                </div>
-                <div>
-                  <div className="text-sm text-muted-foreground">Papir</div>
-                  <div className="text-xl font-semibold text-muted-foreground">€{totalPaperCost.toFixed(2)}</div>
-                </div>
-                <div>
-                  <div className="text-sm text-muted-foreground">Klikovi</div>
-                  <div className="text-xl font-semibold text-muted-foreground">€{totalClickCost.toFixed(2)}</div>
-                </div>
-                <div>
-                  <div className="text-sm text-muted-foreground">Trošak (papir + klikovi)</div>
-                  <div className="text-xl font-bold text-orange-600">€{(totalPaperCost + totalClickCost).toFixed(2)}</div>
-                </div>
-                <div>
-                  <div className="text-sm text-muted-foreground">RUC</div>
-                  <div className="text-xl font-bold text-green-600">
-                    €{ruc.toFixed(2)} <span className="text-sm font-normal">({rucPercent.toFixed(1)}%)</span>
-                  </div>
-                </div>
-                {clientRabatProcenat > 0 && (
-                  <div>
-                    <div className="text-sm text-muted-foreground">Sa rabatom ({clientRabatProcenat}%)</div>
-                    <div className="text-2xl font-bold text-green-600">€{amountWithDiscount.toFixed(2)}</div>
-                  </div>
-                )}
-              </>
-            )}
+            <div>
+              <div className="text-xs uppercase tracking-wide text-muted-foreground">Klikovi</div>
+              <div className="text-sm font-semibold mt-1">
+                <span className="text-primary">C: {totalColorClicks}</span>
+                <span className="mx-1.5 text-muted-foreground">/</span>
+                <span>M: {totalMonoClicks}</span>
+              </div>
+            </div>
           </div>
-          <Button
-            type="button"
-            onClick={handleExportXLSX}
-            variant="outline"
-            className="ml-4"
-          >
+          <Button type="button" onClick={handleExportXLSX} variant="outline" size="sm">
             <FileSpreadsheet className="h-4 w-4 mr-2" />
             Export XLSX
           </Button>
         </div>
+
+        {canSeePrices && (
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            {/* IZLAZ (Prihod) */}
+            <div className="rounded-lg border bg-blue-50/40 dark:bg-blue-950/20 p-3">
+              <div className="text-xs uppercase tracking-wide text-muted-foreground mb-2">Izlaz (prihod)</div>
+              <div className="space-y-1 text-sm">
+                <div className="flex justify-between"><span className="text-muted-foreground">Štampa</span><span>€{totalAmount.toFixed(2)}</span></div>
+                {prepCost > 0 && (
+                  <div className="flex justify-between"><span className="text-muted-foreground">Priprema</span><span>€{prepCost.toFixed(2)}</span></div>
+                )}
+                {finishingsTotal > 0 && (
+                  <div className="flex justify-between"><span className="text-muted-foreground">Dorade</span><span>€{finishingsTotal.toFixed(2)}</span></div>
+                )}
+                <div className="flex justify-between pt-1.5 mt-1.5 border-t font-semibold">
+                  <span>Ukupno</span><span className="text-blue-600">€{revenue.toFixed(2)}</span>
+                </div>
+                {clientRabatProcenat > 0 && (
+                  <div className="flex justify-between text-xs text-muted-foreground">
+                    <span>Sa rabatom ({clientRabatProcenat}%)</span><span>€{amountWithDiscount.toFixed(2)}</span>
+                  </div>
+                )}
+              </div>
+            </div>
+
+            {/* TROŠAK */}
+            <div className="rounded-lg border bg-orange-50/40 dark:bg-orange-950/20 p-3">
+              <div className="text-xs uppercase tracking-wide text-muted-foreground mb-2">Trošak</div>
+              <div className="space-y-1 text-sm">
+                <div className="flex justify-between"><span className="text-muted-foreground">Papir</span><span>€{totalPaperCost.toFixed(2)}</span></div>
+                <div className="flex justify-between"><span className="text-muted-foreground">Klikovi</span><span>€{totalClickCost.toFixed(2)}</span></div>
+                <div className="flex justify-between pt-1.5 mt-1.5 border-t font-semibold">
+                  <span>Ukupno</span><span className="text-orange-600">€{totalCost.toFixed(2)}</span>
+                </div>
+              </div>
+            </div>
+
+            {/* RUC */}
+            <div className="rounded-lg border bg-green-50/40 dark:bg-green-950/20 p-3">
+              <div className="text-xs uppercase tracking-wide text-muted-foreground mb-2">RUC</div>
+              <div className="space-y-1 text-sm">
+                <div className="flex justify-between items-baseline">
+                  <span className="text-muted-foreground">Iznos</span>
+                  <span className="text-2xl font-bold text-green-600">€{ruc.toFixed(2)}</span>
+                </div>
+                <div className="flex justify-between"><span className="text-muted-foreground">Marža</span><span className="font-semibold text-green-600">{rucPercent.toFixed(1)}%</span></div>
+                <div className="flex justify-between pt-1.5 mt-1.5 border-t text-xs">
+                  <span className="text-muted-foreground">RUC / kom</span><span className="font-semibold">€{rucPerPiece.toFixed(4)}</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {canSeePrices && totalPieces > 0 && (
+          <div className="grid grid-cols-3 gap-4 pt-3 border-t text-sm">
+            <div className="flex justify-between">
+              <span className="text-muted-foreground">Cena / kom</span>
+              <span className="font-semibold text-blue-600">€{revenuePerPiece.toFixed(4)}</span>
+            </div>
+            <div className="flex justify-between">
+              <span className="text-muted-foreground">Trošak / kom</span>
+              <span className="font-semibold text-orange-600">€{costPerPiece.toFixed(4)}</span>
+            </div>
+            <div className="flex justify-between">
+              <span className="text-muted-foreground">RUC / kom</span>
+              <span className="font-semibold text-green-600">€{rucPerPiece.toFixed(4)}</span>
+            </div>
+          </div>
+        )}
       </CardContent>
     </Card>
   );
