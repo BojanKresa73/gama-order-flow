@@ -188,6 +188,9 @@ export const DigitalJobsSummary = ({ jobs, clientRabatProcenat = 0, prepHours = 
               <div className="space-y-1 text-sm">
                 <div className="flex justify-between"><span className="text-muted-foreground">Papir</span><span>€{totalPaperCost.toFixed(2)}</span></div>
                 <div className="flex justify-between"><span className="text-muted-foreground">Klikovi</span><span>€{totalClickCost.toFixed(2)}</span></div>
+                {externalServicesTotal > 0 && (
+                  <div className="flex justify-between"><span className="text-muted-foreground">Eksterne usluge</span><span>€{externalServicesTotal.toFixed(2)}</span></div>
+                )}
                 <div className="flex justify-between pt-1.5 mt-1.5 border-t font-semibold">
                   <span>Ukupno</span><span className="text-orange-600">€{totalCost.toFixed(2)}</span>
                 </div>
