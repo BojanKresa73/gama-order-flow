@@ -1,0 +1,1 @@
+ALTER TABLE public.digital_jobs ADD COLUMN IF NOT EXISTS is_external_service boolean NOT NULL DEFAULT false;

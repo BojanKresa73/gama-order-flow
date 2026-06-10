@@ -29,7 +29,8 @@ export const DigitalJobsSummary = ({ jobs, clientRabatProcenat = 0, prepHours = 
     rucPercent,
     groups,
     prepCost,
-    totalWithPrep
+    totalWithPrep,
+    externalServicesTotal,
   } = pricing;
   // Aggregate finishings across all jobs (each product stashes finishings on first job)
   const finishingsTotal = jobs.reduce((sum, j) => sum + (j.finishings_total || 0), 0);
@@ -119,7 +120,7 @@ export const DigitalJobsSummary = ({ jobs, clientRabatProcenat = 0, prepHours = 
     totalPieces += Math.max(...groupJobs.map((g) => g.qty || 0));
   }
 
-  const totalCost = totalPaperCost + totalClickCost;
+  const totalCost = totalPaperCost + totalClickCost + externalServicesTotal;
   const revenue = grandTotal;
   const revenuePerPiece = totalPieces > 0 ? revenue / totalPieces : 0;
   const costPerPiece = totalPieces > 0 ? totalCost / totalPieces : 0;
@@ -167,6 +168,9 @@ export const DigitalJobsSummary = ({ jobs, clientRabatProcenat = 0, prepHours = 
                 {finishingsTotal > 0 && (
                   <div className="flex justify-between"><span className="text-muted-foreground">Dorade</span><span>€{finishingsTotal.toFixed(2)}</span></div>
                 )}
+                {externalServicesTotal > 0 && (
+                  <div className="flex justify-between"><span className="text-muted-foreground">Eksterne usluge</span><span>€{externalServicesTotal.toFixed(2)}</span></div>
+                )}
                 <div className="flex justify-between pt-1.5 mt-1.5 border-t font-semibold">
                   <span>Ukupno</span><span className="text-blue-600">€{revenue.toFixed(2)}</span>
                 </div>
@@ -184,6 +188,9 @@ export const DigitalJobsSummary = ({ jobs, clientRabatProcenat = 0, prepHours = 
               <div className="space-y-1 text-sm">
                 <div className="flex justify-between"><span className="text-muted-foreground">Papir</span><span>€{totalPaperCost.toFixed(2)}</span></div>
                 <div className="flex justify-between"><span className="text-muted-foreground">Klikovi</span><span>€{totalClickCost.toFixed(2)}</span></div>
+                {externalServicesTotal > 0 && (
+                  <div className="flex justify-between"><span className="text-muted-foreground">Eksterne usluge</span><span>€{externalServicesTotal.toFixed(2)}</span></div>
+                )}
                 <div className="flex justify-between pt-1.5 mt-1.5 border-t font-semibold">
                   <span>Ukupno</span><span className="text-orange-600">€{totalCost.toFixed(2)}</span>
                 </div>

@@ -1,9 +1,10 @@
 import { useState, useMemo } from "react";
-import { Plus, Trash2, FileUp, Package, Pencil } from "lucide-react";
+import { Plus, Trash2, FileUp, Package, Pencil, Wrench } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { AddDigitalJobsModal } from "./AddDigitalJobsModal";
+import { AddExternalServiceDialog, ExternalServicePayload } from "./AddExternalServiceDialog";
 import { DigitalJobsSummary } from "./DigitalJobsSummary";
 import { DigitalProductDialog } from "./DigitalProductDialog";
 import { reconstructDraftFromJob, type ProductDraft } from "@/lib/digitalProductPricing";
@@ -81,6 +82,10 @@ export interface LocalDigitalJob {
     notes?: string;
   }>;
   finishings_total?: number;
+  // External service line (3rd-party, pass-through price)
+  is_external_service?: boolean;
+  external_price?: number;
+  external_note?: string;
 }
 
 interface LocalDigitalJobsTableProps {
@@ -94,6 +99,8 @@ interface LocalDigitalJobsTableProps {
 export const LocalDigitalJobsTable = ({ jobs, onChange, printSides, clientRabatProcenat, prepHours = 0 }: LocalDigitalJobsTableProps) => {
   const [showAddFilesModal, setShowAddFilesModal] = useState(false);
   const [showProductDialog, setShowProductDialog] = useState(false);
+  const [showExternalDialog, setShowExternalDialog] = useState(false);
+  const [editExternalIndex, setEditExternalIndex] = useState<number | null>(null);
   const [editGroupId, setEditGroupId] = useState<string | null>(null);
   const [editDraft, setEditDraft] = useState<ProductDraft | null>(null);
   const { data: paperTypes } = useDigitalPaperTypes();
@@ -237,6 +244,46 @@ export const LocalDigitalJobsTable = ({ jobs, onChange, printSides, clientRabatP
   };
 
 
+  const handleExternalSubmit = (payload: ExternalServicePayload) => {
+    if (editExternalIndex !== null) {
+      const updated = [...jobs];
+      const job = updated[editExternalIndex];
+      updated[editExternalIndex] = {
+        ...job,
+        external_note: payload.external_note,
+        external_price: payload.external_price,
+        name: payload.external_note,
+        file_name: payload.external_note,
+        __status: job.id ? 'updated' : job.__status,
+      };
+      onChange(updated);
+      setEditExternalIndex(null);
+    } else {
+      const newJob: LocalDigitalJob = {
+        name: payload.external_note,
+        file_name: payload.external_note,
+        finished_w_mm: 0,
+        finished_h_mm: 0,
+        pages: 1,
+        obim: 1,
+        qty: 1,
+        is_test_print: false,
+        print_sides: "4/4",
+        machine_sheet_format: "488x330",
+        is_external_service: true,
+        external_price: payload.external_price,
+        external_note: payload.external_note,
+      };
+      onChange([...jobs, newJob]);
+    }
+  };
+
+  const handleEditExternal = (index: number) => {
+    setEditExternalIndex(index);
+    setShowExternalDialog(true);
+  };
+
+
   return (
     <div className="space-y-4">
       <DigitalJobsSummary jobs={jobs} clientRabatProcenat={clientRabatProcenat} prepHours={prepHours} />
@@ -268,6 +315,15 @@ export const LocalDigitalJobsTable = ({ jobs, onChange, printSides, clientRabatP
           <FileUp className="h-4 w-4 mr-2" />
           Dodaj fajlove
         </Button>
+        <Button
+          type="button"
+          onClick={() => { setEditExternalIndex(null); setShowExternalDialog(true); }}
+          variant="outline"
+          size="sm"
+        >
+          <Wrench className="h-4 w-4 mr-2" />
+          Dodaj eksternu uslugu
+        </Button>
       </div>
 
       {jobs.length === 0 ? (
@@ -291,7 +347,51 @@ export const LocalDigitalJobsTable = ({ jobs, onChange, printSides, clientRabatP
               </TableRow>
             </TableHeader>
             <TableBody>
-              {jobs.map((job, index) => (
+              {jobs.map((job, index) => {
+                if (job.is_external_service) {
+                  return (
+                    <TableRow key={index} className="bg-purple-50/40 dark:bg-purple-950/20">
+                      <TableCell className="py-2" colSpan={canSeePrices ? 7 : 7}>
+                        <div className="flex items-center gap-2">
+                          <Wrench className="h-3.5 w-3.5 text-purple-600 shrink-0" />
+                          <span className="text-xs uppercase tracking-wide text-purple-700 dark:text-purple-300 font-semibold">
+                            Eksterna usluga
+                          </span>
+                          <span className="text-sm truncate">{job.external_note || job.name || '—'}</span>
+                        </div>
+                      </TableCell>
+                      {canSeePrices && (
+                        <TableCell className="py-2 text-right text-sm font-semibold text-purple-700 dark:text-purple-300">
+                          €{(Number(job.external_price) || 0).toFixed(2)}
+                        </TableCell>
+                      )}
+                      <TableCell className="py-2">
+                        <div className="flex items-center gap-1">
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="sm"
+                            className="h-6 w-6 p-0"
+                            onClick={() => handleEditExternal(index)}
+                            title="Izmeni eksternu uslugu"
+                          >
+                            <Pencil className="h-3.5 w-3.5" />
+                          </Button>
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="sm"
+                            className="h-6 w-6 p-0"
+                            onClick={() => handleDelete(index)}
+                          >
+                            <Trash2 className="h-4 w-4 text-destructive" />
+                          </Button>
+                        </div>
+                      </TableCell>
+                    </TableRow>
+                  );
+                }
+                return (
                 <TableRow key={index}>
                   <TableCell className="py-2">
                     <Input
@@ -411,7 +511,8 @@ export const LocalDigitalJobsTable = ({ jobs, onChange, printSides, clientRabatP
                     </div>
                   </TableCell>
                 </TableRow>
-              ))}
+                );
+              })}
             </TableBody>
           </Table>
         </div>
@@ -435,6 +536,23 @@ export const LocalDigitalJobsTable = ({ jobs, onChange, printSides, clientRabatP
         onAdd={handleProductSubmit}
         initialDraft={editDraft}
         editGroupId={editGroupId}
+      />
+
+      <AddExternalServiceDialog
+        open={showExternalDialog}
+        onOpenChange={(o) => {
+          setShowExternalDialog(o);
+          if (!o) setEditExternalIndex(null);
+        }}
+        onSubmit={handleExternalSubmit}
+        initial={
+          editExternalIndex !== null
+            ? {
+                external_note: jobs[editExternalIndex]?.external_note || jobs[editExternalIndex]?.name || "",
+                external_price: Number(jobs[editExternalIndex]?.external_price) || 0,
+              }
+            : null
+        }
       />
     </div>
   );

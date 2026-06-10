@@ -23,6 +23,9 @@ export interface DigitalJobItem {
   paper_type?: string;
   is_test_print?: boolean;
   pieces_count?: number | null; // Number of pieces (flyers, cards) imposed per copy
+  is_external_service?: boolean;
+  external_price?: number;
+  external_note?: string;
   finishings?: Array<{
     code: string;
     name?: string;
@@ -71,6 +74,7 @@ export interface GroupedPricingResult {
   rucPercent: number;
   prepCost: number;
   totalWithPrep: number;
+  externalServicesTotal: number;
 }
 
 // Preparation hour rate in EUR
@@ -103,7 +107,7 @@ function getPriceForTier(qty: number, coverage: string): number {
 function calculatePaperCost(jobs: DigitalJobItem[]): number {
   let total = 0;
   for (const job of jobs) {
-    if (job.is_test_print) continue;
+    if (job.is_test_print || job.is_external_service) continue;
     
     const obim = job.obim || 1;
     const qty = job.qty || 0;
@@ -125,7 +129,7 @@ function calculateClickCosts(jobs: DigitalJobItem[]): { colorClicks: number; mon
   let monoClicks = 0;
   
   for (const job of jobs) {
-    if (job.is_test_print) continue;
+    if (job.is_test_print || job.is_external_service) continue;
     
     const obim = job.obim || 1;
     const qty = job.qty || 0;
@@ -151,8 +155,13 @@ function calculateClickCosts(jobs: DigitalJobItem[]): { colorClicks: number; mon
  * Then calculates price tier based on aggregated sheets per group
  */
 export function calculateGroupedPricing(jobs: DigitalJobItem[], prepHours: number = 0): GroupedPricingResult {
-  // Filter out test prints for pricing
-  const billableJobs = jobs.filter(j => !j.is_test_print);
+  // Filter out test prints and external services for sheet/click pricing
+  const billableJobs = jobs.filter(j => !j.is_test_print && !j.is_external_service);
+
+  // External services: pass-through amount added to revenue and cost
+  const externalServicesTotal = jobs
+    .filter(j => j.is_external_service)
+    .reduce((sum, j) => sum + (Number(j.external_price) || 0), 0);
   
   // Group by coverage + format
   const groupMap = new Map<string, PricingGroup>();
@@ -239,12 +248,13 @@ export function calculateGroupedPricing(jobs: DigitalJobItem[], prepHours: numbe
   const totalPaperCost = calculatePaperCost(jobs);
   const clickCosts = calculateClickCosts(jobs);
   const totalClickCost = clickCosts.totalCost;
-  const totalCost = totalPaperCost + totalClickCost;
+  // External services are pass-through: same amount added to revenue and cost
+  const totalCost = totalPaperCost + totalClickCost + externalServicesTotal;
   const prepCost = prepHours * PREP_HOUR_RATE;
-  const totalWithPrep = totalAmount + prepCost;
+  const totalWithPrep = totalAmount + prepCost + externalServicesTotal;
   const ruc = totalWithPrep - totalCost;
   const rucPercent = totalWithPrep > 0 ? (ruc / totalWithPrep) * 100 : 0;
-  
+
   return {
     groups,
     totalAmount,
@@ -257,7 +267,8 @@ export function calculateGroupedPricing(jobs: DigitalJobItem[], prepHours: numbe
     ruc,
     rucPercent,
     prepCost,
-    totalWithPrep
+    totalWithPrep,
+    externalServicesTotal,
   };
 }
 
