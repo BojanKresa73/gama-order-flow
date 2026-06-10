@@ -107,7 +107,7 @@ function getPriceForTier(qty: number, coverage: string): number {
 function calculatePaperCost(jobs: DigitalJobItem[]): number {
   let total = 0;
   for (const job of jobs) {
-    if (job.is_test_print) continue;
+    if (job.is_test_print || job.is_external_service) continue;
     
     const obim = job.obim || 1;
     const qty = job.qty || 0;
