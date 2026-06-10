@@ -116,7 +116,7 @@ function calculatePaperCost(jobs: DigitalJobItem[]): number {
     const format = job.machine_sheet_format || '488x330';
     
     const basePaperPrice = PAPER_PRICE_TABLE[paperType] ?? 0;
-    const paperMultiplier = format === '700x330' ? 1.5 : 1.0;
+    const paperMultiplier = format === '700x330' ? 700 / 488 : 1.0;
     
     total += sheets * basePaperPrice * paperMultiplier;
   }
