@@ -386,15 +386,29 @@ export const LocalDigitalJobsTable = ({ jobs, onChange, printSides, clientRabatP
                     </TableCell>
                   )}
                   <TableCell className="py-2">
-                    <Button
-                      type="button"
-                      variant="ghost"
-                      size="sm"
-                      className="h-6 w-6 p-0"
-                      onClick={() => handleDelete(index)}
-                    >
-                      <Trash2 className="h-4 w-4 text-destructive" />
-                    </Button>
+                    <div className="flex items-center gap-1">
+                      {job.product_code && job.product_group_id && (
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="sm"
+                          className="h-6 w-6 p-0"
+                          onClick={() => handleEditProduct(job)}
+                          title="Izmeni proizvod"
+                        >
+                          <Pencil className="h-3.5 w-3.5" />
+                        </Button>
+                      )}
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="sm"
+                        className="h-6 w-6 p-0"
+                        onClick={() => handleDelete(index)}
+                      >
+                        <Trash2 className="h-4 w-4 text-destructive" />
+                      </Button>
+                    </div>
                   </TableCell>
                 </TableRow>
               ))}
@@ -411,8 +425,16 @@ export const LocalDigitalJobsTable = ({ jobs, onChange, printSides, clientRabatP
 
       <DigitalProductDialog
         open={showProductDialog}
-        onOpenChange={setShowProductDialog}
-        onAdd={(newJobs) => onChange([...jobs, ...newJobs])}
+        onOpenChange={(o) => {
+          setShowProductDialog(o);
+          if (!o) {
+            setEditGroupId(null);
+            setEditDraft(null);
+          }
+        }}
+        onAdd={handleProductSubmit}
+        initialDraft={editDraft}
+        editGroupId={editGroupId}
       />
     </div>
   );
