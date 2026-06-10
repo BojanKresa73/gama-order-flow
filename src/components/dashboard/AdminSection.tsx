@@ -1,7 +1,7 @@
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { useNavigate } from "react-router-dom";
-import { Shield, Users, Boxes, CloudUpload, Loader2, ListOrdered, Mail } from "lucide-react";
+import { Shield, Users, Boxes, CloudUpload, Loader2, ListOrdered, Mail, Layers } from "lucide-react";
 import { useAuthz } from "@/hooks/useAuthz";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
