@@ -66,23 +66,45 @@ export const PRICE_TABLE = [
   { minQty: 1001, maxQty: Infinity, prices: { "4/0": 0.39, "4/4": 0.65, "4/1": 0.49, "1/0": 0.14, "1/1": 0.20 } },
 ];
 
-// Paper price table per sheet 488×330 (from Bojan's Excel column F)
-export const PAPER_PRICE_TABLE: Record<string, number> = {
-  "Ofsetni": 0.01, // Default Ofsetni
-  "Ofsetni 80g": 0.01,
-  "Ofsetni 100g": 0.02,
-  "Kunzdruk 115g": 0.03,
-  "Kunzdruk 135g": 0.03,
-  "Kunzdruk 150g": 0.04,
-  "Kunzdruk 170g": 0.04,
-  "Kunzdruk 200g": 0.05,
-  "Kunzdruk 220g": 0.05,
-  "Kunzdruk 250g": 0.06,
-  "Kunzdruk 300g": 0.07,
-  "Kunzdruk 350g": 0.09,
-  "Kunzdruk 400g": 0.10,
-  "Specijalni": 0, // Special paper - cost 0 for now
+// Paper price per kg (EUR). Ofsetni = 1.45, all others = 1.55, Specijalni = 0.
+export const PAPER_PRICE_PER_KG: Record<string, number> = {
+  "Ofsetni": 1.45,
+  "Kunzdruk": 1.55,
+  "Specijalni": 0,
 };
+
+// Default GSM when not embedded in the paper name
+const DEFAULT_GSM: Record<string, number> = {
+  "Ofsetni": 80,
+};
+
+// Sheet area in m² for 488×330 base format
+const BASE_SHEET_AREA_M2 = 0.488 * 0.330; // 0.16104
+
+// Parse GSM from paper name (e.g. "Kunzdruk 150g" -> 150)
+function parseGsm(paperType: string): number {
+  const m = paperType.match(/(\d{2,4})\s*g/i);
+  if (m) return parseInt(m[1], 10);
+  return DEFAULT_GSM[paperType] ?? 0;
+}
+
+// Get €/kg for a paper type based on its family
+function getPricePerKg(paperType: string): number {
+  if (!paperType) return 0;
+  if (paperType.startsWith("Specijalni")) return PAPER_PRICE_PER_KG["Specijalni"];
+  if (paperType.startsWith("Ofsetni")) return PAPER_PRICE_PER_KG["Ofsetni"];
+  if (paperType.startsWith("Kunzdruk")) return PAPER_PRICE_PER_KG["Kunzdruk"];
+  return 1.55; // fallback for new paper types
+}
+
+// Backwards-compatible per-sheet (488×330) price table, computed dynamically from kg price
+export const PAPER_PRICE_TABLE: Record<string, number> = new Proxy({} as Record<string, number>, {
+  get: (_t, key: string) => {
+    const gsm = parseGsm(key);
+    const pricePerKg = getPricePerKg(key);
+    return (gsm * BASE_SHEET_AREA_M2 * pricePerKg) / 1000;
+  },
+});
 
 // Click cost per A3 equivalent
 export const COLOR_CLICK_COST_BASE = 0.06; // €/click
