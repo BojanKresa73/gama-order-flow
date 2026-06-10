@@ -537,6 +537,23 @@ export const LocalDigitalJobsTable = ({ jobs, onChange, printSides, clientRabatP
         initialDraft={editDraft}
         editGroupId={editGroupId}
       />
+
+      <AddExternalServiceDialog
+        open={showExternalDialog}
+        onOpenChange={(o) => {
+          setShowExternalDialog(o);
+          if (!o) setEditExternalIndex(null);
+        }}
+        onSubmit={handleExternalSubmit}
+        initial={
+          editExternalIndex !== null
+            ? {
+                external_note: jobs[editExternalIndex]?.external_note || jobs[editExternalIndex]?.name || "",
+                external_price: Number(jobs[editExternalIndex]?.external_price) || 0,
+              }
+            : null
+        }
+      />
     </div>
   );
 };
