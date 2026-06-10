@@ -320,11 +320,16 @@ export function aggregateByPaperType(jobs: (DigitalJob & Partial<ComputedDigital
   return result;
 }
 
+// Paper area multiplier vs base 488×330 sheet (real area, not click multiplier)
+// 700×330 = 700/488 ≈ 1.4344 of base area
+export function getPaperAreaMultiplier(format: string): number {
+  return format === "700x330" ? 700 / 488 : 1.0;
+}
+
 // Get paper price per sheet for a given paper type and format
 export function getPaperPricePerSheet(paperType: string, format: string): number {
   const basePrice = PAPER_PRICE_TABLE[paperType] ?? 0;
-  const paperMultiplier = format === "700x330" ? 1.5 : 1.0;
-  return basePrice * paperMultiplier;
+  return basePrice * getPaperAreaMultiplier(format);
 }
 
 // Calculate paper cost for a single item
