@@ -905,7 +905,7 @@ export const DigitalProductDialog = ({
                     {printPricing && (
                       <BreakdownRow label="Trošak papira" total={paperCost}>
                         <div className="text-[11px] text-muted-foreground mb-1">
-                          Tabaka × cena/tab × {`{1.0 | 1.5}`} za 760×330
+                          Tabaka × cena/tab × {`{1.0 | 1.5}`} za 700×330
                         </div>
                         {preview.jobs.map((j, k) => {
                           const sheets = (j.obim || 1) * (j.qty || 0);

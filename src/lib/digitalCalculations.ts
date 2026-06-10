@@ -1,5 +1,5 @@
 // Simplified Digital Sheet Logic
-// Each row = imposed sheet file, only 488×330 and 760×330 formats
+// Each row = imposed sheet file, only 488×330 and 700×330 formats
 
 export interface DigitalSettings {
   sheet_width_mm: number;
@@ -90,7 +90,7 @@ export const MONO_CLICK_COST_BASE = 0.016; // €/click
 
 // Get sheet multiplier for click calculation (A3 equivalents)
 // 488×330 = 1.0 (base A3)
-// 760×330 = 1.5 (50% more)
+// 700×330 = 1.5 (50% more)
 export function getSheetMultiplier(format: string): number {
   if (format === "700x330") return 1.5;
   return 1.0; // Default 488x330
@@ -102,7 +102,7 @@ export function getPricingSheetCount(totalSheets: number, format: string): numbe
 
 // Get A4 factor for pricing
 // 488×330 = 2 A4
-// 760×330 = 3 A4
+// 700×330 = 3 A4
 export function getA4Factor(format: string): number {
   if (format === "700x330") return 3;
   return 2; // Default 488x330
@@ -221,7 +221,7 @@ export function calculateItemPrice(
 
 // Legacy function for backward compatibility
 export function parseSheetFormat(format: string): { width: number; height: number } {
-  if (format === '700x330' || format === '330x760') {
+  if (format === '700x330' || format === '330x700') {
     return { width: 760, height: 330 };
   }
   return { width: 488, height: 330 };
