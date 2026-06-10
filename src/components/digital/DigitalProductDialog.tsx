@@ -37,8 +37,23 @@ import {
   useDigitalFinishingTypes,
   useDigitalFinishingPrices,
 } from "@/hooks/useDigitalFinishings";
-import { SHEET_FORMATS, PRINT_MODES } from "@/lib/digitalCalculations";
+import {
+  SHEET_FORMATS,
+  PRINT_MODES,
+  PAPER_PRICE_TABLE,
+  COLOR_CLICK_COST_BASE,
+  MONO_CLICK_COST_BASE,
+  getCoverageSides,
+  getSheetMultiplier,
+  getProgressiveBreakdown,
+} from "@/lib/digitalCalculations";
 import { calculateGroupedPricing } from "@/lib/digitalGroupedPricing";
+import {
+  Collapsible,
+  CollapsibleContent,
+  CollapsibleTrigger,
+} from "@/components/ui/collapsible";
+import { ChevronDown } from "lucide-react";
 import {
   PAGE_FORMAT_PRESETS,
   buildProductJobs,
