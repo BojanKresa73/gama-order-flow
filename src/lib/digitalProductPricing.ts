@@ -219,6 +219,7 @@ export function buildProductJobs(
       cover_print_sides: draft.cover_print_sides,
       cover_lamination: draft.cover_lamination,
       binding_code: draft.binding_code,
+      product_group_id: groupId,
     });
   }
 
