@@ -905,13 +905,13 @@ export const DigitalProductDialog = ({
                     {printPricing && (
                       <BreakdownRow label="Trošak papira" total={paperCost}>
                         <div className="text-[11px] text-muted-foreground mb-1">
-                          Tabaka × cena/tab × {`{1.0 | 1.5}`} za 700×330
+                          Tabaka × cena/tab × {`{1.0 | ${(700 / 488).toFixed(3)}}`} za 700×330
                         </div>
                         {preview.jobs.map((j, k) => {
                           const sheets = (j.obim || 1) * (j.qty || 0);
                           const base = PAPER_PRICE_TABLE[j.paper_type || ""] ?? 0;
                           const mult =
-                            j.machine_sheet_format === "700x330" ? 1.5 : 1.0;
+                            j.machine_sheet_format === "700x330" ? 700 / 488 : 1.0;
                           const cost = sheets * base * mult;
                           return (
                             <div
@@ -919,10 +919,11 @@ export const DigitalProductDialog = ({
                               className="flex justify-between text-[11px]"
                             >
                               <span className="truncate pr-2">
-                                {j.name}: {sheets} × {base.toFixed(2)}
-                                {mult !== 1 ? ` × ${mult}` : ""} ({j.paper_type})
+                                {j.name}: {sheets} × {base.toFixed(4)}
+                                {mult !== 1 ? ` × ${mult.toFixed(3)}` : ""} ({j.paper_type})
                               </span>
                               <span className="tabular-nums">
+
                                 {cost.toFixed(2)} €
                               </span>
                             </div>
