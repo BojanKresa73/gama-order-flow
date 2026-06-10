@@ -120,7 +120,7 @@ export const DigitalJobsSummary = ({ jobs, clientRabatProcenat = 0, prepHours = 
     totalPieces += Math.max(...groupJobs.map((g) => g.qty || 0));
   }
 
-  const totalCost = totalPaperCost + totalClickCost;
+  const totalCost = totalPaperCost + totalClickCost + externalServicesTotal;
   const revenue = grandTotal;
   const revenuePerPiece = totalPieces > 0 ? revenue / totalPieces : 0;
   const costPerPiece = totalPieces > 0 ? totalCost / totalPieces : 0;
