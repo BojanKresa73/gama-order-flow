@@ -244,6 +244,7 @@ Deno.serve(async (req) => {
           binding_code: item.binding_code || null,
           finishings: item.finishings || [],
           finishings_total: item.finishings_total || 0,
+          is_external_service: item.is_external_service || false,
         });
       }
 
