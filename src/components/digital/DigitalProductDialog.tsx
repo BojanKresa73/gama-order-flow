@@ -38,6 +38,7 @@ import {
   useDigitalFinishingPrices,
 } from "@/hooks/useDigitalFinishings";
 import { SHEET_FORMATS, PRINT_MODES } from "@/lib/digitalCalculations";
+import { calculateGroupedPricing } from "@/lib/digitalGroupedPricing";
 import {
   PAGE_FORMAT_PRESETS,
   buildProductJobs,
