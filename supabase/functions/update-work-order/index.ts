@@ -232,6 +232,18 @@ Deno.serve(async (req) => {
           computed_mono_clicks: item.computed_mono_clicks || null,
           computed_price_per_sheet: item.computed_price_per_sheet || null,
           computed_line_total: item.computed_line_total || null,
+          product_code: item.product_code || null,
+          page_count: item.page_count || null,
+          page_format: item.page_format || null,
+          page_width_mm: item.page_width_mm || null,
+          page_height_mm: item.page_height_mm || null,
+          has_cover: item.has_cover || false,
+          cover_paper: item.cover_paper || null,
+          cover_print_sides: item.cover_print_sides || null,
+          cover_lamination: item.cover_lamination || null,
+          binding_code: item.binding_code || null,
+          finishings: item.finishings || [],
+          finishings_total: item.finishings_total || 0,
         });
       }
 
@@ -262,6 +274,18 @@ Deno.serve(async (req) => {
           computed_mono_clicks: item.computed_mono_clicks || null,
           computed_price_per_sheet: item.computed_price_per_sheet || null,
           computed_line_total: item.computed_line_total || null,
+          product_code: item.product_code || null,
+          page_count: item.page_count || null,
+          page_format: item.page_format || null,
+          page_width_mm: item.page_width_mm || null,
+          page_height_mm: item.page_height_mm || null,
+          has_cover: item.has_cover || false,
+          cover_paper: item.cover_paper || null,
+          cover_print_sides: item.cover_print_sides || null,
+          cover_lamination: item.cover_lamination || null,
+          binding_code: item.binding_code || null,
+          finishings: item.finishings || [],
+          finishings_total: item.finishings_total || 0,
         }).eq('id', item.id);
       }
     }

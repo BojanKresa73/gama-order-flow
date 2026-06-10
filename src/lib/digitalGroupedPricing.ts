@@ -23,6 +23,18 @@ export interface DigitalJobItem {
   paper_type?: string;
   is_test_print?: boolean;
   pieces_count?: number | null; // Number of pieces (flyers, cards) imposed per copy
+  finishings?: Array<{
+    code: string;
+    name?: string;
+    variant: string;
+    pricing_model?: string;
+    qty: number;
+    unit_price: number;
+    fixed_cost: number;
+    total: number;
+    notes?: string;
+  }>;
+  finishings_total?: number;
 }
 
 export interface GroupedPricingItem {

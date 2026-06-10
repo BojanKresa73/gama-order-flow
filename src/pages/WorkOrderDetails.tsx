@@ -75,7 +75,7 @@ const WorkOrderDetails = () => {
           .order('order_index');
         
         if (!digitalError && digitalJobsData) {
-          setDigitalJobs(digitalJobsData as LocalDigitalJob[]);
+          setDigitalJobs(digitalJobsData as unknown as LocalDigitalJob[]);
         }
       }
 

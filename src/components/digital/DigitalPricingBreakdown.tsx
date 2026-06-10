@@ -63,8 +63,14 @@ export const DigitalPricingBreakdown = ({
   if (jobs.length === 0) return null;
 
   const pricing = calculateGroupedPricing(jobs, prepHours);
-  const amountWithDiscount = pricing.totalWithPrep * (1 - clientRabatProcenat / 100);
-  const discountAmount = pricing.totalWithPrep - amountWithDiscount;
+
+  // Aggregate finishings across all jobs (stashed on first job per product)
+  const allFinishings = jobs.flatMap((j) => j.finishings ?? []);
+  const finishingsTotal = jobs.reduce((s, j) => s + (j.finishings_total || 0), 0);
+  const grandTotal = pricing.totalWithPrep + finishingsTotal;
+
+  const amountWithDiscount = grandTotal * (1 - clientRabatProcenat / 100);
+  const discountAmount = grandTotal - amountWithDiscount;
 
   return (
     <Card>
@@ -197,10 +203,31 @@ export const DigitalPricingBreakdown = ({
             </>
           )}
 
+          {/* Finishings breakdown */}
+          {allFinishings.length > 0 && (
+            <div className="space-y-1 bg-amber-50 dark:bg-amber-950/20 p-3 rounded">
+              <div className="text-sm font-semibold mb-1">Dorade</div>
+              {allFinishings.map((f, i) => (
+                <div key={i} className="flex justify-between text-sm">
+                  <span className="text-muted-foreground">
+                    {f.name || f.code}{f.variant ? ` — ${f.variant}` : ""}
+                    {f.qty ? ` (${f.qty} kom)` : ""}
+                  </span>
+                  <span className="font-medium">{f.total.toFixed(2)} €</span>
+                </div>
+              ))}
+              <Separator className="my-1" />
+              <div className="flex justify-between text-sm font-semibold">
+                <span>Ukupno dorade:</span>
+                <span className="text-amber-600">{finishingsTotal.toFixed(2)} €</span>
+              </div>
+            </div>
+          )}
+
           {/* Total price */}
           <div className="flex justify-between text-lg font-bold">
             <span>Ukupna cena:</span>
-            <span className="text-primary">{pricing.totalWithPrep.toFixed(2)} €</span>
+            <span className="text-primary">{grandTotal.toFixed(2)} €</span>
           </div>
 
           {/* Discount if applicable */}

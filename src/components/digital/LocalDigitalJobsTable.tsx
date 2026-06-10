@@ -1,10 +1,11 @@
 import { useState, useMemo } from "react";
-import { Plus, Trash2, FileUp } from "lucide-react";
+import { Plus, Trash2, FileUp, Package } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { AddDigitalJobsModal } from "./AddDigitalJobsModal";
 import { DigitalJobsSummary } from "./DigitalJobsSummary";
+import { DigitalProductDialog } from "./DigitalProductDialog";
 import {
   Table,
   TableBody,
@@ -55,6 +56,29 @@ export interface LocalDigitalJob {
   pieces_per_sheet?: number;
   sheets_for_production?: number;
   sheets_for_test?: number;
+  // Product-oriented fields (set by DigitalProductForm)
+  product_code?: string;
+  page_count?: number;
+  page_format?: string;
+  page_width_mm?: number;
+  page_height_mm?: number;
+  has_cover?: boolean;
+  cover_paper?: string;
+  cover_print_sides?: string;
+  cover_lamination?: string;
+  binding_code?: string;
+  finishings?: Array<{
+    code: string;
+    name?: string;
+    variant: string;
+    pricing_model?: string;
+    qty: number;
+    unit_price: number;
+    fixed_cost: number;
+    total: number;
+    notes?: string;
+  }>;
+  finishings_total?: number;
 }
 
 interface LocalDigitalJobsTableProps {
@@ -67,6 +91,7 @@ interface LocalDigitalJobsTableProps {
 
 export const LocalDigitalJobsTable = ({ jobs, onChange, printSides, clientRabatProcenat, prepHours = 0 }: LocalDigitalJobsTableProps) => {
   const [showAddFilesModal, setShowAddFilesModal] = useState(false);
+  const [showProductDialog, setShowProductDialog] = useState(false);
   const { data: paperTypes } = useDigitalPaperTypes();
   const { isSuper, isAdmin } = useAuthz();
   const canSeePrices = isSuper || isAdmin;
@@ -172,7 +197,15 @@ export const LocalDigitalJobsTable = ({ jobs, onChange, printSides, clientRabatP
     <div className="space-y-4">
       <DigitalJobsSummary jobs={jobs} clientRabatProcenat={clientRabatProcenat} prepHours={prepHours} />
       
-      <div className="flex gap-2">
+      <div className="flex gap-2 flex-wrap">
+        <Button
+          type="button"
+          onClick={() => setShowProductDialog(true)}
+          size="sm"
+        >
+          <Package className="h-4 w-4 mr-2" />
+          Dodaj proizvod
+        </Button>
         <Button
           type="button"
           onClick={handleAdd}
@@ -180,7 +213,7 @@ export const LocalDigitalJobsTable = ({ jobs, onChange, printSides, clientRabatP
           size="sm"
         >
           <Plus className="h-4 w-4 mr-2" />
-          Dodaj stavku
+          Brzi unos
         </Button>
         <Button
           type="button"
@@ -330,6 +363,12 @@ export const LocalDigitalJobsTable = ({ jobs, onChange, printSides, clientRabatP
         open={showAddFilesModal}
         onOpenChange={setShowAddFilesModal}
         onAddJobs={handleAddJobs}
+      />
+
+      <DigitalProductDialog
+        open={showProductDialog}
+        onOpenChange={setShowProductDialog}
+        onAdd={(newJobs) => onChange([...jobs, ...newJobs])}
       />
     </div>
   );

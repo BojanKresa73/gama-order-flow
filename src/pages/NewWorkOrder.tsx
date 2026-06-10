@@ -321,6 +321,18 @@ const NewWorkOrder = () => {
             computed_line_total: item.computed_line_total || undefined,
             cover_sheets: item.cover_sheets || undefined,
             lamination_sheets: item.lamination_sheets || undefined,
+            product_code: (item as any).product_code || undefined,
+            page_count: (item as any).page_count || undefined,
+            page_format: (item as any).page_format || undefined,
+            page_width_mm: (item as any).page_width_mm || undefined,
+            page_height_mm: (item as any).page_height_mm || undefined,
+            has_cover: (item as any).has_cover || false,
+            cover_paper: (item as any).cover_paper || undefined,
+            cover_print_sides: (item as any).cover_print_sides || undefined,
+            cover_lamination: (item as any).cover_lamination || undefined,
+            binding_code: (item as any).binding_code || undefined,
+            finishings: (item as any).finishings || [],
+            finishings_total: (item as any).finishings_total || 0,
             __status: 'unchanged' as const,
           })));
         }
@@ -645,6 +657,19 @@ const NewWorkOrder = () => {
             computed_mono_clicks: job.computed_mono_clicks || null,
             computed_price_per_sheet: job.computed_price_per_sheet || null,
             computed_line_total: job.computed_line_total || null,
+            // Product / finishings (new)
+            product_code: job.product_code || null,
+            page_count: job.page_count || null,
+            page_format: job.page_format || null,
+            page_width_mm: job.page_width_mm || null,
+            page_height_mm: job.page_height_mm || null,
+            has_cover: job.has_cover || false,
+            cover_paper: job.cover_paper || null,
+            cover_print_sides: job.cover_print_sides || null,
+            cover_lamination: job.cover_lamination || null,
+            binding_code: job.binding_code || null,
+            finishings: (job.finishings as any) || [],
+            finishings_total: job.finishings_total || 0,
           }));
 
         if (digitalItems.length > 0) {
