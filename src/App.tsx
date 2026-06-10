@@ -22,6 +22,7 @@ const Inventory = lazy(() => import("./pages/Inventory"));
 const Procurement = lazy(() => import("./pages/Procurement"));
 const Checklist = lazy(() => import("./pages/Checklist"));
 const AdminPriceListDigital = lazy(() => import("./pages/AdminPriceListDigital"));
+const AdminDigitalCatalog = lazy(() => import("./pages/AdminDigitalCatalog"));
 const AdminUsers = lazy(() => import("./pages/AdminUsers"));
 const AdminInventory = lazy(() => import("./pages/AdminInventory"));
 const AdminPriority = lazy(() => import("./pages/AdminPriority"));
