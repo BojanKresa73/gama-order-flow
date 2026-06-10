@@ -74,6 +74,7 @@ export interface GroupedPricingResult {
   rucPercent: number;
   prepCost: number;
   totalWithPrep: number;
+  externalServicesTotal: number;
 }
 
 // Preparation hour rate in EUR
