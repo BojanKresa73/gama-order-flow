@@ -263,10 +263,15 @@ export const DigitalProductDialog = ({
 
   const handleAdd = () => {
     if (!finishingTypes || !finishingPrices) return;
-    const built = buildProductJobs(draft, finishingTypes, finishingPrices);
-    onAdd(built.jobs);
+    const built = buildProductJobs(
+      draft,
+      finishingTypes,
+      finishingPrices,
+      editGroupId ?? undefined
+    );
+    onAdd(built.jobs, editGroupId ?? undefined);
     onOpenChange(false);
-    setDraft(DEFAULT_DRAFT);
+    if (!isEdit) setDraft(DEFAULT_DRAFT);
     setTab("product");
   };
 
@@ -276,7 +281,9 @@ export const DigitalProductDialog = ({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-5xl max-h-[92vh] overflow-hidden flex flex-col p-0">
         <DialogHeader className="px-6 pt-6 pb-3 border-b">
-          <DialogTitle className="text-lg">Dodaj proizvod (digitalna štampa)</DialogTitle>
+          <DialogTitle className="text-lg">
+            {isEdit ? "Izmeni proizvod" : "Dodaj proizvod"} (digitalna štampa)
+          </DialogTitle>
           <DialogDescription className="text-xs">
             Konfiguriši proizvod kroz korake — sistem generiše stavke naloga sa cenom.
           </DialogDescription>
