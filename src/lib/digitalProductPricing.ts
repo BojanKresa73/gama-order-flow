@@ -239,7 +239,6 @@ export function buildProductJobs(
       machine_sheet_format: draft.machine_sheet_format,
       pieces_count: draft.qty,
       product_code: draft.product_code,
-      product_code: draft.product_code,
       product_group_id: groupId,
       has_cover: false, // cover-of-cover not allowed
     });
