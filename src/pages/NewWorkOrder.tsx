@@ -33,6 +33,28 @@ const prepareDigitalJobsForSave = (jobs: LocalDigitalJob[], prepHours = 0): Loca
   }
 
   return jobs.map((job) => {
+    // External service rows are pass-through and skip click/sheet recalculation
+    if (job.is_external_service) {
+      const price = Number(job.external_price) || 0;
+      return {
+        ...job,
+        obim: 1,
+        qty: 1,
+        is_test_print: false,
+        machine_sheet_format: job.machine_sheet_format || "488x330",
+        print_sides: job.print_sides || "4/4",
+        name: job.external_note || job.name || "Eksterna usluga",
+        file_name: job.external_note || job.file_name || "Eksterna usluga",
+        computed_total_sheets: 0,
+        computed_color_clicks: 0,
+        computed_mono_clicks: 0,
+        computed_sheets_per_copy: 0,
+        computed_nup: 1,
+        computed_price_per_sheet: 0,
+        computed_line_total: price,
+      };
+    }
+
     const obim = Math.max(1, Number(job.obim) || 1);
     const qty = Math.max(1, Number(job.qty) || 1);
     const format = job.machine_sheet_format || "488x330";
