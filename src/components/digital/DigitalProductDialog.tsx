@@ -199,6 +199,34 @@ export const DigitalProductDialog = ({
   const grandTotal = printTotal + preview.finishingsTotal;
   const pricePerPiece = draft.qty > 0 ? grandTotal / draft.qty : 0;
 
+  // Booklet imposition feasibility: klamovanje / šivenje require a spread (2 pages side-by-side)
+  const bookletWarning = useMemo(() => {
+    if (!currentProduct?.supports_pages) return null;
+    const hasBooklet = draft.finishings.some((f) => isBookletBinding(f.variant));
+    if (!hasBooklet) return null;
+    const sheet = draft.machine_sheet_format;
+    const fits = spreadFitsOnSheet(draft.page_width_mm, draft.page_height_mm, sheet);
+    if (fits) return null;
+    const suggested = minSheetForBooklet(draft.page_width_mm, draft.page_height_mm);
+    const dim = MACHINE_SHEET_DIMS[sheet];
+    return {
+      pageW: draft.page_width_mm,
+      pageH: draft.page_height_mm,
+      sheet,
+      sheetW: dim?.w ?? 0,
+      sheetH: dim?.h ?? 0,
+      spreadW: draft.page_width_mm * 2,
+      suggested,
+    };
+  }, [
+    currentProduct,
+    draft.finishings,
+    draft.page_width_mm,
+    draft.page_height_mm,
+    draft.machine_sheet_format,
+  ]);
+
+
 
   const handleAdd = () => {
     if (!finishingTypes || !finishingPrices) return;
