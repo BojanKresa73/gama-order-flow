@@ -69,7 +69,9 @@ import type { LocalDigitalJob } from "./LocalDigitalJobsTable";
 interface DigitalProductDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  onAdd: (jobs: LocalDigitalJob[]) => void;
+  onAdd: (jobs: LocalDigitalJob[], editGroupId?: string) => void;
+  initialDraft?: ProductDraft | null;
+  editGroupId?: string | null;
 }
 
 const DEFAULT_DRAFT: ProductDraft = {
