@@ -31,6 +31,51 @@ export const MACHINE_SHEET_DIMS: Record<string, { w: number; h: number }> = {
   "760x330": { w: 760, h: 330 },
 };
 
+// Binding variants that require booklet imposition (2 pages side-by-side on a spread).
+export const BOOKLET_BINDING_VARIANTS = [
+  "Klamovanje (žičano)",
+  "Šivenje koncem",
+];
+
+export function isBookletBinding(variant?: string | null): boolean {
+  if (!variant) return false;
+  return BOOKLET_BINDING_VARIANTS.includes(variant);
+}
+
+/**
+ * Does a spread (2 finished pages side-by-side) of pageW × pageH fit on the given sheet?
+ * Tries both orientations of the spread.
+ */
+export function spreadFitsOnSheet(
+  pageW: number,
+  pageH: number,
+  sheetFormat: string
+): boolean {
+  const dim = MACHINE_SHEET_DIMS[sheetFormat];
+  if (!dim || pageW <= 0 || pageH <= 0) return false;
+  const spreadW = pageW * 2;
+  const spreadH = pageH;
+  return (
+    (spreadW <= dim.w && spreadH <= dim.h) ||
+    (spreadH <= dim.w && spreadW <= dim.h)
+  );
+}
+
+/**
+ * Smallest available machine sheet that can hold a 2-up booklet spread,
+ * or null if none fits.
+ */
+export function minSheetForBooklet(
+  pageW: number,
+  pageH: number
+): string | null {
+  const ordered = ["488x330", "760x330"];
+  for (const f of ordered) {
+    if (spreadFitsOnSheet(pageW, pageH, f)) return f;
+  }
+  return null;
+}
+
 /**
  * How many finished pages of a given format fit on one machine sheet.
  * Simple capacity-fit (no rotation optimization beyond basic both-orientations check).
