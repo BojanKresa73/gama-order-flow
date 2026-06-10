@@ -57,8 +57,13 @@ import { ChevronDown } from "lucide-react";
 import {
   PAGE_FORMAT_PRESETS,
   buildProductJobs,
+  isBookletBinding,
+  spreadFitsOnSheet,
+  minSheetForBooklet,
+  MACHINE_SHEET_DIMS,
   type ProductDraft,
 } from "@/lib/digitalProductPricing";
+import { AlertTriangle } from "lucide-react";
 import type { LocalDigitalJob } from "./LocalDigitalJobsTable";
 
 interface DigitalProductDialogProps {
