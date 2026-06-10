@@ -692,6 +692,7 @@ const NewWorkOrder = () => {
             binding_code: job.binding_code || null,
             finishings: (job.finishings as any) || [],
             finishings_total: job.finishings_total || 0,
+            is_external_service: job.is_external_service || false,
           }));
 
         if (digitalItems.length > 0) {
