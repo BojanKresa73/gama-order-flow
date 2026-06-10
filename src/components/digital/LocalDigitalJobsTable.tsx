@@ -1,9 +1,10 @@
 import { useState, useMemo } from "react";
-import { Plus, Trash2, FileUp, Package, Pencil } from "lucide-react";
+import { Plus, Trash2, FileUp, Package, Pencil, Wrench } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { AddDigitalJobsModal } from "./AddDigitalJobsModal";
+import { AddExternalServiceDialog, ExternalServicePayload } from "./AddExternalServiceDialog";
 import { DigitalJobsSummary } from "./DigitalJobsSummary";
 import { DigitalProductDialog } from "./DigitalProductDialog";
 import { reconstructDraftFromJob, type ProductDraft } from "@/lib/digitalProductPricing";
