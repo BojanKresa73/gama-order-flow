@@ -55,6 +55,29 @@ export interface LocalDigitalJob {
   pieces_per_sheet?: number;
   sheets_for_production?: number;
   sheets_for_test?: number;
+  // Product-oriented fields (set by DigitalProductForm)
+  product_code?: string;
+  page_count?: number;
+  page_format?: string;
+  page_width_mm?: number;
+  page_height_mm?: number;
+  has_cover?: boolean;
+  cover_paper?: string;
+  cover_print_sides?: string;
+  cover_lamination?: string;
+  binding_code?: string;
+  finishings?: Array<{
+    code: string;
+    name?: string;
+    variant: string;
+    pricing_model?: string;
+    qty: number;
+    unit_price: number;
+    fixed_cost: number;
+    total: number;
+    notes?: string;
+  }>;
+  finishings_total?: number;
 }
 
 interface LocalDigitalJobsTableProps {
