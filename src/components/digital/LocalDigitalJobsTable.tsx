@@ -347,7 +347,51 @@ export const LocalDigitalJobsTable = ({ jobs, onChange, printSides, clientRabatP
               </TableRow>
             </TableHeader>
             <TableBody>
-              {jobs.map((job, index) => (
+              {jobs.map((job, index) => {
+                if (job.is_external_service) {
+                  return (
+                    <TableRow key={index} className="bg-purple-50/40 dark:bg-purple-950/20">
+                      <TableCell className="py-2" colSpan={canSeePrices ? 7 : 7}>
+                        <div className="flex items-center gap-2">
+                          <Wrench className="h-3.5 w-3.5 text-purple-600 shrink-0" />
+                          <span className="text-xs uppercase tracking-wide text-purple-700 dark:text-purple-300 font-semibold">
+                            Eksterna usluga
+                          </span>
+                          <span className="text-sm truncate">{job.external_note || job.name || '—'}</span>
+                        </div>
+                      </TableCell>
+                      {canSeePrices && (
+                        <TableCell className="py-2 text-right text-sm font-semibold text-purple-700 dark:text-purple-300">
+                          €{(Number(job.external_price) || 0).toFixed(2)}
+                        </TableCell>
+                      )}
+                      <TableCell className="py-2">
+                        <div className="flex items-center gap-1">
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="sm"
+                            className="h-6 w-6 p-0"
+                            onClick={() => handleEditExternal(index)}
+                            title="Izmeni eksternu uslugu"
+                          >
+                            <Pencil className="h-3.5 w-3.5" />
+                          </Button>
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="sm"
+                            className="h-6 w-6 p-0"
+                            onClick={() => handleDelete(index)}
+                          >
+                            <Trash2 className="h-4 w-4 text-destructive" />
+                          </Button>
+                        </div>
+                      </TableCell>
+                    </TableRow>
+                  );
+                }
+                return (
                 <TableRow key={index}>
                   <TableCell className="py-2">
                     <Input
@@ -467,7 +511,8 @@ export const LocalDigitalJobsTable = ({ jobs, onChange, printSides, clientRabatP
                     </div>
                   </TableCell>
                 </TableRow>
-              ))}
+                );
+              })}
             </TableBody>
           </Table>
         </div>
