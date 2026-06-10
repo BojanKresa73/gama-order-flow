@@ -748,6 +748,65 @@ export const DigitalProductDialog = ({
                 </div>
               </>
             )}
+
+            {printPricing && (
+              <>
+                <Separator />
+                <div>
+                  <h4 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-2">
+                    Kalkulacija
+                  </h4>
+                  <div className="space-y-1 text-xs">
+                    {printPricing.groups.map((g, i) => (
+                      <div key={i} className="flex justify-between">
+                        <span className="text-muted-foreground truncate pr-2">
+                          Štampa {g.coverage} {g.format} ({g.totalSheets} tab.)
+                        </span>
+                        <span className="font-medium tabular-nums">
+                          {g.groupTotal.toFixed(2)} €
+                        </span>
+                      </div>
+                    ))}
+                    <div className="flex justify-between">
+                      <span className="text-muted-foreground">Trošak papira</span>
+                      <span className="tabular-nums">{paperCost.toFixed(2)} €</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-muted-foreground">Trošak klikova</span>
+                      <span className="tabular-nums">{clickCost.toFixed(2)} €</span>
+                    </div>
+                  </div>
+                </div>
+              </>
+            )}
+
+            <Separator />
+
+            <div className="rounded-lg bg-primary/10 p-3 space-y-1.5">
+              <div className="flex justify-between text-xs">
+                <span className="text-muted-foreground">Štampa</span>
+                <span className="tabular-nums font-medium">{printTotal.toFixed(2)} €</span>
+              </div>
+              <div className="flex justify-between text-xs">
+                <span className="text-muted-foreground">Dorade</span>
+                <span className="tabular-nums font-medium">
+                  {preview.finishingsTotal.toFixed(2)} €
+                </span>
+              </div>
+              <Separator className="my-1" />
+              <div className="flex justify-between text-base font-bold">
+                <span>Ukupno</span>
+                <span className="text-primary tabular-nums">
+                  {grandTotal.toFixed(2)} €
+                </span>
+              </div>
+              {draft.qty > 0 && grandTotal > 0 && (
+                <div className="flex justify-between text-[11px] text-muted-foreground">
+                  <span>Cena po komadu</span>
+                  <span className="tabular-nums">{pricePerPiece.toFixed(3)} €</span>
+                </div>
+              )}
+            </div>
           </aside>
         </div>
 
@@ -755,8 +814,11 @@ export const DigitalProductDialog = ({
           <Button variant="outline" onClick={() => onOpenChange(false)}>
             Otkaži
           </Button>
-          <Button onClick={handleAdd}>Dodaj na nalog</Button>
+          <Button onClick={handleAdd}>
+            Dodaj na nalog{grandTotal > 0 ? ` — ${grandTotal.toFixed(2)} €` : ""}
+          </Button>
         </DialogFooter>
+
       </DialogContent>
     </Dialog>
   );
