@@ -82,6 +82,10 @@ export interface LocalDigitalJob {
     notes?: string;
   }>;
   finishings_total?: number;
+  // External service line (3rd-party, pass-through price)
+  is_external_service?: boolean;
+  external_price?: number;
+  external_note?: string;
 }
 
 interface LocalDigitalJobsTableProps {
