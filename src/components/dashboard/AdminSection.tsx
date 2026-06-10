@@ -1,7 +1,7 @@
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { useNavigate } from "react-router-dom";
-import { Shield, Users, Boxes, CloudUpload, Loader2, ListOrdered, Mail } from "lucide-react";
+import { Shield, Users, Boxes, CloudUpload, Loader2, ListOrdered, Mail, Layers } from "lucide-react";
 import { useAuthz } from "@/hooks/useAuthz";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
@@ -76,6 +76,15 @@ export default function AdminSection() {
         >
           <ListOrdered className="h-6 w-6" />
           <span className="font-semibold">Prioritet</span>
+        </Button>
+
+        <Button
+          variant="outline"
+          className="h-20 flex-col gap-2"
+          onClick={() => nav("/admin/digital-catalog")}
+        >
+          <Layers className="h-6 w-6" />
+          <span className="font-semibold">Digital šifarnik</span>
         </Button>
 
         <Button

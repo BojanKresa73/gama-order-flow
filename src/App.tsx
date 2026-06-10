@@ -22,6 +22,7 @@ const Inventory = lazy(() => import("./pages/Inventory"));
 const Procurement = lazy(() => import("./pages/Procurement"));
 const Checklist = lazy(() => import("./pages/Checklist"));
 const AdminPriceListDigital = lazy(() => import("./pages/AdminPriceListDigital"));
+const AdminDigitalCatalog = lazy(() => import("./pages/AdminDigitalCatalog"));
 const AdminUsers = lazy(() => import("./pages/AdminUsers"));
 const AdminInventory = lazy(() => import("./pages/AdminInventory"));
 const AdminPriority = lazy(() => import("./pages/AdminPriority"));
@@ -96,6 +97,7 @@ const App = () => {
                 <Route path="/nabavka" element={<InternalUserGuard><Procurement /></InternalUserGuard>} />
                 <Route path="/checklist" element={<InternalUserGuard><Checklist /></InternalUserGuard>} />
                 <Route path="/admin/price-list-digital" element={<InternalUserGuard><AdminPriceListDigital /></InternalUserGuard>} />
+                <Route path="/admin/digital-catalog" element={<AdminGuard><AdminDigitalCatalog /></AdminGuard>} />
                 <Route path="/admin/users" element={<AdminGuard><AdminUsers /></AdminGuard>} />
                 <Route path="/admin/inventory" element={<AdminGuard><AdminInventory /></AdminGuard>} />
                 <Route path="/admin/priority" element={<AdminGuard><AdminPriority /></AdminGuard>} />
