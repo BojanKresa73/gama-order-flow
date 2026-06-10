@@ -672,9 +672,102 @@ export type Database = {
           },
         ]
       }
+      digital_finishing_prices: {
+        Row: {
+          active: boolean
+          created_at: string
+          display_order: number
+          finishing_code: string
+          fixed_cost: number
+          id: string
+          max_qty: number | null
+          min_qty: number
+          notes: string | null
+          unit_price: number
+          updated_at: string
+          variant: string
+        }
+        Insert: {
+          active?: boolean
+          created_at?: string
+          display_order?: number
+          finishing_code: string
+          fixed_cost?: number
+          id?: string
+          max_qty?: number | null
+          min_qty?: number
+          notes?: string | null
+          unit_price?: number
+          updated_at?: string
+          variant?: string
+        }
+        Update: {
+          active?: boolean
+          created_at?: string
+          display_order?: number
+          finishing_code?: string
+          fixed_cost?: number
+          id?: string
+          max_qty?: number | null
+          min_qty?: number
+          notes?: string | null
+          unit_price?: number
+          updated_at?: string
+          variant?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "digital_finishing_prices_finishing_code_fkey"
+            columns: ["finishing_code"]
+            isOneToOne: false
+            referencedRelation: "digital_finishing_types"
+            referencedColumns: ["code"]
+          },
+        ]
+      }
+      digital_finishing_types: {
+        Row: {
+          active: boolean
+          category: string
+          code: string
+          created_at: string
+          description: string | null
+          display_order: number
+          has_variants: boolean
+          name: string
+          pricing_model: string
+          updated_at: string
+        }
+        Insert: {
+          active?: boolean
+          category: string
+          code: string
+          created_at?: string
+          description?: string | null
+          display_order?: number
+          has_variants?: boolean
+          name: string
+          pricing_model?: string
+          updated_at?: string
+        }
+        Update: {
+          active?: boolean
+          category?: string
+          code?: string
+          created_at?: string
+          description?: string | null
+          display_order?: number
+          has_variants?: boolean
+          name?: string
+          pricing_model?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       digital_jobs: {
         Row: {
           binding: string | null
+          binding_code: string | null
           computed_color_clicks: number | null
           computed_line_total: number | null
           computed_mono_clicks: number | null
@@ -683,13 +776,19 @@ export type Database = {
           computed_sheets_per_copy: number | null
           computed_total_sheets: number | null
           cover_gsm: number | null
+          cover_lamination: string | null
+          cover_paper: string | null
+          cover_print_sides: string | null
           cover_sheets: number | null
           created_at: string
           file_name: string
           finished_h_mm: number
           finished_w_mm: number
           finishing: string | null
+          finishings: Json
+          finishings_total: number
           folds: number | null
+          has_cover: boolean
           id: string
           include_test_in_clicks: boolean
           is_test_print: boolean
@@ -701,6 +800,10 @@ export type Database = {
           name: string | null
           obim: number
           order_index: number | null
+          page_count: number | null
+          page_format: string | null
+          page_height_mm: number | null
+          page_width_mm: number | null
           pages: number
           paper_gsm: number | null
           paper_type: string | null
@@ -708,6 +811,7 @@ export type Database = {
           pieces_per_sheet: number | null
           pieces_per_sheet_override: number | null
           print_sides: string
+          product_code: string | null
           qty: number
           test_sheets: number
           updated_at: string
@@ -715,6 +819,7 @@ export type Database = {
         }
         Insert: {
           binding?: string | null
+          binding_code?: string | null
           computed_color_clicks?: number | null
           computed_line_total?: number | null
           computed_mono_clicks?: number | null
@@ -723,13 +828,19 @@ export type Database = {
           computed_sheets_per_copy?: number | null
           computed_total_sheets?: number | null
           cover_gsm?: number | null
+          cover_lamination?: string | null
+          cover_paper?: string | null
+          cover_print_sides?: string | null
           cover_sheets?: number | null
           created_at?: string
           file_name: string
           finished_h_mm: number
           finished_w_mm: number
           finishing?: string | null
+          finishings?: Json
+          finishings_total?: number
           folds?: number | null
+          has_cover?: boolean
           id?: string
           include_test_in_clicks?: boolean
           is_test_print?: boolean
@@ -741,6 +852,10 @@ export type Database = {
           name?: string | null
           obim?: number
           order_index?: number | null
+          page_count?: number | null
+          page_format?: string | null
+          page_height_mm?: number | null
+          page_width_mm?: number | null
           pages?: number
           paper_gsm?: number | null
           paper_type?: string | null
@@ -748,6 +863,7 @@ export type Database = {
           pieces_per_sheet?: number | null
           pieces_per_sheet_override?: number | null
           print_sides: string
+          product_code?: string | null
           qty: number
           test_sheets?: number
           updated_at?: string
@@ -755,6 +871,7 @@ export type Database = {
         }
         Update: {
           binding?: string | null
+          binding_code?: string | null
           computed_color_clicks?: number | null
           computed_line_total?: number | null
           computed_mono_clicks?: number | null
@@ -763,13 +880,19 @@ export type Database = {
           computed_sheets_per_copy?: number | null
           computed_total_sheets?: number | null
           cover_gsm?: number | null
+          cover_lamination?: string | null
+          cover_paper?: string | null
+          cover_print_sides?: string | null
           cover_sheets?: number | null
           created_at?: string
           file_name?: string
           finished_h_mm?: number
           finished_w_mm?: number
           finishing?: string | null
+          finishings?: Json
+          finishings_total?: number
           folds?: number | null
+          has_cover?: boolean
           id?: string
           include_test_in_clicks?: boolean
           is_test_print?: boolean
@@ -781,6 +904,10 @@ export type Database = {
           name?: string | null
           obim?: number
           order_index?: number | null
+          page_count?: number | null
+          page_format?: string | null
+          page_height_mm?: number | null
+          page_width_mm?: number | null
           pages?: number
           paper_gsm?: number | null
           paper_type?: string | null
@@ -788,6 +915,7 @@ export type Database = {
           pieces_per_sheet?: number | null
           pieces_per_sheet_override?: number | null
           print_sides?: string
+          product_code?: string | null
           qty?: number
           test_sheets?: number
           updated_at?: string
@@ -859,6 +987,51 @@ export type Database = {
           id?: string
           is_active?: boolean
           name?: string
+        }
+        Relationships: []
+      }
+      digital_product_types: {
+        Row: {
+          active: boolean
+          code: string
+          created_at: string
+          default_machine_sheet_format: string | null
+          default_paper: string | null
+          default_print_sides: string | null
+          description: string | null
+          display_order: number
+          name: string
+          supports_cover: boolean
+          supports_pages: boolean
+          updated_at: string
+        }
+        Insert: {
+          active?: boolean
+          code: string
+          created_at?: string
+          default_machine_sheet_format?: string | null
+          default_paper?: string | null
+          default_print_sides?: string | null
+          description?: string | null
+          display_order?: number
+          name: string
+          supports_cover?: boolean
+          supports_pages?: boolean
+          updated_at?: string
+        }
+        Update: {
+          active?: boolean
+          code?: string
+          created_at?: string
+          default_machine_sheet_format?: string | null
+          default_paper?: string | null
+          default_print_sides?: string | null
+          description?: string | null
+          display_order?: number
+          name?: string
+          supports_cover?: boolean
+          supports_pages?: boolean
+          updated_at?: string
         }
         Relationships: []
       }
