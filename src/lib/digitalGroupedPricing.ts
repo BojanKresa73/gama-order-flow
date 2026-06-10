@@ -23,6 +23,9 @@ export interface DigitalJobItem {
   paper_type?: string;
   is_test_print?: boolean;
   pieces_count?: number | null; // Number of pieces (flyers, cards) imposed per copy
+  is_external_service?: boolean;
+  external_price?: number;
+  external_note?: string;
   finishings?: Array<{
     code: string;
     name?: string;
