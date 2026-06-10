@@ -139,6 +139,25 @@ export const DigitalProductDialog = ({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [draft.page_format]);
 
+  // Auto-select smallest machine sheet that can hold the booklet spread when
+  // klamovanje / šivenje is selected. No manual click required.
+  useEffect(() => {
+    const hasBooklet = draft.finishings.some((f) => isBookletBinding(f.variant));
+    if (!hasBooklet) return;
+    if (spreadFitsOnSheet(draft.page_width_mm, draft.page_height_mm, draft.machine_sheet_format)) {
+      return;
+    }
+    const suggested = minSheetForBooklet(draft.page_width_mm, draft.page_height_mm);
+    if (suggested && suggested !== draft.machine_sheet_format) {
+      setDraft((d) => ({ ...d, machine_sheet_format: suggested }));
+    }
+  }, [
+    draft.finishings,
+    draft.page_width_mm,
+    draft.page_height_mm,
+    draft.machine_sheet_format,
+  ]);
+
   const currentProduct = products?.find((p) => p.code === draft.product_code);
 
   const getVariantsForCode = (code: string) =>
