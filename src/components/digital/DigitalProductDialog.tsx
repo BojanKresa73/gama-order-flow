@@ -105,14 +105,26 @@ export const DigitalProductDialog = ({
   open,
   onOpenChange,
   onAdd,
+  initialDraft,
+  editGroupId,
 }: DigitalProductDialogProps) => {
   const { data: paperTypes } = useDigitalPaperTypes();
   const { data: products } = useDigitalProductTypes();
   const { data: finishingTypes } = useDigitalFinishingTypes();
   const { data: finishingPrices } = useDigitalFinishingPrices();
 
-  const [draft, setDraft] = useState<ProductDraft>(DEFAULT_DRAFT);
+  const isEdit = !!editGroupId;
+  const [draft, setDraft] = useState<ProductDraft>(initialDraft ?? DEFAULT_DRAFT);
   const [tab, setTab] = useState<"product" | "material" | "finishings">("product");
+
+  // Reset/load draft whenever the dialog opens
+  useEffect(() => {
+    if (open) {
+      setDraft(initialDraft ?? DEFAULT_DRAFT);
+      setTab("product");
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open, editGroupId]);
 
   useEffect(() => {
     if (!products) return;
