@@ -197,6 +197,46 @@ export const LocalDigitalJobsTable = ({ jobs, onChange, printSides, clientRabatP
     onChange([...jobs, ...jobsWithDefaults]);
   };
 
+  const handleEditProduct = (job: LocalDigitalJob) => {
+    if (!job.product_group_id) return;
+    // Find the "interior" job in the group — the one with finishings stashed,
+    // falling back to the first member.
+    const groupJobs = jobs.filter((j) => j.product_group_id === job.product_group_id);
+    const interior = groupJobs.find((j) => (j.finishings?.length ?? 0) > 0) || groupJobs[0];
+    setEditDraft(reconstructDraftFromJob(interior));
+    setEditGroupId(job.product_group_id);
+    setShowProductDialog(true);
+  };
+
+  const handleProductSubmit = (newJobs: LocalDigitalJob[], groupId?: string) => {
+    if (groupId) {
+      // Edit: replace all jobs sharing this group_id, preserving deleted ids for diff.
+      const oldGroup = jobs.filter((j) => j.product_group_id === groupId);
+      const oldIds = oldGroup.map((j) => j.id).filter(Boolean) as string[];
+      // Carry the first existing id (and __status='updated') onto the new interior
+      // so the row updates in place instead of being recreated.
+      if (oldIds[0] && newJobs[0]) {
+        newJobs[0] = { ...newJobs[0], id: oldIds[0], __status: 'updated' };
+      }
+      if (oldIds[1] && newJobs[1]) {
+        newJobs[1] = { ...newJobs[1], id: oldIds[1], __status: 'updated' };
+      }
+      // Mark any leftover old ids as deleted (e.g., cover removed during edit).
+      const carriedIds = new Set(newJobs.map((j) => j.id).filter(Boolean) as string[]);
+      const deletedTombstones: LocalDigitalJob[] = oldGroup
+        .filter((j) => j.id && !carriedIds.has(j.id))
+        .map((j) => ({ ...j, __status: 'deleted' as const }));
+
+      const others = jobs.filter((j) => j.product_group_id !== groupId);
+      onChange([...others, ...newJobs, ...deletedTombstones]);
+    } else {
+      onChange([...jobs, ...newJobs]);
+    }
+    setEditGroupId(null);
+    setEditDraft(null);
+  };
+
+
   return (
     <div className="space-y-4">
       <DigitalJobsSummary jobs={jobs} clientRabatProcenat={clientRabatProcenat} prepHours={prepHours} />
