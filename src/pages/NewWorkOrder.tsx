@@ -355,6 +355,9 @@ const NewWorkOrder = () => {
             binding_code: (item as any).binding_code || undefined,
             finishings: (item as any).finishings || [],
             finishings_total: (item as any).finishings_total || 0,
+            is_external_service: (item as any).is_external_service || false,
+            external_price: (item as any).is_external_service ? Number((item as any).computed_line_total) || 0 : undefined,
+            external_note: (item as any).is_external_service ? (item.name || item.file_name || '') : undefined,
             __status: 'unchanged' as const,
           })));
         }
