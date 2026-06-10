@@ -63,8 +63,14 @@ export const DigitalPricingBreakdown = ({
   if (jobs.length === 0) return null;
 
   const pricing = calculateGroupedPricing(jobs, prepHours);
-  const amountWithDiscount = pricing.totalWithPrep * (1 - clientRabatProcenat / 100);
-  const discountAmount = pricing.totalWithPrep - amountWithDiscount;
+
+  // Aggregate finishings across all jobs (stashed on first job per product)
+  const allFinishings = jobs.flatMap((j) => j.finishings ?? []);
+  const finishingsTotal = jobs.reduce((s, j) => s + (j.finishings_total || 0), 0);
+  const grandTotal = pricing.totalWithPrep + finishingsTotal;
+
+  const amountWithDiscount = grandTotal * (1 - clientRabatProcenat / 100);
+  const discountAmount = grandTotal - amountWithDiscount;
 
   return (
     <Card>
