@@ -308,3 +308,45 @@ export function buildProductJobs(
 
   return { jobs, finishings: finishingLines, finishingsTotal };
 }
+
+/**
+ * Reconstruct a ProductDraft from the interior LocalDigitalJob (the one that
+ * carries product_code + stashed finishings). Used when editing an existing
+ * product group.
+ */
+export function reconstructDraftFromJob(job: LocalDigitalJob): ProductDraft {
+  // Filter out the auto-added cover lamination finishing — it's re-derived
+  // from cover_lamination, not stored as an explicit user pick.
+  const userFinishings = (job.finishings ?? [])
+    .filter(
+      (f) =>
+        !(
+          job.has_cover &&
+          job.cover_lamination &&
+          job.cover_lamination !== "none" &&
+          f.code === "plastifikacija" &&
+          f.variant === job.cover_lamination
+        )
+    )
+    .map((f) => ({ code: f.code, variant: f.variant, qty: f.qty }));
+
+  return {
+    product_code: job.product_code || "katalog",
+    name: job.name || job.file_name || "",
+    qty: job.qty || 1,
+    page_count: job.page_count || 1,
+    page_format: job.page_format || "A4",
+    page_width_mm: job.page_width_mm || job.finished_w_mm || 210,
+    page_height_mm: job.page_height_mm || job.finished_h_mm || 297,
+    machine_sheet_format: job.machine_sheet_format || "488x330",
+    paper_type: job.paper_type || "",
+    print_sides: job.print_sides || "4/4",
+    has_cover: !!job.has_cover,
+    cover_paper: job.cover_paper,
+    cover_print_sides: job.cover_print_sides,
+    cover_lamination: job.cover_lamination || "none",
+    binding_code: job.binding_code || "none",
+    finishings: userFinishings,
+  };
+}
+
