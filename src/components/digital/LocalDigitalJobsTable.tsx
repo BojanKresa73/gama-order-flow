@@ -315,6 +315,15 @@ export const LocalDigitalJobsTable = ({ jobs, onChange, printSides, clientRabatP
           <FileUp className="h-4 w-4 mr-2" />
           Dodaj fajlove
         </Button>
+        <Button
+          type="button"
+          onClick={() => { setEditExternalIndex(null); setShowExternalDialog(true); }}
+          variant="outline"
+          size="sm"
+        >
+          <Wrench className="h-4 w-4 mr-2" />
+          Dodaj eksternu uslugu
+        </Button>
       </div>
 
       {jobs.length === 0 ? (
