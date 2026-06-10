@@ -249,7 +249,42 @@ export const DigitalProductDialog = ({
           </DialogDescription>
         </DialogHeader>
 
+        {bookletWarning && (
+          <div className="mx-6 mt-3 rounded-md border border-destructive/40 bg-destructive/10 text-destructive px-3 py-2 flex items-start gap-2 text-xs">
+            <AlertTriangle className="h-4 w-4 mt-0.5 shrink-0" />
+            <div className="flex-1 space-y-1">
+              <div className="font-semibold">
+                Klamovanje / šivenje zahteva spread štampu — format ne staje na mašinski tabak.
+              </div>
+              <div className="opacity-90">
+                Strana {bookletWarning.pageW}×{bookletWarning.pageH} mm → potreban spread {bookletWarning.spreadW}×{bookletWarning.pageH} mm,
+                a tabak {bookletWarning.sheet} je {bookletWarning.sheetW}×{bookletWarning.sheetH} mm.
+                {bookletWarning.suggested
+                  ? ` Predlog: koristi ${bookletWarning.suggested}.`
+                  : " Nijedan dostupan tabak ne staje — promeni format strane ili povez."}
+              </div>
+              {bookletWarning.suggested && (
+                <Button
+                  type="button"
+                  size="sm"
+                  variant="outline"
+                  className="h-7 mt-1"
+                  onClick={() =>
+                    setDraft((d) => ({
+                      ...d,
+                      machine_sheet_format: bookletWarning.suggested!,
+                    }))
+                  }
+                >
+                  Prebaci na {bookletWarning.suggested}
+                </Button>
+              )}
+            </div>
+          </div>
+        )}
+
         <div className="grid grid-cols-1 md:grid-cols-[1fr_320px] gap-0 flex-1 overflow-hidden">
+
           {/* LEFT: tabbed form */}
           <div className="overflow-y-auto px-6 py-4">
             <Tabs value={tab} onValueChange={(v) => setTab(v as typeof tab)}>
