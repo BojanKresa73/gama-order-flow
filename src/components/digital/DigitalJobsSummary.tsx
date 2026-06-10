@@ -18,12 +18,13 @@ export const DigitalJobsSummary = ({ jobs, clientRabatProcenat = 0, prepHours = 
 
   // Calculate totals using new grouped logic
   const pricing = calculateGroupedPricing(jobs, prepHours);
-  const { 
-    totalSheets, 
-    totalColorClicks, 
-    totalMonoClicks, 
+  const {
+    totalSheets,
+    totalColorClicks,
+    totalMonoClicks,
     totalAmount,
     totalPaperCost,
+    totalClickCost,
     ruc,
     rucPercent,
     groups,
