@@ -155,9 +155,17 @@ export const DigitalJobsSummary = ({ jobs, clientRabatProcenat = 0, prepHours = 
                   <div className="text-xl font-semibold text-muted-foreground">€{totalPaperCost.toFixed(2)}</div>
                 </div>
                 <div>
+                  <div className="text-sm text-muted-foreground">Klikovi</div>
+                  <div className="text-xl font-semibold text-muted-foreground">€{totalClickCost.toFixed(2)}</div>
+                </div>
+                <div>
+                  <div className="text-sm text-muted-foreground">Trošak (papir + klikovi)</div>
+                  <div className="text-xl font-bold text-orange-600">€{(totalPaperCost + totalClickCost).toFixed(2)}</div>
+                </div>
+                <div>
                   <div className="text-sm text-muted-foreground">RUC</div>
-                  <div className="text-xl font-semibold text-green-600">
-                    €{ruc.toFixed(2)} ({rucPercent.toFixed(1)}%)
+                  <div className="text-xl font-bold text-green-600">
+                    €{ruc.toFixed(2)} <span className="text-sm font-normal">({rucPercent.toFixed(1)}%)</span>
                   </div>
                 </div>
                 {clientRabatProcenat > 0 && (
