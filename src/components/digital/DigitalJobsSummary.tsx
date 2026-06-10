@@ -29,7 +29,8 @@ export const DigitalJobsSummary = ({ jobs, clientRabatProcenat = 0, prepHours = 
     rucPercent,
     groups,
     prepCost,
-    totalWithPrep
+    totalWithPrep,
+    externalServicesTotal,
   } = pricing;
   // Aggregate finishings across all jobs (each product stashes finishings on first job)
   const finishingsTotal = jobs.reduce((sum, j) => sum + (j.finishings_total || 0), 0);
