@@ -67,6 +67,7 @@ export interface LocalDigitalJob {
   cover_print_sides?: string;
   cover_lamination?: string;
   binding_code?: string;
+  product_group_id?: string;
   finishings?: Array<{
     code: string;
     name?: string;
