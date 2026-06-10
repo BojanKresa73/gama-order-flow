@@ -121,6 +121,11 @@ export const DigitalJobsSummary = ({ jobs, clientRabatProcenat = 0, prepHours = 
                 <span className="mx-2">|</span>
                 <span className="text-muted-foreground">Mono: {totalMonoClicks}</span>
               </div>
+              {canSeePrices && (
+                <div className="text-xs text-muted-foreground mt-0.5">
+                  Trošak: €{totalClickCost.toFixed(2)}
+                </div>
+              )}
             </div>
             {canSeePrices && (
               <>
