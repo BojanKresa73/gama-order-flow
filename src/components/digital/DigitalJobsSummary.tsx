@@ -18,12 +18,13 @@ export const DigitalJobsSummary = ({ jobs, clientRabatProcenat = 0, prepHours = 
 
   // Calculate totals using new grouped logic
   const pricing = calculateGroupedPricing(jobs, prepHours);
-  const { 
-    totalSheets, 
-    totalColorClicks, 
-    totalMonoClicks, 
+  const {
+    totalSheets,
+    totalColorClicks,
+    totalMonoClicks,
     totalAmount,
     totalPaperCost,
+    totalClickCost,
     ruc,
     rucPercent,
     groups,
@@ -83,6 +84,7 @@ export const DigitalJobsSummary = ({ jobs, clientRabatProcenat = 0, prepHours = 
         ["Priprema (€):", prepCost.toFixed(2)],
         ["Ukupno (€):", totalWithPrep.toFixed(2)],
         ["Papir (€):", totalPaperCost.toFixed(2)],
+        ["Klikovi (€):", totalClickCost.toFixed(2)],
         ["RUC (€):", ruc.toFixed(2)],
         ["RUC (%):", rucPercent.toFixed(1) + "%"]
       );
@@ -120,6 +122,11 @@ export const DigitalJobsSummary = ({ jobs, clientRabatProcenat = 0, prepHours = 
                 <span className="mx-2">|</span>
                 <span className="text-muted-foreground">Mono: {totalMonoClicks}</span>
               </div>
+              {canSeePrices && (
+                <div className="text-xs text-muted-foreground mt-0.5">
+                  Trošak: €{totalClickCost.toFixed(2)}
+                </div>
+              )}
             </div>
             {canSeePrices && (
               <>
