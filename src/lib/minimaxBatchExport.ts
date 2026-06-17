@@ -74,13 +74,14 @@ async function fetchWorkOrderForMinimax(workOrderId: string, nbsRate: number): P
     return null;
   }
 
-  // Fetch client plate prices
+  // Fetch client plate prices (sve verzije) — biramo onu sa najvećim valid_from <= created_at
   const { data: platePrices, error: pricesError } = await supabase
     .from("client_plate_prices")
     .select(`
       plate_format_id,
       price_eur,
       price_eur_mono,
+      valid_from,
       plate_formats (format_name)
     `)
     .eq("client_id", workOrder.client_id);
@@ -100,8 +101,18 @@ async function fetchWorkOrderForMinimax(workOrderId: string, nbsRate: number): P
     notes: entry.notes,
   }));
 
-  // Transform plate prices
-  const transformedPrices = (platePrices || []).map((price: any) => ({
+  // Izaberi cenu po formatu koja je važila na datum kreiranja naloga
+  const orderDate = (workOrder.created_at || new Date().toISOString()).slice(0, 10);
+  const byFormat = new Map<string, any>();
+  for (const p of (platePrices || []) as any[]) {
+    if (!p.valid_from || p.valid_from > orderDate) continue;
+    const existing = byFormat.get(p.plate_format_id);
+    if (!existing || existing.valid_from < p.valid_from) {
+      byFormat.set(p.plate_format_id, p);
+    }
+  }
+
+  const transformedPrices = Array.from(byFormat.values()).map((price: any) => ({
     plate_format_id: price.plate_format_id,
     format_name: price.plate_formats?.format_name || "",
     price_eur: price.price_eur,
