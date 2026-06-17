@@ -68,18 +68,22 @@ export function ClientPlatePricesDialog({
       if (formatsError) throw formatsError;
       setPlateFormats(formats || []);
 
-      // Fetch existing prices for this client
+      // Fetch existing prices for this client (sve verzije, biramo najnoviju po formatu)
       const { data: existingPrices, error: pricesError } = await supabase
         .from("client_plate_prices")
-        .select("plate_format_id, price_eur, price_eur_mono")
-        .eq("client_id", clientId);
+        .select("plate_format_id, price_eur, price_eur_mono, valid_from")
+        .eq("client_id", clientId)
+        .order("valid_from", { ascending: false });
 
       if (pricesError) throw pricesError;
 
-      // Map existing prices to the states
+      // Map existing prices to the states (najnoviji red po formatu)
       const priceMap: Record<string, number> = {};
       const monoMap: Record<string, number> = {};
+      const seen = new Set<string>();
       (existingPrices || []).forEach((p) => {
+        if (seen.has(p.plate_format_id)) return;
+        seen.add(p.plate_format_id);
         priceMap[p.plate_format_id] = Number(p.price_eur);
         if (p.price_eur_mono !== null) {
           monoMap[p.plate_format_id] = Number(p.price_eur_mono);
@@ -139,35 +143,53 @@ export function ClientPlatePricesDialog({
         onMonoPricingChange(localMonoPricing);
       }
 
-      // Delete existing prices for this client
-      const { error: deleteError } = await supabase
+      // Učitaj sve postojeće cene da bismo znali koja je najnovija verzija po formatu
+      const { data: existing } = await supabase
         .from("client_plate_prices")
-        .delete()
-        .eq("client_id", clientId);
+        .select("id, plate_format_id, valid_from")
+        .eq("client_id", clientId)
+        .order("valid_from", { ascending: false });
 
-      if (deleteError) throw deleteError;
+      const latestByFormat = new Map<string, { id: string; valid_from: string }>();
+      (existing || []).forEach((r: any) => {
+        if (!latestByFormat.has(r.plate_format_id)) {
+          latestByFormat.set(r.plate_format_id, { id: r.id, valid_from: r.valid_from });
+        }
+      });
 
-      // Insert new prices (only non-zero values for color, include mono if enabled)
-      const insertData = Object.entries(prices)
-        .filter(([_, price]) => price > 0)
-        .map(([plate_format_id, price_eur]) => {
-          const row: any = {
-          client_id: clientId,
-          plate_format_id,
-          price_eur,
-          };
-          if (localMonoPricing && monoPrices[plate_format_id]) {
-            row.price_eur_mono = monoPrices[plate_format_id];
-          }
-          return row;
-        });
-
-      if (insertData.length > 0) {
-        const { error: insertError } = await supabase
+      // Format-ovi koje treba potpuno ukloniti (cena obrisana / 0)
+      const formatIdsToRemove: string[] = [];
+      for (const [fmtId] of latestByFormat) {
+        const newPrice = prices[fmtId];
+        if (!newPrice || newPrice <= 0) formatIdsToRemove.push(fmtId);
+      }
+      if (formatIdsToRemove.length > 0) {
+        const { error: delErr } = await supabase
           .from("client_plate_prices")
-          .insert(insertData);
+          .delete()
+          .eq("client_id", clientId)
+          .in("plate_format_id", formatIdsToRemove);
+        if (delErr) throw delErr;
+      }
 
-        if (insertError) throw insertError;
+      // Upsert: ažuriraj najnoviji red, ili kreiraj novi (valid_from = danas) ako format nije postojao
+      const today = new Date().toISOString().slice(0, 10);
+      for (const [plate_format_id, price_eur] of Object.entries(prices)) {
+        if (!price_eur || price_eur <= 0) continue;
+        const monoVal = localMonoPricing && monoPrices[plate_format_id] ? monoPrices[plate_format_id] : null;
+        const latest = latestByFormat.get(plate_format_id);
+        if (latest) {
+          const { error } = await supabase
+            .from("client_plate_prices")
+            .update({ price_eur, price_eur_mono: monoVal, updated_at: new Date().toISOString() })
+            .eq("id", latest.id);
+          if (error) throw error;
+        } else {
+          const { error } = await supabase
+            .from("client_plate_prices")
+            .insert({ client_id: clientId, plate_format_id, price_eur, price_eur_mono: monoVal, valid_from: today });
+          if (error) throw error;
+        }
       }
 
       toast.success("Cenovnik sačuvan");
