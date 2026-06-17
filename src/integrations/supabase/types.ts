@@ -211,6 +211,7 @@ export type Database = {
           price_eur: number
           price_eur_mono: number | null
           updated_at: string
+          valid_from: string
         }
         Insert: {
           client_id: string
@@ -220,6 +221,7 @@ export type Database = {
           price_eur?: number
           price_eur_mono?: number | null
           updated_at?: string
+          valid_from?: string
         }
         Update: {
           client_id?: string
@@ -229,6 +231,7 @@ export type Database = {
           price_eur?: number
           price_eur_mono?: number | null
           updated_at?: string
+          valid_from?: string
         }
         Relationships: [
           {
