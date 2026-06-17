@@ -96,14 +96,24 @@ const WorkOrderDetails = () => {
           setFileEntries(entries);
         }
 
-         // Fetch client plate prices for Minimax export and pricing summary
+         // Fetch client plate prices (sve verzije); filtriraj po datumu naloga
         const { data: pricesData } = await supabase
           .from('client_plate_prices')
           .select('*, plate_formats(format_name)')
           .eq('client_id', data.client_id);
         
         if (pricesData) {
-          const prices = pricesData.map(p => ({
+          const orderDate = (data.created_at || new Date().toISOString()).slice(0, 10);
+          const byFormat = new Map<string, any>();
+          for (const p of pricesData as any[]) {
+            const vf = p.valid_from || '2000-01-01';
+            if (vf > orderDate) continue;
+            const existing = byFormat.get(p.plate_format_id);
+            if (!existing || (existing.valid_from || '2000-01-01') < vf) {
+              byFormat.set(p.plate_format_id, p);
+            }
+          }
+          const prices = Array.from(byFormat.values()).map((p: any) => ({
             plate_format_id: p.plate_format_id,
             format_name: p.plate_formats?.format_name,
              price_eur: Number(p.price_eur),
