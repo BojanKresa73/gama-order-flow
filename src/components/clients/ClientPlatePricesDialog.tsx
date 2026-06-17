@@ -68,18 +68,22 @@ export function ClientPlatePricesDialog({
       if (formatsError) throw formatsError;
       setPlateFormats(formats || []);
 
-      // Fetch existing prices for this client
+      // Fetch existing prices for this client (sve verzije, biramo najnoviju po formatu)
       const { data: existingPrices, error: pricesError } = await supabase
         .from("client_plate_prices")
-        .select("plate_format_id, price_eur, price_eur_mono")
-        .eq("client_id", clientId);
+        .select("plate_format_id, price_eur, price_eur_mono, valid_from")
+        .eq("client_id", clientId)
+        .order("valid_from", { ascending: false });
 
       if (pricesError) throw pricesError;
 
-      // Map existing prices to the states
+      // Map existing prices to the states (najnoviji red po formatu)
       const priceMap: Record<string, number> = {};
       const monoMap: Record<string, number> = {};
+      const seen = new Set<string>();
       (existingPrices || []).forEach((p) => {
+        if (seen.has(p.plate_format_id)) return;
+        seen.add(p.plate_format_id);
         priceMap[p.plate_format_id] = Number(p.price_eur);
         if (p.price_eur_mono !== null) {
           monoMap[p.plate_format_id] = Number(p.price_eur_mono);
