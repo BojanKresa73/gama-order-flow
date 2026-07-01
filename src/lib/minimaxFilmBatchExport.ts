@@ -16,8 +16,16 @@ const FILM_ARTIKAL = {
   sifra: "16M03",
   naziv: "Filmovanje: Rolna 500mm",
   jedinica: "m",
-  cenaEur: 22, // EUR per meter
 };
+
+// Cena po m se dobija iz film_price_versions po datumu naloga
+function pickPriceForDate(versions: Array<{ price_eur_per_m: number; valid_from: string }>, orderDateIso: string): number {
+  const d = orderDateIso.slice(0, 10);
+  const applicable = versions
+    .filter(v => v.valid_from <= d)
+    .sort((a, b) => b.valid_from.localeCompare(a.valid_from));
+  return applicable[0]?.price_eur_per_m ?? 22;
+}
 
 // Pomoćna funkcija za escape XML specijalnih karaktera
 function escapeXml(text: string | null | undefined): string {
