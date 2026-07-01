@@ -311,12 +311,23 @@ const WorkOrderDetails = () => {
       let xml: string;
       
       if (workOrder.order_type === 'film') {
+        // Uzmi cenu koja važi na dan otvaranja naloga
+        const orderDate = (workOrder.created_at || '').slice(0, 10);
+        const { data: versions } = await supabase
+          .from('film_price_versions')
+          .select('price_eur_per_m, valid_from')
+          .lte('valid_from', orderDate)
+          .order('valid_from', { ascending: false })
+          .limit(1);
+        const priceEur = Number(versions?.[0]?.price_eur_per_m ?? 22);
+
         // Generate Film XML
         xml = generateMinimaxFilmXml({
           ...workOrder,
           clients: workOrder.clients,
           film_jobs: filmJobs,
-          nbs_rate: nbsRate
+          nbs_rate: nbsRate,
+          price_eur_per_m: priceEur,
         });
       } else {
         // Generate CTP XML
