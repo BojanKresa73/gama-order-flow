@@ -50,3 +50,7 @@ verify_jwt = false
 
 [functions.send-price-increase-excel]
 verify_jwt = false
+
+[functions.send-film-price-increase-newsletter]
+verify_jwt = false
+
