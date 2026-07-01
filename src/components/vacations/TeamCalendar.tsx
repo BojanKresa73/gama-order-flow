@@ -3,7 +3,7 @@ import { Button } from "@/components/ui/button";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import { VacationRequest } from "@/hooks/useVacations";
 import { useVacationHolidays } from "@/hooks/useVacations";
-import { colorForUser, statusLabel } from "@/lib/vacationCalc";
+import { colorForUser, formatDate, statusLabel } from "@/lib/vacationCalc";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 
 interface Props {
@@ -129,6 +129,32 @@ export function TeamCalendar({ requests }: Props) {
               </Button>
             );
           })}
+        </div>
+      )}
+
+      {visibleRequests.length > 0 && (
+        <div className="grid gap-2 md:grid-cols-2 xl:grid-cols-3">
+          {visibleRequests
+            .slice()
+            .sort((a, b) => (a.user_name || "").localeCompare(b.user_name || "", "sr"))
+            .map((r) => {
+              const color = colorForUser(r.user_id);
+              return (
+                <div key={r.id} className="flex items-center gap-3 rounded-md border bg-card px-3 py-2">
+                  <span
+                    className="h-10 w-1.5 rounded-full"
+                    style={{ background: color.border }}
+                    aria-hidden="true"
+                  />
+                  <div className="min-w-0">
+                    <div className="truncate text-sm font-semibold">{r.user_name || "Nepoznat"}</div>
+                    <div className="text-xs text-muted-foreground">
+                      {formatDate(r.start_date)} — {formatDate(r.end_date)} · {r.days_count} dana · {statusLabel(r.status)}
+                    </div>
+                  </div>
+                </div>
+              );
+            })}
         </div>
       )}
 
