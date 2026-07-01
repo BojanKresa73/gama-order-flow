@@ -1,9 +1,9 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import { VacationRequest } from "@/hooks/useVacations";
 import { useVacationHolidays } from "@/hooks/useVacations";
-import { colorForUser, statusLabel } from "@/lib/vacationCalc";
+import { colorForUser, formatDate, statusLabel } from "@/lib/vacationCalc";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 
 interface Props {
@@ -15,19 +15,62 @@ export function TeamCalendar({ requests }: Props) {
     const d = new Date();
     return new Date(d.getFullYear(), d.getMonth(), 1);
   });
+  const [didSetInitialMonth, setDidSetInitialMonth] = useState(false);
   const { data: holidays = [] } = useVacationHolidays();
   const holidaySet = useMemo(() => new Set(holidays.map((h) => h.holiday_date)), [holidays]);
 
   const daysInMonth = new Date(month.getFullYear(), month.getMonth() + 1, 0).getDate();
   const days = Array.from({ length: daysInMonth }, (_, i) => i + 1);
 
-  const activeRequests = requests.filter(
-    (r) => r.status === "approved" || r.status === "pending"
+  const activeRequests = useMemo(
+    () => requests.filter((r) => r.status === "approved" || r.status === "pending"),
+    [requests]
   );
+
+  useEffect(() => {
+    if (didSetInitialMonth || activeRequests.length === 0) return;
+    const earliest = activeRequests.reduce((min, r) => {
+      const d = new Date(r.start_date);
+      return d < min ? d : min;
+    }, new Date(activeRequests[0].start_date));
+    setMonth(new Date(earliest.getFullYear(), earliest.getMonth(), 1));
+    setDidSetInitialMonth(true);
+  }, [activeRequests, didSetInitialMonth]);
+
+  const overlapsMonth = (r: VacationRequest) => {
+    const monthStart = new Date(month.getFullYear(), month.getMonth(), 1);
+    const monthEnd = new Date(month.getFullYear(), month.getMonth() + 1, 0);
+    const start = new Date(r.start_date);
+    const end = new Date(r.end_date);
+    start.setHours(0, 0, 0, 0);
+    end.setHours(0, 0, 0, 0);
+    return start <= monthEnd && end >= monthStart;
+  };
+
+  const visibleRequests = activeRequests.filter(overlapsMonth);
+
+  const monthShortcuts = useMemo(() => {
+    const months = new Map<string, { date: Date; count: number }>();
+    activeRequests.forEach((r) => {
+      const start = new Date(r.start_date);
+      const end = new Date(r.end_date);
+      const cursor = new Date(start.getFullYear(), start.getMonth(), 1);
+      const last = new Date(end.getFullYear(), end.getMonth(), 1);
+      while (cursor <= last) {
+        const key = `${cursor.getFullYear()}-${cursor.getMonth()}`;
+        months.set(key, {
+          date: new Date(cursor),
+          count: (months.get(key)?.count ?? 0) + 1,
+        });
+        cursor.setMonth(cursor.getMonth() + 1);
+      }
+    });
+    return Array.from(months.values()).sort((a, b) => a.date.getTime() - b.date.getTime());
+  }, [activeRequests]);
 
   // group by user
   const usersMap = new Map<string, { name: string; requests: VacationRequest[] }>();
-  activeRequests.forEach((r) => {
+  visibleRequests.forEach((r) => {
     if (!usersMap.has(r.user_id)) usersMap.set(r.user_id, { name: r.user_name || "Nepoznat", requests: [] });
     usersMap.get(r.user_id)!.requests.push(r);
   });
@@ -56,13 +99,64 @@ export function TeamCalendar({ requests }: Props) {
         <Button variant="outline" size="sm" onClick={() => setMonth(new Date(month.getFullYear(), month.getMonth() - 1, 1))}>
           <ChevronLeft className="h-4 w-4" />
         </Button>
-        <div className="text-lg font-semibold capitalize">
-          {month.toLocaleDateString("sr-RS", { month: "long", year: "numeric" })}
+        <div className="text-center">
+          <div className="text-lg font-semibold capitalize">
+            {month.toLocaleDateString("sr-RS", { month: "long", year: "numeric" })}
+          </div>
+          <div className="text-xs text-muted-foreground">
+            {visibleRequests.length > 0 ? `${visibleRequests.length} odmor${visibleRequests.length === 1 ? "" : "a"} u ovom mesecu` : "Nema odmora u ovom mesecu"}
+          </div>
         </div>
         <Button variant="outline" size="sm" onClick={() => setMonth(new Date(month.getFullYear(), month.getMonth() + 1, 1))}>
           <ChevronRight className="h-4 w-4" />
         </Button>
       </div>
+
+      {monthShortcuts.length > 0 && (
+        <div className="flex flex-wrap gap-2">
+          {monthShortcuts.map((m) => {
+            const active = m.date.getFullYear() === month.getFullYear() && m.date.getMonth() === month.getMonth();
+            return (
+              <Button
+                key={`${m.date.getFullYear()}-${m.date.getMonth()}`}
+                type="button"
+                variant={active ? "default" : "outline"}
+                size="sm"
+                onClick={() => setMonth(new Date(m.date))}
+                className="h-8"
+              >
+                {m.date.toLocaleDateString("sr-RS", { month: "short", year: "numeric" })} · {m.count}
+              </Button>
+            );
+          })}
+        </div>
+      )}
+
+      {visibleRequests.length > 0 && (
+        <div className="grid gap-2 md:grid-cols-2 xl:grid-cols-3">
+          {visibleRequests
+            .slice()
+            .sort((a, b) => (a.user_name || "").localeCompare(b.user_name || "", "sr"))
+            .map((r) => {
+              const color = colorForUser(r.user_id);
+              return (
+                <div key={r.id} className="flex items-center gap-3 rounded-md border bg-card px-3 py-2">
+                  <span
+                    className="h-10 w-1.5 rounded-full"
+                    style={{ background: color.border }}
+                    aria-hidden="true"
+                  />
+                  <div className="min-w-0">
+                    <div className="truncate text-sm font-semibold">{r.user_name || "Nepoznat"}</div>
+                    <div className="text-xs text-muted-foreground">
+                      {formatDate(r.start_date)} — {formatDate(r.end_date)} · {r.days_count} dana · {statusLabel(r.status)}
+                    </div>
+                  </div>
+                </div>
+              );
+            })}
+        </div>
+      )}
 
       <div className="border rounded-lg overflow-x-auto">
         <TooltipProvider>
