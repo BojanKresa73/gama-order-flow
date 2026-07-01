@@ -15,8 +15,8 @@ const FILM_ARTIKAL = {
   sifra: "16M03",
   naziv: "Filmovanje: Rolna 500mm",
   jedinica: "m",
-  cenaEur: 22, // EUR per meter
 };
+
 
 // Tipovi za film stavke
 export interface FilmJobEntry {
