@@ -4039,9 +4039,31 @@ export type Database = {
         Args: { p_decision: string; p_id: string; p_note?: string }
         Returns: undefined
       }
+      vacation_set_allocated: {
+        Args: { p_allocated: number; p_user: string; p_year: number }
+        Returns: undefined
+      }
+      vacation_set_carryover: {
+        Args: { p_carried_over: number; p_user: string; p_year: number }
+        Returns: undefined
+      }
       vacation_submit: {
         Args: { p_end: string; p_reason: string; p_start: string }
         Returns: string
+      }
+      vacation_team_overview: {
+        Args: { p_year: number }
+        Returns: {
+          allocated: number
+          carried_over: number
+          carryover_expires_on: string
+          full_name: string
+          pending_days: number
+          used: number
+          used_from_current: number
+          used_from_previous: number
+          user_id: string
+        }[]
       }
     }
     Enums: {
