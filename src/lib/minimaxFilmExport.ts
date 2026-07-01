@@ -52,6 +52,7 @@ export interface FilmWorkOrderData {
   clients: ClientData;
   film_jobs: FilmJobEntry[];
   nbs_rate?: number;
+  price_eur_per_m?: number; // cena za datum naloga (iz film_price_versions), fallback 22
 }
 
 // Pomoćna funkcija za escape XML specijalnih karaktera
