@@ -16,8 +16,16 @@ const FILM_ARTIKAL = {
   sifra: "16M03",
   naziv: "Filmovanje: Rolna 500mm",
   jedinica: "m",
-  cenaEur: 22, // EUR per meter
 };
+
+// Cena po m se dobija iz film_price_versions po datumu naloga
+function pickPriceForDate(versions: Array<{ price_eur_per_m: number; valid_from: string }>, orderDateIso: string): number {
+  const d = orderDateIso.slice(0, 10);
+  const applicable = versions
+    .filter(v => v.valid_from <= d)
+    .sort((a, b) => b.valid_from.localeCompare(a.valid_from));
+  return applicable[0]?.price_eur_per_m ?? 22;
+}
 
 // Pomoćna funkcija za escape XML specijalnih karaktera
 function escapeXml(text: string | null | undefined): string {
@@ -70,7 +78,15 @@ export async function exportFilmBatchToMinimax(orderIds: string[]): Promise<Film
     .single();
 
   const eurToRsd = nbsRate?.middle_rate || 117.0;
-  const priceRsd = FILM_ARTIKAL.cenaEur * eurToRsd;
+
+  // Fetch film price versions (za odabir cene po datumu naloga)
+  const { data: priceVersions } = await supabase
+    .from("film_price_versions")
+    .select("price_eur_per_m, valid_from");
+  const versions = (priceVersions || []).map(v => ({
+    price_eur_per_m: Number(v.price_eur_per_m),
+    valid_from: String(v.valid_from),
+  }));
 
   // Fetch all work orders with film jobs and client data
   const { data: workOrders, error: woError } = await supabase
@@ -132,6 +148,9 @@ export async function exportFilmBatchToMinimax(orderIds: string[]): Promise<Film
     const orderNumber = wo.order_number || wo.id;
     const orderDate = format(new Date(wo.created_at), "yyyy-MM-dd");
     const hasMinimaxClient = minimaxStrankaSifra !== null;
+    const priceEur = pickPriceForDate(versions, wo.created_at);
+    const priceRsd = priceEur * eurToRsd;
+
 
     // Build NarociloVrstice - each film job is a separate row
     const vrsticeXml = filmJobs
