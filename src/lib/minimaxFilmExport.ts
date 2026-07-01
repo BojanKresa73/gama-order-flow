@@ -98,8 +98,10 @@ export function generateMinimaxFilmXml(workOrder: FilmWorkOrderData): string {
     (client.pib ? truncate(client.pib.replace(/\D/g, ""), 30) : 
      truncate(client.name.replace(/[^A-Za-z0-9]/g, "").toUpperCase(), 30));
 
-  // Cena filma u RSD (22 EUR × NBS kurs)
-  const priceRsd = FILM_ARTIKAL.cenaEur * nbsRate;
+  // Cena filma u RSD (EUR × NBS kurs); EUR se bira iz film_price_versions po datumu naloga
+  const priceEur = workOrder.price_eur_per_m ?? 22;
+  const priceRsd = priceEur * nbsRate;
+
 
   // Build NarociloVrstice - svaki film job je posebna stavka
   const vrsticeXml = workOrder.film_jobs
