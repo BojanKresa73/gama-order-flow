@@ -1560,6 +1560,33 @@ export type Database = {
           },
         ]
       }
+      film_price_versions: {
+        Row: {
+          cost_eur_per_m: number
+          created_at: string
+          id: string
+          note: string | null
+          price_eur_per_m: number
+          valid_from: string
+        }
+        Insert: {
+          cost_eur_per_m: number
+          created_at?: string
+          id?: string
+          note?: string | null
+          price_eur_per_m: number
+          valid_from: string
+        }
+        Update: {
+          cost_eur_per_m?: number
+          created_at?: string
+          id?: string
+          note?: string | null
+          price_eur_per_m?: number
+          valid_from?: string
+        }
+        Relationships: []
+      }
       film_settings: {
         Row: {
           cost_eur_per_m: number
@@ -3795,6 +3822,14 @@ export type Database = {
         Returns: Json
       }
       get_current_nbs_rate: { Args: { p_currency?: string }; Returns: number }
+      get_film_price_for_date: {
+        Args: { p_date: string }
+        Returns: {
+          cost_eur_per_m: number
+          price_eur_per_m: number
+          valid_from: string
+        }[]
+      }
       get_format_monthly_consumption: { Args: never; Returns: Json }
       get_monthly_plate_usage: {
         Args: { p_end: string; p_start: string }
