@@ -2631,6 +2631,161 @@ export type Database = {
           },
         ]
       }
+      vacation_balances: {
+        Row: {
+          allocated: number
+          carried_over: number
+          carryover_expires_on: string | null
+          updated_at: string
+          used: number
+          user_id: string
+          year: number
+        }
+        Insert: {
+          allocated?: number
+          carried_over?: number
+          carryover_expires_on?: string | null
+          updated_at?: string
+          used?: number
+          user_id: string
+          year: number
+        }
+        Update: {
+          allocated?: number
+          carried_over?: number
+          carryover_expires_on?: string | null
+          updated_at?: string
+          used?: number
+          user_id?: string
+          year?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "vacation_balances_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      vacation_holidays: {
+        Row: {
+          created_at: string
+          holiday_date: string
+          id: string
+          is_active: boolean
+          name: string
+        }
+        Insert: {
+          created_at?: string
+          holiday_date: string
+          id?: string
+          is_active?: boolean
+          name: string
+        }
+        Update: {
+          created_at?: string
+          holiday_date?: string
+          id?: string
+          is_active?: boolean
+          name?: string
+        }
+        Relationships: []
+      }
+      vacation_requests: {
+        Row: {
+          created_at: string
+          days_count: number
+          end_date: string
+          id: string
+          reason: string | null
+          reviewed_at: string | null
+          reviewer_id: string | null
+          reviewer_note: string | null
+          start_date: string
+          status: Database["public"]["Enums"]["vacation_status"]
+          updated_at: string
+          used_from_current: number
+          used_from_previous: number
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          days_count: number
+          end_date: string
+          id?: string
+          reason?: string | null
+          reviewed_at?: string | null
+          reviewer_id?: string | null
+          reviewer_note?: string | null
+          start_date: string
+          status?: Database["public"]["Enums"]["vacation_status"]
+          updated_at?: string
+          used_from_current?: number
+          used_from_previous?: number
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          days_count?: number
+          end_date?: string
+          id?: string
+          reason?: string | null
+          reviewed_at?: string | null
+          reviewer_id?: string | null
+          reviewer_note?: string | null
+          start_date?: string
+          status?: Database["public"]["Enums"]["vacation_status"]
+          updated_at?: string
+          used_from_current?: number
+          used_from_previous?: number
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "vacation_requests_reviewer_id_fkey"
+            columns: ["reviewer_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "vacation_requests_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      vacation_settings: {
+        Row: {
+          annual_days: number
+          carryover_deadline_day: number
+          carryover_deadline_month: number
+          id: boolean
+          min_notice_days: number
+          updated_at: string
+        }
+        Insert: {
+          annual_days?: number
+          carryover_deadline_day?: number
+          carryover_deadline_month?: number
+          id?: boolean
+          min_notice_days?: number
+          updated_at?: string
+        }
+        Update: {
+          annual_days?: number
+          carryover_deadline_day?: number
+          carryover_deadline_month?: number
+          id?: boolean
+          min_notice_days?: number
+          updated_at?: string
+        }
+        Relationships: []
+      }
       work_order_checklist_items: {
         Row: {
           assignee_user_id: string | null
@@ -3872,6 +4027,22 @@ export type Database = {
         }
         Returns: Json
       }
+      vacation_count_days: {
+        Args: { p_end: string; p_start: string }
+        Returns: number
+      }
+      vacation_ensure_balance: {
+        Args: { p_user: string; p_year: number }
+        Returns: undefined
+      }
+      vacation_review: {
+        Args: { p_decision: string; p_id: string; p_note?: string }
+        Returns: undefined
+      }
+      vacation_submit: {
+        Args: { p_end: string; p_reason: string; p_start: string }
+        Returns: string
+      }
     }
     Enums: {
       app_role:
@@ -3903,6 +4074,7 @@ export type Database = {
         | "tarpaulin"
         | "mesh_banner"
         | "other"
+      vacation_status: "pending" | "approved" | "rejected" | "cancelled"
       wo_type: "CTP" | "DIGITAL" | "FILM" | "OSTALO"
       work_order_kind:
         | "CTP"
@@ -4067,6 +4239,7 @@ export const Constants = {
         "mesh_banner",
         "other",
       ],
+      vacation_status: ["pending", "approved", "rejected", "cancelled"],
       wo_type: ["CTP", "DIGITAL", "FILM", "OSTALO"],
       work_order_kind: [
         "CTP",
