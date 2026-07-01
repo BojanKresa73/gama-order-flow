@@ -148,6 +148,9 @@ export async function exportFilmBatchToMinimax(orderIds: string[]): Promise<Film
     const orderNumber = wo.order_number || wo.id;
     const orderDate = format(new Date(wo.created_at), "yyyy-MM-dd");
     const hasMinimaxClient = minimaxStrankaSifra !== null;
+    const priceEur = pickPriceForDate(versions, wo.created_at);
+    const priceRsd = priceEur * eurToRsd;
+
 
     // Build NarociloVrstice - each film job is a separate row
     const vrsticeXml = filmJobs
