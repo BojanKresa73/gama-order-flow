@@ -1,6 +1,6 @@
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
-import { FileText, BarChart3, ChevronDown, Mail } from "lucide-react";
+import { FileText, BarChart3, ChevronDown, Mail, Palmtree } from "lucide-react";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -64,6 +64,10 @@ export const DashboardQuickActions = ({ canViewStats, isSuper }: DashboardQuickA
         </Button>
         <Button variant="outline" onClick={() => navigate("/checklist")}>
           Checklist
+        </Button>
+        <Button variant="outline" onClick={() => navigate("/vacations")}>
+          <Palmtree className="h-4 w-4 mr-2" />
+          Godišnji odmori
         </Button>
         <Button variant="outline" onClick={() => navigate("/reports/delivery-notes")}>
           <FileText className="h-4 w-4 mr-2" />
