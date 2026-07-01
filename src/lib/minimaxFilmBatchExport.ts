@@ -78,7 +78,15 @@ export async function exportFilmBatchToMinimax(orderIds: string[]): Promise<Film
     .single();
 
   const eurToRsd = nbsRate?.middle_rate || 117.0;
-  const priceRsd = FILM_ARTIKAL.cenaEur * eurToRsd;
+
+  // Fetch film price versions (za odabir cene po datumu naloga)
+  const { data: priceVersions } = await supabase
+    .from("film_price_versions")
+    .select("price_eur_per_m, valid_from");
+  const versions = (priceVersions || []).map(v => ({
+    price_eur_per_m: Number(v.price_eur_per_m),
+    valid_from: String(v.valid_from),
+  }));
 
   // Fetch all work orders with film jobs and client data
   const { data: workOrders, error: woError } = await supabase
