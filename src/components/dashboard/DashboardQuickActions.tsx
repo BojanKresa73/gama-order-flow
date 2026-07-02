@@ -33,8 +33,12 @@ export const DashboardQuickActions = ({ canViewStats, isSuper }: DashboardQuickA
         <Button size="sm" variant="outline" className="w-full" onClick={() => navigate("/large-format/new?type=rigid")}>
           + Ploča
         </Button>
-        <Button size="sm" variant="outline" className="w-full col-span-2" onClick={() => navigate("/nabavka")}>
+        <Button size="sm" variant="outline" className="w-full" onClick={() => navigate("/nabavka")}>
           Nabavka
+        </Button>
+        <Button size="sm" variant="outline" className="w-full col-span-2" onClick={() => navigate("/vacations")}>
+          <Palmtree className="h-4 w-4 mr-1" />
+          Godišnji odmori
         </Button>
       </div>
 
