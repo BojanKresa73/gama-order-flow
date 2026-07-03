@@ -337,46 +337,60 @@ export async function generatePastedQuotePdf(data: PastedQuoteData): Promise<Uin
       const natH = rec.h;
       const ratio = natH > 0 ? natW / natH : 1;
 
-      // Detect signature-like images: wide aspect, no explicit dimensions,
-      // typically the last image in the body → cap width more tightly.
+      // Detect signature-like images: wide aspect, no explicit dimensions.
       const isSignatureLike = !b.width && !b.height && ratio > 2 && ratio < 8;
 
-      // Hard caps
-      const MAX_W_DEFAULT = Math.min(CONTENT_W, 360);
-      const MAX_W_SIG = Math.min(CONTENT_W, 240);
-      const maxW = isSignatureLike ? MAX_W_SIG : MAX_W_DEFAULT;
+      // Extra breathing room around signatures so they don't hug text or borders
+      const padTop = isSignatureLike ? 10 : 4;
+      const padBottom = isSignatureLike ? 14 : 8;
+      const sidePad = isSignatureLike ? 24 : 0;
 
-      // Available vertical space on the current page (leave signature footer area free)
-      const availH = Math.max(60, y - (BOTTOM + 60));
-      const MAX_H_ABS = 220;
-      const maxH = Math.min(MAX_H_ABS, availH);
+      // Reserve room for the bottom signer card (~90pt) + footer inset
+      const FOOTER_SAFE = 100;
+
+      // Hard width caps (respect side padding)
+      const usableW = CONTENT_W - sidePad * 2;
+      const MAX_W_DEFAULT = Math.min(usableW, 360);
+      const MAX_W_SIG = Math.min(usableW, 220);
+      let maxW = isSignatureLike ? MAX_W_SIG : MAX_W_DEFAULT;
+
+      // Available vertical space on current page
+      let availH = y - padTop - padBottom - (BOTTOM + FOOTER_SAFE);
+      const MAX_H_ABS = isSignatureLike ? 110 : 220;
+
+      // If there's not enough room on the current page, start a fresh page
+      if (availH < 40) {
+        page = doc.addPage([595.28, 841.89]);
+        drawBg(page);
+        y = TOP;
+        availH = y - padTop - padBottom - (BOTTOM + FOOTER_SAFE);
+      }
+      let maxH = Math.min(MAX_H_ABS, availH);
 
       // Preferred size from HTML hints if present, otherwise natural size (in pt)
       let w = b.width ? b.width * PX_TO_PT : natW * PX_TO_PT;
       let h = b.height ? b.height * PX_TO_PT : natH * PX_TO_PT;
-      // Keep aspect ratio if only one dim provided
       if (b.width && !b.height && ratio > 0) h = w / ratio;
       if (b.height && !b.width && ratio > 0) w = h * ratio;
 
-      // Scale down to fit caps (never scale up above natural pt size to avoid pixelation)
+      // Auto-shrink to fit both caps (never upscale above natural size)
       const scale = Math.min(maxW / w, maxH / h, 1);
       w = w * scale;
       h = h * scale;
 
-      // Placement: default to centered for standalone/signature-like; honor explicit align
+      // Placement (center by default; honor explicit align)
       let x: number;
-      if (b.align === "right") x = RIGHT - w;
-      else if (b.align === "left" && !isSignatureLike) x = LEFT;
+      if (b.align === "right") x = RIGHT - sidePad - w;
+      else if (b.align === "left" && !isSignatureLike) x = LEFT + sidePad;
       else x = LEFT + (CONTENT_W - w) / 2;
 
-      // Ensure we have room, page-break if not
-      ensurePage(h + 14);
-      y -= 4;
+      y -= padTop;
       y -= h;
       page.drawImage(rec.img, { x, y, width: w, height: h });
-      y -= 8;
+      y -= padBottom;
       continue;
     }
+
 
 
     if (b.kind === "table") {
