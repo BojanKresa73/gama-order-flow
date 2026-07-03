@@ -188,17 +188,24 @@ export function QuoteDialog({ open, onOpenChange, items, total }: Props) {
     try {
       const quote = await buildQuote();
       const bytes = await generateQuotePdf(quote);
-      const blob = new Blob([bytes as BlobPart], { type: "application/pdf" });
-      if (previewUrl) URL.revokeObjectURL(previewUrl);
-      setPreviewUrl(URL.createObjectURL(blob));
+      setPreviewBytes(bytes);
     } catch (e: any) {
       toast.error("Pregled nije uspeo: " + (e?.message || "nepoznata"));
     } finally { setBusy(""); }
   };
 
+  const openPreviewInNewTab = () => {
+    if (!previewBytes) return;
+    const blob = new Blob([previewBytes as BlobPart], { type: "application/pdf" });
+    const url = URL.createObjectURL(blob);
+    window.open(url, "_blank", "noopener,noreferrer");
+    // Give the tab a moment to load before revoking.
+    setTimeout(() => URL.revokeObjectURL(url), 60_000);
+  };
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className={cn(previewUrl ? "max-w-6xl" : "max-w-lg")}>
+      <DialogContent className={cn(previewBytes ? "max-w-6xl" : "max-w-lg")}>
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <FileText className="h-5 w-5 text-primary" />
@@ -206,7 +213,7 @@ export function QuoteDialog({ open, onOpenChange, items, total }: Props) {
           </DialogTitle>
         </DialogHeader>
 
-        <div className={cn("gap-4", previewUrl ? "grid md:grid-cols-[minmax(0,1fr)_minmax(0,1.2fr)]" : "")}>
+        <div className={cn("gap-4", previewBytes ? "grid md:grid-cols-[minmax(0,1fr)_minmax(0,1.2fr)]" : "")}>
           <div className="space-y-3 min-w-0">
           <div className="rounded-md bg-muted/40 p-2 text-xs text-muted-foreground">
             Potpisnik: <strong className="text-foreground">{signer?.fullName || "…"}</strong>
