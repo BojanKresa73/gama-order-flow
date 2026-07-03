@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Loader2, Send } from "lucide-react";
 import { toast } from "sonner";
 import {
@@ -30,15 +30,15 @@ export function SendQuoteProDialog({ quoteId, open, onOpenChange }: Props) {
   const [body, setBody] = useState("");
   const [sending, setSending] = useState(false);
 
-  // Seed fields when quote loads
-  useState(() => undefined);
-  if (quote && !to && quote.client?.email) setTo(quote.client.email);
-  if (quote && !subject) setSubject(`Ponuda ${quote.quote_number}${quote.job_name ? " — " + quote.job_name : ""}`);
-  if (quote && signer && !body) {
+  useEffect(() => {
+    if (!quote || !signer) return;
+    if (quote.client?.email) setTo((prev) => prev || quote.client!.email!);
+    setSubject((prev) => prev || `Ponuda ${quote.quote_number}${quote.job_name ? " — " + quote.job_name : ""}`);
     setBody(
+      (prev) => prev ||
       `Poštovani,\n\nU prilogu Vam dostavljamo ponudu ${quote.quote_number}.\nZa sva pitanja stojimo Vam na raspolaganju.\n\nSrdačan pozdrav,\n${signer.fullName}${signer.jobTitle ? "\n" + signer.jobTitle : ""}\nGama United`
     );
-  }
+  }, [quote, signer]);
 
   async function handleSend() {
     if (!quote || !signer) return;
