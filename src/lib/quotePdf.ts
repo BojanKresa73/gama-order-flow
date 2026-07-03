@@ -76,6 +76,16 @@ function wrap(text: string, font: PDFFont, size: number, maxWidth: number): stri
   return lines;
 }
 
+function fit(text: string, font: PDFFont, size: number, maxWidth: number): string {
+  const clean = String(text || "").replace(/\s+/g, " ").trim();
+  if (font.widthOfTextAtSize(clean, size) <= maxWidth) return clean;
+  let out = clean;
+  while (out.length > 1 && font.widthOfTextAtSize(`${out}…`, size) > maxWidth) {
+    out = out.slice(0, -1);
+  }
+  return `${out.trim()}…`;
+}
+
 export async function generateQuotePdf(data: QuoteData): Promise<Uint8Array> {
   const doc = await PDFDocument.create();
   doc.registerFontkit(fontkit);
@@ -150,7 +160,7 @@ export async function generateQuotePdf(data: QuoteData): Promise<Uint8Array> {
   page.drawRectangle({ x: LEFT, y: y - cardH, width: 2.5, height: cardH, color: CYAN });
   page.drawText("KUPAC", { x: LEFT + 14, y: y - 15, size: 8, font: bold, color: GRAY });
 
-  const clientTitle = data.clientCompany || data.clientName;
+  const clientTitle = fit(data.clientCompany || data.clientName, bold, 13, CONTENT_W - 32);
   page.drawText(clientTitle, { x: LEFT + 14, y: y - 32, size: 13, font: bold, color: NAVY });
 
   const sub: string[] = [];
@@ -159,7 +169,7 @@ export async function generateQuotePdf(data: QuoteData): Promise<Uint8Array> {
   if (data.clientPib) sub.push("PIB: " + data.clientPib);
   if (data.clientEmail) sub.push(data.clientEmail);
   if (sub.length) {
-    page.drawText(sub.join("  ·  "), {
+    page.drawText(fit(sub.join("  ·  "), reg, 9, CONTENT_W - 32), {
       x: LEFT + 14,
       y: y - 48,
       size: 9,
@@ -172,66 +182,67 @@ export async function generateQuotePdf(data: QuoteData): Promise<Uint8Array> {
 
   // Table
   const cols = {
-    rb: LEFT + 8,
-    name: LEFT + 30,
-    dim: LEFT + 240,
-    qty: LEFT + 300,
-    sides: LEFT + 335,
-    unit: LEFT + 415,   // right-aligned end
-    total: RIGHT - 8,   // right-aligned end
+    rb: LEFT + 10,
+    name: LEFT + 34,
+    dim: LEFT + 242,
+    qty: LEFT + 304,
+    sides: LEFT + 344,
+    unit: RIGHT - 86,
+    total: RIGHT - 12,
+  };
+
+  const drawTableHeader = () => {
+    const headerH = 22;
+    page.drawRectangle({ x: LEFT, y: y - headerH, width: CONTENT_W, height: headerH, color: NAVY });
+    const headerBaseline = y - 14;
+    const th = (t: string, x: number, right = false) => {
+      const w = right ? bold.widthOfTextAtSize(t, 8) : 0;
+      page.drawText(t, { x: right ? x - w : x, y: headerBaseline, size: 8, font: bold, color: rgb(1, 1, 1) });
+    };
+    th("#", cols.rb);
+    th("ARTIKAL", cols.name);
+    th("DIM.", cols.dim);
+    th("KOL.", cols.qty);
+    th("ŠT.", cols.sides);
+    th("CENA/KOM", cols.unit, true);
+    th("UKUPNO", cols.total, true);
+    y -= headerH + 16;
   };
 
   // Header band
-  const headerH = 22;
-  page.drawRectangle({ x: LEFT, y: y - headerH, width: CONTENT_W, height: headerH, color: NAVY });
-  const headerBaseline = y - 14;
-  const th = (t: string, x: number, right = false) => {
-    const w = right ? bold.widthOfTextAtSize(t, 8.5) : 0;
-    page.drawText(t, { x: right ? x - w : x, y: headerBaseline, size: 8.5, font: bold, color: rgb(1, 1, 1) });
-  };
-  th("#", cols.rb);
-  th("ARTIKAL", cols.name);
-  th("DIM (cm)", cols.dim);
-  th("KOL.", cols.qty);
-  th("ŠTAMPA", cols.sides);
-  th("CENA/KOM", cols.unit, true);
-  th("UKUPNO", cols.total, true);
-
-  y -= headerH + 6;
+  drawTableHeader();
 
   const ensurePage = () => {
     if (y < BOTTOM + 80) {
       page = doc.addPage([595.28, 841.89]);
       drawBackground(page, memo);
       y = height - 130;
+      drawTableHeader();
     }
   };
 
   data.items.forEach((it, idx) => {
     ensurePage();
+    const rowH = 23;
     if (idx % 2 === 1) {
-      page.drawRectangle({ x: LEFT, y: y - 5, width: CONTENT_W, height: 19, color: rgb(0.97, 0.97, 0.98) });
+      page.drawRectangle({ x: LEFT, y: y - 8, width: CONTENT_W, height: rowH, color: rgb(0.97, 0.97, 0.98) });
     }
     const td = (t: string, x: number, right = false, f: PDFFont = reg, size = 9, color = INK) => {
       const w = right ? f.widthOfTextAtSize(t, size) : 0;
       page.drawText(t, { x: right ? x - w : x, y: y, size, font: f, color });
     };
     td(String(idx + 1), cols.rb);
-    const nameMax = cols.dim - cols.name - 8;
-    let name = it.materialName;
-    while (reg.widthOfTextAtSize(name, 9) > nameMax && name.length > 4) name = name.slice(0, -2);
-    if (name !== it.materialName) name = name.slice(0, -1) + "…";
-    td(name, cols.name);
+    td(fit(it.materialName, reg, 9, cols.dim - cols.name - 12), cols.name);
     td(`${it.widthCm}×${it.heightCm}`, cols.dim);
     td(String(it.qty), cols.qty);
-    td(it.printSides, cols.sides);
+    td(fit(it.printSides, reg, 9, cols.unit - cols.sides - 58), cols.sides);
     td(fmt(it.unitPrice), cols.unit, true);
     td(fmt(it.lineTotal), cols.total, true, bold, 9, NAVY);
-    y -= 19;
+    y -= rowH;
   });
 
   // Total
-  y -= 8;
+  y += 4;
   page.drawRectangle({ x: LEFT, y: y - 2, width: CONTENT_W, height: 0.7, color: NAVY });
   y -= 30;
   const totalBoxW = 230;
