@@ -657,6 +657,9 @@ export function QuickPriceCalculator({
               <Button type="button" variant="outline" size="sm" disabled={!hasMaterial} onClick={addToList}>
                 <Plus className="h-4 w-4 mr-2" /> Dodaj na listu
               </Button>
+              <Button type="button" variant="outline" size="sm" disabled={!hasMaterial} onClick={openQuoteFromCalc}>
+                <FileText className="h-4 w-4 mr-2" /> Napravi ponudu
+              </Button>
               <Button type="button" size="sm" onClick={copyAll}>
                 {copied ? <Check className="h-4 w-4 mr-2" /> : <Copy className="h-4 w-4 mr-2" />}
                 {copied ? "Kopirano" : "Kopiraj"}
