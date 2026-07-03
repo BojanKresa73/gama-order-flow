@@ -1,5 +1,5 @@
 import { useMemo, useState } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { AppHeader } from "@/components/layout/AppHeader";
 import { Input } from "@/components/ui/input";
@@ -46,6 +46,7 @@ export default function Quotes() {
   const [from, setFrom] = useState("");
   const [to, setTo] = useState("");
   const [pasteOpen, setPasteOpen] = useState(false);
+  const qc = useQueryClient();
 
   const { data, isLoading } = useQuery({
     queryKey: ["quick-calc-quotes", client, from, to],
@@ -139,7 +140,11 @@ export default function Quotes() {
           </DropdownMenu>
         </div>
 
-        <PasteQuoteEditor open={pasteOpen} onOpenChange={setPasteOpen} />
+        <PasteQuoteEditor
+          open={pasteOpen}
+          onOpenChange={setPasteOpen}
+          onSaved={() => qc.invalidateQueries({ queryKey: ["quick-calc-quotes"] })}
+        />
 
         <Card>
           <div className="p-4 flex items-center justify-between border-b">
