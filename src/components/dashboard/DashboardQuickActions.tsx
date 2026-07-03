@@ -45,6 +45,17 @@ export const DashboardQuickActions = ({ canViewStats, isSuper }: DashboardQuickA
           <Palmtree className="h-4 w-4 mr-1" />
           Godišnji odmori
         </Button>
+        {isAdmin && (
+          <Button
+            size="sm"
+            variant="outline"
+            className="w-full col-span-2 border-primary/40 text-primary"
+            onClick={() => setQuickCalcOpen(true)}
+          >
+            <Calculator className="h-4 w-4 mr-1" />
+            Brzi kalkulator
+          </Button>
+        )}
       </div>
 
       {/* Desktop Quick Actions */}
