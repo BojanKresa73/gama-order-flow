@@ -33,6 +33,7 @@ import {
 } from "@/hooks/useQuotesPro";
 import { QuoteProActivityPanel } from "@/components/quotes-pro/QuoteProActivityPanel";
 import { SendQuoteProDialog } from "@/components/quotes-pro/SendQuoteProDialog";
+import { QuoteItemsTable } from "@/components/quotes/QuoteItemsTable";
 import { generateQuoteProPdf } from "@/lib/quoteProPdf";
 import { useSignerProfile } from "@/hooks/useSignerProfile";
 
