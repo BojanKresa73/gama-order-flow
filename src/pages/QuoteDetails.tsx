@@ -5,6 +5,7 @@ import { sr } from "date-fns/locale";
 import {
   ArrowLeft, Pencil, Trash2, Plus, FileText, Send, CheckCircle, XCircle,
   Clock, Archive, Copy, Download, GitBranch, Loader2, Eye, Users, Target,
+  Wand2, ClipboardPaste, Package,
 } from "lucide-react";
 import { toast } from "sonner";
 import { AppHeader } from "@/components/layout/AppHeader";
@@ -29,6 +30,7 @@ import {
 import {
   useQuote, useUpdateQuote, useDeleteQuote, useDuplicateQuote,
   useAddQuoteItem, useUpdateQuoteItem, useDeleteQuoteItem, useRecalculateQuoteTotals,
+  useBulkInsertQuoteItemsPro,
   type QuoteStatus, type QuoteItemType,
 } from "@/hooks/useQuotesPro";
 import { QuoteProActivityPanel } from "@/components/quotes-pro/QuoteProActivityPanel";
@@ -42,6 +44,10 @@ import { SetTargetPriceDialog } from "@/components/quotes/SetTargetPriceDialog";
 import { QuoteCalculationWorkspace } from "@/components/quotes/QuoteCalculationWorkspace";
 import { QuoteVersionHistory } from "@/components/quotes/QuoteVersionHistory";
 import { QuoteCollaboratorsCard } from "@/components/quotes/QuoteCollaboratorsCard";
+import { TenderImportItemsDialog } from "@/components/quotes/TenderImportItemsDialog";
+import { PasteItemsDialog } from "@/components/quotes/PasteItemsDialog";
+import { DigitalProductDialog } from "@/components/digital/DigitalProductDialog";
+import type { LocalDigitalJob } from "@/components/digital/LocalDigitalJobsTable";
 
 import { generateQuoteProPdf } from "@/lib/quoteProPdf";
 import { useSignerProfile } from "@/hooks/useSignerProfile";
@@ -82,12 +88,16 @@ export default function QuoteDetails() {
   const recalc = useRecalculateQuoteTotals();
   const { data: signer } = useSignerProfile();
 
+  const bulkInsert = useBulkInsertQuoteItemsPro();
   const [sendOpen, setSendOpen] = useState(false);
   const [pdfBusy, setPdfBusy] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
   const [addItemOpen, setAddItemOpen] = useState(false);
   const [changeClientOpen, setChangeClientOpen] = useState(false);
   const [targetPriceOpen, setTargetPriceOpen] = useState(false);
+  const [tenderImportOpen, setTenderImportOpen] = useState(false);
+  const [pasteItemsOpen, setPasteItemsOpen] = useState(false);
+  const [digitalProductOpen, setDigitalProductOpen] = useState(false);
   const [editData, setEditData] = useState({
     notes: "",
     internal_notes: "",
@@ -167,6 +177,53 @@ export default function QuoteDetails() {
     if (!quote) return;
     if (!confirm("Obrisati stavku?")) return;
     await delItem.mutateAsync({ id: itemId, quote_id: quote.id });
+    await recalc.mutateAsync(quote.id);
+  }
+
+  async function handleDigitalJobsAdd(jobs: LocalDigitalJob[]) {
+    if (!quote) return;
+    const startIdx = quote.items?.length ?? 0;
+    const rows = jobs.map((j, i) => {
+      const qty = Number(j.qty || 1);
+      const lineTotal =
+        Number(j.computed_line_total || 0) + Number(j.finishings_total || 0);
+      const unit = qty > 0 ? lineTotal / qty : lineTotal;
+      const name =
+        j.name?.trim() ||
+        j.file_name?.trim() ||
+        (j.product_code ? j.product_code : "Digitalni proizvod");
+      return {
+        quote_id: quote.id,
+        item_type: "digital" as any,
+        name,
+        description: null,
+        quantity: qty,
+        width_mm: j.finished_w_mm ?? null,
+        height_mm: j.finished_h_mm ?? null,
+        pages: j.pages ?? null,
+        print_sides: j.print_sides ?? null,
+        paper_type: j.paper_type ?? null,
+        sheet_format: j.machine_sheet_format ?? null,
+        unit_cost: 0,
+        unit_price: unit,
+        line_total: lineTotal,
+        finishing_cost: Number(j.finishings_total || 0),
+        order_index: startIdx + i,
+        digital_spec: j as any,
+      };
+    }) as any[];
+    try {
+      await bulkInsert.mutateAsync({ quoteId: quote.id, items: rows });
+      await recalc.mutateAsync(quote.id);
+      toast.success(`Dodato ${rows.length} digitalnih stavki`);
+      setDigitalProductOpen(false);
+    } catch (e: any) {
+      toast.error(e.message ?? "Greška pri dodavanju");
+    }
+  }
+
+  async function refreshAfterImport() {
+    if (!quote) return;
     await recalc.mutateAsync(quote.id);
   }
 
@@ -400,12 +457,23 @@ export default function QuoteDetails() {
         <div className="grid gap-6 md:grid-cols-3">
           <div className="md:col-span-2 space-y-6">
             <Card>
-              <CardHeader className="flex flex-row items-center justify-between space-y-0">
+              <CardHeader className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between space-y-0">
                 <CardTitle>Stavke ponude</CardTitle>
                 {canEdit && (
-                  <Button size="sm" onClick={handleAddItem}>
-                    <Plus className="h-4 w-4 mr-1" /> Dodaj stavku
-                  </Button>
+                  <div className="flex flex-wrap gap-2">
+                    <Button size="sm" variant="outline" onClick={() => setTenderImportOpen(true)}>
+                      <Wand2 className="h-4 w-4 mr-1" /> Uvezi zahtev
+                    </Button>
+                    <Button size="sm" variant="outline" onClick={() => setPasteItemsOpen(true)}>
+                      <ClipboardPaste className="h-4 w-4 mr-1" /> Nalepi tekst
+                    </Button>
+                    <Button size="sm" variant="outline" onClick={() => setDigitalProductOpen(true)}>
+                      <Package className="h-4 w-4 mr-1" /> Digitalni proizvod
+                    </Button>
+                    <Button size="sm" onClick={handleAddItem}>
+                      <Plus className="h-4 w-4 mr-1" /> Dodaj stavku
+                    </Button>
+                  </div>
                 )}
               </CardHeader>
               <CardContent className="p-0">
@@ -537,6 +605,34 @@ export default function QuoteDetails() {
           quoteId={quote.id}
           currentTarget={(quote as any).target_price_eur ?? null}
           currentFinal={finalEur}
+        />
+      )}
+
+      {tenderImportOpen && (
+        <TenderImportItemsDialog
+          open={tenderImportOpen}
+          onOpenChange={setTenderImportOpen}
+          quoteId={quote.id}
+          startOrderIndex={items.length}
+          onImported={refreshAfterImport}
+        />
+      )}
+
+      {pasteItemsOpen && (
+        <PasteItemsDialog
+          open={pasteItemsOpen}
+          onOpenChange={setPasteItemsOpen}
+          quoteId={quote.id}
+          startOrderIndex={items.length}
+          onImported={refreshAfterImport}
+        />
+      )}
+
+      {digitalProductOpen && (
+        <DigitalProductDialog
+          open={digitalProductOpen}
+          onOpenChange={setDigitalProductOpen}
+          onAdd={(jobs) => handleDigitalJobsAdd(jobs)}
         />
       )}
     </div>
