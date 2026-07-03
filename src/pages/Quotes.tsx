@@ -14,7 +14,14 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { Loader2, FileText, Search, X } from "lucide-react";
+import { Loader2, FileText, Search, X, Plus, ClipboardPaste } from "lucide-react";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import { PasteQuoteEditor } from "@/components/quotes/PasteQuoteEditor";
 
 interface QuoteRow {
   id: string;
