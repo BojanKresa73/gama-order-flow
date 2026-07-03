@@ -556,6 +556,13 @@ export default function QuoteDetails() {
 
           {/* Side panel */}
           <div className="space-y-6">
+            {canEdit && (
+              <QuoteStatusActions
+                quote={quote}
+                onOpenSend={() => setSendOpen(true)}
+                onOpenWorkOrder={(woId) => navigate(`/work-orders/${woId}`)}
+              />
+            )}
             <QuoteCalculationWorkspace
               quoteId={quote.id}
               items={items}
