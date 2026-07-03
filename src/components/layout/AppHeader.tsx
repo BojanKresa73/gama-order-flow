@@ -38,18 +38,18 @@ export const AppHeader = ({ userName, showBackButton, title }: AppHeaderProps) =
 
   return (
     <header className="border-b bg-card sticky top-0 z-50">
-      <div className="container mx-auto px-3 md:px-4 py-3 md:py-4 flex justify-between items-center">
-        <div className="flex items-center gap-2 md:gap-4">
+      <div className="container mx-auto px-3 md:px-4 py-3 md:py-4 flex justify-between items-center gap-3 min-w-0">
+        <div className="flex items-center gap-2 md:gap-4 min-w-0 flex-1">
           {/* Mobile hamburger menu */}
           <MobileNav userName={userName} />
-          
-          <img 
-            src={gamaLogo} 
-            alt="Gama United" 
-            className="h-10 md:h-14 cursor-pointer" 
+
+          <img
+            src={gamaLogo}
+            alt="Gama United"
+            className="h-10 md:h-14 cursor-pointer shrink-0"
             onClick={() => navigate("/dashboard")}
           />
-          <h1 className="text-lg md:text-2xl font-bold hidden sm:block">
+          <h1 className="text-lg md:text-2xl font-bold hidden sm:block truncate whitespace-nowrap min-w-0">
             {title || "Radni nalozi"}
           </h1>
         </div>
