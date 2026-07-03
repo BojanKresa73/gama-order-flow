@@ -99,8 +99,9 @@ export function QuoteActivityTimeline({ quoteId }: { quoteId: string }) {
               </ScrollArea>
             )}
           </CardContent>
-        </Collapsible>
+        </CollapsibleContent>
       </Collapsible>
     </Card>
+
   );
 }
