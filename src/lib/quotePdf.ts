@@ -225,7 +225,7 @@ export async function generateQuotePdf(data: QuoteData): Promise<Uint8Array> {
     td(`${it.widthCm}×${it.heightCm}`, cols.dim);
     td(String(it.qty), cols.qty);
     td(it.printSides, cols.sides);
-    td(fmt(it.unitPrice), cols.unit + 55, true);
+    td(fmt(it.unitPrice), cols.unit, true);
     td(fmt(it.lineTotal), cols.total, true, bold, 9, NAVY);
     y -= 19;
   });
