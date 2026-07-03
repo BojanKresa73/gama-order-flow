@@ -122,6 +122,25 @@ export default function Quotes() {
           </div>
         </Card>
 
+        <div className="flex justify-end">
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button>
+                <Plus className="h-4 w-4 mr-2" />
+                Nova ponuda
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end">
+              <DropdownMenuItem onClick={() => setPasteOpen(true)}>
+                <ClipboardPaste className="h-4 w-4 mr-2" />
+                Nalepi tekst
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+        </div>
+
+        <PasteQuoteEditor open={pasteOpen} onOpenChange={setPasteOpen} />
+
         <Card>
           <div className="p-4 flex items-center justify-between border-b">
             <div className="flex items-center gap-2">
