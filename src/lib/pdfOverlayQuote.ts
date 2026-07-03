@@ -78,9 +78,7 @@ export async function generatePdfOverlayQuote(data: PdfOverlayQuoteData): Promis
   // Load source PDF and embed all its pages
   const srcDoc = await PDFDocument.load(data.sourcePdf, { ignoreEncryption: true });
   const srcCount = srcDoc.getPageCount();
-  const srcIndices = Array.from({ length: srcCount }, (_, i) => i);
-  const embedded = await doc.embedPages(srcDoc.getPages().map((_p, i) => srcDoc.getPage(i)), undefined, srcIndices.map(() => undefined));
-  // Note: pdf-lib API — embedPages returns PDFEmbeddedPage[]
+  const embedded = await doc.embedPages(srcDoc.getPages());
 
   const [PW, PH] = A4;
   const HEADER_INSET = 140;
