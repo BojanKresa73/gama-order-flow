@@ -86,6 +86,14 @@ export const AppHeader = ({ userName, showBackButton, title }: AppHeaderProps) =
           </Button>
         </div>
       </div>
+
+      {!isAuthzLoading && isAdmin && (
+        <QuickPriceCalculator
+          open={quickCalcOpen}
+          onOpenChange={setQuickCalcOpen}
+          hideTrigger
+        />
+      )}
     </header>
   );
 };
