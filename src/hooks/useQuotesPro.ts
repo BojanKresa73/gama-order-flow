@@ -618,4 +618,8 @@ export const useAddQuoteItem = useAddQuoteItemPro;
 export const useUpdateQuoteItem = useUpdateQuoteItemPro;
 export const useDeleteQuoteItem = useDeleteQuoteItemPro;
 export const useRecalculateQuoteTotals = useRecalculateQuoteTotalsPro;
+export const useBulkInsertQuoteItems = useBulkInsertQuoteItemsPro;
+export const useUpdateMaterialCostInQuote = useUpdateMaterialCostInQuotePro;
+export const useUpdateQuoteItemPricing = useUpdateQuoteItemPricingPro;
+
 
