@@ -184,10 +184,10 @@ export async function generateQuotePdf(data: QuoteData): Promise<Uint8Array> {
   const cols = {
     rb: LEFT + 10,
     name: LEFT + 34,
-    dim: LEFT + 242,
-    qty: LEFT + 304,
-    sides: LEFT + 344,
-    unit: RIGHT - 86,
+    dim: LEFT + 240,
+    qty: LEFT + 300,
+    sides: LEFT + 330,
+    unit: RIGHT - 64,
     total: RIGHT - 12,
   };
 
@@ -203,7 +203,7 @@ export async function generateQuotePdf(data: QuoteData): Promise<Uint8Array> {
     th("ARTIKAL", cols.name);
     th("DIM.", cols.dim);
     th("KOL.", cols.qty);
-    th("ŠT.", cols.sides);
+    th("ŠTAMPA", cols.sides);
     th("CENA/KOM", cols.unit, true);
     th("UKUPNO", cols.total, true);
     y -= headerH + 16;
@@ -235,7 +235,7 @@ export async function generateQuotePdf(data: QuoteData): Promise<Uint8Array> {
     td(fit(it.materialName, reg, 9, cols.dim - cols.name - 12), cols.name);
     td(`${it.widthCm}×${it.heightCm}`, cols.dim);
     td(String(it.qty), cols.qty);
-    td(fit(it.printSides, reg, 9, cols.unit - cols.sides - 58), cols.sides);
+    td(fit(it.printSides, reg, 9, cols.unit - cols.sides - 48), cols.sides);
     td(fmt(it.unitPrice), cols.unit, true);
     td(fmt(it.lineTotal), cols.total, true, bold, 9, NAVY);
     y -= rowH;
