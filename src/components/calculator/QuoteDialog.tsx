@@ -342,9 +342,36 @@ export function QuoteDialog({ open, onOpenChange, items, total }: Props) {
               {new Intl.NumberFormat("sr-RS", { minimumFractionDigits: 2 }).format(total)} EUR
             </span>
           </div>
+          </div>
+
+          {previewUrl && (
+            <div className="min-w-0 flex flex-col border rounded-md overflow-hidden bg-muted/30">
+              <div className="flex items-center justify-between px-2 py-1.5 border-b bg-background/60">
+                <span className="text-xs font-medium text-muted-foreground">Pregled ponude (A4)</span>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="h-6 px-2"
+                  onClick={() => { URL.revokeObjectURL(previewUrl); setPreviewUrl(null); }}
+                >
+                  <X className="h-3.5 w-3.5" />
+                </Button>
+              </div>
+              <iframe
+                src={previewUrl}
+                title="Pregled ponude"
+                className="w-full flex-1"
+                style={{ minHeight: 620, height: "70vh" }}
+              />
+            </div>
+          )}
         </div>
 
         <div className="flex flex-wrap justify-end gap-2 pt-2">
+          <Button variant="outline" size="sm" onClick={handlePreview} disabled={!!busy || !canGenerate}>
+            {busy === "preview" ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Eye className="h-4 w-4 mr-2" />}
+            {previewUrl ? "Osveži pregled" : "Pregled"}
+          </Button>
           <Button variant="outline" size="sm" onClick={handleSave} disabled={!!busy || !canGenerate}>
             {busy === "save" ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Save className="h-4 w-4 mr-2" />}
             Sačuvaj
