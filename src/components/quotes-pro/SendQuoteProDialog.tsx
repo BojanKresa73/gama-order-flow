@@ -128,29 +128,51 @@ export function SendQuoteProDialog({ quoteId, open, onOpenChange }: Props) {
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-2xl">
+      <DialogContent className="max-w-4xl max-h-[92vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <Send className="w-5 h-5" /> Pošalji ponudu na e-mail
           </DialogTitle>
         </DialogHeader>
-        <div className="space-y-3">
-          <div>
-            <Label>Za</Label>
-            <Input value={to} onChange={(e) => setTo(e.target.value)} placeholder="klijent@primer.rs" />
+        <div className="grid gap-4 md:grid-cols-2">
+          <div className="space-y-3">
+            <div>
+              <Label>Za</Label>
+              <Input value={to} onChange={(e) => setTo(e.target.value)} placeholder="klijent@primer.rs" />
+            </div>
+            <div>
+              <Label>Naslov</Label>
+              <Input value={subject} onChange={(e) => setSubject(e.target.value)} />
+            </div>
+            <div>
+              <Label>Poruka</Label>
+              <Textarea rows={10} value={body} onChange={(e) => setBody(e.target.value)} />
+            </div>
+            <div className="text-xs text-muted-foreground">
+              PDF ponude će biti automatski priložen. Kopija ide na Vaš e-mail i u arhivu.
+            </div>
           </div>
-          <div>
-            <Label>Naslov</Label>
-            <Input value={subject} onChange={(e) => setSubject(e.target.value)} />
-          </div>
-          <div>
-            <Label>Poruka</Label>
-            <Textarea rows={8} value={body} onChange={(e) => setBody(e.target.value)} />
-          </div>
-          <div className="text-xs text-muted-foreground">
-            PDF ponude će biti automatski priložen. Kopija ide na Vaš e-mail i u arhivu.
+
+          <div className="space-y-2">
+            <div className="flex items-center justify-between">
+              <Label>PDF pregled</Label>
+              <Button size="sm" variant="outline" onClick={handlePreview} disabled={previewBusy}>
+                {previewBusy ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Eye className="w-4 h-4 mr-2" />}
+                {previewUrl ? "Osveži pregled" : "Prikaži PDF"}
+              </Button>
+            </div>
+            <div className="rounded-md border bg-muted/30 h-[60vh] overflow-hidden">
+              {previewUrl ? (
+                <iframe src={previewUrl} title="PDF pregled" className="w-full h-full" />
+              ) : (
+                <div className="flex h-full items-center justify-center text-xs text-muted-foreground text-center px-4">
+                  Klikni "Prikaži PDF" za pregled atačmenta pre slanja.
+                </div>
+              )}
+            </div>
           </div>
         </div>
+
         <DialogFooter>
           <Button variant="outline" onClick={() => onOpenChange(false)}>Odustani</Button>
           <Button onClick={handleSend} disabled={sending}>
