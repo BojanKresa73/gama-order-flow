@@ -347,8 +347,120 @@ export async function generatePastedQuotePdf(data: PastedQuoteData): Promise<Uin
       continue;
     }
 
+    if (b.kind === "table") {
+      const TSIZE = 9;
+      const CPAD = 5;
+      const LINE_H = TSIZE + 3;
+      const nCols = Math.max(...b.rows.map((r) => r.length));
+      if (!nCols) continue;
+      // Normalize rows to nCols cells
+      const rows = b.rows.map((r) => {
+        const copy = r.slice();
+        while (copy.length < nCols) copy.push({ runs: [], header: false, align: "left" });
+        return copy;
+      });
+      // Compute preferred column widths from longest single word / short content
+      const measure = (runs: Inline[], bld: boolean) => {
+        const text = runs.map((r) => r.text).join("").replace(/\s+/g, " ").trim();
+        const f = bld ? bold : reg;
+        return { full: f.widthOfTextAtSize(text, TSIZE), text };
+      };
+      const colMax = new Array(nCols).fill(0);
+      const colMin = new Array(nCols).fill(0);
+      for (const r of rows) {
+        for (let i = 0; i < nCols; i++) {
+          const cell = r[i];
+          const { full, text } = measure(cell.runs, cell.header);
+          colMax[i] = Math.max(colMax[i], full + CPAD * 2);
+          const longestWord = text.split(/\s+/).reduce((m, w) => {
+            const ww = (cell.header ? bold : reg).widthOfTextAtSize(w, TSIZE);
+            return Math.max(m, ww);
+          }, 0);
+          colMin[i] = Math.max(colMin[i], longestWord + CPAD * 2);
+        }
+      }
+      // Fit to CONTENT_W: start from colMax, shrink largest columns down to colMin
+      let widths = colMax.slice();
+      const total = () => widths.reduce((s, w) => s + w, 0);
+      while (total() > CONTENT_W) {
+        // find widest column above its min
+        let idx = -1, best = 0;
+        for (let i = 0; i < nCols; i++) {
+          const room = widths[i] - colMin[i];
+          if (room > best) { best = room; idx = i; }
+        }
+        if (idx < 0) break;
+        const overflow = total() - CONTENT_W;
+        widths[idx] = Math.max(colMin[idx], widths[idx] - Math.min(overflow, best));
+      }
+      // If still smaller than CONTENT_W, scale up proportionally
+      const t2 = total();
+      if (t2 < CONTENT_W && t2 > 0) {
+        const scale = CONTENT_W / t2;
+        widths = widths.map((w) => w * scale);
+      }
 
-    let size = BASE;
+      // Wrap each cell into lines according to its column width
+      const wrapCells = (r: Cell[]) =>
+        r.map((cell, i) => {
+          const maxW = widths[i] - CPAD * 2;
+          return wrapRuns(cell.runs, reg, bold, TSIZE, Math.max(maxW, 20));
+        });
+
+      y -= 6;
+      for (let ri = 0; ri < rows.length; ri++) {
+        const r = rows[ri];
+        const wrapped = wrapCells(r);
+        const rowH = Math.max(LINE_H, ...wrapped.map((ls) => ls.length * LINE_H)) + CPAD;
+        ensurePage(rowH + 4);
+        // Background for header row
+        const isHeaderRow = r.every((c) => c.header) || (ri === 0 && r.some((c) => c.header));
+        if (isHeaderRow) {
+          page.drawRectangle({ x: LEFT, y: y - rowH, width: CONTENT_W, height: rowH, color: SOFT });
+        }
+        // Cell content + right border
+        let cx = LEFT;
+        for (let i = 0; i < nCols; i++) {
+          const cw = widths[i];
+          const cell = r[i];
+          const lines = wrapped[i];
+          let ty = y - CPAD - TSIZE;
+          for (const line of lines) {
+            let tx = cx + CPAD;
+            if (cell.align === "center") {
+              const lw = lineWidth(line, reg, bold, TSIZE);
+              tx = cx + (cw - lw) / 2;
+            } else if (cell.align === "right") {
+              const lw = lineWidth(line, reg, bold, TSIZE);
+              tx = cx + cw - CPAD - lw;
+            }
+            for (const run of line) {
+              const f = (run.bold || cell.header) ? bold : reg;
+              page.drawText(run.text, { x: tx, y: ty, size: TSIZE, font: f, color: INK });
+              tx += f.widthOfTextAtSize(run.text, TSIZE);
+            }
+            ty -= LINE_H;
+          }
+          cx += cw;
+        }
+        // Borders: bottom + outer verticals
+        const bColor = rgb(0.82, 0.85, 0.9);
+        page.drawRectangle({ x: LEFT, y: y - rowH, width: CONTENT_W, height: 0.5, color: bColor });
+        let vx = LEFT;
+        for (let i = 0; i <= nCols; i++) {
+          page.drawRectangle({ x: vx, y: y - rowH, width: 0.5, height: rowH, color: bColor });
+          if (i < nCols) vx += widths[i];
+        }
+        if (ri === 0) {
+          page.drawRectangle({ x: LEFT, y, width: CONTENT_W, height: 0.5, color: bColor });
+        }
+        y -= rowH;
+      }
+      y -= 6;
+      continue;
+    }
+
+
     let leadingBefore = 6;
     let leadingAfter = 4;
     if (b.kind === "h1") { size = 18; leadingBefore = 12; leadingAfter = 6; }
