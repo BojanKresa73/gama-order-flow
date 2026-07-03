@@ -83,11 +83,16 @@ export const AppHeader = ({ userName, showBackButton, title }: AppHeaderProps) =
               Administracija
             </Button>
           )}
+          <Button variant="outline" size="icon" onClick={() => setProfileOpen(true)} title="Podešavanja profila">
+            <UserCog className="h-4 w-4" />
+          </Button>
           <Button variant="outline" onClick={handleLogout}>
             Odjavi se
           </Button>
         </div>
       </div>
+
+      <ProfileSettingsDialog open={profileOpen} onOpenChange={setProfileOpen} />
 
       {!isAuthzLoading && isAdmin && (
         <QuickPriceCalculator
