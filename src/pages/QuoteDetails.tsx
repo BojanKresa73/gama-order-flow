@@ -607,6 +607,34 @@ export default function QuoteDetails() {
           currentFinal={finalEur}
         />
       )}
+
+      {tenderImportOpen && (
+        <TenderImportItemsDialog
+          open={tenderImportOpen}
+          onOpenChange={setTenderImportOpen}
+          quoteId={quote.id}
+          startOrderIndex={items.length}
+          onImported={refreshAfterImport}
+        />
+      )}
+
+      {pasteItemsOpen && (
+        <PasteItemsDialog
+          open={pasteItemsOpen}
+          onOpenChange={setPasteItemsOpen}
+          quoteId={quote.id}
+          startOrderIndex={items.length}
+          onImported={refreshAfterImport}
+        />
+      )}
+
+      {digitalProductOpen && (
+        <DigitalProductDialog
+          open={digitalProductOpen}
+          onOpenChange={setDigitalProductOpen}
+          onAdd={(jobs) => handleDigitalJobsAdd(jobs)}
+        />
+      )}
     </div>
   );
 }
