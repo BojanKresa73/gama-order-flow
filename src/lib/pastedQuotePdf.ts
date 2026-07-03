@@ -135,16 +135,20 @@ function parseHtmlToBlocks(html: string): Block[] {
       return;
     }
     if (tag === "table") {
-      // Render each row as a paragraph with tab-separated cells
+      const rows: Cell[][] = [];
       for (const row of Array.from(el.querySelectorAll("tr"))) {
-        const cells = Array.from(row.querySelectorAll("th,td")).map((c) => (c.textContent || "").replace(/\s+/g, " ").trim());
-        blocks.push({
-          kind: "p",
-          align: "left",
-          runs: [{ text: cells.join("   |   "), bold: row.querySelector("th") !== null, italic: false, underline: false }],
-        });
-        collectImages(row as HTMLElement, "left");
+        const cells: Cell[] = [];
+        for (const c of Array.from(row.querySelectorAll("th,td"))) {
+          const cellEl = c as HTMLElement;
+          const header = cellEl.tagName.toLowerCase() === "th";
+          const runs: Inline[] = [];
+          walk(cellEl, { bold: header, italic: false, underline: false, align: "left" }, (r) => runs.push(r));
+          cells.push({ runs, header, align: alignOf(cellEl) });
+        }
+        if (cells.length) rows.push(cells);
       }
+      if (rows.length) blocks.push({ kind: "table", rows });
+      collectImages(el, "left");
       return;
     }
     const kind: Block["kind"] =
