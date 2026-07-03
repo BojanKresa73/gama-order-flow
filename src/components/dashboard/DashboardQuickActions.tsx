@@ -118,7 +118,25 @@ export const DashboardQuickActions = ({ canViewStats, isSuper }: DashboardQuickA
             Newsletter
           </Button>
         )}
+        {isAdmin && (
+          <Button
+            variant="outline"
+            className="border-primary/40 text-primary hover:bg-primary/10"
+            onClick={() => setQuickCalcOpen(true)}
+          >
+            <Calculator className="h-4 w-4 mr-2" />
+            Brzi kalkulator
+          </Button>
+        )}
       </div>
+
+      {isAdmin && (
+        <QuickPriceCalculator
+          open={quickCalcOpen}
+          onOpenChange={setQuickCalcOpen}
+          hideTrigger
+        />
+      )}
     </>
   );
 };
