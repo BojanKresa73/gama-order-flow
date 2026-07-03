@@ -18,7 +18,7 @@ import {
 } from "@/components/ui/command";
 import {
   Bold, Italic, Underline, List, ListOrdered, AlignLeft, AlignCenter, AlignRight,
-  Undo2, Redo2, Eraser, Download, Send, Save, Loader2, Eye, Check, ChevronsUpDown, UserPlus, X,
+  Undo2, Redo2, Eraser, Download, Send, Save, Loader2, Eye, Check, ChevronsUpDown, UserPlus, X, Upload,
 } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
