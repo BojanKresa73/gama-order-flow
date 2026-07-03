@@ -385,20 +385,30 @@ export function QuoteProEditor({ quoteId, open, onOpenChange }: Props) {
                 </div>
               </Card>
             )}
+            {quote && <QuoteProActivityPanel quoteId={quote.id} />}
           </div>
         )}
 
         <DialogFooter className="gap-2">
           {quote && (
-            <Button
-              variant="outline"
-              onClick={async () => {
-                await dup.mutateAsync({ quoteId: quote.id, asNewVersion: true });
-                onOpenChange(false);
-              }}
-            >
-              <Copy className="w-4 h-4 mr-2" /> Nova verzija
-            </Button>
+            <>
+              <Button variant="outline" onClick={handlePreviewPdf} disabled={pdfBusy}>
+                {pdfBusy ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Eye className="w-4 h-4 mr-2" />}
+                PDF pregled
+              </Button>
+              <Button variant="outline" onClick={() => setSendOpen(true)}>
+                <Send className="w-4 h-4 mr-2" /> Pošalji
+              </Button>
+              <Button
+                variant="outline"
+                onClick={async () => {
+                  await dup.mutateAsync({ quoteId: quote.id, asNewVersion: true });
+                  onOpenChange(false);
+                }}
+              >
+                <Copy className="w-4 h-4 mr-2" /> Nova verzija
+              </Button>
+            </>
           )}
           <Button variant="outline" onClick={() => onOpenChange(false)}>Zatvori</Button>
           <Button onClick={handleSaveHeader} disabled={create.isPending || update.isPending}>
@@ -406,6 +416,9 @@ export function QuoteProEditor({ quoteId, open, onOpenChange }: Props) {
             Sačuvaj
           </Button>
         </DialogFooter>
+        {quote && sendOpen && (
+          <SendQuoteProDialog quoteId={quote.id} open={sendOpen} onOpenChange={setSendOpen} />
+        )}
       </DialogContent>
     </Dialog>
   );
