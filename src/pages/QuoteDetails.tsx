@@ -33,6 +33,7 @@ import {
 } from "@/hooks/useQuotesPro";
 import { QuoteProActivityPanel } from "@/components/quotes-pro/QuoteProActivityPanel";
 import { SendQuoteProDialog } from "@/components/quotes-pro/SendQuoteProDialog";
+import { QuoteItemsTable } from "@/components/quotes/QuoteItemsTable";
 import { generateQuoteProPdf } from "@/lib/quoteProPdf";
 import { useSignerProfile } from "@/hooks/useSignerProfile";
 
@@ -406,114 +407,13 @@ export default function QuoteDetails() {
                 )}
               </CardHeader>
               <CardContent className="p-0">
-                {items.length === 0 ? (
-                  <div className="p-8 text-center text-muted-foreground text-sm">
-                    Još nema stavki.
-                  </div>
-                ) : (
-                  <Table>
-                    <TableHeader>
-                      <TableRow>
-                        <TableHead>Tip</TableHead>
-                        <TableHead>Naziv</TableHead>
-                        <TableHead>Dim (mm)</TableHead>
-                        <TableHead className="w-20">Kol.</TableHead>
-                        <TableHead className="w-28">Jed. cena</TableHead>
-                        <TableHead className="w-32 text-right">Ukupno</TableHead>
-                        <TableHead className="w-10" />
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {items.map((it) => (
-                        <TableRow key={it.id}>
-                          <TableCell>
-                            <Select
-                              value={it.item_type}
-                              onValueChange={(v) => handleItemChange(it.id, { item_type: v })}
-                              disabled={!canEdit}
-                            >
-                              <SelectTrigger className="h-8"><SelectValue /></SelectTrigger>
-                              <SelectContent>
-                                {ITEM_TYPES.map((t) => (
-                                  <SelectItem key={t.value} value={t.value}>{t.label}</SelectItem>
-                                ))}
-                              </SelectContent>
-                            </Select>
-                          </TableCell>
-                          <TableCell>
-                            <Input
-                              className="h-8"
-                              defaultValue={it.name}
-                              disabled={!canEdit}
-                              onBlur={(e) => e.target.value !== it.name && handleItemChange(it.id, { name: e.target.value })}
-                            />
-                          </TableCell>
-                          <TableCell>
-                            <div className="flex gap-1">
-                              <Input
-                                className="h-8 w-20"
-                                type="number"
-                                defaultValue={it.width_mm ?? ""}
-                                placeholder="Š"
-                                disabled={!canEdit}
-                                onBlur={(e) => handleItemChange(it.id, {
-                                  width_mm: e.target.value === "" ? null : Number(e.target.value),
-                                })}
-                              />
-                              <Input
-                                className="h-8 w-20"
-                                type="number"
-                                defaultValue={it.height_mm ?? ""}
-                                placeholder="V"
-                                disabled={!canEdit}
-                                onBlur={(e) => handleItemChange(it.id, {
-                                  height_mm: e.target.value === "" ? null : Number(e.target.value),
-                                })}
-                              />
-                            </div>
-                          </TableCell>
-                          <TableCell>
-                            <Input
-                              className="h-8 w-20"
-                              type="number"
-                              defaultValue={it.quantity}
-                              disabled={!canEdit}
-                              onBlur={(e) => {
-                                const qty = Number(e.target.value);
-                                const total = qty * Number(it.unit_price ?? 0);
-                                handleItemChange(it.id, { quantity: qty, line_total: total });
-                              }}
-                            />
-                          </TableCell>
-                          <TableCell>
-                            <Input
-                              className="h-8 w-28"
-                              type="number"
-                              step="0.01"
-                              defaultValue={it.unit_price}
-                              disabled={!canEdit}
-                              onBlur={(e) => {
-                                const up = Number(e.target.value);
-                                const total = up * Number(it.quantity ?? 0);
-                                handleItemChange(it.id, { unit_price: up, line_total: total });
-                              }}
-                            />
-                          </TableCell>
-                          <TableCell className="text-right font-mono">
-                            {fmtEur(it.line_total)}
-                          </TableCell>
-                          <TableCell>
-                            {canEdit && (
-                              <Button size="icon" variant="ghost" onClick={() => handleDeleteItem(it.id)}>
-                                <Trash2 className="h-4 w-4" />
-                              </Button>
-                            )}
-                          </TableCell>
-                        </TableRow>
-                      ))}
-                    </TableBody>
-                  </Table>
-                )}
+                <QuoteItemsTable
+                  items={items}
+                  quoteId={quote.id}
+                  canEdit={canEdit}
+                  onChange={handleItemChange}
+                  onDelete={handleDeleteItem}
+                />
               </CardContent>
             </Card>
 
