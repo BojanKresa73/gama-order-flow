@@ -45,6 +45,7 @@ import { QuoteCalculationWorkspace } from "@/components/quotes/QuoteCalculationW
 import { QuoteVersionHistory } from "@/components/quotes/QuoteVersionHistory";
 import { QuoteCollaboratorsCard } from "@/components/quotes/QuoteCollaboratorsCard";
 import { TenderImportItemsDialog } from "@/components/quotes/TenderImportItemsDialog";
+import { QuoteStatusActions } from "@/components/quotes/QuoteStatusActions";
 import { PasteItemsDialog } from "@/components/quotes/PasteItemsDialog";
 import { DigitalProductDialog } from "@/components/digital/DigitalProductDialog";
 import type { LocalDigitalJob } from "@/components/digital/LocalDigitalJobsTable";
