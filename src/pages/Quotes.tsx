@@ -140,7 +140,11 @@ export default function Quotes() {
           </DropdownMenu>
         </div>
 
-        <PasteQuoteEditor open={pasteOpen} onOpenChange={setPasteOpen} />
+        <PasteQuoteEditor
+          open={pasteOpen}
+          onOpenChange={setPasteOpen}
+          onSaved={() => qc.invalidateQueries({ queryKey: ["quick-calc-quotes"] })}
+        />
 
         <Card>
           <div className="p-4 flex items-center justify-between border-b">
