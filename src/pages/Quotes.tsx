@@ -30,7 +30,9 @@ import {
   type QuoteStatus,
   type QuoteFilters,
   type QuoteQuickFilter,
+  type QuoteSortBy,
 } from "@/hooks/useQuotesPro";
+
 import { useClients } from "@/hooks/useClients";
 import { TenderImportDialog } from "@/components/quotes-pro/TenderImportDialog";
 
@@ -157,54 +159,121 @@ export default function Quotes() {
 
         {/* Filters */}
         <Card>
-          <CardContent className="pt-6">
-            <div className="flex flex-col gap-4 md:flex-row md:items-center">
-              <div className="relative flex-1">
+          <CardContent className="pt-6 space-y-3">
+            <div className="flex flex-col gap-3 md:flex-row md:items-center md:flex-wrap">
+              <div className="relative flex-1 min-w-[220px]">
                 <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
                 <Input
-                  placeholder="Pretraži po broju, klijentu..."
+                  placeholder="Pretraži po broju, klijentu, poslu..."
                   value={filters.search ?? ""}
                   onChange={(e) => setFilters((p) => ({ ...p, search: e.target.value }))}
                   className="pl-10"
                 />
               </div>
-              <div className="flex gap-2">
-                <Select
-                  value={filters.status || "all"}
-                  onValueChange={(v) => setFilters((p) => ({ ...p, status: v as QuoteStatus | "all" }))}
-                >
-                  <SelectTrigger className="w-[160px]">
-                    <Filter className="mr-2 h-4 w-4" />
-                    <SelectValue placeholder="Status" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">Svi statusi</SelectItem>
-                    <SelectItem value="draft">Nacrt</SelectItem>
-                    <SelectItem value="sent">Poslata</SelectItem>
-                    <SelectItem value="accepted">Prihvaćena</SelectItem>
-                    <SelectItem value="rejected">Odbijena</SelectItem>
-                    <SelectItem value="expired">Istekla</SelectItem>
-                    <SelectItem value="superseded">Zamenjena</SelectItem>
-                  </SelectContent>
-                </Select>
-                <Select
-                  value={filters.clientId || "all"}
-                  onValueChange={(v) => setFilters((p) => ({ ...p, clientId: v === "all" ? undefined : v }))}
-                >
-                  <SelectTrigger className="w-[220px]">
-                    <SelectValue placeholder="Klijent" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">Svi klijenti</SelectItem>
-                    {clients?.map((c) => (
-                      <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
+              <Select
+                value={filters.status || "all"}
+                onValueChange={(v) => setFilters((p) => ({ ...p, status: v as QuoteStatus | "all" }))}
+              >
+                <SelectTrigger className="w-[160px]">
+                  <Filter className="mr-2 h-4 w-4" />
+                  <SelectValue placeholder="Status" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">Svi statusi</SelectItem>
+                  <SelectItem value="draft">Nacrt</SelectItem>
+                  <SelectItem value="sent">Poslata</SelectItem>
+                  <SelectItem value="accepted">Prihvaćena</SelectItem>
+                  <SelectItem value="rejected">Odbijena</SelectItem>
+                  <SelectItem value="expired">Istekla</SelectItem>
+                  <SelectItem value="superseded">Zamenjena</SelectItem>
+                </SelectContent>
+              </Select>
+              <Select
+                value={filters.clientId || "all"}
+                onValueChange={(v) => setFilters((p) => ({ ...p, clientId: v === "all" ? undefined : v }))}
+              >
+                <SelectTrigger className="w-[220px]">
+                  <SelectValue placeholder="Klijent" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">Svi klijenti</SelectItem>
+                  {clients?.map((c) => (
+                    <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <Select
+                value={filters.sortBy ?? "newest"}
+                onValueChange={(v) => setFilters((p) => ({ ...p, sortBy: v as QuoteSortBy }))}
+              >
+                <SelectTrigger className="w-[190px]">
+                  <SelectValue placeholder="Sortiranje" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="newest">Najnovije prvo</SelectItem>
+                  <SelectItem value="oldest">Najstarije prvo</SelectItem>
+                  <SelectItem value="value_desc">Vrednost ↓</SelectItem>
+                  <SelectItem value="value_asc">Vrednost ↑</SelectItem>
+                  <SelectItem value="expiring_soon">Ističu najpre</SelectItem>
+                  <SelectItem value="client_name">Klijent (A–Ž)</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="flex flex-wrap items-center gap-2 text-xs">
+              <span className="text-muted-foreground">Period:</span>
+              {[
+                { label: "Svi", days: null },
+                { label: "7 dana", days: 7 },
+                { label: "30 dana", days: 30 },
+                { label: "90 dana", days: 90 },
+              ].map((p) => {
+                const active =
+                  (p.days == null && !filters.dateFrom) ||
+                  (p.days != null &&
+                    filters.dateFrom &&
+                    Math.abs(
+                      (Date.now() - filters.dateFrom.getTime()) / 86400000 - p.days,
+                    ) < 1);
+                return (
+                  <Button
+                    key={p.label}
+                    type="button"
+                    size="sm"
+                    variant={active ? "default" : "outline"}
+                    className="h-7 px-2"
+                    onClick={() =>
+                      setFilters((prev) => ({
+                        ...prev,
+                        dateFrom:
+                          p.days == null
+                            ? undefined
+                            : new Date(Date.now() - p.days * 86400000),
+                      }))
+                    }
+                  >
+                    {p.label}
+                  </Button>
+                );
+              })}
+              <span className="ml-4 text-muted-foreground">Min. vrednost (EUR):</span>
+              <Input
+                type="number"
+                min={0}
+                step={100}
+                value={filters.minValueEur ?? ""}
+                onChange={(e) =>
+                  setFilters((prev) => ({
+                    ...prev,
+                    minValueEur: e.target.value ? Number(e.target.value) : undefined,
+                  }))
+                }
+                className="h-7 w-28"
+                placeholder="0"
+              />
             </div>
           </CardContent>
         </Card>
+
 
         {/* Table */}
         <Card>

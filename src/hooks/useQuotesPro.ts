@@ -150,6 +150,9 @@ export interface QuoteItem {
   updated_at: string;
 }
 
+export type QuoteSortBy =
+  | "newest" | "oldest" | "value_desc" | "value_asc" | "expiring_soon" | "client_name";
+
 export interface QuoteFilters {
   search?: string;
   status?: QuoteStatus | "all";
@@ -157,7 +160,10 @@ export interface QuoteFilters {
   dateFrom?: Date;
   dateTo?: Date;
   quickFilter?: QuoteQuickFilter;
+  sortBy?: QuoteSortBy;
+  minValueEur?: number;
 }
+
 
 export function useQuotesPro(filters?: QuoteFilters) {
   return useQuery({
@@ -169,8 +175,15 @@ export function useQuotesPro(filters?: QuoteFilters) {
           *,
           client:clients!client_id(id, name, email, pib),
           creator:profiles!created_by(id, full_name)
-        `)
-        .order("created_at", { ascending: false });
+        `);
+
+      const sortBy = filters?.sortBy ?? "newest";
+      if (sortBy === "newest") query = query.order("created_at", { ascending: false });
+      else if (sortBy === "oldest") query = query.order("created_at", { ascending: true });
+      else if (sortBy === "value_desc") query = query.order("final_price", { ascending: false, nullsFirst: false });
+      else if (sortBy === "value_asc") query = query.order("final_price", { ascending: true, nullsFirst: false });
+      else if (sortBy === "expiring_soon") query = query.order("expires_at", { ascending: true, nullsFirst: false });
+      else if (sortBy === "client_name") query = query.order("created_at", { ascending: false });
 
       if (filters?.status && filters.status !== "all") {
         query = query.eq("status", filters.status);
@@ -178,6 +191,9 @@ export function useQuotesPro(filters?: QuoteFilters) {
       if (filters?.clientId) query = query.eq("client_id", filters.clientId);
       if (filters?.dateFrom) query = query.gte("created_at", filters.dateFrom.toISOString());
       if (filters?.dateTo) query = query.lte("created_at", filters.dateTo.toISOString());
+      if (typeof filters?.minValueEur === "number" && filters.minValueEur > 0) {
+        query = query.gte("final_price", filters.minValueEur * EUR_TO_RSD);
+      }
 
       const qf = filters?.quickFilter ?? "all";
       const now = new Date();
@@ -191,7 +207,7 @@ export function useQuotesPro(filters?: QuoteFilters) {
         const sevenAgo = new Date(now.getTime() - 7 * 86400000).toISOString();
         query = query.eq("status", "sent").lte("sent_at", sevenAgo);
       } else if (qf === "high_value") {
-        query = query.gte("final_price", 1000 * 117.55);
+        query = query.gte("final_price", 1000 * EUR_TO_RSD);
       } else if (qf === "this_month") {
         const first = new Date(now.getFullYear(), now.getMonth(), 1).toISOString();
         query = query.gte("created_at", first);
@@ -211,10 +227,16 @@ export function useQuotesPro(filters?: QuoteFilters) {
             q.notes?.toLowerCase().includes(s)
         );
       }
+      if (sortBy === "client_name") {
+        quotes = [...quotes].sort((a, b) =>
+          (a.client?.name ?? "").localeCompare(b.client?.name ?? "", "sr"),
+        );
+      }
       return quotes;
     },
   });
 }
+
 
 export function useDuplicateQuotePro() {
   const queryClient = useQueryClient();
