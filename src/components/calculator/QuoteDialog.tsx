@@ -342,8 +342,8 @@ export function QuoteDialog({ open, onOpenChange, items, total }: Props) {
           </div>
           </div>
 
-          {previewUrl && (
-            <div className="min-w-0 flex flex-col border rounded-md overflow-hidden bg-muted/30">
+          {previewBytes && (
+            <div className="min-w-0 flex flex-col border rounded-md overflow-hidden bg-muted/30" style={{ minHeight: 620, height: "70vh" }}>
               <div className="flex items-center justify-between px-2 py-1.5 border-b bg-background/60">
                 <span className="text-xs font-medium text-muted-foreground">Pregled ponude (A4)</span>
                 <div className="flex items-center gap-1">
@@ -351,7 +351,7 @@ export function QuoteDialog({ open, onOpenChange, items, total }: Props) {
                     variant="ghost"
                     size="sm"
                     className="h-6 px-2 text-xs"
-                    onClick={() => window.open(previewUrl, "_blank", "noopener,noreferrer")}
+                    onClick={openPreviewInNewTab}
                   >
                     Otvori u novom tabu
                   </Button>
@@ -359,29 +359,15 @@ export function QuoteDialog({ open, onOpenChange, items, total }: Props) {
                     variant="ghost"
                     size="sm"
                     className="h-6 px-2"
-                    onClick={() => { URL.revokeObjectURL(previewUrl); setPreviewUrl(null); }}
+                    onClick={() => setPreviewBytes(null)}
                   >
                     <X className="h-3.5 w-3.5" />
                   </Button>
                 </div>
               </div>
-              <object
-                data={previewUrl}
-                type="application/pdf"
-                className="w-full flex-1"
-                style={{ minHeight: 620, height: "70vh" }}
-              >
-                <div className="p-6 text-sm text-muted-foreground text-center">
-                  Pregled PDF-a nije podržan u ovom prozoru.{" "}
-                  <button
-                    className="text-primary underline"
-                    onClick={() => window.open(previewUrl, "_blank", "noopener,noreferrer")}
-                  >
-                    Otvori u novom tabu
-                  </button>
-                  .
-                </div>
-              </object>
+              <div className="flex-1 min-h-0">
+                <PdfPreview bytes={previewBytes} />
+              </div>
             </div>
           )}
         </div>
@@ -390,7 +376,7 @@ export function QuoteDialog({ open, onOpenChange, items, total }: Props) {
         <div className="flex flex-wrap justify-end gap-2 pt-2">
           <Button variant="outline" size="sm" onClick={handlePreview} disabled={!!busy || !canGenerate}>
             {busy === "preview" ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Eye className="h-4 w-4 mr-2" />}
-            {previewUrl ? "Osveži pregled" : "Pregled"}
+            {previewBytes ? "Osveži pregled" : "Pregled"}
           </Button>
           <Button variant="outline" size="sm" onClick={handleSave} disabled={!!busy || !canGenerate}>
             {busy === "save" ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Save className="h-4 w-4 mr-2" />}
