@@ -24,6 +24,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useSignerProfile } from "@/hooks/useSignerProfile";
 import { useClients, type Client } from "@/hooks/useClients";
 import { generateQuotePdf, downloadPdf, pdfToBase64, type QuoteItemPdf } from "@/lib/quotePdf";
+import { PdfPreview } from "./PdfPreview";
 import { cn } from "@/lib/utils";
 
 interface Props {
