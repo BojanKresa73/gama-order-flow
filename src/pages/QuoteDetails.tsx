@@ -457,12 +457,23 @@ export default function QuoteDetails() {
         <div className="grid gap-6 md:grid-cols-3">
           <div className="md:col-span-2 space-y-6">
             <Card>
-              <CardHeader className="flex flex-row items-center justify-between space-y-0">
+              <CardHeader className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between space-y-0">
                 <CardTitle>Stavke ponude</CardTitle>
                 {canEdit && (
-                  <Button size="sm" onClick={handleAddItem}>
-                    <Plus className="h-4 w-4 mr-1" /> Dodaj stavku
-                  </Button>
+                  <div className="flex flex-wrap gap-2">
+                    <Button size="sm" variant="outline" onClick={() => setTenderImportOpen(true)}>
+                      <Wand2 className="h-4 w-4 mr-1" /> Uvezi zahtev
+                    </Button>
+                    <Button size="sm" variant="outline" onClick={() => setPasteItemsOpen(true)}>
+                      <ClipboardPaste className="h-4 w-4 mr-1" /> Nalepi tekst
+                    </Button>
+                    <Button size="sm" variant="outline" onClick={() => setDigitalProductOpen(true)}>
+                      <Package className="h-4 w-4 mr-1" /> Digitalni proizvod
+                    </Button>
+                    <Button size="sm" onClick={handleAddItem}>
+                      <Plus className="h-4 w-4 mr-1" /> Dodaj stavku
+                    </Button>
+                  </div>
                 )}
               </CardHeader>
               <CardContent className="p-0">
