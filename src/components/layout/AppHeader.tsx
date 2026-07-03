@@ -8,7 +8,7 @@ import { useIsMobile } from "@/hooks/use-mobile";
 import gamaLogo from "@/assets/gama-united-logo.svg";
 import { MobileNav } from "./MobileNav";
 import { PriorityNotificationBell } from "@/components/priority/PriorityNotificationBell";
-import { Flag, Calculator, UserCog } from "lucide-react";
+import { Flag, Calculator, UserCog, FileText } from "lucide-react";
 import { QuickPriceCalculator } from "@/components/calculator/QuickPriceCalculator";
 import { ProfileSettingsDialog } from "@/components/profile/ProfileSettingsDialog";
 
@@ -67,6 +67,13 @@ export const AppHeader = ({ userName, showBackButton, title }: AppHeaderProps) =
             >
               <Calculator className="h-4 w-4 mr-2" />
               Brzi kalkulator
+            </Button>
+          )}
+
+          {!isAuthzLoading && isAdmin && (
+            <Button variant="outline" onClick={() => navigate("/quotes")}>
+              <FileText className="h-4 w-4 mr-2" />
+              Ponude
             </Button>
           )}
 
