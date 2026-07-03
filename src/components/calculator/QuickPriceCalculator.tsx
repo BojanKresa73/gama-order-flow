@@ -762,8 +762,11 @@ export function QuickPriceCalculator({
                   <Button type="button" variant="outline" size="sm" onClick={() => setItems([])}>
                     Isprazni listu
                   </Button>
-                  <Button type="button" size="sm" onClick={copyAll}>
+                  <Button type="button" variant="outline" size="sm" onClick={copyAll}>
                     <Copy className="h-4 w-4 mr-2" /> Kopiraj sve
+                  </Button>
+                  <Button type="button" size="sm" onClick={openQuoteFromList}>
+                    <FileText className="h-4 w-4 mr-2" /> Napravi ponudu
                   </Button>
                 </div>
               </>
