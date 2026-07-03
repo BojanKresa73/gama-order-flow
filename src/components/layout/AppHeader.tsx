@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { supabase } from "@/integrations/supabase/client";
@@ -7,7 +8,9 @@ import { useIsMobile } from "@/hooks/use-mobile";
 import gamaLogo from "@/assets/gama-united-logo.svg";
 import { MobileNav } from "./MobileNav";
 import { PriorityNotificationBell } from "@/components/priority/PriorityNotificationBell";
-import { Flag } from "lucide-react";
+import { Flag, Calculator } from "lucide-react";
+import { QuickPriceCalculator } from "@/components/calculator/QuickPriceCalculator";
+
 
 interface AppHeaderProps {
   userName?: string;
@@ -20,6 +23,7 @@ export const AppHeader = ({ userName, showBackButton, title }: AppHeaderProps) =
   const { toast } = useToast();
   const { isSuper, isAdmin, isLoading: isAuthzLoading } = useAuthz();
   const isMobile = useIsMobile();
+  const [quickCalcOpen, setQuickCalcOpen] = useState(false);
 
   const handleLogout = async () => {
     await supabase.auth.signOut();
@@ -54,11 +58,23 @@ export const AppHeader = ({ userName, showBackButton, title }: AppHeaderProps) =
           <span className="text-sm text-muted-foreground">{userName}</span>
 
           {!isAuthzLoading && isAdmin && (
+            <Button
+              variant="outline"
+              className="border-primary/50 text-primary hover:bg-primary/10"
+              onClick={() => setQuickCalcOpen(true)}
+            >
+              <Calculator className="h-4 w-4 mr-2" />
+              Brzi kalkulator
+            </Button>
+          )}
+
+          {!isAuthzLoading && isAdmin && (
             <Button variant="outline" onClick={() => navigate("/admin/priority")}>
               <Flag className="h-4 w-4 mr-2" />
               Prioritet
             </Button>
           )}
+
 
           {isSuper && (
             <Button variant="outline" onClick={() => navigate("/admin/users")}>
@@ -70,6 +86,14 @@ export const AppHeader = ({ userName, showBackButton, title }: AppHeaderProps) =
           </Button>
         </div>
       </div>
+
+      {!isAuthzLoading && isAdmin && (
+        <QuickPriceCalculator
+          open={quickCalcOpen}
+          onOpenChange={setQuickCalcOpen}
+          hideTrigger
+        />
+      )}
     </header>
   );
 };
