@@ -45,6 +45,7 @@ import { QuoteCalculationWorkspace } from "@/components/quotes/QuoteCalculationW
 import { QuoteVersionHistory } from "@/components/quotes/QuoteVersionHistory";
 import { QuoteCollaboratorsCard } from "@/components/quotes/QuoteCollaboratorsCard";
 import { TenderImportItemsDialog } from "@/components/quotes/TenderImportItemsDialog";
+import { QuoteStatusActions } from "@/components/quotes/QuoteStatusActions";
 import { PasteItemsDialog } from "@/components/quotes/PasteItemsDialog";
 import { DigitalProductDialog } from "@/components/digital/DigitalProductDialog";
 import type { LocalDigitalJob } from "@/components/digital/LocalDigitalJobsTable";
@@ -556,6 +557,13 @@ export default function QuoteDetails() {
 
           {/* Side panel */}
           <div className="space-y-6">
+            {canEdit && (
+              <QuoteStatusActions
+                quote={quote}
+                onOpenSend={() => setSendOpen(true)}
+                onOpenWorkOrder={(woId) => navigate(`/work-orders/${woId}`)}
+              />
+            )}
             <QuoteCalculationWorkspace
               quoteId={quote.id}
               items={items}

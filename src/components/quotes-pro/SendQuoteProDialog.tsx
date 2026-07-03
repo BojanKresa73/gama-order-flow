@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Loader2, Send } from "lucide-react";
+import { Eye, Loader2, Send } from "lucide-react";
 import { toast } from "sonner";
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter,
@@ -29,6 +29,8 @@ export function SendQuoteProDialog({ quoteId, open, onOpenChange }: Props) {
   const [subject, setSubject] = useState("");
   const [body, setBody] = useState("");
   const [sending, setSending] = useState(false);
+  const [previewUrl, setPreviewUrl] = useState<string | null>(null);
+  const [previewBusy, setPreviewBusy] = useState(false);
 
   useEffect(() => {
     if (!quote || !signer) return;
@@ -39,6 +41,29 @@ export function SendQuoteProDialog({ quoteId, open, onOpenChange }: Props) {
       `Poštovani,\n\nU prilogu Vam dostavljamo ponudu ${quote.quote_number}.\nZa sva pitanja stojimo Vam na raspolaganju.\n\nSrdačan pozdrav,\n${signer.fullName}${signer.jobTitle ? "\n" + signer.jobTitle : ""}\nGama United`
     );
   }, [quote, signer]);
+
+  // Cleanup preview URL when dialog closes
+  useEffect(() => {
+    if (!open && previewUrl) {
+      URL.revokeObjectURL(previewUrl);
+      setPreviewUrl(null);
+    }
+  }, [open, previewUrl]);
+
+  async function handlePreview() {
+    if (!quote || !signer) return;
+    setPreviewBusy(true);
+    try {
+      const pdf = await generateQuoteProPdf(quote, quote.items ?? [], signer);
+      const blob = new Blob([pdf as unknown as ArrayBuffer], { type: "application/pdf" });
+      if (previewUrl) URL.revokeObjectURL(previewUrl);
+      setPreviewUrl(URL.createObjectURL(blob));
+    } catch (e: any) {
+      toast.error(e.message ?? "Greška pri generisanju PDF-a");
+    } finally {
+      setPreviewBusy(false);
+    }
+  }
 
   async function handleSend() {
     if (!quote || !signer) return;
@@ -103,29 +128,51 @@ export function SendQuoteProDialog({ quoteId, open, onOpenChange }: Props) {
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-2xl">
+      <DialogContent className="max-w-4xl max-h-[92vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <Send className="w-5 h-5" /> Pošalji ponudu na e-mail
           </DialogTitle>
         </DialogHeader>
-        <div className="space-y-3">
-          <div>
-            <Label>Za</Label>
-            <Input value={to} onChange={(e) => setTo(e.target.value)} placeholder="klijent@primer.rs" />
+        <div className="grid gap-4 md:grid-cols-2">
+          <div className="space-y-3">
+            <div>
+              <Label>Za</Label>
+              <Input value={to} onChange={(e) => setTo(e.target.value)} placeholder="klijent@primer.rs" />
+            </div>
+            <div>
+              <Label>Naslov</Label>
+              <Input value={subject} onChange={(e) => setSubject(e.target.value)} />
+            </div>
+            <div>
+              <Label>Poruka</Label>
+              <Textarea rows={10} value={body} onChange={(e) => setBody(e.target.value)} />
+            </div>
+            <div className="text-xs text-muted-foreground">
+              PDF ponude će biti automatski priložen. Kopija ide na Vaš e-mail i u arhivu.
+            </div>
           </div>
-          <div>
-            <Label>Naslov</Label>
-            <Input value={subject} onChange={(e) => setSubject(e.target.value)} />
-          </div>
-          <div>
-            <Label>Poruka</Label>
-            <Textarea rows={8} value={body} onChange={(e) => setBody(e.target.value)} />
-          </div>
-          <div className="text-xs text-muted-foreground">
-            PDF ponude će biti automatski priložen. Kopija ide na Vaš e-mail i u arhivu.
+
+          <div className="space-y-2">
+            <div className="flex items-center justify-between">
+              <Label>PDF pregled</Label>
+              <Button size="sm" variant="outline" onClick={handlePreview} disabled={previewBusy}>
+                {previewBusy ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Eye className="w-4 h-4 mr-2" />}
+                {previewUrl ? "Osveži pregled" : "Prikaži PDF"}
+              </Button>
+            </div>
+            <div className="rounded-md border bg-muted/30 h-[60vh] overflow-hidden">
+              {previewUrl ? (
+                <iframe src={previewUrl} title="PDF pregled" className="w-full h-full" />
+              ) : (
+                <div className="flex h-full items-center justify-center text-xs text-muted-foreground text-center px-4">
+                  Klikni "Prikaži PDF" za pregled atačmenta pre slanja.
+                </div>
+              )}
+            </div>
           </div>
         </div>
+
         <DialogFooter>
           <Button variant="outline" onClick={() => onOpenChange(false)}>Odustani</Button>
           <Button onClick={handleSend} disabled={sending}>
