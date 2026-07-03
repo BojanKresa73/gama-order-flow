@@ -138,6 +138,10 @@ export default function Quotes() {
                 <ClipboardPaste className="h-4 w-4 mr-2" />
                 Nalepi tekst
               </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => setCalcOpen(true)}>
+                <Calculator className="h-4 w-4 mr-2" />
+                Brzi Kalkulator
+              </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
         </div>
@@ -147,6 +151,16 @@ export default function Quotes() {
           onOpenChange={setPasteOpen}
           onSaved={() => qc.invalidateQueries({ queryKey: ["quick-calc-quotes"] })}
         />
+
+        <QuickPriceCalculator
+          open={calcOpen}
+          onOpenChange={(o) => {
+            setCalcOpen(o);
+            if (!o) qc.invalidateQueries({ queryKey: ["quick-calc-quotes"] });
+          }}
+          hideTrigger
+        />
+
 
         <Card>
           <div className="p-4 flex items-center justify-between border-b">
