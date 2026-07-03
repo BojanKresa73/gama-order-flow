@@ -1,119 +1,48 @@
 ## Cilj
 
-Nova sekcija **Godišnji odmori** (ruta `/vacations`) dostupna svim internim korisnicima. Zaposleni podnose zahteve, Superuser/Admin Plus odobravaju/odbijaju. Sistem prati kvote (21 dan/godišnje), prenos iz prethodne godine (rok 30.06.), državne praznike RS i pravila najave (min. 7 dana ranije).
+Dodati **Brzi kalkulator** (isti kao u GDC Order) na naš sajt. Vidljiv samo za `admin`, `admin_plus`, `superuser`. Cene materijala se čitaju **uživo iz GDC Order baze**.
 
-## UX / Prikazi
+## Kako će raditi
 
-Stranica ima 3 taba na vrhu + sticky "Novi zahtev" dugme:
+- Novi drugi Supabase klijent (`supabaseGDC`) — čita samo tabele cenovnika iz GDC Order projekta (anon key, read-only za frontend, RLS mora dozvoliti čitanje).
+- Kompletna komponenta `QuickPriceCalculator` sa: unos dimenzija, količina, materijal, štampa 4/0÷4/4, marža, dorada, kasiranje, custom cena, tabovi Kalkulator / Lista stavki / Istorija, sačuvane liste u localStorage, izračun profita, kopiranje rezultata, dugme „Napravi ponudu".
+- **Istorija** (`quick_calc_history`) se čuva u našoj bazi (per-user, RLS).
+- **„Napravi ponudu"** — ovaj projekat trenutno nema modul Ponuda. Predložena varijanta: dugme otvara nov nalog `/work-orders/new` sa predpopunjenim stavkama iz sessionStorage, ili — ako želiš — samo se skloni. **Ovo mi treba potvrda pre finalne implementacije.**
+- Pristup: dugme se pojavljuje u sidebar-u / na dashboardu samo ako je uloga admin+.
 
-1. **Tim kalendar (default)** — mesečni grid (react-day-picker custom): svaki zaposleni = obojena traka preko dana odsustva; hover = tooltip sa imenom, statusom (Odobreno/Na čekanju), tipom. Filteri: mesec/godina, status. Vikend i praznici blago osenčeni. Legenda boja po osobi.
-2. **Vremenska osa (Gantt)** — horizontalna godišnja skala (jan–dec), zaposleni u vrstama, blokovi po zahtevu. Odmah se vidi preklapanje po timovima. Klik na blok = detalj drawer.
-3. **Moji zahtevi / Svi zahtevi** — tabela (datumi, dana, status, komentar odobravaoca, akcije: otkaži dok je pending). Za Superuser/Admin Plus još i dugmad "Odobri / Odbij + razlog".
+## Šta mi treba od tebe
 
-Sticky desno gore: **kartica bilansa** — "Preostalo 2026: 14 dana · Preneseno iz 2025: 3 (istiće 30.06.) · Na čekanju: 5".
+1. **Supabase URL i anon key GDC Order projekta** (postavi kao secret: `GDC_SUPABASE_URL` i `GDC_SUPABASE_ANON_KEY`, ili ih prosledi meni). Bez ovoga kalkulator ne može da čita cene.
+2. Potvrda da RLS na GDC Order tabelama (`large_format_materials`, `large_format_prices`, `kasiranje_settings`, `digital_paper_types`, itd.) **dozvoljava anonimno čitanje** — inače moraš omogućiti `SELECT` za `anon` na tim tabelama u GDC Order projektu (to se radi tamo, ne ovde).
+3. Odluka o dugmetu „Napravi ponudu" (vidi gore).
 
-Novi zahtev dijalog: date-range picker (shadcn Calendar mode="range", `pointer-events-auto`), auto-računanje kalendarskih dana bez praznika RS, live upozorenja:
-- crveno ako **start < today + 7 dana** (blokirano, osim ako Superuser override checkbox);
-- crveno ako **traženo > preostalo**;
-- žuto info: "Koristi X dana iz 2025 (prenos), Y iz 2026".
+## Tehnički koraci (redom)
 
-Vizuelno: pastelne trake po osobi (deterministički hash → HSL iz semantic tokena), rounded-md, status ikonice (Check/Clock/X iz lucide), meke senke — dosledno postojećem shadcn stilu app-a.
-
-## Data model (nova migracija)
-
-```
-public.vacation_settings (singleton)
-  annual_days int default 21
-  min_notice_days int default 7
-  carryover_deadline_month int default 6  -- 30.06.
-  carryover_deadline_day int default 30
-
-public.vacation_holidays  -- praznici RS
-  id, holiday_date date unique, name text, is_active bool
-
-public.vacation_requests
-  id, user_id (profiles.id), start_date, end_date,
-  days_count int,           -- pre-computed kalendarski minus praznici (u opsegu)
-  used_from_previous int default 0,
-  used_from_current int default 0,
-  status enum('pending','approved','rejected','cancelled') default 'pending',
-  reason text,              -- napomena zaposlenog
-  reviewer_id, reviewed_at, reviewer_note,
-  created_at, updated_at
-
-public.vacation_balances   -- godišnji obračun po korisniku
-  user_id, year int, allocated int, used int, carried_over int,
-  carryover_expires_on date, PK(user_id, year)
+```text
+1. Migracija: tabela quick_calc_history (per-user, RLS auth-only) + GRANT
+2. src/integrations/supabase/gdc-client.ts  — drugi Supabase klijent (VITE_GDC_SUPABASE_URL, VITE_GDC_SUPABASE_ANON_KEY)
+3. Kopiraj iz GDC Order:
+   - src/lib/quotePricing.ts, kasiranjeCost.ts, auth/quickCalcAccess.ts
+   - src/hooks/useLargeFormatPricing.ts, useKasiranjeSettings.ts  (izmeni da koriste supabaseGDC)
+   - src/components/quotes/MaterialCombobox.tsx
+   - src/components/calculator/QuickPriceCalculator.tsx  (izmeni: history koristi naš supabase, /quotes/new prilagoditi)
+4. Ugradi u DashboardQuickActions.tsx (dugme za admin+)
+5. Ugradi trigger u AppHeader-u (globalno dostupno)
+6. Test: forma se otvara, materijali se učitavaju iz GDC baze, cena se računa, kopiranje radi, istorija pamti
 ```
 
-GRANT-i: SELECT za `authenticated` (svi vide timski kalendar), INSERT/UPDATE svog zahteva za `authenticated`, `service_role` ALL. Za approve/reject → RPC `vacation_review(request_id, decision, note)` sa `has_admin_plus_access` check.
+## Datoteke koje se prave / menjaju
 
-RLS: 
-- `vacation_requests` SELECT za internal users (ne client_user), INSERT svoj, UPDATE svoj samo dok je pending (za cancel), review preko SECURITY DEFINER RPC.
-- `vacation_balances` SELECT: svoj + admin_plus vidi sve.
-- `vacation_holidays` SELECT za authenticated, upravlja Superuser.
+- `supabase/migrations/…_quick_calc_history.sql` (nova)
+- `src/integrations/supabase/gdc-client.ts` (nova)
+- `src/lib/quotePricing.ts`, `src/lib/kasiranjeCost.ts`, `src/lib/auth/quickCalcAccess.ts` (kopije)
+- `src/hooks/useLargeFormatPricing.ts`, `src/hooks/useKasiranjeSettings.ts` (kopije + prebačeno na `supabaseGDC`)
+- `src/components/quotes/MaterialCombobox.tsx` (kopija)
+- `src/components/calculator/QuickPriceCalculator.tsx` (kopija + izmene)
+- `src/components/dashboard/DashboardQuickActions.tsx` (dugme)
+- `src/components/layout/AppHeader.tsx` (globalni trigger — opciono)
+- `.env` dobija `VITE_GDC_SUPABASE_URL` i `VITE_GDC_SUPABASE_ANON_KEY` (kroz secrets)
 
-Seed: državni praznici RS 2026/2027 (Nova godina 1-2.1, Božić 7.1, Sretenje 15-16.2, Uskrs pomični, Praznik rada 1-2.5, Dan primirja 11.11).
+## Napomena o rizicima
 
-## Business logika (RPC-ovi)
-
-`vacation_calculate_days(p_start, p_end)` → int (kalendarski dani u opsegu minus datumi iz `vacation_holidays`).
-
-`vacation_submit(p_start, p_end, p_reason)`:
-- validira start ≥ today + 7 (min_notice_days iz settings);
-- računa days;
-- proverava bilans (prvo troši `carried_over` ako još važi, pa `allocated`);
-- INSERT pending zahtev.
-
-`vacation_review(p_id, p_decision, p_note)` — samo admin_plus+; ako approved: umanjuje balans u `vacation_balances` (upsert za godinu starta); insert log; okida notifikaciju.
-
-`vacation_expire_carryover()` — cron 1.7. svake godine (pg_cron + pg_net): za sve `vacation_balances` gde `carryover_expires_on < today` i `carried_over > 0`, postavi `carried_over = 0` i enqueue email upozorenja preko `email_outbox` ("Izgubili ste N dana prenosa").
-
-`vacation_year_rollover()` — cron 1.1: kreira novi red bilansa (allocated=21, carried_over = prošlogodišnji unused, carryover_expires_on = 30.06. tekuće).
-
-## Notifikacije
-
-- Novi zahtev → email Superuser + Admin Plus (edge function `notify-vacation-request`, koristi postojeći `email_outbox`/Resend).
-- Odluka → email podnosiocu.
-- 15 dana pre 30.06. → podsetnik zaposlenima sa neiskorišćenim prenosom.
-- U app-u: `PortalNotificationBell` slična komponenta u AppHeader-u — badge sa brojem pending zahteva (za admine) i statusa (za sve).
-
-## Rute i navigacija
-
-- `/vacations` — glavna stranica (lazy route u `App.tsx`).
-- Link u `AppHeader` i `MobileNav` "Godišnji odmori" (ikona Palmtree iz lucide).
-- Dashboard widget: mala kartica "Ko je na odmoru danas + sledećih 7 dana".
-
-## Fajlovi za izmenu/kreiranje
-
-Novi:
-- `src/pages/Vacations.tsx` (tabovi + header bilansa)
-- `src/components/vacations/TeamCalendar.tsx`
-- `src/components/vacations/VacationGantt.tsx`
-- `src/components/vacations/RequestsTable.tsx`
-- `src/components/vacations/NewRequestDialog.tsx`
-- `src/components/vacations/ReviewDialog.tsx`
-- `src/components/vacations/BalanceCard.tsx`
-- `src/hooks/useVacations.ts`, `useVacationBalance.ts`, `useVacationHolidays.ts`
-- `src/lib/vacationCalc.ts` (računanje dana klijentski, ogledalo RPC-a)
-- `supabase/functions/notify-vacation-request/index.ts`
-- `supabase/functions/vacation-cron/index.ts` (poziva expire + rollover; zaštita CRON_SECRET)
-- Migracije: tabele, RPC-ovi, RLS, seed praznika
-
-Izmene:
-- `src/App.tsx` — lazy route
-- `src/components/layout/AppHeader.tsx`, `MobileNav.tsx` — link
-- `src/components/dashboard/*` — mini widget "Ko je na odmoru"
-
-## Redosled implementacije
-
-1. Migracija (tabele, RPC-ovi, RLS, seed praznika 2026/27, pg_cron 1.1. i 1.7.).
-2. Hooks + `vacationCalc.ts`.
-3. `NewRequestDialog` + `BalanceCard` + `RequestsTable` (moji).
-4. `TeamCalendar` (mesečni prikaz sa trakama).
-5. `VacationGantt` godišnji.
-6. Approve/Reject workflow + edge function za email.
-7. AppHeader badge + Dashboard mini widget.
-8. Testiranje ivičnih slučajeva (praznici u opsegu, prenos, 7 dana notice, override).
-
-Kad odobriš, krećem redom od migracije.
+- Ako GDC Order jednog dana promeni šemu tabela cenovnika, ovaj kalkulator će pući ovde. Preporučeni pravac dugoročno: nightly cron koji sinhronizuje cene u našu bazu. Ali za sada — direktno čitanje kako si tražio.
