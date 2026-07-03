@@ -603,3 +603,19 @@ export function useUpdateQuoteItemPricingPro() {
     onError: (error: Error) => toast.error(`Greška: ${error.message}`),
   });
 }
+
+// -----------------------------------------------------------------------------
+// GDC-compatible aliases (used by the new full-page /quotes, /quotes/new,
+// /quotes/:id screens ported 1:1 from the GDC Order project).
+// -----------------------------------------------------------------------------
+export const useQuotes = useQuotesPro;
+export const useQuote = useQuotePro;
+export const useCreateQuote = useCreateQuotePro;
+export const useUpdateQuote = useUpdateQuotePro;
+export const useDeleteQuote = useDeleteQuotePro;
+export const useDuplicateQuote = useDuplicateQuotePro;
+export const useAddQuoteItem = useAddQuoteItemPro;
+export const useUpdateQuoteItem = useUpdateQuoteItemPro;
+export const useDeleteQuoteItem = useDeleteQuoteItemPro;
+export const useRecalculateQuoteTotals = useRecalculateQuoteTotalsPro;
+
