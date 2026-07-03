@@ -6,9 +6,26 @@ export interface User {
   id: string;
   email: string;
   full_name: string | null;
+  phone: string | null;
+  job_title: string | null;
   role: AppRole | null;
   is_active: boolean;
   created_at: string;
+}
+
+export async function updateUserProfile(
+  userId: string,
+  fullName: string | null,
+  phone: string | null,
+  jobTitle: string | null
+): Promise<void> {
+  const { error } = await supabase.rpc("admin_update_user_profile" as any, {
+    p_user_id: userId,
+    p_full_name: fullName ?? "",
+    p_phone: phone ?? "",
+    p_job_title: jobTitle ?? "",
+  } as any);
+  if (error) throw error;
 }
 
 export async function listUsers(search = "", limit = 50, offset = 0): Promise<User[]> {
