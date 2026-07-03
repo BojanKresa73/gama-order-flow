@@ -1,14 +1,30 @@
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { Download, Send, Save, Loader2, FileText } from "lucide-react";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
+import {
+  Command,
+  CommandEmpty,
+  CommandGroup,
+  CommandInput,
+  CommandItem,
+  CommandList,
+} from "@/components/ui/command";
+import { Download, Send, Save, Loader2, FileText, Check, ChevronsUpDown, UserPlus } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { useSignerProfile } from "@/hooks/useSignerProfile";
+import { useClients, type Client } from "@/hooks/useClients";
 import { generateQuotePdf, downloadPdf, pdfToBase64, type QuoteItemPdf } from "@/lib/quotePdf";
+import { cn } from "@/lib/utils";
 
 interface Props {
   open: boolean;
@@ -17,15 +33,48 @@ interface Props {
   total: number;
 }
 
+type Mode = "existing" | "prospect";
+
 export function QuoteDialog({ open, onOpenChange, items, total }: Props) {
   const { data: signer } = useSignerProfile();
-  const [clientName, setClientName] = useState("");
-  const [clientCompany, setClientCompany] = useState("");
-  const [clientEmail, setClientEmail] = useState("");
+  const { data: clients = [] } = useClients();
+
+  const [mode, setMode] = useState<Mode>("existing");
+  const [selectedClient, setSelectedClient] = useState<Client | null>(null);
+  const [clientPickerOpen, setClientPickerOpen] = useState(false);
+  const [emailOverride, setEmailOverride] = useState("");
+
+  const [prospectName, setProspectName] = useState("");
+
   const [notes, setNotes] = useState("");
   const [busy, setBusy] = useState<"" | "download" | "send" | "save">("");
 
-  const canGenerate = clientName.trim().length > 0 && items.length > 0 && !!signer;
+  const resolved = useMemo(() => {
+    if (mode === "existing" && selectedClient) {
+      const addrParts = [selectedClient.adresa, selectedClient.postanski_broj, selectedClient.grad].filter(Boolean);
+      return {
+        clientName: selectedClient.kontakt_osoba || selectedClient.name,
+        clientCompany: selectedClient.name,
+        clientEmail: (emailOverride.trim() || selectedClient.email || "").trim(),
+        clientPib: selectedClient.pib || undefined,
+        clientAddress: addrParts.length ? addrParts.join(", ") : undefined,
+        ok: true,
+      };
+    }
+    if (mode === "prospect" && prospectName.trim()) {
+      return {
+        clientName: prospectName.trim(),
+        clientCompany: undefined,
+        clientEmail: emailOverride.trim() || undefined,
+        clientPib: undefined,
+        clientAddress: undefined,
+        ok: true,
+      };
+    }
+    return { ok: false } as any;
+  }, [mode, selectedClient, prospectName, emailOverride]);
+
+  const canGenerate = resolved.ok && items.length > 0 && !!signer;
 
   const buildQuote = async () => {
     const { data: numData } = await (supabase as any).rpc("next_quote_number");
@@ -33,9 +82,11 @@ export function QuoteDialog({ open, onOpenChange, items, total }: Props) {
     return {
       quoteNumber,
       date: new Date(),
-      clientName: clientName.trim(),
-      clientCompany: clientCompany.trim() || undefined,
-      clientEmail: clientEmail.trim() || undefined,
+      clientName: resolved.clientName,
+      clientCompany: resolved.clientCompany,
+      clientEmail: resolved.clientEmail || undefined,
+      clientPib: resolved.clientPib,
+      clientAddress: resolved.clientAddress,
       notes: notes.trim() || undefined,
       items,
       total,
@@ -49,9 +100,9 @@ export function QuoteDialog({ open, onOpenChange, items, total }: Props) {
     await (supabase as any).from("quick_calc_quotes").insert({
       user_id: auth.user.id,
       quote_number: quoteNumber,
-      client_name: clientName.trim(),
-      client_email: clientEmail.trim() || null,
-      client_company: clientCompany.trim() || null,
+      client_name: resolved.clientName,
+      client_email: resolved.clientEmail || null,
+      client_company: resolved.clientCompany || null,
       notes: notes.trim() || null,
       items: items as any,
       total_eur: total,
@@ -63,7 +114,7 @@ export function QuoteDialog({ open, onOpenChange, items, total }: Props) {
   };
 
   const handleDownload = async () => {
-    if (!canGenerate) { toast.error("Unesi ime klijenta"); return; }
+    if (!canGenerate) { toast.error("Izaberi klijenta"); return; }
     setBusy("download");
     try {
       const quote = await buildQuote();
@@ -78,15 +129,15 @@ export function QuoteDialog({ open, onOpenChange, items, total }: Props) {
   };
 
   const handleSend = async () => {
-    if (!canGenerate) { toast.error("Unesi ime klijenta"); return; }
-    if (!clientEmail.trim()) { toast.error("Unesi email klijenta"); return; }
+    if (!canGenerate) { toast.error("Izaberi klijenta"); return; }
+    if (!resolved.clientEmail) { toast.error("Nedostaje email klijenta"); return; }
     setBusy("send");
     try {
       const quote = await buildQuote();
       const bytes = await generateQuotePdf(quote);
       const base64 = pdfToBase64(bytes);
       const html = `
-        <div style="font-family:Arial,sans-serif;color:#0b1937">
+        <div style="font-family:Arial,sans-serif;color:#19213e">
           <p>Poštovani,</p>
           <p>U prilogu Vam šaljemo ponudu <strong>${quote.quoteNumber}</strong>.</p>
           <p>Za sva pitanja stojimo Vam na raspolaganju.</p>
@@ -94,7 +145,7 @@ export function QuoteDialog({ open, onOpenChange, items, total }: Props) {
         </div>`;
       const { error } = await supabase.functions.invoke("send-quote-email", {
         body: {
-          to: clientEmail.trim(),
+          to: resolved.clientEmail,
           subject: `Ponuda ${quote.quoteNumber} — Gama United`,
           html,
           pdfBase64: base64,
@@ -103,7 +154,7 @@ export function QuoteDialog({ open, onOpenChange, items, total }: Props) {
       });
       if (error) throw error;
       await saveToDb(quote.quoteNumber, new Date());
-      toast.success(`Ponuda ${quote.quoteNumber} poslata na ${clientEmail}`);
+      toast.success(`Ponuda ${quote.quoteNumber} poslata na ${resolved.clientEmail}`);
       onOpenChange(false);
     } catch (e: any) {
       toast.error("Slanje nije uspelo: " + (e?.message || "nepoznata"));
@@ -111,7 +162,7 @@ export function QuoteDialog({ open, onOpenChange, items, total }: Props) {
   };
 
   const handleSave = async () => {
-    if (!canGenerate) { toast.error("Unesi ime klijenta"); return; }
+    if (!canGenerate) { toast.error("Izaberi klijenta"); return; }
     setBusy("save");
     try {
       const quote = await buildQuote();
@@ -146,18 +197,108 @@ export function QuoteDialog({ open, onOpenChange, items, total }: Props) {
             )}
           </div>
 
-          <div className="space-y-1.5">
-            <Label>Ime klijenta / kontakt osoba *</Label>
-            <Input value={clientName} onChange={(e) => setClientName(e.target.value)} placeholder="Petar Petrović" />
-          </div>
-          <div className="space-y-1.5">
-            <Label>Firma (opciono)</Label>
-            <Input value={clientCompany} onChange={(e) => setClientCompany(e.target.value)} placeholder="Klijent d.o.o." />
-          </div>
-          <div className="space-y-1.5">
-            <Label>Email klijenta (za slanje)</Label>
-            <Input type="email" value={clientEmail} onChange={(e) => setClientEmail(e.target.value)} placeholder="kontakt@firma.rs" />
-          </div>
+          <Tabs value={mode} onValueChange={(v) => setMode(v as Mode)}>
+            <TabsList className="grid grid-cols-2 w-full">
+              <TabsTrigger value="existing">Postojeći klijent</TabsTrigger>
+              <TabsTrigger value="prospect">
+                <UserPlus className="h-3.5 w-3.5 mr-1.5" /> Potencijalni klijent
+              </TabsTrigger>
+            </TabsList>
+
+            <TabsContent value="existing" className="space-y-3 pt-3">
+              <div className="space-y-1.5">
+                <Label>Klijent *</Label>
+                <Popover open={clientPickerOpen} onOpenChange={setClientPickerOpen}>
+                  <PopoverTrigger asChild>
+                    <Button
+                      variant="outline"
+                      role="combobox"
+                      className="w-full justify-between font-normal"
+                    >
+                      <span className="truncate text-left">
+                        {selectedClient ? selectedClient.name : "Izaberi klijenta…"}
+                      </span>
+                      <ChevronsUpDown className="h-4 w-4 shrink-0 opacity-50" />
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-[--radix-popover-trigger-width] p-0" align="start">
+                    <Command>
+                      <CommandInput placeholder="Pretraži klijente…" />
+                      <CommandList>
+                        <CommandEmpty>Nema rezultata.</CommandEmpty>
+                        <CommandGroup>
+                          {clients.slice(0, 300).map((c) => (
+                            <CommandItem
+                              key={c.id}
+                              value={`${c.name} ${c.pib ?? ""} ${c.email ?? ""}`}
+                              onSelect={() => {
+                                setSelectedClient(c);
+                                setEmailOverride("");
+                                setClientPickerOpen(false);
+                              }}
+                            >
+                              <Check
+                                className={cn(
+                                  "mr-2 h-4 w-4",
+                                  selectedClient?.id === c.id ? "opacity-100" : "opacity-0"
+                                )}
+                              />
+                              <div className="flex flex-col">
+                                <span className="font-medium">{c.name}</span>
+                                <span className="text-xs text-muted-foreground">
+                                  {[c.pib && `PIB ${c.pib}`, c.grad, c.email].filter(Boolean).join(" · ")}
+                                </span>
+                              </div>
+                            </CommandItem>
+                          ))}
+                        </CommandGroup>
+                      </CommandList>
+                    </Command>
+                  </PopoverContent>
+                </Popover>
+                {selectedClient && (
+                  <div className="text-xs text-muted-foreground pt-1">
+                    {[selectedClient.adresa, selectedClient.grad, selectedClient.pib && `PIB ${selectedClient.pib}`]
+                      .filter(Boolean)
+                      .join(" · ")}
+                  </div>
+                )}
+              </div>
+              <div className="space-y-1.5">
+                <Label>Email za slanje {selectedClient?.email && <span className="text-xs text-muted-foreground">(podrazumevano: {selectedClient.email})</span>}</Label>
+                <Input
+                  type="email"
+                  value={emailOverride}
+                  onChange={(e) => setEmailOverride(e.target.value)}
+                  placeholder={selectedClient?.email || "kontakt@firma.rs"}
+                />
+              </div>
+            </TabsContent>
+
+            <TabsContent value="prospect" className="space-y-3 pt-3">
+              <div className="space-y-1.5">
+                <Label>Ime / naziv potencijalnog klijenta *</Label>
+                <Input
+                  value={prospectName}
+                  onChange={(e) => setProspectName(e.target.value)}
+                  placeholder="Petar Petrović ili Firma d.o.o."
+                />
+                <p className="text-xs text-muted-foreground">
+                  Ponuda se ne vezuje za bazu klijenata. Kasnije, ako postane klijent, dodaj ga u bazu.
+                </p>
+              </div>
+              <div className="space-y-1.5">
+                <Label>Email (opciono, za slanje)</Label>
+                <Input
+                  type="email"
+                  value={emailOverride}
+                  onChange={(e) => setEmailOverride(e.target.value)}
+                  placeholder="kontakt@firma.rs"
+                />
+              </div>
+            </TabsContent>
+          </Tabs>
+
           <div className="space-y-1.5">
             <Label>Napomena (opciono)</Label>
             <Textarea value={notes} onChange={(e) => setNotes(e.target.value)} rows={2} placeholder="Rok isporuke, način plaćanja…" />
@@ -180,7 +321,7 @@ export function QuoteDialog({ open, onOpenChange, items, total }: Props) {
             {busy === "download" ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Download className="h-4 w-4 mr-2" />}
             Preuzmi PDF
           </Button>
-          <Button size="sm" onClick={handleSend} disabled={!!busy || !canGenerate || !clientEmail.trim()}>
+          <Button size="sm" onClick={handleSend} disabled={!!busy || !canGenerate || !resolved.clientEmail}>
             {busy === "send" ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Send className="h-4 w-4 mr-2" />}
             Pošalji email
           </Button>
