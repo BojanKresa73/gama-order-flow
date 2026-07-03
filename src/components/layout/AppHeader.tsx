@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { supabase } from "@/integrations/supabase/client";
@@ -7,7 +8,9 @@ import { useIsMobile } from "@/hooks/use-mobile";
 import gamaLogo from "@/assets/gama-united-logo.svg";
 import { MobileNav } from "./MobileNav";
 import { PriorityNotificationBell } from "@/components/priority/PriorityNotificationBell";
-import { Flag } from "lucide-react";
+import { Flag, Calculator } from "lucide-react";
+import { QuickPriceCalculator } from "@/components/calculator/QuickPriceCalculator";
+
 
 interface AppHeaderProps {
   userName?: string;
