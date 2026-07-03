@@ -1,5 +1,9 @@
 import { useEffect, useMemo, useState } from "react";
-import { Loader2, Plus, Trash2, Send, FileText, Copy } from "lucide-react";
+import { Loader2, Plus, Trash2, Send, FileText, Copy, Eye } from "lucide-react";
+import { generateQuoteProPdf } from "@/lib/quoteProPdf";
+import { useSignerProfile } from "@/hooks/useSignerProfile";
+import { SendQuoteProDialog } from "./SendQuoteProDialog";
+import { QuoteProActivityPanel } from "./QuoteProActivityPanel";
 import { format } from "date-fns";
 import { toast } from "sonner";
 import {
