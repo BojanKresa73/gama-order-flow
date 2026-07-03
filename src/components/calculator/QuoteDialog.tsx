@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -18,7 +18,7 @@ import {
   CommandItem,
   CommandList,
 } from "@/components/ui/command";
-import { Download, Send, Save, Loader2, FileText, Check, ChevronsUpDown, UserPlus } from "lucide-react";
+import { Download, Send, Save, Loader2, FileText, Check, ChevronsUpDown, UserPlus, Eye, X } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { useSignerProfile } from "@/hooks/useSignerProfile";
@@ -47,7 +47,24 @@ export function QuoteDialog({ open, onOpenChange, items, total }: Props) {
   const [prospectName, setProspectName] = useState("");
 
   const [notes, setNotes] = useState("");
-  const [busy, setBusy] = useState<"" | "download" | "send" | "save">("");
+  const [busy, setBusy] = useState<"" | "download" | "send" | "save" | "preview">("");
+  const [previewUrl, setPreviewUrl] = useState<string | null>(null);
+
+  // Revoke preview blob URLs on change/unmount to avoid leaks.
+  useEffect(() => {
+    return () => {
+      if (previewUrl) URL.revokeObjectURL(previewUrl);
+    };
+  }, [previewUrl]);
+
+  // Clear preview whenever inputs change so user knows it's stale.
+  useEffect(() => {
+    if (previewUrl) {
+      URL.revokeObjectURL(previewUrl);
+      setPreviewUrl(null);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [mode, selectedClient?.id, emailOverride, prospectName, notes, items, total]);
 
   const resolved = useMemo(() => {
     if (mode === "existing" && selectedClient) {
@@ -174,9 +191,23 @@ export function QuoteDialog({ open, onOpenChange, items, total }: Props) {
     } finally { setBusy(""); }
   };
 
+  const handlePreview = async () => {
+    if (!canGenerate) { toast.error("Izaberi klijenta"); return; }
+    setBusy("preview");
+    try {
+      const quote = await buildQuote();
+      const bytes = await generateQuotePdf(quote);
+      const blob = new Blob([bytes as BlobPart], { type: "application/pdf" });
+      if (previewUrl) URL.revokeObjectURL(previewUrl);
+      setPreviewUrl(URL.createObjectURL(blob));
+    } catch (e: any) {
+      toast.error("Pregled nije uspeo: " + (e?.message || "nepoznata"));
+    } finally { setBusy(""); }
+  };
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-lg">
+      <DialogContent className={cn(previewUrl ? "max-w-6xl" : "max-w-lg")}>
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <FileText className="h-5 w-5 text-primary" />
@@ -184,7 +215,8 @@ export function QuoteDialog({ open, onOpenChange, items, total }: Props) {
           </DialogTitle>
         </DialogHeader>
 
-        <div className="space-y-3">
+        <div className={cn("gap-4", previewUrl ? "grid md:grid-cols-[minmax(0,1fr)_minmax(0,1.2fr)]" : "")}>
+          <div className="space-y-3 min-w-0">
           <div className="rounded-md bg-muted/40 p-2 text-xs text-muted-foreground">
             Potpisnik: <strong className="text-foreground">{signer?.fullName || "…"}</strong>
             {signer?.jobTitle && <> · {signer.jobTitle}</>}
@@ -310,9 +342,36 @@ export function QuoteDialog({ open, onOpenChange, items, total }: Props) {
               {new Intl.NumberFormat("sr-RS", { minimumFractionDigits: 2 }).format(total)} EUR
             </span>
           </div>
+          </div>
+
+          {previewUrl && (
+            <div className="min-w-0 flex flex-col border rounded-md overflow-hidden bg-muted/30">
+              <div className="flex items-center justify-between px-2 py-1.5 border-b bg-background/60">
+                <span className="text-xs font-medium text-muted-foreground">Pregled ponude (A4)</span>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="h-6 px-2"
+                  onClick={() => { URL.revokeObjectURL(previewUrl); setPreviewUrl(null); }}
+                >
+                  <X className="h-3.5 w-3.5" />
+                </Button>
+              </div>
+              <iframe
+                src={previewUrl}
+                title="Pregled ponude"
+                className="w-full flex-1"
+                style={{ minHeight: 620, height: "70vh" }}
+              />
+            </div>
+          )}
         </div>
 
         <div className="flex flex-wrap justify-end gap-2 pt-2">
+          <Button variant="outline" size="sm" onClick={handlePreview} disabled={!!busy || !canGenerate}>
+            {busy === "preview" ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Eye className="h-4 w-4 mr-2" />}
+            {previewUrl ? "Osveži pregled" : "Pregled"}
+          </Button>
           <Button variant="outline" size="sm" onClick={handleSave} disabled={!!busy || !canGenerate}>
             {busy === "save" ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Save className="h-4 w-4 mr-2" />}
             Sačuvaj
