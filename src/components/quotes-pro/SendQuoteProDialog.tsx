@@ -45,7 +45,6 @@ export function SendQuoteProDialog({ quoteId, open, onOpenChange }: Props) {
   // Cleanup preview URL when dialog closes
   useEffect(() => {
     if (!open && previewUrl) {
-      URL.revokeObjectURL(previewUrl);
       setPreviewUrl(null);
     }
   }, [open, previewUrl]);
@@ -55,12 +54,10 @@ export function SendQuoteProDialog({ quoteId, open, onOpenChange }: Props) {
     setPreviewBusy(true);
     try {
       const pdf = await generateQuoteProPdf(quote, quote.items ?? [], signer);
-      // Copy into a fresh ArrayBuffer so Blob gets clean bytes regardless of byteOffset
-      const copy = new Uint8Array(pdf.byteLength);
-      copy.set(pdf);
-      const blob = new Blob([copy.buffer], { type: "application/pdf" });
-      if (previewUrl) URL.revokeObjectURL(previewUrl);
-      setPreviewUrl(URL.createObjectURL(blob));
+      // Use data: URL (base64) instead of blob: — blob URLs are often blocked
+      // by ad blockers (ERR_BLOCKED_BY_CLIENT) inside embedded previews.
+      const base64 = pdfToBase64(pdf);
+      setPreviewUrl(`data:application/pdf;base64,${base64}`);
     } catch (e: any) {
       toast.error(e.message ?? "Greška pri generisanju PDF-a");
     } finally {
