@@ -172,30 +172,32 @@ export async function generateQuotePdf(data: QuoteData): Promise<Uint8Array> {
 
   // Table
   const cols = {
-    rb: LEFT + 6,
+    rb: LEFT + 8,
     name: LEFT + 30,
-    dim: LEFT + 250,
-    qty: LEFT + 310,
-    sides: LEFT + 345,
-    unit: LEFT + 420,
-    total: RIGHT - 6,
+    dim: LEFT + 240,
+    qty: LEFT + 300,
+    sides: LEFT + 335,
+    unit: LEFT + 415,   // right-aligned end
+    total: RIGHT - 8,   // right-aligned end
   };
 
-  // Header
-  page.drawRectangle({ x: LEFT, y: y - 18, width: CONTENT_W, height: 22, color: NAVY });
+  // Header band
+  const headerH = 22;
+  page.drawRectangle({ x: LEFT, y: y - headerH, width: CONTENT_W, height: headerH, color: NAVY });
+  const headerBaseline = y - 14;
   const th = (t: string, x: number, right = false) => {
     const w = right ? bold.widthOfTextAtSize(t, 8.5) : 0;
-    page.drawText(t, { x: right ? x - w : x, y: y - 12, size: 8.5, font: bold, color: rgb(1, 1, 1) });
+    page.drawText(t, { x: right ? x - w : x, y: headerBaseline, size: 8.5, font: bold, color: rgb(1, 1, 1) });
   };
   th("#", cols.rb);
   th("ARTIKAL", cols.name);
   th("DIM (cm)", cols.dim);
   th("KOL.", cols.qty);
   th("ŠTAMPA", cols.sides);
-  th("CENA/KOM", cols.unit + 55, true);
+  th("CENA/KOM", cols.unit, true);
   th("UKUPNO", cols.total, true);
 
-  y -= 22;
+  y -= headerH + 6;
 
   const ensurePage = () => {
     if (y < BOTTOM + 80) {
@@ -223,7 +225,7 @@ export async function generateQuotePdf(data: QuoteData): Promise<Uint8Array> {
     td(`${it.widthCm}×${it.heightCm}`, cols.dim);
     td(String(it.qty), cols.qty);
     td(it.printSides, cols.sides);
-    td(fmt(it.unitPrice), cols.unit + 55, true);
+    td(fmt(it.unitPrice), cols.unit, true);
     td(fmt(it.lineTotal), cols.total, true, bold, 9, NAVY);
     y -= 19;
   });
