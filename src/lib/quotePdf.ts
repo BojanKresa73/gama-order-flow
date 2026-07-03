@@ -55,25 +55,10 @@ async function fetchBytes(url: string): Promise<ArrayBuffer> {
   return await r.arrayBuffer();
 }
 
-interface MemoPlacement {
-  x: number;
-  y: number;
-  width: number;
-  height: number;
-}
-
-function drawBackground(page: PDFPage, memo: PDFImage): MemoPlacement {
-  const { width: pw, height: ph } = page.getSize();
-  const iw = memo.width;
-  const ih = memo.height;
-  // Scale memorandum to fit inside A4 while preserving aspect ratio, centered.
-  const scale = Math.min(pw / iw, ph / ih);
-  const w = iw * scale;
-  const h = ih * scale;
-  const x = (pw - w) / 2;
-  const y = (ph - h) / 2;
-  page.drawImage(memo, { x, y, width: w, height: h });
-  return { x, y, width: w, height: h };
+function drawBackground(page: PDFPage, memo: PDFImage) {
+  const { width, height } = page.getSize();
+  // Memorandum is already sized to A4 — draw at full page, no scaling.
+  page.drawImage(memo, { x: 0, y: 0, width, height });
 }
 
 // Wrap helper
@@ -115,22 +100,17 @@ export async function generateQuotePdf(data: QuoteData): Promise<Uint8Array> {
   const memo = await doc.embedPng(memoBuf);
 
   let page = doc.addPage([595.28, 841.89]); // A4
-  let placement = drawBackground(page, memo);
+  drawBackground(page, memo);
+  const { width: PW, height: PH } = page.getSize();
 
-  // Content area is inset from the memorandum image bounds (not the A4 page),
-  // leaving room for logo/header on top and the footer band at bottom.
-  const HEADER_INSET = 140; // space under memorandum top logo area
-  const FOOTER_INSET = 110; // space above memorandum footer strip
-  const SIDE_INSET = 42;    // side padding within the memorandum
-  const memoLeft = placement.x + SIDE_INSET;
-  const memoRight = placement.x + placement.width - SIDE_INSET;
-  const memoTop = placement.y + placement.height - HEADER_INSET;
-  const memoBottom = placement.y + FOOTER_INSET;
-
-  const TOP = memoTop;
-  const BOTTOM = memoBottom;
-  const LEFT = memoLeft;
-  const RIGHT = memoRight;
+  // Memorandum is A4 with logo top and footer band bottom — inset accordingly.
+  const HEADER_INSET = 140;
+  const FOOTER_INSET = 110;
+  const SIDE_INSET = 55;
+  const LEFT = SIDE_INSET;
+  const RIGHT = PW - SIDE_INSET;
+  const TOP = PH - HEADER_INSET;
+  const BOTTOM = FOOTER_INSET;
   const CONTENT_W = RIGHT - LEFT;
 
   let y = TOP;
@@ -239,8 +219,8 @@ export async function generateQuotePdf(data: QuoteData): Promise<Uint8Array> {
   const ensurePage = () => {
     if (y < BOTTOM + 80) {
       page = doc.addPage([595.28, 841.89]);
-      placement = drawBackground(page, memo);
-      y = placement.y + placement.height - HEADER_INSET;
+      drawBackground(page, memo);
+      y = TOP;
       drawTableHeader();
     }
   };
