@@ -3933,6 +3933,8 @@ export type Database = {
           full_name: string
           id: string
           is_active: boolean
+          job_title: string
+          phone: string
           role: Database["public"]["Enums"]["app_role"]
         }[]
       }
@@ -3944,6 +3946,15 @@ export type Database = {
       admin_set_user_role: {
         Args: {
           p_role: Database["public"]["Enums"]["app_role"]
+          p_user_id: string
+        }
+        Returns: undefined
+      }
+      admin_update_user_profile: {
+        Args: {
+          p_full_name: string
+          p_job_title: string
+          p_phone: string
           p_user_id: string
         }
         Returns: undefined

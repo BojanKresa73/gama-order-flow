@@ -339,6 +339,31 @@ export default function AdminUsers() {
                           onChange={(e) => setEditUser({ ...editUser, full_name: e.target.value })}
                         />
                       </div>
+                      {(editUser.role === "superuser" || editUser.role === "admin_plus" || editUser.role === "admin") && (
+                        <>
+                          <div className="space-y-2">
+                            <Label htmlFor="edit_job_title">Titula / pozicija</Label>
+                            <Input
+                              id="edit_job_title"
+                              placeholder="npr. Direktor prodaje"
+                              value={editUser.job_title || ""}
+                              onChange={(e) => setEditUser({ ...editUser, job_title: e.target.value })}
+                            />
+                          </div>
+                          <div className="space-y-2">
+                            <Label htmlFor="edit_phone">Telefon</Label>
+                            <Input
+                              id="edit_phone"
+                              placeholder="+381 60 123 4567"
+                              value={editUser.phone || ""}
+                              onChange={(e) => setEditUser({ ...editUser, phone: e.target.value })}
+                            />
+                          </div>
+                          <p className="text-xs text-muted-foreground">
+                            Ova polja se prikazuju kao potpis u ponudama koje korisnik generiše.
+                          </p>
+                        </>
+                      )}
                       <div className="space-y-2">
                         <Label htmlFor="edit_role">Rola</Label>
                         <Select 
@@ -374,13 +399,31 @@ export default function AdminUsers() {
                     <Button variant="outline" onClick={() => setEditOpen(false)}>
                       Otkaži
                     </Button>
-                    <Button onClick={() => {
-                      if (editUser) {
-                        handleRoleChange(editUser.id, editUser.role);
-                        if (editUser.is_active !== users.find(u => u.id === editUser.id)?.is_active) {
+                    <Button onClick={async () => {
+                      if (!editUser) return;
+                      try {
+                        const original = users.find(u => u.id === editUser.id);
+                        // Profile fields (name/phone/title)
+                        await adminUsersService.updateUserProfile(
+                          editUser.id,
+                          editUser.full_name,
+                          editUser.phone,
+                          editUser.job_title,
+                        );
+                        // Role
+                        if (original?.role !== editUser.role && editUser.role) {
+                          handleRoleChange(editUser.id, editUser.role);
+                        }
+                        // Active state
+                        if (original && original.is_active !== editUser.is_active) {
                           handleToggleActive(editUser.id, !editUser.is_active);
                         }
+                        toast({ title: "Podaci sačuvani" });
+                        queryClient.invalidateQueries({ queryKey: ["admin-users"] });
+                        queryClient.invalidateQueries({ queryKey: ["signer-profile"] });
                         setEditOpen(false);
+                      } catch (e: any) {
+                        toast({ title: "Greška", description: e?.message, variant: "destructive" });
                       }
                     }}>
                       Sačuvaj
