@@ -54,6 +54,7 @@ type Inline = { text: string; bold: boolean; italic: boolean; underline: boolean
 type Block =
   | { kind: "p" | "h1" | "h2" | "h3"; align: "left" | "center" | "right"; runs: Inline[] }
   | { kind: "li"; ordered: boolean; index: number; runs: Inline[] }
+  | { kind: "img"; src: string; align: "left" | "center" | "right"; width?: number; height?: number }
   | { kind: "hr" };
 
 function parseHtmlToBlocks(html: string): Block[] {
@@ -89,8 +90,27 @@ function parseHtmlToBlocks(html: string): Block[] {
     return "left";
   };
 
+  const collectImages = (el: HTMLElement, align: "left" | "center" | "right") => {
+    for (const img of Array.from(el.querySelectorAll("img"))) {
+      const src = img.getAttribute("src") || "";
+      if (!src) continue;
+      const w = parseInt(img.getAttribute("width") || "0", 10) || undefined;
+      const h = parseInt(img.getAttribute("height") || "0", 10) || undefined;
+      blocks.push({ kind: "img", src, align, width: w, height: h });
+    }
+  };
+
   const handleBlock = (el: HTMLElement) => {
     const tag = el.tagName.toLowerCase();
+    if (tag === "img") {
+      const src = el.getAttribute("src") || "";
+      if (src) {
+        const w = parseInt(el.getAttribute("width") || "0", 10) || undefined;
+        const h = parseInt(el.getAttribute("height") || "0", 10) || undefined;
+        blocks.push({ kind: "img", src, align: "left", width: w, height: h });
+      }
+      return;
+    }
     if (tag === "ul" || tag === "ol") {
       const ordered = tag === "ol";
       let idx = 0;
@@ -100,6 +120,7 @@ function parseHtmlToBlocks(html: string): Block[] {
         const runs: Inline[] = [];
         walk(li, { bold: false, italic: false, underline: false, align: "left" }, (r) => runs.push(r));
         blocks.push({ kind: "li", ordered, index: idx, runs });
+        collectImages(li as HTMLElement, "left");
       }
       return;
     }
@@ -120,6 +141,7 @@ function parseHtmlToBlocks(html: string): Block[] {
           align: "left",
           runs: [{ text: cells.join("   |   "), bold: row.querySelector("th") !== null, italic: false, underline: false }],
         });
+        collectImages(row as HTMLElement, "left");
       }
       return;
     }
@@ -127,7 +149,11 @@ function parseHtmlToBlocks(html: string): Block[] {
       tag === "h1" ? "h1" : tag === "h2" ? "h2" : tag === "h3" ? "h3" : "p";
     const runs: Inline[] = [];
     walk(el, { bold: false, italic: false, underline: false, align: "left" }, (r) => runs.push(r));
-    blocks.push({ kind, align: alignOf(el), runs });
+    const align = alignOf(el);
+    if (runs.some((r) => r.text.trim())) {
+      blocks.push({ kind, align, runs } as Block);
+    }
+    collectImages(el, align);
   };
 
   for (const c of Array.from(root.childNodes)) {
@@ -269,6 +295,23 @@ export async function generatePastedQuotePdf(data: PastedQuoteData): Promise<Uin
     }
   };
 
+  // Preload images referenced in blocks (data: URIs and same-origin URLs)
+  const imgCache = new Map<string, { img: PDFImage; w: number; h: number } | null>();
+  for (const b of blocks) {
+    if (b.kind !== "img") continue;
+    if (imgCache.has(b.src)) continue;
+    try {
+      const res = await fetch(b.src);
+      const buf = await res.arrayBuffer();
+      const head = new Uint8Array(buf).slice(0, 4);
+      const isPng = head[0] === 0x89 && head[1] === 0x50;
+      const embedded = isPng ? await doc.embedPng(buf) : await doc.embedJpg(buf);
+      imgCache.set(b.src, { img: embedded, w: embedded.width, h: embedded.height });
+    } catch {
+      imgCache.set(b.src, null);
+    }
+  }
+
   for (const b of blocks) {
     if (b.kind === "hr") {
       ensurePage(16);
@@ -277,6 +320,27 @@ export async function generatePastedQuotePdf(data: PastedQuoteData): Promise<Uin
       y -= 10;
       continue;
     }
+
+    if (b.kind === "img") {
+      const rec = imgCache.get(b.src);
+      if (!rec) continue;
+      const maxW = Math.min(CONTENT_W, 260);
+      const maxH = 140;
+      let w = b.width || rec.w;
+      let h = b.height || rec.h;
+      const scale = Math.min(maxW / w, maxH / h, 1);
+      w = w * scale;
+      h = h * scale;
+      ensurePage(h + 10);
+      let x = LEFT;
+      if (b.align === "center") x = LEFT + (CONTENT_W - w) / 2;
+      else if (b.align === "right") x = RIGHT - w;
+      y -= h;
+      page.drawImage(rec.img, { x, y, width: w, height: h });
+      y -= 6;
+      continue;
+    }
+
 
     let size = BASE;
     let leadingBefore = 6;
