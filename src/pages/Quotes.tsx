@@ -14,7 +14,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { Loader2, FileText, Search, X, Plus, ClipboardPaste, Calculator } from "lucide-react";
+import { Loader2, FileText, Search, X, Plus, ClipboardPaste, Calculator, FileUp } from "lucide-react";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -22,6 +22,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { PasteQuoteEditor } from "@/components/quotes/PasteQuoteEditor";
+import { PdfImportQuoteDialog } from "@/components/quotes/PdfImportQuoteDialog";
 import { QuickPriceCalculator } from "@/components/calculator/QuickPriceCalculator";
 
 interface QuoteRow {
@@ -48,6 +49,7 @@ export default function Quotes() {
   const [to, setTo] = useState("");
   const [pasteOpen, setPasteOpen] = useState(false);
   const [calcOpen, setCalcOpen] = useState(false);
+  const [pdfOpen, setPdfOpen] = useState(false);
   const qc = useQueryClient();
 
   const { data, isLoading } = useQuery({
@@ -138,6 +140,10 @@ export default function Quotes() {
                 <ClipboardPaste className="h-4 w-4 mr-2" />
                 Nalepi tekst
               </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => setPdfOpen(true)}>
+                <FileUp className="h-4 w-4 mr-2" />
+                Uvezi PDF
+              </DropdownMenuItem>
               <DropdownMenuItem onClick={() => setCalcOpen(true)}>
                 <Calculator className="h-4 w-4 mr-2" />
                 Brzi Kalkulator
@@ -149,6 +155,12 @@ export default function Quotes() {
         <PasteQuoteEditor
           open={pasteOpen}
           onOpenChange={setPasteOpen}
+          onSaved={() => qc.invalidateQueries({ queryKey: ["quick-calc-quotes"] })}
+        />
+
+        <PdfImportQuoteDialog
+          open={pdfOpen}
+          onOpenChange={setPdfOpen}
           onSaved={() => qc.invalidateQueries({ queryKey: ["quick-calc-quotes"] })}
         />
 
