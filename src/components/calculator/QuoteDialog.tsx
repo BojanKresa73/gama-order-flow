@@ -18,7 +18,7 @@ import {
   CommandItem,
   CommandList,
 } from "@/components/ui/command";
-import { Download, Send, Save, Loader2, FileText, Check, ChevronsUpDown, UserPlus } from "lucide-react";
+import { Download, Send, Save, Loader2, FileText, Check, ChevronsUpDown, UserPlus, Eye, X } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { useSignerProfile } from "@/hooks/useSignerProfile";
