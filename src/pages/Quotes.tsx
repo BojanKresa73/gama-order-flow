@@ -140,6 +140,10 @@ export default function Quotes() {
                 <ClipboardPaste className="h-4 w-4 mr-2" />
                 Nalepi tekst
               </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => setPdfOpen(true)}>
+                <FileUp className="h-4 w-4 mr-2" />
+                Uvezi PDF
+              </DropdownMenuItem>
               <DropdownMenuItem onClick={() => setCalcOpen(true)}>
                 <Calculator className="h-4 w-4 mr-2" />
                 Brzi Kalkulator
@@ -151,6 +155,12 @@ export default function Quotes() {
         <PasteQuoteEditor
           open={pasteOpen}
           onOpenChange={setPasteOpen}
+          onSaved={() => qc.invalidateQueries({ queryKey: ["quick-calc-quotes"] })}
+        />
+
+        <PdfImportQuoteDialog
+          open={pdfOpen}
+          onOpenChange={setPdfOpen}
           onSaved={() => qc.invalidateQueries({ queryKey: ["quick-calc-quotes"] })}
         />
 
