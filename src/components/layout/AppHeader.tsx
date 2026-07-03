@@ -55,7 +55,7 @@ export const AppHeader = ({ userName, showBackButton, title }: AppHeaderProps) =
         </div>
         
         {/* Desktop actions */}
-        <div className="hidden md:flex items-center gap-4">
+        <div className="hidden md:flex items-center gap-4 shrink-0">
           <PriorityNotificationBell />
           <span className="text-sm text-muted-foreground">{userName}</span>
 
