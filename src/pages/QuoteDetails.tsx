@@ -217,7 +217,7 @@ export default function QuoteDetails() {
 
   return (
     <div className="min-h-screen bg-background">
-      <AppHeader title={`Ponuda ${quote.quote_number}`} />
+      <AppHeader title={quote.quote_number} />
       <div className="mx-auto max-w-[1600px] p-3 md:p-4 lg:p-8 space-y-6">
         {/* Header */}
         <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
