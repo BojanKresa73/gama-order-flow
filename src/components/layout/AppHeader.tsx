@@ -58,11 +58,23 @@ export const AppHeader = ({ userName, showBackButton, title }: AppHeaderProps) =
           <span className="text-sm text-muted-foreground">{userName}</span>
 
           {!isAuthzLoading && isAdmin && (
+            <Button
+              variant="outline"
+              className="border-primary/50 text-primary hover:bg-primary/10"
+              onClick={() => setQuickCalcOpen(true)}
+            >
+              <Calculator className="h-4 w-4 mr-2" />
+              Brzi kalkulator
+            </Button>
+          )}
+
+          {!isAuthzLoading && isAdmin && (
             <Button variant="outline" onClick={() => navigate("/admin/priority")}>
               <Flag className="h-4 w-4 mr-2" />
               Prioritet
             </Button>
           )}
+
 
           {isSuper && (
             <Button variant="outline" onClick={() => navigate("/admin/users")}>
