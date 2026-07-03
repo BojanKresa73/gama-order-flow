@@ -461,6 +461,7 @@ export async function generatePastedQuotePdf(data: PastedQuoteData): Promise<Uin
     }
 
 
+    let size = BASE;
     let leadingBefore = 6;
     let leadingAfter = 4;
     if (b.kind === "h1") { size = 18; leadingBefore = 12; leadingAfter = 6; }
