@@ -40,6 +40,7 @@ const SretenjeNewsletter = lazy(() => import("./pages/SretenjeNewsletter"));
 const AdminNewsletter = lazy(() => import("./pages/AdminNewsletter"));
 const Vacations = lazy(() => import("./pages/Vacations"));
 const Quotes = lazy(() => import("./pages/Quotes"));
+const QuotesPro = lazy(() => import("./pages/QuotesPro"));
 const NotFound = lazy(() => import("./pages/NotFound"));
 
 // Guards are small - keep synchronous
@@ -110,6 +111,7 @@ const App = () => {
                 <Route path="/reports/delivery-notes" element={<InternalUserGuard><ClientDeliveryReport /></InternalUserGuard>} />
                 <Route path="/vacations" element={<InternalUserGuard><Vacations /></InternalUserGuard>} />
                 <Route path="/quotes" element={<AdminGuard><Quotes /></AdminGuard>} />
+                <Route path="/quotes-pro" element={<AdminGuard><QuotesPro /></AdminGuard>} />
                 {import.meta.env.VITE_SHOW_DEV_PREVIEW === "true" && (
                 <>
                     <Route path="/dev/preview" element={<DevPreview />} />
