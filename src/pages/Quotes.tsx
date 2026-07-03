@@ -30,7 +30,9 @@ import {
   type QuoteStatus,
   type QuoteFilters,
   type QuoteQuickFilter,
+  type QuoteSortBy,
 } from "@/hooks/useQuotesPro";
+
 import { useClients } from "@/hooks/useClients";
 import { TenderImportDialog } from "@/components/quotes-pro/TenderImportDialog";
 
