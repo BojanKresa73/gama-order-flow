@@ -90,8 +90,27 @@ function parseHtmlToBlocks(html: string): Block[] {
     return "left";
   };
 
+  const collectImages = (el: HTMLElement, align: "left" | "center" | "right") => {
+    for (const img of Array.from(el.querySelectorAll("img"))) {
+      const src = img.getAttribute("src") || "";
+      if (!src) continue;
+      const w = parseInt(img.getAttribute("width") || "0", 10) || undefined;
+      const h = parseInt(img.getAttribute("height") || "0", 10) || undefined;
+      blocks.push({ kind: "img", src, align, width: w, height: h });
+    }
+  };
+
   const handleBlock = (el: HTMLElement) => {
     const tag = el.tagName.toLowerCase();
+    if (tag === "img") {
+      const src = el.getAttribute("src") || "";
+      if (src) {
+        const w = parseInt(el.getAttribute("width") || "0", 10) || undefined;
+        const h = parseInt(el.getAttribute("height") || "0", 10) || undefined;
+        blocks.push({ kind: "img", src, align: "left", width: w, height: h });
+      }
+      return;
+    }
     if (tag === "ul" || tag === "ol") {
       const ordered = tag === "ol";
       let idx = 0;
@@ -101,6 +120,7 @@ function parseHtmlToBlocks(html: string): Block[] {
         const runs: Inline[] = [];
         walk(li, { bold: false, italic: false, underline: false, align: "left" }, (r) => runs.push(r));
         blocks.push({ kind: "li", ordered, index: idx, runs });
+        collectImages(li as HTMLElement, "left");
       }
       return;
     }
@@ -121,6 +141,7 @@ function parseHtmlToBlocks(html: string): Block[] {
           align: "left",
           runs: [{ text: cells.join("   |   "), bold: row.querySelector("th") !== null, italic: false, underline: false }],
         });
+        collectImages(row as HTMLElement, "left");
       }
       return;
     }
@@ -128,7 +149,11 @@ function parseHtmlToBlocks(html: string): Block[] {
       tag === "h1" ? "h1" : tag === "h2" ? "h2" : tag === "h3" ? "h3" : "p";
     const runs: Inline[] = [];
     walk(el, { bold: false, italic: false, underline: false, align: "left" }, (r) => runs.push(r));
-    blocks.push({ kind, align: alignOf(el), runs });
+    const align = alignOf(el);
+    if (runs.some((r) => r.text.trim())) {
+      blocks.push({ kind, align, runs } as Block);
+    }
+    collectImages(el, align);
   };
 
   for (const c of Array.from(root.childNodes)) {
