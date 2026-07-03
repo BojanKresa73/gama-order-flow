@@ -14,7 +14,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { Loader2, FileText, Search, X, Plus, ClipboardPaste } from "lucide-react";
+import { Loader2, FileText, Search, X, Plus, ClipboardPaste, Calculator } from "lucide-react";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -22,6 +22,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { PasteQuoteEditor } from "@/components/quotes/PasteQuoteEditor";
+import { QuickPriceCalculator } from "@/components/calculator/QuickPriceCalculator";
 
 interface QuoteRow {
   id: string;
@@ -46,6 +47,7 @@ export default function Quotes() {
   const [from, setFrom] = useState("");
   const [to, setTo] = useState("");
   const [pasteOpen, setPasteOpen] = useState(false);
+  const [calcOpen, setCalcOpen] = useState(false);
   const qc = useQueryClient();
 
   const { data, isLoading } = useQuery({
@@ -136,6 +138,10 @@ export default function Quotes() {
                 <ClipboardPaste className="h-4 w-4 mr-2" />
                 Nalepi tekst
               </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => setCalcOpen(true)}>
+                <Calculator className="h-4 w-4 mr-2" />
+                Brzi Kalkulator
+              </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
         </div>
@@ -145,6 +151,16 @@ export default function Quotes() {
           onOpenChange={setPasteOpen}
           onSaved={() => qc.invalidateQueries({ queryKey: ["quick-calc-quotes"] })}
         />
+
+        <QuickPriceCalculator
+          open={calcOpen}
+          onOpenChange={(o) => {
+            setCalcOpen(o);
+            if (!o) qc.invalidateQueries({ queryKey: ["quick-calc-quotes"] });
+          }}
+          hideTrigger
+        />
+
 
         <Card>
           <div className="p-4 flex items-center justify-between border-b">
