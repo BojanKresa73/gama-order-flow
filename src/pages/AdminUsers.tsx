@@ -399,13 +399,31 @@ export default function AdminUsers() {
                     <Button variant="outline" onClick={() => setEditOpen(false)}>
                       Otkaži
                     </Button>
-                    <Button onClick={() => {
-                      if (editUser) {
-                        handleRoleChange(editUser.id, editUser.role);
-                        if (editUser.is_active !== users.find(u => u.id === editUser.id)?.is_active) {
+                    <Button onClick={async () => {
+                      if (!editUser) return;
+                      try {
+                        const original = users.find(u => u.id === editUser.id);
+                        // Profile fields (name/phone/title)
+                        await adminUsersService.updateUserProfile(
+                          editUser.id,
+                          editUser.full_name,
+                          editUser.phone,
+                          editUser.job_title,
+                        );
+                        // Role
+                        if (original?.role !== editUser.role && editUser.role) {
+                          handleRoleChange(editUser.id, editUser.role);
+                        }
+                        // Active state
+                        if (original && original.is_active !== editUser.is_active) {
                           handleToggleActive(editUser.id, !editUser.is_active);
                         }
+                        toast({ title: "Podaci sačuvani" });
+                        queryClient.invalidateQueries({ queryKey: ["admin-users"] });
+                        queryClient.invalidateQueries({ queryKey: ["signer-profile"] });
                         setEditOpen(false);
+                      } catch (e: any) {
+                        toast({ title: "Greška", description: e?.message, variant: "destructive" });
                       }
                     }}>
                       Sačuvaj
