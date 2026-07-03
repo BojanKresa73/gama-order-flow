@@ -2569,6 +2569,27 @@ export type Database = {
         }
         Relationships: []
       }
+      quick_calc_history: {
+        Row: {
+          created_at: string
+          id: string
+          snapshot: Json
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          snapshot: Json
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          snapshot?: Json
+          user_id?: string
+        }
+        Relationships: []
+      }
       saved_reports: {
         Row: {
           created_at: string

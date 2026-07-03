@@ -1,12 +1,15 @@
+import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
-import { FileText, BarChart3, ChevronDown, Mail, Palmtree } from "lucide-react";
+import { FileText, BarChart3, ChevronDown, Mail, Palmtree, Calculator } from "lucide-react";
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { useAuthz } from "@/hooks/useAuthz";
+import { QuickPriceCalculator } from "@/components/calculator/QuickPriceCalculator";
 
 interface DashboardQuickActionsProps {
   canViewStats: boolean;
@@ -15,6 +18,8 @@ interface DashboardQuickActionsProps {
 
 export const DashboardQuickActions = ({ canViewStats, isSuper }: DashboardQuickActionsProps) => {
   const navigate = useNavigate();
+  const { isAdmin } = useAuthz();
+  const [quickCalcOpen, setQuickCalcOpen] = useState(false);
 
   return (
     <>
@@ -40,6 +45,17 @@ export const DashboardQuickActions = ({ canViewStats, isSuper }: DashboardQuickA
           <Palmtree className="h-4 w-4 mr-1" />
           Godišnji odmori
         </Button>
+        {isAdmin && (
+          <Button
+            size="sm"
+            variant="outline"
+            className="w-full col-span-2 border-primary/40 text-primary"
+            onClick={() => setQuickCalcOpen(true)}
+          >
+            <Calculator className="h-4 w-4 mr-1" />
+            Brzi kalkulator
+          </Button>
+        )}
       </div>
 
       {/* Desktop Quick Actions */}
@@ -102,7 +118,25 @@ export const DashboardQuickActions = ({ canViewStats, isSuper }: DashboardQuickA
             Newsletter
           </Button>
         )}
+        {isAdmin && (
+          <Button
+            variant="outline"
+            className="border-primary/40 text-primary hover:bg-primary/10"
+            onClick={() => setQuickCalcOpen(true)}
+          >
+            <Calculator className="h-4 w-4 mr-2" />
+            Brzi kalkulator
+          </Button>
+        )}
       </div>
+
+      {isAdmin && (
+        <QuickPriceCalculator
+          open={quickCalcOpen}
+          onOpenChange={setQuickCalcOpen}
+          hideTrigger
+        />
+      )}
     </>
   );
 };
