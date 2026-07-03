@@ -148,7 +148,7 @@ export default function QuoteDetails() {
       name: "Nova stavka",
       description: null,
       quantity: 1,
-      width_mm: null, height_mm: null, pages: null, print_sides: null,
+      width_mm: null, height_mm: null, pages: null, print_sides: "4/0",
       paper_type: null, paper_gsm: null, sheet_format: null,
       material_id: null, material_name: null, area_m2: null,
       service_id: null, service_name: null,
