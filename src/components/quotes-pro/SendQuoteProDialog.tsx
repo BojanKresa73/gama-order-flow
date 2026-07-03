@@ -55,7 +55,10 @@ export function SendQuoteProDialog({ quoteId, open, onOpenChange }: Props) {
     setPreviewBusy(true);
     try {
       const pdf = await generateQuoteProPdf(quote, quote.items ?? [], signer);
-      const blob = new Blob([pdf as unknown as ArrayBuffer], { type: "application/pdf" });
+      // Copy into a fresh ArrayBuffer so Blob gets clean bytes regardless of byteOffset
+      const copy = new Uint8Array(pdf.byteLength);
+      copy.set(pdf);
+      const blob = new Blob([copy.buffer], { type: "application/pdf" });
       if (previewUrl) URL.revokeObjectURL(previewUrl);
       setPreviewUrl(URL.createObjectURL(blob));
     } catch (e: any) {
