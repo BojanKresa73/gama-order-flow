@@ -54,6 +54,7 @@ type Inline = { text: string; bold: boolean; italic: boolean; underline: boolean
 type Block =
   | { kind: "p" | "h1" | "h2" | "h3"; align: "left" | "center" | "right"; runs: Inline[] }
   | { kind: "li"; ordered: boolean; index: number; runs: Inline[] }
+  | { kind: "img"; src: string; align: "left" | "center" | "right"; width?: number; height?: number }
   | { kind: "hr" };
 
 function parseHtmlToBlocks(html: string): Block[] {
