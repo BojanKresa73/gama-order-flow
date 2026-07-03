@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Loader2, Send } from "lucide-react";
+import { Eye, Loader2, Send } from "lucide-react";
 import { toast } from "sonner";
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter,
@@ -29,6 +29,8 @@ export function SendQuoteProDialog({ quoteId, open, onOpenChange }: Props) {
   const [subject, setSubject] = useState("");
   const [body, setBody] = useState("");
   const [sending, setSending] = useState(false);
+  const [previewUrl, setPreviewUrl] = useState<string | null>(null);
+  const [previewBusy, setPreviewBusy] = useState(false);
 
   useEffect(() => {
     if (!quote || !signer) return;
@@ -39,6 +41,29 @@ export function SendQuoteProDialog({ quoteId, open, onOpenChange }: Props) {
       `Poštovani,\n\nU prilogu Vam dostavljamo ponudu ${quote.quote_number}.\nZa sva pitanja stojimo Vam na raspolaganju.\n\nSrdačan pozdrav,\n${signer.fullName}${signer.jobTitle ? "\n" + signer.jobTitle : ""}\nGama United`
     );
   }, [quote, signer]);
+
+  // Cleanup preview URL when dialog closes
+  useEffect(() => {
+    if (!open && previewUrl) {
+      URL.revokeObjectURL(previewUrl);
+      setPreviewUrl(null);
+    }
+  }, [open, previewUrl]);
+
+  async function handlePreview() {
+    if (!quote || !signer) return;
+    setPreviewBusy(true);
+    try {
+      const pdf = await generateQuoteProPdf(quote, quote.items ?? [], signer);
+      const blob = new Blob([pdf as unknown as ArrayBuffer], { type: "application/pdf" });
+      if (previewUrl) URL.revokeObjectURL(previewUrl);
+      setPreviewUrl(URL.createObjectURL(blob));
+    } catch (e: any) {
+      toast.error(e.message ?? "Greška pri generisanju PDF-a");
+    } finally {
+      setPreviewBusy(false);
+    }
+  }
 
   async function handleSend() {
     if (!quote || !signer) return;
