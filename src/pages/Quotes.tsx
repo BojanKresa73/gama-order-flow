@@ -14,7 +14,14 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { Loader2, FileText, Search, X } from "lucide-react";
+import { Loader2, FileText, Search, X, Plus, ClipboardPaste } from "lucide-react";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import { PasteQuoteEditor } from "@/components/quotes/PasteQuoteEditor";
 
 interface QuoteRow {
   id: string;
@@ -38,6 +45,7 @@ export default function Quotes() {
   const [client, setClient] = useState("");
   const [from, setFrom] = useState("");
   const [to, setTo] = useState("");
+  const [pasteOpen, setPasteOpen] = useState(false);
 
   const { data, isLoading } = useQuery({
     queryKey: ["quick-calc-quotes", client, from, to],
@@ -113,6 +121,25 @@ export default function Quotes() {
             </Button>
           </div>
         </Card>
+
+        <div className="flex justify-end">
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button>
+                <Plus className="h-4 w-4 mr-2" />
+                Nova ponuda
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end">
+              <DropdownMenuItem onClick={() => setPasteOpen(true)}>
+                <ClipboardPaste className="h-4 w-4 mr-2" />
+                Nalepi tekst
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+        </div>
+
+        <PasteQuoteEditor open={pasteOpen} onOpenChange={setPasteOpen} />
 
         <Card>
           <div className="p-4 flex items-center justify-between border-b">
