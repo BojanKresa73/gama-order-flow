@@ -4,7 +4,7 @@ import { format } from "date-fns";
 import { sr } from "date-fns/locale";
 import {
   ArrowLeft, Pencil, Trash2, Plus, FileText, Send, CheckCircle, XCircle,
-  Clock, Archive, Copy, Download, GitBranch, Loader2, Eye,
+  Clock, Archive, Copy, Download, GitBranch, Loader2, Eye, Users, Target,
 } from "lucide-react";
 import { toast } from "sonner";
 import { AppHeader } from "@/components/layout/AppHeader";
@@ -37,6 +37,9 @@ import { QuoteItemsTable } from "@/components/quotes/QuoteItemsTable";
 import { QuoteFloatingPriceSummary } from "@/components/quotes/QuoteFloatingPriceSummary";
 import { MaterialsCostPanel } from "@/components/quotes/MaterialsCostPanel";
 import { QuoteActivityTimeline } from "@/components/quotes/QuoteActivityTimeline";
+import { AddQuoteItemDialog } from "@/components/quotes/AddQuoteItemDialog";
+import { ChangeClientDialog } from "@/components/quotes/ChangeClientDialog";
+import { SetTargetPriceDialog } from "@/components/quotes/SetTargetPriceDialog";
 
 import { generateQuoteProPdf } from "@/lib/quoteProPdf";
 import { useSignerProfile } from "@/hooks/useSignerProfile";
@@ -80,6 +83,9 @@ export default function QuoteDetails() {
   const [sendOpen, setSendOpen] = useState(false);
   const [pdfBusy, setPdfBusy] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
+  const [addItemOpen, setAddItemOpen] = useState(false);
+  const [changeClientOpen, setChangeClientOpen] = useState(false);
+  const [targetPriceOpen, setTargetPriceOpen] = useState(false);
   const [editData, setEditData] = useState({
     notes: "",
     internal_notes: "",
@@ -144,25 +150,9 @@ export default function QuoteDetails() {
     }
   }
 
-  async function handleAddItem() {
+  function handleAddItem() {
     if (!quote) return;
-    await addItem.mutateAsync({
-      quote_id: quote.id,
-      item_type: "large_format",
-      name: "Nova stavka",
-      description: null,
-      quantity: 1,
-      width_mm: null, height_mm: null, pages: null, print_sides: "4/0",
-      paper_type: null, paper_gsm: null, sheet_format: null,
-      material_id: null, material_name: null, area_m2: null,
-      service_id: null, service_name: null,
-      unit_cost: 0, unit_price: 0, custom_price: null, line_total: 0,
-      supplier_name: null, supplier_price: null, cost_per_m2: null,
-      finishing_cost: 0, markup_percent: null, source_category: null,
-      min_qty_per_order: null, yearly_qty: null,
-      order_index: (quote.items ?? []).length,
-    } as any);
-    await recalc.mutateAsync(quote.id);
+    setAddItemOpen(true);
   }
 
   async function handleItemChange(itemId: string, patch: Record<string, any>) {
@@ -306,6 +296,12 @@ export default function QuoteDetails() {
             )}
             {canEdit && (
               <>
+                <Button variant="outline" onClick={() => setChangeClientOpen(true)} className="gap-2">
+                  <Users className="h-4 w-4" /> Klijent
+                </Button>
+                <Button variant="outline" onClick={() => setTargetPriceOpen(true)} className="gap-2">
+                  <Target className="h-4 w-4" /> Ciljna cena
+                </Button>
                 <Button
                   variant="outline"
                   onClick={() => setIsEditing((v) => !v)}
@@ -506,6 +502,34 @@ export default function QuoteDetails() {
 
       {sendOpen && (
         <SendQuoteProDialog quoteId={quote.id} open={sendOpen} onOpenChange={setSendOpen} />
+      )}
+
+      {addItemOpen && (
+        <AddQuoteItemDialog
+          open={addItemOpen}
+          onOpenChange={setAddItemOpen}
+          quoteId={quote.id}
+          orderIndex={items.length}
+        />
+      )}
+
+      {changeClientOpen && (
+        <ChangeClientDialog
+          open={changeClientOpen}
+          onOpenChange={setChangeClientOpen}
+          quoteId={quote.id}
+          currentClientId={quote.client_id}
+        />
+      )}
+
+      {targetPriceOpen && (
+        <SetTargetPriceDialog
+          open={targetPriceOpen}
+          onOpenChange={setTargetPriceOpen}
+          quoteId={quote.id}
+          currentTarget={(quote as any).target_price_eur ?? null}
+          currentFinal={finalEur}
+        />
       )}
     </div>
   );
