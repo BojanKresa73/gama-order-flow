@@ -296,6 +296,12 @@ export default function QuoteDetails() {
             )}
             {canEdit && (
               <>
+                <Button variant="outline" onClick={() => setChangeClientOpen(true)} className="gap-2">
+                  <Users className="h-4 w-4" /> Klijent
+                </Button>
+                <Button variant="outline" onClick={() => setTargetPriceOpen(true)} className="gap-2">
+                  <Target className="h-4 w-4" /> Ciljna cena
+                </Button>
                 <Button
                   variant="outline"
                   onClick={() => setIsEditing((v) => !v)}
