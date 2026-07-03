@@ -176,6 +176,36 @@ export function QuickPriceCalculator({
   const [history, setHistory] = useState<CalcSnapshot[]>([]);
   const [savedLists, setSavedLists] = useState<SavedList[]>([]);
   const [listName, setListName] = useState("");
+  const [quoteOpen, setQuoteOpen] = useState(false);
+  const [quoteItems, setQuoteItems] = useState<QuoteItemPdf[]>([]);
+  const [quoteTotal, setQuoteTotal] = useState(0);
+
+  const openQuoteFromList = () => {
+    if (items.length === 0) { toast.error("Lista je prazna"); return; }
+    setQuoteItems(items.map((it) => ({
+      materialName: it.materialName,
+      widthCm: it.widthCm,
+      heightCm: it.heightCm,
+      qty: it.qty,
+      printSides: it.printSides,
+      unitPrice: it.unitPrice,
+      lineTotal: it.lineTotal,
+    })));
+    setQuoteTotal(listTotal);
+    setQuoteOpen(true);
+  };
+
+  const openQuoteFromCalc = () => {
+    if (!hasMaterial) { toast.error("Izaberi materijal"); return; }
+    setQuoteItems([{
+      materialName: material?.name ?? "",
+      widthCm, heightCm, qty, printSides,
+      unitPrice: result.unitPrice, lineTotal: result.lineTotal,
+    }]);
+    setQuoteTotal(result.lineTotal);
+    pushHistory(buildSnapshot());
+    setQuoteOpen(true);
+  };
 
   useEffect(() => {
     if (!open) return;
