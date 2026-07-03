@@ -55,25 +55,10 @@ async function fetchBytes(url: string): Promise<ArrayBuffer> {
   return await r.arrayBuffer();
 }
 
-interface MemoPlacement {
-  x: number;
-  y: number;
-  width: number;
-  height: number;
-}
-
-function drawBackground(page: PDFPage, memo: PDFImage): MemoPlacement {
-  const { width: pw, height: ph } = page.getSize();
-  const iw = memo.width;
-  const ih = memo.height;
-  // Scale memorandum to fit inside A4 while preserving aspect ratio, centered.
-  const scale = Math.min(pw / iw, ph / ih);
-  const w = iw * scale;
-  const h = ih * scale;
-  const x = (pw - w) / 2;
-  const y = (ph - h) / 2;
-  page.drawImage(memo, { x, y, width: w, height: h });
-  return { x, y, width: w, height: h };
+function drawBackground(page: PDFPage, memo: PDFImage) {
+  const { width, height } = page.getSize();
+  // Memorandum is already sized to A4 — draw at full page, no scaling.
+  page.drawImage(memo, { x: 0, y: 0, width, height });
 }
 
 // Wrap helper
