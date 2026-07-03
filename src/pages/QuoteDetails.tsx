@@ -180,6 +180,53 @@ export default function QuoteDetails() {
     await recalc.mutateAsync(quote.id);
   }
 
+  async function handleDigitalJobsAdd(jobs: LocalDigitalJob[]) {
+    if (!quote) return;
+    const startIdx = quote.items?.length ?? 0;
+    const rows = jobs.map((j, i) => {
+      const qty = Number(j.qty || 1);
+      const lineTotal =
+        Number(j.computed_line_total || 0) + Number(j.finishings_total || 0);
+      const unit = qty > 0 ? lineTotal / qty : lineTotal;
+      const name =
+        j.name?.trim() ||
+        j.file_name?.trim() ||
+        (j.product_code ? j.product_code : "Digitalni proizvod");
+      return {
+        quote_id: quote.id,
+        item_type: "digital" as any,
+        name,
+        description: null,
+        quantity: qty,
+        width_mm: j.finished_w_mm ?? null,
+        height_mm: j.finished_h_mm ?? null,
+        pages: j.pages ?? null,
+        print_sides: j.print_sides ?? null,
+        paper_type: j.paper_type ?? null,
+        sheet_format: j.machine_sheet_format ?? null,
+        unit_cost: 0,
+        unit_price: unit,
+        line_total: lineTotal,
+        finishing_cost: Number(j.finishings_total || 0),
+        order_index: startIdx + i,
+        digital_spec: j as any,
+      };
+    }) as any[];
+    try {
+      await bulkInsert.mutateAsync({ quoteId: quote.id, items: rows });
+      await recalc.mutateAsync(quote.id);
+      toast.success(`Dodato ${rows.length} digitalnih stavki`);
+      setDigitalProductOpen(false);
+    } catch (e: any) {
+      toast.error(e.message ?? "Greška pri dodavanju");
+    }
+  }
+
+  async function refreshAfterImport() {
+    if (!quote) return;
+    await recalc.mutateAsync(quote.id);
+  }
+
   if (isLoading) {
     return (
       <div className="min-h-screen bg-background">
