@@ -60,12 +60,40 @@ export function SendQuoteProDialog({ quoteId, open, onOpenChange }: Props) {
       });
       if (error) throw error;
 
-      // Mark quote as sent (trigger sets expires_at automatically)
-      if (quote.status === "draft") {
-        await update.mutateAsync({ id: quote.id, status: "sent" });
-      }
+      // Persist snapshot + recipient + sent_at; mark sent (trigger sets expires_at)
+      const snapshot = {
+        sent_at: new Date().toISOString(),
+        to,
+        subject,
+        body,
+        quote: {
+          quote_number: quote.quote_number,
+          job_name: quote.job_name,
+          final_price: quote.final_price,
+          total_price: quote.total_price,
+          discount_percent: quote.discount_percent,
+          valid_days: quote.valid_days,
+        },
+        items: (quote.items ?? []).map((it) => ({
+          id: it.id,
+          name: it.name,
+          quantity: it.quantity,
+          unit_price: it.unit_price,
+          custom_price: it.custom_price,
+          line_total: it.line_total,
+          item_type: it.item_type,
+        })),
+      };
+      await update.mutateAsync({
+        id: quote.id,
+        status: quote.status === "draft" ? "sent" : quote.status,
+        sent_at: new Date().toISOString(),
+        sent_to_email: to,
+        sent_snapshot: snapshot as any,
+      } as any);
       toast.success("Ponuda poslata");
       onOpenChange(false);
+
     } catch (e: any) {
       toast.error(e.message ?? "Greška pri slanju");
     } finally {
