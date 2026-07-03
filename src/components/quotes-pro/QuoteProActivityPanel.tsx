@@ -71,7 +71,7 @@ export function QuoteProActivityPanel({ quoteId }: Props) {
           )}
           {collabs.map((c) => (
             <Badge key={c.id} variant="secondary" className="gap-1">
-              {c.user_name ?? c.user_id.slice(0, 8)}
+              {c.profile?.full_name ?? c.user_id.slice(0, 8)}
               <button
                 className="ml-1 hover:text-destructive"
                 onClick={async () => {
