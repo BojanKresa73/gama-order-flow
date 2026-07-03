@@ -68,7 +68,7 @@ export default function QuoteNew() {
   return (
     <div className="min-h-screen bg-background">
       <AppHeader title="Nova ponuda" />
-      <div className="container mx-auto p-4 md:p-6">
+      <div className="mx-auto max-w-[1600px] p-3 md:p-4 lg:p-8">
         <div className="mx-auto max-w-2xl space-y-6">
           <div className="flex items-center gap-4">
             <Button variant="ghost" size="icon" onClick={() => navigate("/quotes")}>

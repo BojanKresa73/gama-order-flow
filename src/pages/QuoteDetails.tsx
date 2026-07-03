@@ -177,7 +177,7 @@ export default function QuoteDetails() {
     return (
       <div className="min-h-screen bg-background">
         <AppHeader title="Ponuda" />
-        <div className="container mx-auto p-4 md:p-6 space-y-6">
+        <div className="mx-auto max-w-[1600px] p-3 md:p-4 lg:p-8 space-y-6">
           <Skeleton className="h-10 w-64" />
           <div className="grid gap-6 md:grid-cols-3">
             <Skeleton className="h-64 md:col-span-2" />
@@ -192,7 +192,7 @@ export default function QuoteDetails() {
     return (
       <div className="min-h-screen bg-background">
         <AppHeader title="Ponuda" />
-        <div className="container mx-auto p-4 md:p-6 flex flex-col items-center justify-center py-12">
+        <div className="mx-auto max-w-[1600px] p-3 md:p-4 lg:p-8 flex flex-col items-center justify-center py-12">
           <FileText className="h-12 w-12 text-muted-foreground" />
           <h2 className="mt-4 text-lg font-semibold">Ponuda nije pronađena</h2>
           <Button variant="outline" onClick={() => navigate("/quotes")} className="mt-4">
@@ -217,7 +217,7 @@ export default function QuoteDetails() {
   return (
     <div className="min-h-screen bg-background">
       <AppHeader title={`Ponuda ${quote.quote_number}`} />
-      <div className="container mx-auto p-4 md:p-6 space-y-6">
+      <div className="mx-auto max-w-[1600px] p-3 md:p-4 lg:p-8 space-y-6">
         {/* Header */}
         <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
           <div className="flex items-center gap-4">
