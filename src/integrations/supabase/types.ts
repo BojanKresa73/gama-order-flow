@@ -2521,6 +2521,8 @@ export type Database = {
           full_name: string | null
           id: string
           is_active: boolean
+          job_title: string | null
+          phone: string | null
           updated_at: string
         }
         Insert: {
@@ -2528,6 +2530,8 @@ export type Database = {
           full_name?: string | null
           id: string
           is_active?: boolean
+          job_title?: string | null
+          phone?: string | null
           updated_at?: string
         }
         Update: {
@@ -2535,6 +2539,8 @@ export type Database = {
           full_name?: string | null
           id?: string
           is_active?: boolean
+          job_title?: string | null
+          phone?: string | null
           updated_at?: string
         }
         Relationships: []
@@ -2586,6 +2592,75 @@ export type Database = {
           created_at?: string
           id?: string
           snapshot?: Json
+          user_id?: string
+        }
+        Relationships: []
+      }
+      quick_calc_quote_counters: {
+        Row: {
+          last_serial: number
+          year: number
+        }
+        Insert: {
+          last_serial?: number
+          year: number
+        }
+        Update: {
+          last_serial?: number
+          year?: number
+        }
+        Relationships: []
+      }
+      quick_calc_quotes: {
+        Row: {
+          client_company: string | null
+          client_email: string | null
+          client_name: string
+          created_at: string
+          id: string
+          items: Json
+          notes: string | null
+          quote_number: string
+          sent_at: string | null
+          signer_email: string | null
+          signer_name: string | null
+          signer_phone: string | null
+          total_eur: number
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          client_company?: string | null
+          client_email?: string | null
+          client_name: string
+          created_at?: string
+          id?: string
+          items?: Json
+          notes?: string | null
+          quote_number: string
+          sent_at?: string | null
+          signer_email?: string | null
+          signer_name?: string | null
+          signer_phone?: string | null
+          total_eur?: number
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          client_company?: string | null
+          client_email?: string | null
+          client_name?: string
+          created_at?: string
+          id?: string
+          items?: Json
+          notes?: string | null
+          quote_number?: string
+          sent_at?: string | null
+          signer_email?: string | null
+          signer_name?: string | null
+          signer_phone?: string | null
+          total_eur?: number
+          updated_at?: string
           user_id?: string
         }
         Relationships: []
@@ -4039,6 +4114,7 @@ export type Database = {
       }
       is_client_portal_user: { Args: never; Returns: boolean }
       is_superuser: { Args: { p_uid: string }; Returns: boolean }
+      next_quote_number: { Args: never; Returns: string }
       refresh_plate_usage_stats: { Args: never; Returns: undefined }
       update_work_order_priority: {
         Args: {
