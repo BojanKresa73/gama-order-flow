@@ -1,12 +1,15 @@
+import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
-import { FileText, BarChart3, ChevronDown, Mail, Palmtree } from "lucide-react";
+import { FileText, BarChart3, ChevronDown, Mail, Palmtree, Calculator } from "lucide-react";
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { useAuthz } from "@/hooks/useAuthz";
+import { QuickPriceCalculator } from "@/components/calculator/QuickPriceCalculator";
 
 interface DashboardQuickActionsProps {
   canViewStats: boolean;
@@ -15,6 +18,8 @@ interface DashboardQuickActionsProps {
 
 export const DashboardQuickActions = ({ canViewStats, isSuper }: DashboardQuickActionsProps) => {
   const navigate = useNavigate();
+  const { isAdmin } = useAuthz();
+  const [quickCalcOpen, setQuickCalcOpen] = useState(false);
 
   return (
     <>
