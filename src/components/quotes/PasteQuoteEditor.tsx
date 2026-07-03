@@ -409,6 +409,20 @@ export function PasteQuoteEditor({ open, onOpenChange, onSaved }: Props) {
                 <button type="button" className={btn} title="Ponovi" onMouseDown={(e) => { e.preventDefault(); exec("redo"); }}><Redo2 className="h-4 w-4" /></button>
                 <button type="button" className={btn} title="Ukloni formatiranje" onMouseDown={(e) => { e.preventDefault(); exec("removeFormat"); }}><Eraser className="h-4 w-4" /></button>
                 <div className="ml-auto flex items-center gap-1 pr-1">
+                  <input
+                    ref={fileInputRef}
+                    type="file"
+                    accept=".docx,.xlsx,.xls,.csv,.txt,.md"
+                    className="hidden"
+                    onChange={(e) => {
+                      const f = e.target.files?.[0];
+                      if (f) handleImportFile(f);
+                      e.target.value = "";
+                    }}
+                  />
+                  <Button size="sm" variant="outline" onClick={() => fileInputRef.current?.click()}>
+                    <Upload className="h-4 w-4 mr-1" /> Uvezi Word/Excel
+                  </Button>
                   <Button size="sm" variant="ghost" onClick={clearBody}>Obriši</Button>
                 </div>
               </div>
