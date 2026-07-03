@@ -814,6 +814,7 @@ export function QuickPriceCalculator({
           </TabsContent>
         </Tabs>
       </DialogContent>
+      <QuoteDialog open={quoteOpen} onOpenChange={setQuoteOpen} items={quoteItems} total={quoteTotal} />
     </Dialog>
   );
 }
