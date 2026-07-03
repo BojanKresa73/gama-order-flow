@@ -339,6 +339,31 @@ export default function AdminUsers() {
                           onChange={(e) => setEditUser({ ...editUser, full_name: e.target.value })}
                         />
                       </div>
+                      {(editUser.role === "superuser" || editUser.role === "admin_plus" || editUser.role === "admin") && (
+                        <>
+                          <div className="space-y-2">
+                            <Label htmlFor="edit_job_title">Titula / pozicija</Label>
+                            <Input
+                              id="edit_job_title"
+                              placeholder="npr. Direktor prodaje"
+                              value={editUser.job_title || ""}
+                              onChange={(e) => setEditUser({ ...editUser, job_title: e.target.value })}
+                            />
+                          </div>
+                          <div className="space-y-2">
+                            <Label htmlFor="edit_phone">Telefon</Label>
+                            <Input
+                              id="edit_phone"
+                              placeholder="+381 60 123 4567"
+                              value={editUser.phone || ""}
+                              onChange={(e) => setEditUser({ ...editUser, phone: e.target.value })}
+                            />
+                          </div>
+                          <p className="text-xs text-muted-foreground">
+                            Ova polja se prikazuju kao potpis u ponudama koje korisnik generiše.
+                          </p>
+                        </>
+                      )}
                       <div className="space-y-2">
                         <Label htmlFor="edit_role">Rola</Label>
                         <Select 
