@@ -295,6 +295,23 @@ export async function generatePastedQuotePdf(data: PastedQuoteData): Promise<Uin
     }
   };
 
+  // Preload images referenced in blocks (data: URIs and same-origin URLs)
+  const imgCache = new Map<string, { img: PDFImage; w: number; h: number } | null>();
+  for (const b of blocks) {
+    if (b.kind !== "img") continue;
+    if (imgCache.has(b.src)) continue;
+    try {
+      const res = await fetch(b.src);
+      const buf = await res.arrayBuffer();
+      const head = new Uint8Array(buf).slice(0, 4);
+      const isPng = head[0] === 0x89 && head[1] === 0x50;
+      const embedded = isPng ? await doc.embedPng(buf) : await doc.embedJpg(buf);
+      imgCache.set(b.src, { img: embedded, w: embedded.width, h: embedded.height });
+    } catch {
+      imgCache.set(b.src, null);
+    }
+  }
+
   for (const b of blocks) {
     if (b.kind === "hr") {
       ensurePage(16);
@@ -303,6 +320,27 @@ export async function generatePastedQuotePdf(data: PastedQuoteData): Promise<Uin
       y -= 10;
       continue;
     }
+
+    if (b.kind === "img") {
+      const rec = imgCache.get(b.src);
+      if (!rec) continue;
+      const maxW = Math.min(CONTENT_W, 260);
+      const maxH = 140;
+      let w = b.width || rec.w;
+      let h = b.height || rec.h;
+      const scale = Math.min(maxW / w, maxH / h, 1);
+      w = w * scale;
+      h = h * scale;
+      ensurePage(h + 10);
+      let x = LEFT;
+      if (b.align === "center") x = LEFT + (CONTENT_W - w) / 2;
+      else if (b.align === "right") x = RIGHT - w;
+      y -= h;
+      page.drawImage(rec.img, { x, y, width: w, height: h });
+      y -= 6;
+      continue;
+    }
+
 
     let size = BASE;
     let leadingBefore = 6;
