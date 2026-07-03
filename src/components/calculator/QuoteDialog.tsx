@@ -49,21 +49,11 @@ export function QuoteDialog({ open, onOpenChange, items, total }: Props) {
 
   const [notes, setNotes] = useState("");
   const [busy, setBusy] = useState<"" | "download" | "send" | "save" | "preview">("");
-  const [previewUrl, setPreviewUrl] = useState<string | null>(null);
-
-  // Revoke preview blob URLs on change/unmount to avoid leaks.
-  useEffect(() => {
-    return () => {
-      if (previewUrl) URL.revokeObjectURL(previewUrl);
-    };
-  }, [previewUrl]);
+  const [previewBytes, setPreviewBytes] = useState<Uint8Array | null>(null);
 
   // Clear preview whenever inputs change so user knows it's stale.
   useEffect(() => {
-    if (previewUrl) {
-      URL.revokeObjectURL(previewUrl);
-      setPreviewUrl(null);
-    }
+    setPreviewBytes(null);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [mode, selectedClient?.id, emailOverride, prospectName, notes, items, total]);
 
