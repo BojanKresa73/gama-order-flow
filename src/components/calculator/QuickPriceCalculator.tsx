@@ -24,6 +24,8 @@ import { supabase } from "@/integrations/supabase/client";
 import { defaultTonerCostEur, type PrintSides } from "@/lib/quotePricing";
 import { useKasiranjeSettings } from "@/hooks/useKasiranjeSettings";
 import { computeKasiranjeCostEur } from "@/lib/kasiranjeCost";
+import { QuoteDialog } from "@/components/calculator/QuoteDialog";
+import type { QuoteItemPdf } from "@/lib/quotePdf";
 
 interface Props {
   variant?: "button" | "tile";
@@ -174,6 +176,36 @@ export function QuickPriceCalculator({
   const [history, setHistory] = useState<CalcSnapshot[]>([]);
   const [savedLists, setSavedLists] = useState<SavedList[]>([]);
   const [listName, setListName] = useState("");
+  const [quoteOpen, setQuoteOpen] = useState(false);
+  const [quoteItems, setQuoteItems] = useState<QuoteItemPdf[]>([]);
+  const [quoteTotal, setQuoteTotal] = useState(0);
+
+  const openQuoteFromList = () => {
+    if (items.length === 0) { toast.error("Lista je prazna"); return; }
+    setQuoteItems(items.map((it) => ({
+      materialName: it.materialName,
+      widthCm: it.widthCm,
+      heightCm: it.heightCm,
+      qty: it.qty,
+      printSides: it.printSides,
+      unitPrice: it.unitPrice,
+      lineTotal: it.lineTotal,
+    })));
+    setQuoteTotal(listTotal);
+    setQuoteOpen(true);
+  };
+
+  const openQuoteFromCalc = () => {
+    if (!hasMaterial) { toast.error("Izaberi materijal"); return; }
+    setQuoteItems([{
+      materialName: material?.name ?? "",
+      widthCm, heightCm, qty, printSides,
+      unitPrice: result.unitPrice, lineTotal: result.lineTotal,
+    }]);
+    setQuoteTotal(result.lineTotal);
+    pushHistory(buildSnapshot());
+    setQuoteOpen(true);
+  };
 
   useEffect(() => {
     if (!open) return;
@@ -625,6 +657,9 @@ export function QuickPriceCalculator({
               <Button type="button" variant="outline" size="sm" disabled={!hasMaterial} onClick={addToList}>
                 <Plus className="h-4 w-4 mr-2" /> Dodaj na listu
               </Button>
+              <Button type="button" variant="outline" size="sm" disabled={!hasMaterial} onClick={openQuoteFromCalc}>
+                <FileText className="h-4 w-4 mr-2" /> Napravi ponudu
+              </Button>
               <Button type="button" size="sm" onClick={copyAll}>
                 {copied ? <Check className="h-4 w-4 mr-2" /> : <Copy className="h-4 w-4 mr-2" />}
                 {copied ? "Kopirano" : "Kopiraj"}
@@ -727,8 +762,11 @@ export function QuickPriceCalculator({
                   <Button type="button" variant="outline" size="sm" onClick={() => setItems([])}>
                     Isprazni listu
                   </Button>
-                  <Button type="button" size="sm" onClick={copyAll}>
+                  <Button type="button" variant="outline" size="sm" onClick={copyAll}>
                     <Copy className="h-4 w-4 mr-2" /> Kopiraj sve
+                  </Button>
+                  <Button type="button" size="sm" onClick={openQuoteFromList}>
+                    <FileText className="h-4 w-4 mr-2" /> Napravi ponudu
                   </Button>
                 </div>
               </>
@@ -776,6 +814,7 @@ export function QuickPriceCalculator({
           </TabsContent>
         </Tabs>
       </DialogContent>
+      <QuoteDialog open={quoteOpen} onOpenChange={setQuoteOpen} items={quoteItems} total={quoteTotal} />
     </Dialog>
   );
 }

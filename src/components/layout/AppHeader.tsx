@@ -8,8 +8,9 @@ import { useIsMobile } from "@/hooks/use-mobile";
 import gamaLogo from "@/assets/gama-united-logo.svg";
 import { MobileNav } from "./MobileNav";
 import { PriorityNotificationBell } from "@/components/priority/PriorityNotificationBell";
-import { Flag, Calculator } from "lucide-react";
+import { Flag, Calculator, UserCog } from "lucide-react";
 import { QuickPriceCalculator } from "@/components/calculator/QuickPriceCalculator";
+import { ProfileSettingsDialog } from "@/components/profile/ProfileSettingsDialog";
 
 
 interface AppHeaderProps {
@@ -24,6 +25,7 @@ export const AppHeader = ({ userName, showBackButton, title }: AppHeaderProps) =
   const { isSuper, isAdmin, isLoading: isAuthzLoading } = useAuthz();
   const isMobile = useIsMobile();
   const [quickCalcOpen, setQuickCalcOpen] = useState(false);
+  const [profileOpen, setProfileOpen] = useState(false);
 
   const handleLogout = async () => {
     await supabase.auth.signOut();
@@ -81,11 +83,16 @@ export const AppHeader = ({ userName, showBackButton, title }: AppHeaderProps) =
               Administracija
             </Button>
           )}
+          <Button variant="outline" size="icon" onClick={() => setProfileOpen(true)} title="Podešavanja profila">
+            <UserCog className="h-4 w-4" />
+          </Button>
           <Button variant="outline" onClick={handleLogout}>
             Odjavi se
           </Button>
         </div>
       </div>
+
+      <ProfileSettingsDialog open={profileOpen} onOpenChange={setProfileOpen} />
 
       {!isAuthzLoading && isAdmin && (
         <QuickPriceCalculator
