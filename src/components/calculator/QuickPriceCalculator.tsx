@@ -24,6 +24,8 @@ import { supabase } from "@/integrations/supabase/client";
 import { defaultTonerCostEur, type PrintSides } from "@/lib/quotePricing";
 import { useKasiranjeSettings } from "@/hooks/useKasiranjeSettings";
 import { computeKasiranjeCostEur } from "@/lib/kasiranjeCost";
+import { QuoteDialog } from "@/components/calculator/QuoteDialog";
+import type { QuoteItemPdf } from "@/lib/quotePdf";
 
 interface Props {
   variant?: "button" | "tile";
