@@ -51,10 +51,12 @@ function fit(text: string, font: PDFFont, size: number, maxWidth: number): strin
 
 // ————— HTML → simple block model —————
 type Inline = { text: string; bold: boolean; italic: boolean; underline: boolean };
+type Cell = { runs: Inline[]; header: boolean; align: "left" | "center" | "right" };
 type Block =
   | { kind: "p" | "h1" | "h2" | "h3"; align: "left" | "center" | "right"; runs: Inline[] }
   | { kind: "li"; ordered: boolean; index: number; runs: Inline[] }
   | { kind: "img"; src: string; align: "left" | "center" | "right"; width?: number; height?: number }
+  | { kind: "table"; rows: Cell[][] }
   | { kind: "hr" };
 
 function parseHtmlToBlocks(html: string): Block[] {
