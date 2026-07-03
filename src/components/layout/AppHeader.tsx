@@ -25,6 +25,7 @@ export const AppHeader = ({ userName, showBackButton, title }: AppHeaderProps) =
   const { isSuper, isAdmin, isLoading: isAuthzLoading } = useAuthz();
   const isMobile = useIsMobile();
   const [quickCalcOpen, setQuickCalcOpen] = useState(false);
+  const [profileOpen, setProfileOpen] = useState(false);
 
   const handleLogout = async () => {
     await supabase.auth.signOut();
