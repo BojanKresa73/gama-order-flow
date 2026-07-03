@@ -5,6 +5,7 @@ import { sr } from "date-fns/locale";
 import {
   ArrowLeft, Pencil, Trash2, Plus, FileText, Send, CheckCircle, XCircle,
   Clock, Archive, Copy, Download, GitBranch, Loader2, Eye, Users, Target,
+  Wand2, ClipboardPaste, Package,
 } from "lucide-react";
 import { toast } from "sonner";
 import { AppHeader } from "@/components/layout/AppHeader";
@@ -29,6 +30,7 @@ import {
 import {
   useQuote, useUpdateQuote, useDeleteQuote, useDuplicateQuote,
   useAddQuoteItem, useUpdateQuoteItem, useDeleteQuoteItem, useRecalculateQuoteTotals,
+  useBulkInsertQuoteItemsPro,
   type QuoteStatus, type QuoteItemType,
 } from "@/hooks/useQuotesPro";
 import { QuoteProActivityPanel } from "@/components/quotes-pro/QuoteProActivityPanel";
@@ -42,6 +44,10 @@ import { SetTargetPriceDialog } from "@/components/quotes/SetTargetPriceDialog";
 import { QuoteCalculationWorkspace } from "@/components/quotes/QuoteCalculationWorkspace";
 import { QuoteVersionHistory } from "@/components/quotes/QuoteVersionHistory";
 import { QuoteCollaboratorsCard } from "@/components/quotes/QuoteCollaboratorsCard";
+import { TenderImportItemsDialog } from "@/components/quotes/TenderImportItemsDialog";
+import { PasteItemsDialog } from "@/components/quotes/PasteItemsDialog";
+import { DigitalProductDialog } from "@/components/digital/DigitalProductDialog";
+import type { LocalDigitalJob } from "@/components/digital/LocalDigitalJobsTable";
 
 import { generateQuoteProPdf } from "@/lib/quoteProPdf";
 import { useSignerProfile } from "@/hooks/useSignerProfile";
@@ -82,12 +88,16 @@ export default function QuoteDetails() {
   const recalc = useRecalculateQuoteTotals();
   const { data: signer } = useSignerProfile();
 
+  const bulkInsert = useBulkInsertQuoteItemsPro();
   const [sendOpen, setSendOpen] = useState(false);
   const [pdfBusy, setPdfBusy] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
   const [addItemOpen, setAddItemOpen] = useState(false);
   const [changeClientOpen, setChangeClientOpen] = useState(false);
   const [targetPriceOpen, setTargetPriceOpen] = useState(false);
+  const [tenderImportOpen, setTenderImportOpen] = useState(false);
+  const [pasteItemsOpen, setPasteItemsOpen] = useState(false);
+  const [digitalProductOpen, setDigitalProductOpen] = useState(false);
   const [editData, setEditData] = useState({
     notes: "",
     internal_notes: "",
