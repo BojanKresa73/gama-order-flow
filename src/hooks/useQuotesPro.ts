@@ -150,6 +150,9 @@ export interface QuoteItem {
   updated_at: string;
 }
 
+export type QuoteSortBy =
+  | "newest" | "oldest" | "value_desc" | "value_asc" | "expiring_soon" | "client_name";
+
 export interface QuoteFilters {
   search?: string;
   status?: QuoteStatus | "all";
@@ -157,7 +160,10 @@ export interface QuoteFilters {
   dateFrom?: Date;
   dateTo?: Date;
   quickFilter?: QuoteQuickFilter;
+  sortBy?: QuoteSortBy;
+  minValueEur?: number;
 }
+
 
 export function useQuotesPro(filters?: QuoteFilters) {
   return useQuery({
