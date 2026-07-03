@@ -34,6 +34,10 @@ import {
 import { QuoteProActivityPanel } from "@/components/quotes-pro/QuoteProActivityPanel";
 import { SendQuoteProDialog } from "@/components/quotes-pro/SendQuoteProDialog";
 import { QuoteItemsTable } from "@/components/quotes/QuoteItemsTable";
+import { QuoteFloatingPriceSummary } from "@/components/quotes/QuoteFloatingPriceSummary";
+import { MaterialsCostPanel } from "@/components/quotes/MaterialsCostPanel";
+import { QuoteActivityTimeline } from "@/components/quotes/QuoteActivityTimeline";
+
 import { generateQuoteProPdf } from "@/lib/quoteProPdf";
 import { useSignerProfile } from "@/hooks/useSignerProfile";
 
@@ -486,10 +490,19 @@ export default function QuoteDetails() {
 
           {/* Side panel */}
           <div className="space-y-6">
+            <MaterialsCostPanel
+              quoteId={quote.id}
+              items={items}
+              defaultMarkupPercent={Number(quote.default_markup_percent ?? 300)}
+            />
+            <QuoteActivityTimeline quoteId={quote.id} />
             <QuoteProActivityPanel quoteId={quote.id} />
           </div>
         </div>
       </div>
+
+      <QuoteFloatingPriceSummary quote={quote} />
+
 
       {sendOpen && (
         <SendQuoteProDialog quoteId={quote.id} open={sendOpen} onOpenChange={setSendOpen} />

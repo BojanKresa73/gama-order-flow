@@ -2818,6 +2818,7 @@ export type Database = {
           description: string | null
           digital_spec: Json | null
           finishing_cost: number
+          finishing_cost_manual_override: boolean
           finishing_creasing: boolean
           finishing_cutting: boolean
           finishing_enabled: boolean
@@ -2827,6 +2828,7 @@ export type Database = {
           finishing_lamination: boolean
           finishing_lepljenje: boolean
           finishing_notes: string | null
+          finishing_qty_overrides: Json
           finishing_ruter: boolean
           finishing_sleeve: boolean
           finishing_v_cut: boolean
@@ -2899,6 +2901,7 @@ export type Database = {
           description?: string | null
           digital_spec?: Json | null
           finishing_cost?: number
+          finishing_cost_manual_override?: boolean
           finishing_creasing?: boolean
           finishing_cutting?: boolean
           finishing_enabled?: boolean
@@ -2908,6 +2911,7 @@ export type Database = {
           finishing_lamination?: boolean
           finishing_lepljenje?: boolean
           finishing_notes?: string | null
+          finishing_qty_overrides?: Json
           finishing_ruter?: boolean
           finishing_sleeve?: boolean
           finishing_v_cut?: boolean
@@ -2980,6 +2984,7 @@ export type Database = {
           description?: string | null
           digital_spec?: Json | null
           finishing_cost?: number
+          finishing_cost_manual_override?: boolean
           finishing_creasing?: boolean
           finishing_cutting?: boolean
           finishing_enabled?: boolean
@@ -2989,6 +2994,7 @@ export type Database = {
           finishing_lamination?: boolean
           finishing_lepljenje?: boolean
           finishing_notes?: string | null
+          finishing_qty_overrides?: Json
           finishing_ruter?: boolean
           finishing_sleeve?: boolean
           finishing_v_cut?: boolean
@@ -3100,6 +3106,7 @@ export type Database = {
           total_price: number
           updated_at: string
           valid_days: number
+          work_order_id: string | null
         }
         Insert: {
           client_id: string
@@ -3139,6 +3146,7 @@ export type Database = {
           total_price?: number
           updated_at?: string
           valid_days?: number
+          work_order_id?: string | null
         }
         Update: {
           client_id?: string
@@ -3178,6 +3186,7 @@ export type Database = {
           total_price?: number
           updated_at?: string
           valid_days?: number
+          work_order_id?: string | null
         }
         Relationships: [
           {
@@ -3199,6 +3208,48 @@ export type Database = {
             columns: ["parent_quote_id"]
             isOneToOne: false
             referencedRelation: "quotes"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "quotes_work_order_id_fkey"
+            columns: ["work_order_id"]
+            isOneToOne: false
+            referencedRelation: "v_ctp_items"
+            referencedColumns: ["work_order_id"]
+          },
+          {
+            foreignKeyName: "quotes_work_order_id_fkey"
+            columns: ["work_order_id"]
+            isOneToOne: false
+            referencedRelation: "work_orders"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "quotes_work_order_id_fkey"
+            columns: ["work_order_id"]
+            isOneToOne: false
+            referencedRelation: "work_orders_ctp"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "quotes_work_order_id_fkey"
+            columns: ["work_order_id"]
+            isOneToOne: false
+            referencedRelation: "work_orders_digitala"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "quotes_work_order_id_fkey"
+            columns: ["work_order_id"]
+            isOneToOne: false
+            referencedRelation: "work_orders_filmovanje"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "quotes_work_order_id_fkey"
+            columns: ["work_order_id"]
+            isOneToOne: false
+            referencedRelation: "work_orders_razno"
             referencedColumns: ["id"]
           },
         ]
