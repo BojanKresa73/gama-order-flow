@@ -115,14 +115,22 @@ export async function generateQuotePdf(data: QuoteData): Promise<Uint8Array> {
   const memo = await doc.embedPng(memoBuf);
 
   let page = doc.addPage([595.28, 841.89]); // A4
-  const { width, height } = page.getSize();
-  drawBackground(page, memo);
+  let placement = drawBackground(page, memo);
 
-  // Safe content area — memorandum has logo top (~90pt) and footer band bottom (~85pt)
-  const TOP = height - 130;
-  const BOTTOM = 110;
-  const LEFT = 55;
-  const RIGHT = width - 55;
+  // Content area is inset from the memorandum image bounds (not the A4 page),
+  // leaving room for logo/header on top and the footer band at bottom.
+  const HEADER_INSET = 140; // space under memorandum top logo area
+  const FOOTER_INSET = 110; // space above memorandum footer strip
+  const SIDE_INSET = 42;    // side padding within the memorandum
+  const memoLeft = placement.x + SIDE_INSET;
+  const memoRight = placement.x + placement.width - SIDE_INSET;
+  const memoTop = placement.y + placement.height - HEADER_INSET;
+  const memoBottom = placement.y + FOOTER_INSET;
+
+  const TOP = memoTop;
+  const BOTTOM = memoBottom;
+  const LEFT = memoLeft;
+  const RIGHT = memoRight;
   const CONTENT_W = RIGHT - LEFT;
 
   let y = TOP;
