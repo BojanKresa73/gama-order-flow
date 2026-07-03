@@ -47,6 +47,7 @@ export default function Quotes() {
   const [from, setFrom] = useState("");
   const [to, setTo] = useState("");
   const [pasteOpen, setPasteOpen] = useState(false);
+  const [calcOpen, setCalcOpen] = useState(false);
   const qc = useQueryClient();
 
   const { data, isLoading } = useQuery({
