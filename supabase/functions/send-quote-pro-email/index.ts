@@ -1,10 +1,22 @@
 // Send Quotes-Pro PDF via Resend. Reply-to = sender's email, BCC sender + archive.
 import { corsHeaders } from 'npm:@supabase/supabase-js@2/cors';
 import { Resend } from 'npm:resend@3.5.0';
+import { z } from 'npm:zod@3.23.8';
 
 const RESEND_API_KEY = Deno.env.get('RESEND_API_KEY');
 const ARCHIVE_EMAIL = Deno.env.get('ARCHIVE_EMAIL');
 const FROM_EMAIL = Deno.env.get('FROM_EMAIL') || 'notifications@resend.dev';
+
+const BodySchema = z.object({
+  to: z.string().email(),
+  subject: z.string().min(1).max(300),
+  text: z.string().max(20000).optional(),
+  html: z.string().max(200000).optional(),
+  pdfBase64: z.string().min(100),
+  filename: z.string().min(1).max(200),
+  senderName: z.string().max(200).optional(),
+  senderEmail: z.string().email().optional(),
+});
 
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') return new Response('ok', { headers: corsHeaders });
@@ -16,18 +28,15 @@ Deno.serve(async (req) => {
       });
     }
 
-    const body = await req.json();
-    const { to, subject, text, html, pdfBase64, filename, senderName, senderEmail } = body as {
-      to: string; subject: string; text?: string; html?: string;
-      pdfBase64: string; filename: string;
-      senderName?: string; senderEmail?: string;
-    };
-
-    if (!to || !subject || !pdfBase64 || !filename) {
-      return new Response(JSON.stringify({ error: 'Nedostaju polja (to, subject, pdfBase64, filename)' }), {
-        status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      });
+    const raw = await req.json().catch(() => null);
+    const parsed = BodySchema.safeParse(raw);
+    if (!parsed.success) {
+      return new Response(
+        JSON.stringify({ error: 'Neispravan zahtev', details: parsed.error.flatten().fieldErrors }),
+        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } },
+      );
     }
+    const { to, subject, text, html, pdfBase64, filename, senderName, senderEmail } = parsed.data;
 
     const cleanName = (senderName || 'Gama United').replace(/["\r\n<>]/g, '').trim();
     const from = `${cleanName} <${FROM_EMAIL}>`;
@@ -37,7 +46,10 @@ Deno.serve(async (req) => {
     if (ARCHIVE_EMAIL && !bcc.includes(ARCHIVE_EMAIL)) bcc.push(ARCHIVE_EMAIL);
 
     const resend = new Resend(RESEND_API_KEY);
-    const htmlBody = html || `<pre style="font-family:Arial,sans-serif;white-space:pre-wrap;font-size:14px;">${(text || '').replace(/[<>&]/g, (c) => ({ '<': '&lt;', '>': '&gt;', '&': '&amp;' }[c]!))}</pre>`;
+    const escapeHtml = (s: string) =>
+      s.replace(/[<>&]/g, (c) => ({ '<': '&lt;', '>': '&gt;', '&': '&amp;' }[c]!));
+    const htmlBody = html
+      || `<pre style="font-family:Arial,sans-serif;white-space:pre-wrap;font-size:14px;">${escapeHtml(text || '')}</pre>`;
 
     const result = await resend.emails.send({
       from,
@@ -53,7 +65,7 @@ Deno.serve(async (req) => {
     if (result.error) {
       console.error('Resend error:', result.error);
       return new Response(JSON.stringify({ error: result.error }), {
-        status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        status: 502, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
     }
 
