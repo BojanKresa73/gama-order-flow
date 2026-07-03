@@ -23,6 +23,7 @@ export const AppHeader = ({ userName, showBackButton, title }: AppHeaderProps) =
   const { toast } = useToast();
   const { isSuper, isAdmin, isLoading: isAuthzLoading } = useAuthz();
   const isMobile = useIsMobile();
+  const [quickCalcOpen, setQuickCalcOpen] = useState(false);
 
   const handleLogout = async () => {
     await supabase.auth.signOut();
