@@ -71,6 +71,25 @@ export function QuoteProEditor({ quoteId, open, onOpenChange }: Props) {
   const delItem = useDeleteQuoteItemPro();
   const recalc = useRecalculateQuoteTotalsPro();
   const dup = useDuplicateQuotePro();
+  const { data: signer } = useSignerProfile();
+  const [sendOpen, setSendOpen] = useState(false);
+  const [pdfBusy, setPdfBusy] = useState(false);
+
+  async function handlePreviewPdf() {
+    if (!quote || !signer) return;
+    setPdfBusy(true);
+    try {
+      const bytes = await generateQuoteProPdf(quote, quote.items ?? [], signer);
+      const blob = new Blob([bytes], { type: "application/pdf" });
+      const url = URL.createObjectURL(blob);
+      window.open(url, "_blank", "noopener,noreferrer");
+      setTimeout(() => URL.revokeObjectURL(url), 30_000);
+    } catch (e: any) {
+      toast.error(e.message ?? "Greška pri generisanju PDF-a");
+    } finally {
+      setPdfBusy(false);
+    }
+  }
 
   const [clientId, setClientId] = useState("");
   const [jobName, setJobName] = useState("");
