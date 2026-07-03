@@ -35,11 +35,13 @@ import { QuoteProActivityPanel } from "@/components/quotes-pro/QuoteProActivityP
 import { SendQuoteProDialog } from "@/components/quotes-pro/SendQuoteProDialog";
 import { QuoteItemsTable } from "@/components/quotes/QuoteItemsTable";
 import { QuoteFloatingPriceSummary } from "@/components/quotes/QuoteFloatingPriceSummary";
-import { MaterialsCostPanel } from "@/components/quotes/MaterialsCostPanel";
 import { QuoteActivityTimeline } from "@/components/quotes/QuoteActivityTimeline";
 import { AddQuoteItemDialog } from "@/components/quotes/AddQuoteItemDialog";
 import { ChangeClientDialog } from "@/components/quotes/ChangeClientDialog";
 import { SetTargetPriceDialog } from "@/components/quotes/SetTargetPriceDialog";
+import { QuoteCalculationWorkspace } from "@/components/quotes/QuoteCalculationWorkspace";
+import { QuoteVersionHistory } from "@/components/quotes/QuoteVersionHistory";
+import { QuoteCollaboratorsCard } from "@/components/quotes/QuoteCollaboratorsCard";
 
 import { generateQuoteProPdf } from "@/lib/quoteProPdf";
 import { useSignerProfile } from "@/hooks/useSignerProfile";
@@ -486,11 +488,17 @@ export default function QuoteDetails() {
 
           {/* Side panel */}
           <div className="space-y-6">
-            <MaterialsCostPanel
+            <QuoteCalculationWorkspace
               quoteId={quote.id}
               items={items}
               defaultMarkupPercent={Number(quote.default_markup_percent ?? 300)}
             />
+            <QuoteVersionHistory
+              quoteId={quote.id}
+              parentId={quote.parent_quote_id}
+              currentRevision={quote.revision_number}
+            />
+            <QuoteCollaboratorsCard quoteId={quote.id} />
             <QuoteActivityTimeline quoteId={quote.id} />
             <QuoteProActivityPanel quoteId={quote.id} />
           </div>
