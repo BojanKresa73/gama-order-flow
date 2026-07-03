@@ -219,6 +219,66 @@ export function PasteQuoteEditor({ open, onOpenChange, onSaved }: Props) {
   };
 
   const clearBody = () => { if (ref.current) ref.current.innerHTML = "<p><br></p>"; };
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const sanitizeHtml = (raw: string): string => {
+    // Strip dangerous tags/attrs; keep basic block/inline formatting + tables
+    const tmp = document.createElement("div");
+    tmp.innerHTML = raw;
+    tmp.querySelectorAll("script,style,link,meta,iframe,object,embed").forEach((n) => n.remove());
+    tmp.querySelectorAll<HTMLElement>("*").forEach((el) => {
+      for (const a of Array.from(el.attributes)) {
+        if (a.name.startsWith("on") || a.name === "style" || a.name === "class" || a.name === "id") {
+          el.removeAttribute(a.name);
+        }
+      }
+    });
+    return tmp.innerHTML;
+  };
+
+  const handleImportFile = async (file: File) => {
+    if (!ref.current) return;
+    const name = file.name.toLowerCase();
+    try {
+      if (name.endsWith(".docx")) {
+        const mammoth = await import("mammoth/mammoth.browser");
+        const buf = await file.arrayBuffer();
+        const { value } = await (mammoth as any).convertToHtml({ arrayBuffer: buf });
+        ref.current.innerHTML = sanitizeHtml(value || "<p></p>");
+        toast.success(`Uvezeno iz Word-a: ${file.name}`);
+      } else if (name.endsWith(".xlsx") || name.endsWith(".xls") || name.endsWith(".csv")) {
+        const XLSX = await import("xlsx");
+        const buf = await file.arrayBuffer();
+        const wb = XLSX.read(buf, { type: "array" });
+        const parts: string[] = [];
+        wb.SheetNames.forEach((sheetName, i) => {
+          const ws = wb.Sheets[sheetName];
+          const html = XLSX.utils.sheet_to_html(ws, { editable: false });
+          // Extract just the inner <table>...</table>
+          const m = html.match(/<table[\s\S]*?<\/table>/i);
+          if (wb.SheetNames.length > 1) parts.push(`<h3>${sheetName}</h3>`);
+          parts.push(m ? m[0] : html);
+          if (i < wb.SheetNames.length - 1) parts.push("<p></p>");
+        });
+        ref.current.innerHTML = sanitizeHtml(parts.join(""));
+        toast.success(`Uvezeno iz Excel-a: ${file.name}`);
+      } else if (name.endsWith(".txt") || name.endsWith(".md")) {
+        const text = await file.text();
+        const html = text
+          .split(/\n{2,}/)
+          .map((p) => `<p>${p.replace(/\n/g, "<br>").replace(/</g, "&lt;")}</p>`)
+          .join("");
+        ref.current.innerHTML = sanitizeHtml(html);
+        toast.success(`Uvezen tekst: ${file.name}`);
+      } else {
+        toast.error("Nepodržan format. Koristi .docx, .xlsx, .xls, .csv, .txt");
+      }
+    } catch (e: any) {
+      toast.error("Uvoz nije uspeo: " + (e?.message || "nepoznata"));
+    }
+  };
+
+
   const btn = "h-8 w-8 inline-flex items-center justify-center rounded hover:bg-muted text-muted-foreground hover:text-foreground";
 
   return (
