@@ -1,5 +1,9 @@
 import { useEffect, useMemo, useState } from "react";
-import { Loader2, Plus, Trash2, Send, FileText, Copy } from "lucide-react";
+import { Loader2, Plus, Trash2, Send, FileText, Copy, Eye } from "lucide-react";
+import { generateQuoteProPdf } from "@/lib/quoteProPdf";
+import { useSignerProfile } from "@/hooks/useSignerProfile";
+import { SendQuoteProDialog } from "./SendQuoteProDialog";
+import { QuoteProActivityPanel } from "./QuoteProActivityPanel";
 import { format } from "date-fns";
 import { toast } from "sonner";
 import {
@@ -67,6 +71,25 @@ export function QuoteProEditor({ quoteId, open, onOpenChange }: Props) {
   const delItem = useDeleteQuoteItemPro();
   const recalc = useRecalculateQuoteTotalsPro();
   const dup = useDuplicateQuotePro();
+  const { data: signer } = useSignerProfile();
+  const [sendOpen, setSendOpen] = useState(false);
+  const [pdfBusy, setPdfBusy] = useState(false);
+
+  async function handlePreviewPdf() {
+    if (!quote || !signer) return;
+    setPdfBusy(true);
+    try {
+      const bytes = await generateQuoteProPdf(quote, quote.items ?? [], signer);
+      const blob = new Blob([bytes as unknown as ArrayBuffer], { type: "application/pdf" });
+      const url = URL.createObjectURL(blob);
+      window.open(url, "_blank", "noopener,noreferrer");
+      setTimeout(() => URL.revokeObjectURL(url), 30_000);
+    } catch (e: any) {
+      toast.error(e.message ?? "Greška pri generisanju PDF-a");
+    } finally {
+      setPdfBusy(false);
+    }
+  }
 
   const [clientId, setClientId] = useState("");
   const [jobName, setJobName] = useState("");
@@ -362,20 +385,30 @@ export function QuoteProEditor({ quoteId, open, onOpenChange }: Props) {
                 </div>
               </Card>
             )}
+            {quote && <QuoteProActivityPanel quoteId={quote.id} />}
           </div>
         )}
 
         <DialogFooter className="gap-2">
           {quote && (
-            <Button
-              variant="outline"
-              onClick={async () => {
-                await dup.mutateAsync({ quoteId: quote.id, asNewVersion: true });
-                onOpenChange(false);
-              }}
-            >
-              <Copy className="w-4 h-4 mr-2" /> Nova verzija
-            </Button>
+            <>
+              <Button variant="outline" onClick={handlePreviewPdf} disabled={pdfBusy}>
+                {pdfBusy ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Eye className="w-4 h-4 mr-2" />}
+                PDF pregled
+              </Button>
+              <Button variant="outline" onClick={() => setSendOpen(true)}>
+                <Send className="w-4 h-4 mr-2" /> Pošalji
+              </Button>
+              <Button
+                variant="outline"
+                onClick={async () => {
+                  await dup.mutateAsync({ quoteId: quote.id, asNewVersion: true });
+                  onOpenChange(false);
+                }}
+              >
+                <Copy className="w-4 h-4 mr-2" /> Nova verzija
+              </Button>
+            </>
           )}
           <Button variant="outline" onClick={() => onOpenChange(false)}>Zatvori</Button>
           <Button onClick={handleSaveHeader} disabled={create.isPending || update.isPending}>
@@ -383,6 +416,9 @@ export function QuoteProEditor({ quoteId, open, onOpenChange }: Props) {
             Sačuvaj
           </Button>
         </DialogFooter>
+        {quote && sendOpen && (
+          <SendQuoteProDialog quoteId={quote.id} open={sendOpen} onOpenChange={setSendOpen} />
+        )}
       </DialogContent>
     </Dialog>
   );
