@@ -239,8 +239,8 @@ export async function generateQuotePdf(data: QuoteData): Promise<Uint8Array> {
   const ensurePage = () => {
     if (y < BOTTOM + 80) {
       page = doc.addPage([595.28, 841.89]);
-      drawBackground(page, memo);
-      y = height - 130;
+      placement = drawBackground(page, memo);
+      y = placement.y + placement.height - HEADER_INSET;
       drawTableHeader();
     }
   };
