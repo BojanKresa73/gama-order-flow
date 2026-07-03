@@ -503,6 +503,34 @@ export default function QuoteDetails() {
       {sendOpen && (
         <SendQuoteProDialog quoteId={quote.id} open={sendOpen} onOpenChange={setSendOpen} />
       )}
+
+      {addItemOpen && (
+        <AddQuoteItemDialog
+          open={addItemOpen}
+          onOpenChange={setAddItemOpen}
+          quoteId={quote.id}
+          orderIndex={items.length}
+        />
+      )}
+
+      {changeClientOpen && (
+        <ChangeClientDialog
+          open={changeClientOpen}
+          onOpenChange={setChangeClientOpen}
+          quoteId={quote.id}
+          currentClientId={quote.client_id}
+        />
+      )}
+
+      {targetPriceOpen && (
+        <SetTargetPriceDialog
+          open={targetPriceOpen}
+          onOpenChange={setTargetPriceOpen}
+          quoteId={quote.id}
+          currentTarget={(quote as any).target_price_eur ?? null}
+          currentFinal={finalEur}
+        />
+      )}
     </div>
   );
 }
