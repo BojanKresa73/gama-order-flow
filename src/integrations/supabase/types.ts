@@ -3099,7 +3099,9 @@ export type Database = {
           quote_number: string
           revision_number: number
           sent_at: string | null
+          sent_snapshot: Json | null
           status: string
+          target_price_eur: number | null
           terrain_visit_price_eur: number
           terrain_visits_cost: number
           terrain_visits_count: number
@@ -3139,7 +3141,9 @@ export type Database = {
           quote_number: string
           revision_number?: number
           sent_at?: string | null
+          sent_snapshot?: Json | null
           status?: string
+          target_price_eur?: number | null
           terrain_visit_price_eur?: number
           terrain_visits_cost?: number
           terrain_visits_count?: number
@@ -3179,7 +3183,9 @@ export type Database = {
           quote_number?: string
           revision_number?: number
           sent_at?: string | null
+          sent_snapshot?: Json | null
           status?: string
+          target_price_eur?: number | null
           terrain_visit_price_eur?: number
           terrain_visits_cost?: number
           terrain_visits_count?: number
