@@ -24,6 +24,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useSignerProfile } from "@/hooks/useSignerProfile";
 import { useClients, type Client } from "@/hooks/useClients";
 import { generateQuotePdf, downloadPdf, pdfToBase64, type QuoteItemPdf } from "@/lib/quotePdf";
+import { PdfPreview } from "./PdfPreview";
 import { cn } from "@/lib/utils";
 
 interface Props {
@@ -48,21 +49,11 @@ export function QuoteDialog({ open, onOpenChange, items, total }: Props) {
 
   const [notes, setNotes] = useState("");
   const [busy, setBusy] = useState<"" | "download" | "send" | "save" | "preview">("");
-  const [previewUrl, setPreviewUrl] = useState<string | null>(null);
-
-  // Revoke preview blob URLs on change/unmount to avoid leaks.
-  useEffect(() => {
-    return () => {
-      if (previewUrl) URL.revokeObjectURL(previewUrl);
-    };
-  }, [previewUrl]);
+  const [previewBytes, setPreviewBytes] = useState<Uint8Array | null>(null);
 
   // Clear preview whenever inputs change so user knows it's stale.
   useEffect(() => {
-    if (previewUrl) {
-      URL.revokeObjectURL(previewUrl);
-      setPreviewUrl(null);
-    }
+    setPreviewBytes(null);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [mode, selectedClient?.id, emailOverride, prospectName, notes, items, total]);
 
@@ -197,17 +188,24 @@ export function QuoteDialog({ open, onOpenChange, items, total }: Props) {
     try {
       const quote = await buildQuote();
       const bytes = await generateQuotePdf(quote);
-      const blob = new Blob([bytes as BlobPart], { type: "application/pdf" });
-      if (previewUrl) URL.revokeObjectURL(previewUrl);
-      setPreviewUrl(URL.createObjectURL(blob));
+      setPreviewBytes(bytes);
     } catch (e: any) {
       toast.error("Pregled nije uspeo: " + (e?.message || "nepoznata"));
     } finally { setBusy(""); }
   };
 
+  const openPreviewInNewTab = () => {
+    if (!previewBytes) return;
+    const blob = new Blob([previewBytes as BlobPart], { type: "application/pdf" });
+    const url = URL.createObjectURL(blob);
+    window.open(url, "_blank", "noopener,noreferrer");
+    // Give the tab a moment to load before revoking.
+    setTimeout(() => URL.revokeObjectURL(url), 60_000);
+  };
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className={cn(previewUrl ? "max-w-6xl" : "max-w-lg")}>
+      <DialogContent className={cn(previewBytes ? "max-w-6xl" : "max-w-lg")}>
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <FileText className="h-5 w-5 text-primary" />
@@ -215,7 +213,7 @@ export function QuoteDialog({ open, onOpenChange, items, total }: Props) {
           </DialogTitle>
         </DialogHeader>
 
-        <div className={cn("gap-4", previewUrl ? "grid md:grid-cols-[minmax(0,1fr)_minmax(0,1.2fr)]" : "")}>
+        <div className={cn("gap-4", previewBytes ? "grid md:grid-cols-[minmax(0,1fr)_minmax(0,1.2fr)]" : "")}>
           <div className="space-y-3 min-w-0">
           <div className="rounded-md bg-muted/40 p-2 text-xs text-muted-foreground">
             Potpisnik: <strong className="text-foreground">{signer?.fullName || "…"}</strong>
@@ -344,8 +342,8 @@ export function QuoteDialog({ open, onOpenChange, items, total }: Props) {
           </div>
           </div>
 
-          {previewUrl && (
-            <div className="min-w-0 flex flex-col border rounded-md overflow-hidden bg-muted/30">
+          {previewBytes && (
+            <div className="min-w-0 flex flex-col border rounded-md overflow-hidden bg-muted/30" style={{ minHeight: 620, height: "70vh" }}>
               <div className="flex items-center justify-between px-2 py-1.5 border-b bg-background/60">
                 <span className="text-xs font-medium text-muted-foreground">Pregled ponude (A4)</span>
                 <div className="flex items-center gap-1">
@@ -353,7 +351,7 @@ export function QuoteDialog({ open, onOpenChange, items, total }: Props) {
                     variant="ghost"
                     size="sm"
                     className="h-6 px-2 text-xs"
-                    onClick={() => window.open(previewUrl, "_blank", "noopener,noreferrer")}
+                    onClick={openPreviewInNewTab}
                   >
                     Otvori u novom tabu
                   </Button>
@@ -361,29 +359,15 @@ export function QuoteDialog({ open, onOpenChange, items, total }: Props) {
                     variant="ghost"
                     size="sm"
                     className="h-6 px-2"
-                    onClick={() => { URL.revokeObjectURL(previewUrl); setPreviewUrl(null); }}
+                    onClick={() => setPreviewBytes(null)}
                   >
                     <X className="h-3.5 w-3.5" />
                   </Button>
                 </div>
               </div>
-              <object
-                data={previewUrl}
-                type="application/pdf"
-                className="w-full flex-1"
-                style={{ minHeight: 620, height: "70vh" }}
-              >
-                <div className="p-6 text-sm text-muted-foreground text-center">
-                  Pregled PDF-a nije podržan u ovom prozoru.{" "}
-                  <button
-                    className="text-primary underline"
-                    onClick={() => window.open(previewUrl, "_blank", "noopener,noreferrer")}
-                  >
-                    Otvori u novom tabu
-                  </button>
-                  .
-                </div>
-              </object>
+              <div className="flex-1 min-h-0">
+                <PdfPreview bytes={previewBytes} />
+              </div>
             </div>
           )}
         </div>
@@ -392,7 +376,7 @@ export function QuoteDialog({ open, onOpenChange, items, total }: Props) {
         <div className="flex flex-wrap justify-end gap-2 pt-2">
           <Button variant="outline" size="sm" onClick={handlePreview} disabled={!!busy || !canGenerate}>
             {busy === "preview" ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Eye className="h-4 w-4 mr-2" />}
-            {previewUrl ? "Osveži pregled" : "Pregled"}
+            {previewBytes ? "Osveži pregled" : "Pregled"}
           </Button>
           <Button variant="outline" size="sm" onClick={handleSave} disabled={!!busy || !canGenerate}>
             {busy === "save" ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Save className="h-4 w-4 mr-2" />}
