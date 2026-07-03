@@ -30,6 +30,7 @@ const STATUS_LABEL: Record<QuoteStatus, string> = {
   accepted: "Prihvaćeno",
   rejected: "Odbijeno",
   expired: "Isteklo",
+  superseded: "Zamenjeno",
 };
 
 const STATUS_VARIANT: Record<QuoteStatus, "secondary" | "default" | "destructive" | "outline"> = {
@@ -38,6 +39,7 @@ const STATUS_VARIANT: Record<QuoteStatus, "secondary" | "default" | "destructive
   accepted: "default",
   rejected: "destructive",
   expired: "outline",
+  superseded: "outline",
 };
 
 const fmtEur = (n: number | null | undefined) =>
@@ -53,7 +55,7 @@ export default function QuotesPro() {
   const { data: quotes = [], isLoading } = useQuotesPro({
     search: search || undefined,
     status: status === "all" ? undefined : status,
-    quick,
+    quickFilter: quick,
   });
   const del = useDeleteQuotePro();
   const dup = useDuplicateQuotePro();
@@ -111,8 +113,9 @@ export default function QuotesPro() {
                   <SelectItem value="all">Sve</SelectItem>
                   <SelectItem value="mine">Moje</SelectItem>
                   <SelectItem value="expiring_soon">Ističu uskoro</SelectItem>
+                  <SelectItem value="stale_sent">Stara — bez odgovora</SelectItem>
                   <SelectItem value="high_value">Visoka vrednost</SelectItem>
-                  <SelectItem value="pending_response">Čekaju odgovor</SelectItem>
+                  <SelectItem value="this_month">Ovaj mesec</SelectItem>
                 </SelectContent>
               </Select>
             </div>
@@ -181,8 +184,7 @@ export default function QuotesPro() {
                           title="Dupliraj"
                           onClick={async () => {
                             try {
-                              await dup.mutateAsync({ id: q.id, asNewVersion: false });
-                              toast.success("Ponuda duplirana");
+                              await dup.mutateAsync({ quoteId: q.id, asNewVersion: false });
                             } catch (e: any) {
                               toast.error(e.message ?? "Greška pri dupliranju");
                             }
