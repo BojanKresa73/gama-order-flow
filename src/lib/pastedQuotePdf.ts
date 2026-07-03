@@ -330,22 +330,54 @@ export async function generatePastedQuotePdf(data: PastedQuoteData): Promise<Uin
     if (b.kind === "img") {
       const rec = imgCache.get(b.src);
       if (!rec) continue;
-      const maxW = Math.min(CONTENT_W, 260);
-      const maxH = 140;
-      let w = b.width || rec.w;
-      let h = b.height || rec.h;
+
+      // Convert HTML pixel hints (mammoth/Word export in px) to PDF points (1px ≈ 0.75pt)
+      const PX_TO_PT = 0.75;
+      const natW = rec.w;
+      const natH = rec.h;
+      const ratio = natH > 0 ? natW / natH : 1;
+
+      // Detect signature-like images: wide aspect, no explicit dimensions,
+      // typically the last image in the body → cap width more tightly.
+      const isSignatureLike = !b.width && !b.height && ratio > 2 && ratio < 8;
+
+      // Hard caps
+      const MAX_W_DEFAULT = Math.min(CONTENT_W, 360);
+      const MAX_W_SIG = Math.min(CONTENT_W, 240);
+      const maxW = isSignatureLike ? MAX_W_SIG : MAX_W_DEFAULT;
+
+      // Available vertical space on the current page (leave signature footer area free)
+      const availH = Math.max(60, y - (BOTTOM + 60));
+      const MAX_H_ABS = 220;
+      const maxH = Math.min(MAX_H_ABS, availH);
+
+      // Preferred size from HTML hints if present, otherwise natural size (in pt)
+      let w = b.width ? b.width * PX_TO_PT : natW * PX_TO_PT;
+      let h = b.height ? b.height * PX_TO_PT : natH * PX_TO_PT;
+      // Keep aspect ratio if only one dim provided
+      if (b.width && !b.height && ratio > 0) h = w / ratio;
+      if (b.height && !b.width && ratio > 0) w = h * ratio;
+
+      // Scale down to fit caps (never scale up above natural pt size to avoid pixelation)
       const scale = Math.min(maxW / w, maxH / h, 1);
       w = w * scale;
       h = h * scale;
-      ensurePage(h + 10);
-      let x = LEFT;
-      if (b.align === "center") x = LEFT + (CONTENT_W - w) / 2;
-      else if (b.align === "right") x = RIGHT - w;
+
+      // Placement: default to centered for standalone/signature-like; honor explicit align
+      let x: number;
+      if (b.align === "right") x = RIGHT - w;
+      else if (b.align === "left" && !isSignatureLike) x = LEFT;
+      else x = LEFT + (CONTENT_W - w) / 2;
+
+      // Ensure we have room, page-break if not
+      ensurePage(h + 14);
+      y -= 4;
       y -= h;
       page.drawImage(rec.img, { x, y, width: w, height: h });
-      y -= 6;
+      y -= 8;
       continue;
     }
+
 
     if (b.kind === "table") {
       const TSIZE = 9;
