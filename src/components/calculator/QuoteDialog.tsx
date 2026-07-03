@@ -348,24 +348,46 @@ export function QuoteDialog({ open, onOpenChange, items, total }: Props) {
             <div className="min-w-0 flex flex-col border rounded-md overflow-hidden bg-muted/30">
               <div className="flex items-center justify-between px-2 py-1.5 border-b bg-background/60">
                 <span className="text-xs font-medium text-muted-foreground">Pregled ponude (A4)</span>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  className="h-6 px-2"
-                  onClick={() => { URL.revokeObjectURL(previewUrl); setPreviewUrl(null); }}
-                >
-                  <X className="h-3.5 w-3.5" />
-                </Button>
+                <div className="flex items-center gap-1">
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="h-6 px-2 text-xs"
+                    onClick={() => window.open(previewUrl, "_blank", "noopener,noreferrer")}
+                  >
+                    Otvori u novom tabu
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="h-6 px-2"
+                    onClick={() => { URL.revokeObjectURL(previewUrl); setPreviewUrl(null); }}
+                  >
+                    <X className="h-3.5 w-3.5" />
+                  </Button>
+                </div>
               </div>
-              <iframe
-                src={previewUrl}
-                title="Pregled ponude"
+              <object
+                data={previewUrl}
+                type="application/pdf"
                 className="w-full flex-1"
                 style={{ minHeight: 620, height: "70vh" }}
-              />
+              >
+                <div className="p-6 text-sm text-muted-foreground text-center">
+                  Pregled PDF-a nije podržan u ovom prozoru.{" "}
+                  <button
+                    className="text-primary underline"
+                    onClick={() => window.open(previewUrl, "_blank", "noopener,noreferrer")}
+                  >
+                    Otvori u novom tabu
+                  </button>
+                  .
+                </div>
+              </object>
             </div>
           )}
         </div>
+
 
         <div className="flex flex-wrap justify-end gap-2 pt-2">
           <Button variant="outline" size="sm" onClick={handlePreview} disabled={!!busy || !canGenerate}>
