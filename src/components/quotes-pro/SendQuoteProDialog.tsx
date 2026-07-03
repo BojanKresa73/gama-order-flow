@@ -159,14 +159,28 @@ export function SendQuoteProDialog({ quoteId, open, onOpenChange }: Props) {
           <div className="space-y-2">
             <div className="flex items-center justify-between">
               <Label>PDF pregled</Label>
-              <Button size="sm" variant="outline" onClick={handlePreview} disabled={previewBusy}>
-                {previewBusy ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Eye className="w-4 h-4 mr-2" />}
-                {previewUrl ? "Osveži pregled" : "Prikaži PDF"}
-              </Button>
+              <div className="flex gap-2">
+                {previewUrl && (
+                  <Button size="sm" variant="ghost" asChild>
+                    <a href={previewUrl} target="_blank" rel="noopener noreferrer">Otvori u novom tabu</a>
+                  </Button>
+                )}
+                <Button size="sm" variant="outline" onClick={handlePreview} disabled={previewBusy}>
+                  {previewBusy ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Eye className="w-4 h-4 mr-2" />}
+                  {previewUrl ? "Osveži" : "Prikaži PDF"}
+                </Button>
+              </div>
             </div>
             <div className="rounded-md border bg-muted/30 h-[60vh] overflow-hidden">
               {previewUrl ? (
-                <iframe src={previewUrl} title="PDF pregled" className="w-full h-full" />
+                <object data={previewUrl} type="application/pdf" className="w-full h-full">
+                  <div className="flex h-full items-center justify-center text-xs text-muted-foreground text-center px-4">
+                    Pregled nije moguć u ovom prozoru.{" "}
+                    <a href={previewUrl} target="_blank" rel="noopener noreferrer" className="underline ml-1">
+                      Otvori PDF u novom tabu
+                    </a>
+                  </div>
+                </object>
               ) : (
                 <div className="flex h-full items-center justify-center text-xs text-muted-foreground text-center px-4">
                   Klikni "Prikaži PDF" za pregled atačmenta pre slanja.
