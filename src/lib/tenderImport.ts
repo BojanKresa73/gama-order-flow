@@ -4,6 +4,7 @@
 
 import { supabase } from "@/integrations/supabase/client";
 import { classifyPrintType } from "@/lib/printClassifier";
+import { extractDigitalSpec, type DigitalSpec } from "@/lib/digitalSpecExtractor";
 
 export interface ParsedTenderItem {
   name: string;
@@ -16,6 +17,8 @@ export interface ParsedTenderItem {
   material_name?: string | null;
   unit_price?: number | null;
   notes?: string | null;
+  /** Populated only when item_type = "digital". */
+  digital?: DigitalSpec | null;
 }
 
 export interface ParseTenderResult {
