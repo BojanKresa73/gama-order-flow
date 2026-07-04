@@ -100,6 +100,12 @@ export default function QuoteDetails() {
   const [tenderImportOpen, setTenderImportOpen] = useState(false);
   const [pasteItemsOpen, setPasteItemsOpen] = useState(false);
   const [digitalProductOpen, setDigitalProductOpen] = useState(false);
+  const [digitalInitialDraft, setDigitalInitialDraft] = useState<ProductDraft | null>(null);
+
+  const openDigitalDraft = (draft: ProductDraft) => {
+    setDigitalInitialDraft(draft);
+    setDigitalProductOpen(true);
+  };
   const [editData, setEditData] = useState({
     notes: "",
     internal_notes: "",
