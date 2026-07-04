@@ -49,6 +49,7 @@ import { QuoteStatusActions } from "@/components/quotes/QuoteStatusActions";
 import { PasteItemsDialog } from "@/components/quotes/PasteItemsDialog";
 import { DigitalProductDialog } from "@/components/digital/DigitalProductDialog";
 import type { LocalDigitalJob } from "@/components/digital/LocalDigitalJobsTable";
+import type { ProductDraft } from "@/lib/digitalProductPricing";
 
 import { generateQuoteProPdf } from "@/lib/quoteProPdf";
 import { useSignerProfile } from "@/hooks/useSignerProfile";
@@ -99,6 +100,12 @@ export default function QuoteDetails() {
   const [tenderImportOpen, setTenderImportOpen] = useState(false);
   const [pasteItemsOpen, setPasteItemsOpen] = useState(false);
   const [digitalProductOpen, setDigitalProductOpen] = useState(false);
+  const [digitalInitialDraft, setDigitalInitialDraft] = useState<ProductDraft | null>(null);
+
+  const openDigitalDraft = (draft: ProductDraft) => {
+    setDigitalInitialDraft(draft);
+    setDigitalProductOpen(true);
+  };
   const [editData, setEditData] = useState({
     notes: "",
     internal_notes: "",
@@ -623,6 +630,7 @@ export default function QuoteDetails() {
           quoteId={quote.id}
           startOrderIndex={items.length}
           onImported={refreshAfterImport}
+          onDigitalDraft={openDigitalDraft}
         />
       )}
 
@@ -633,14 +641,19 @@ export default function QuoteDetails() {
           quoteId={quote.id}
           startOrderIndex={items.length}
           onImported={refreshAfterImport}
+          onDigitalDraft={openDigitalDraft}
         />
       )}
 
       {digitalProductOpen && (
         <DigitalProductDialog
           open={digitalProductOpen}
-          onOpenChange={setDigitalProductOpen}
+          onOpenChange={(o) => {
+            setDigitalProductOpen(o);
+            if (!o) setDigitalInitialDraft(null);
+          }}
           onAdd={(jobs) => handleDigitalJobsAdd(jobs)}
+          initialDraft={digitalInitialDraft}
         />
       )}
     </div>
