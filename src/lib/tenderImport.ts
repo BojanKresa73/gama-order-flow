@@ -91,11 +91,26 @@ export async function parseTenderText(text: string): Promise<ParseTenderResult> 
     ? (data as any).items
     : [];
 
+  const DIGITAL_RX = /(brošur|brosur|katalog|knjižic|knjizic|flajer|letak|vizit|pozivnic|čestit|cestit|memorandum|deklaracij|\bncr\b|obrazac|jelovnik|menu|blok|kalendar|razglednic|plakat a[3-6]|plakat sra|papir|kunzdruk|kunsdruk|offset\s*\d+g|mat\s*\d+g|sjaj\s*\d+g)/i;
+  const LF_RX = /(pvc|cerad|forex|plexi|pleksi|vinil|alubond|kapa\s*ploč|stadur|samolepljiv|baner|banner|roll[- ]?up|frontlit|backlit|mesh|one ?way|nalepnic|displej)/i;
+
   const items: ParsedTenderItem[] = rows.map((r) => {
-    const item_type: ParsedTenderItem["item_type"] =
+    const blob = `${r.productName ?? ""} ${r.category ?? ""} ${r.rawDescription ?? ""} ${r.material ?? ""} ${r.paperType ?? ""}`;
+    let item_type: ParsedTenderItem["item_type"] =
       r.productType === "digital" ? "digital"
       : r.productType === "large_format" ? "large_format"
       : "other";
+    // Override AI when text clearly points to digital (small format, paper, klamerom, plastifikacija korice...)
+    if (item_type !== "digital" && DIGITAL_RX.test(blob) && !LF_RX.test(blob)) {
+      item_type = "digital";
+    } else if (item_type === "other" && LF_RX.test(blob)) {
+      item_type = "large_format";
+    }
+    // Small format + paper gsm ≤ 350 → digital
+    const maxDim = Math.max(r.widthMm ?? 0, r.heightMm ?? 0);
+    if (item_type !== "digital" && maxDim > 0 && maxDim <= 500 && (r.paperGsm == null || r.paperGsm <= 350) && !LF_RX.test(blob)) {
+      item_type = "digital";
+    }
     const qty = typeof r.yearlyQty === "number" && r.yearlyQty > 0 ? r.yearlyQty : 1;
     const name = r.productName?.trim() || r.category?.trim() || "Stavka";
     return {
