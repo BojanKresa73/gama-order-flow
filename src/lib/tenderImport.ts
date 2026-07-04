@@ -3,6 +3,7 @@
 // + `quote_items`. Used by the Quotes-Pro import dialog.
 
 import { supabase } from "@/integrations/supabase/client";
+import { classifyPrintType } from "@/lib/printClassifier";
 
 export interface ParsedTenderItem {
   name: string;
