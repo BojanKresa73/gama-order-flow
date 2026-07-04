@@ -112,25 +112,51 @@ export function PasteItemsDialog({
 
           {parsed && parsed.items.length > 0 && (
             <Card>
-              <div className="p-3 border-b text-sm font-medium">
-                Prepoznato: {parsed.items.length} stavki
+              <div className="p-3 border-b text-sm font-medium flex items-center justify-between">
+                <span>Prepoznato: {parsed.items.length} stavki</span>
+                {parsed.items.some((i) => i.item_type === "digital") && onDigitalDraft && (
+                  <span className="text-xs text-muted-foreground">
+                    Digital stavke možeš otvoriti u Digital proizvod kalkulatoru →
+                  </span>
+                )}
               </div>
               <Table>
                 <TableHeader>
                   <TableRow>
                     <TableHead>Naziv</TableHead>
+                    <TableHead>Tip</TableHead>
                     <TableHead>Opis</TableHead>
                     <TableHead className="text-right">Kol.</TableHead>
+                    <TableHead />
                   </TableRow>
                 </TableHeader>
                 <TableBody>
                   {parsed.items.map((it, i) => (
                     <TableRow key={i}>
                       <TableCell className="font-medium">{it.name}</TableCell>
+                      <TableCell>
+                        <Badge variant={it.item_type === "digital" ? "default" : "secondary"} className="capitalize">
+                          {it.item_type === "digital" ? "Digital" : it.item_type === "large_format" ? "Veliki format" : "Razno"}
+                        </Badge>
+                      </TableCell>
                       <TableCell className="text-xs whitespace-pre-wrap text-muted-foreground max-w-md">
                         {it.description ?? "—"}
                       </TableCell>
                       <TableCell className="text-right tabular-nums">{it.quantity}</TableCell>
+                      <TableCell className="text-right">
+                        {it.item_type === "digital" && onDigitalDraft && (
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={() => {
+                              onDigitalDraft(parsedItemToProductDraft(it));
+                              onOpenChange(false);
+                            }}
+                          >
+                            <Package className="w-3.5 h-3.5 mr-1" /> Digital proizvod
+                          </Button>
+                        )}
+                      </TableCell>
                     </TableRow>
                   ))}
                 </TableBody>
@@ -143,7 +169,7 @@ export function PasteItemsDialog({
           <Button variant="outline" onClick={() => onOpenChange(false)}>Odustani</Button>
           <Button onClick={handleImport} disabled={!parsed?.items?.length || bulk.isPending}>
             {bulk.isPending && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
-            Dodaj u ponudu
+            Dodaj kao razno
           </Button>
         </DialogFooter>
       </DialogContent>
