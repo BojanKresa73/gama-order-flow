@@ -116,6 +116,19 @@ export async function parseTenderText(text: string): Promise<ParseTenderResult> 
     const clsNote = cls.confidence !== "high"
       ? `\n[klasifikacija: ${cls.type} • ${cls.confidence} — ${cls.reasons.slice(0, 3).join(", ")}]`
       : "";
+    const digital = cls.type === "digital"
+      ? extractDigitalSpec(blob, {
+          aiPages: r.pages ?? null,
+          aiPrintSides: r.printSides ?? null,
+          aiPaperType: r.paperType ?? null,
+          aiPaperGsm: r.paperGsm ?? null,
+          aiSheetFormat: r.sheetFormat ?? null,
+          widthMm: r.widthMm ?? null,
+          heightMm: r.heightMm ?? null,
+          aiFinishing: r.finishing ?? null,
+        })
+      : null;
+
     return {
       name,
       description: (baseDesc + clsNote) || null,
@@ -127,6 +140,7 @@ export async function parseTenderText(text: string): Promise<ParseTenderResult> 
       material_name: r.matchedMaterialName ?? r.material ?? null,
       unit_price: 0,
       notes: r.comment ?? null,
+      digital,
     };
   });
 
