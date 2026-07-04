@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useState } from "react";
 import { ClipboardPaste, Loader2, Package, Wand2 } from "lucide-react";
 import { toast } from "sonner";
 import {
@@ -12,7 +12,7 @@ import { Card } from "@/components/ui/card";
 import {
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
 } from "@/components/ui/table";
-import { parseTenderText, type ParseTenderResult, type ParsedTenderItem } from "@/lib/tenderImport";
+import { parseTenderText, type ParseTenderResult } from "@/lib/tenderImport";
 import { useBulkInsertQuoteItemsPro } from "@/hooks/useQuotesPro";
 import { parsedItemToProductDraft } from "@/lib/parsedItemToProductDraft";
 import type { ProductDraft } from "@/lib/digitalProductPricing";
