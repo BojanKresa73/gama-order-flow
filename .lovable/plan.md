@@ -1,58 +1,48 @@
 ## Cilj
-GDC Order = source of truth za sve što se tiče uvoza i parsiranja ponuda. U ovom projektu se sve dovodi 1:1 na GDC verziju, bez lokalnih „poboljšanja" koja divergiraju od GDC-a.
 
-## Šta se uvozi iz GDC (verbatim, gde god je moguće)
+Dodati **Brzi kalkulator** (isti kao u GDC Order) na naš sajt. Vidljiv samo za `admin`, `admin_plus`, `superuser`. Cene materijala se čitaju **uživo iz GDC Order baze**.
 
-### Edge funkcija
-- `supabase/functions/parse-tender-text/index.ts` → prepiši 1:1 GDC verzijom (sadrži pravila za brošure/kataloge, varijante po boji, shelftalker/wobbler pravila, ø/prečnik, standardne formate).
+## Kako će raditi
 
-### `src/lib/`
-- `tenderImport.ts` — puna verzija iz GDC: `parseTenderWorkbook` (Excel), `autoMatchMaterials` (Fuse.js + sinonimi), `extractDimensionsMm`, `extractFormat`, `extractQuantity`, `extractPrintSides`, `normalizePrintSides`, `extractFinishing`, `extractMaterial`, `recomputeRow`, tip `ParsedTenderRow`.
-- `quotePricing.ts` — GDC verzija (`computeLargeFormatPricing`, `defaultTonerCostEur`, `EUR_TO_RSD`, `deriveStoredTonerCostPerM2Eur`, montaža).
-- `materialPriceFallback.ts` — `resolveMaterialEurPerM2` (nema ga u projektu).
+- Novi drugi Supabase klijent (`supabaseGDC`) — čita samo tabele cenovnika iz GDC Order projekta (anon key, read-only za frontend, RLS mora dozvoliti čitanje).
+- Kompletna komponenta `QuickPriceCalculator` sa: unos dimenzija, količina, materijal, štampa 4/0÷4/4, marža, dorada, kasiranje, custom cena, tabovi Kalkulator / Lista stavki / Istorija, sačuvane liste u localStorage, izračun profita, kopiranje rezultata, dugme „Napravi ponudu".
+- **Istorija** (`quick_calc_history`) se čuva u našoj bazi (per-user, RLS).
+- **„Napravi ponudu"** — ovaj projekat trenutno nema modul Ponuda. Predložena varijanta: dugme otvara nov nalog `/work-orders/new` sa predpopunjenim stavkama iz sessionStorage, ili — ako želiš — samo se skloni. **Ovo mi treba potvrda pre finalne implementacije.**
+- Pristup: dugme se pojavljuje u sidebar-u / na dashboardu samo ako je uloga admin+.
 
-### `src/hooks/`
-- `useAiCorrections.ts` — `useLogAiCorrection` + tip `CorrectionType` (few-shot learning). Pretpostavlja tabelu `ai_corrections` u bazi (proveriti; ako fali → migracija sa GRANT + RLS).
+## Šta mi treba od tebe
 
-### `src/components/quotes/`
-- `ImportTenderDialog.tsx` — puni GDC dijalog (Excel/Word/TXT/EML upload + paste, preview tabela sa Digital/Veliki format badge-ovima, edit UOM/marža/dorada, auto match materijala, cene iz cenovnika, uvoz).
-- Postojeći `PasteItemsDialog.tsx` i `TenderImportItemsDialog.tsx` se **brišu** — `ImportTenderDialog` ih zamenjuje (dva ulaza: `initialMode="file"` i `initialMode="paste"`).
+1. **Supabase URL i anon key GDC Order projekta** (postavi kao secret: `GDC_SUPABASE_URL` i `GDC_SUPABASE_ANON_KEY`, ili ih prosledi meni). Bez ovoga kalkulator ne može da čita cene.
+2. Potvrda da RLS na GDC Order tabelama (`large_format_materials`, `large_format_prices`, `kasiranje_settings`, `digital_paper_types`, itd.) **dozvoljava anonimno čitanje** — inače moraš omogućiti `SELECT` za `anon` na tim tabelama u GDC Order projektu (to se radi tamo, ne ovde).
+3. Odluka o dugmetu „Napravi ponudu" (vidi gore).
 
-### Zavisnosti koje se pretpostavljaju već postoje
-- `useLargeFormatMaterials` + `useLargeFormatMaterialsWithPrices` (koriste se u projektu — GDC kompatibilne).
-- `digitalCalculations` (`calculateItemPrice`, `calculateItemClickCost`, `calculatePiecesPerSheet`) — postoji.
-- `supabase/functions/_shared/ai-corrections.ts` — postoji.
+## Tehnički koraci (redom)
 
-## Adaptacije (samo integracija, ne logika)
-`ImportTenderDialog` u GDC-u koristi `useBulkInsertQuoteItems` + `useRecalculateQuoteTotals` iz `useQuotes` i tip `QuoteItem` sa poljima `pages/print_sides/paper_type/paper_gsm/sheet_format/...`. Ovaj projekat koristi `useQuotesPro` sa `useBulkInsertQuoteItemsPro`. Rešenje:
-1. Sve GDC-specifična polja na `quote_items` insertu (pages, print_sides, paper_*, sheet_format, source_category, min_qty_per_order, yearly_qty, custom_price, cost_per_m2, supplier_*, service_*) — mapiraju se na najbliža polja ovog projekta preko `...(digital ?? {})` spread pattern-a koji već postoji. Nepostojeća polja se prosto izostavljaju iz insert payload-a (Supabase klijent ih ignoriše).
-2. `useRecalculateQuoteTotals` → ekvivalent iz `useQuotesPro` (ako postoji) ili tiho izostaviti (totals se već računaju iz `line_total`).
-3. `logCorrection` — koristi se samo ako tabela `ai_corrections` postoji; inače hook interno tiho preskače.
-
-## Šta se briše iz projekta (jer je zamenjeno GDC-om)
-- `src/lib/printClassifier.ts` — logika je već u parse-tender-text edge funkciji.
-- `src/lib/digitalSpecExtractor.ts` — GDC ne koristi lokalnu re-ekstrakciju; sva polja dolaze direktno iz AI odgovora.
-- `src/lib/parsedItemToProductDraft.ts` — nije deo GDC toka.
-- Prilagođena logika iz trenutnog `tenderImport.ts` (`classifyPrintType` sekundarna klasifikacija, `extractDigitalSpec` post-processing) — GDC to ne radi, AI odgovor je autoritativan.
-
-## Ulazne tačke u UI
-- Dugmad u `QuoteDetails.tsx` / drugde koja su otvarala `PasteItemsDialog` / `TenderImportItemsDialog` → sada otvaraju `ImportTenderDialog` sa `initialMode="paste"` odnosno `"file"`.
-
-## Detalji integracije quote_items schema
-Za digital red iz `handleImport`:
+```text
+1. Migracija: tabela quick_calc_history (per-user, RLS auth-only) + GRANT
+2. src/integrations/supabase/gdc-client.ts  — drugi Supabase klijent (VITE_GDC_SUPABASE_URL, VITE_GDC_SUPABASE_ANON_KEY)
+3. Kopiraj iz GDC Order:
+   - src/lib/quotePricing.ts, kasiranjeCost.ts, auth/quickCalcAccess.ts
+   - src/hooks/useLargeFormatPricing.ts, useKasiranjeSettings.ts  (izmeni da koriste supabaseGDC)
+   - src/components/quotes/MaterialCombobox.tsx
+   - src/components/calculator/QuickPriceCalculator.tsx  (izmeni: history koristi naš supabase, /quotes/new prilagoditi)
+4. Ugradi u DashboardQuickActions.tsx (dugme za admin+)
+5. Ugradi trigger u AppHeader-u (globalno dostupno)
+6. Test: forma se otvara, materijali se učitavaju iz GDC baze, cena se računa, kopiranje radi, istorija pamti
 ```
-{ quote_id, item_type: "digital", name, description, quantity,
-  width_mm, height_mm, pages, print_sides, paper_type, paper_gsm,
-  sheet_format, unit_cost, unit_price, line_total, finishing_cost: 0,
-  order_index }
-```
-Za large_format red analogno bez digital polja + `material_id`, `material_name`, `area_m2`, `cost_per_m2`.
 
-## Verifikacija
-1. `tsgo --noEmit` čist.
-2. Paste flow: nalepiti primer katalog/flajer tekst → očekuje se Digital badge, `pages`, `sheet_format`, `sides`, cena iz digital tarife (nije 0).
-3. Excel flow: uvesti test .xlsx tender → očekuje se struktura sa mapiranim materijalima i m² cenama.
+## Datoteke koje se prave / menjaju
 
-## Van scope-a
-- Nikakva nova UI polja niti "poboljšanja" izvan GDC verzije.
-- Ništa se ne menja u `digitalCalculations`, `digitalProductPricing`, `DigitalProductDialog`.
+- `supabase/migrations/…_quick_calc_history.sql` (nova)
+- `src/integrations/supabase/gdc-client.ts` (nova)
+- `src/lib/quotePricing.ts`, `src/lib/kasiranjeCost.ts`, `src/lib/auth/quickCalcAccess.ts` (kopije)
+- `src/hooks/useLargeFormatPricing.ts`, `src/hooks/useKasiranjeSettings.ts` (kopije + prebačeno na `supabaseGDC`)
+- `src/components/quotes/MaterialCombobox.tsx` (kopija)
+- `src/components/calculator/QuickPriceCalculator.tsx` (kopija + izmene)
+- `src/components/dashboard/DashboardQuickActions.tsx` (dugme)
+- `src/components/layout/AppHeader.tsx` (globalni trigger — opciono)
+- `.env` dobija `VITE_GDC_SUPABASE_URL` i `VITE_GDC_SUPABASE_ANON_KEY` (kroz secrets)
+
+## Napomena o rizicima
+
+- Ako GDC Order jednog dana promeni šemu tabela cenovnika, ovaj kalkulator će pući ovde. Preporučeni pravac dugoročno: nightly cron koji sinhronizuje cene u našu bazu. Ali za sada — direktno čitanje kako si tražio.
