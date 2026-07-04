@@ -630,6 +630,7 @@ export default function QuoteDetails() {
           quoteId={quote.id}
           startOrderIndex={items.length}
           onImported={refreshAfterImport}
+          onDigitalDraft={openDigitalDraft}
         />
       )}
 
@@ -640,14 +641,19 @@ export default function QuoteDetails() {
           quoteId={quote.id}
           startOrderIndex={items.length}
           onImported={refreshAfterImport}
+          onDigitalDraft={openDigitalDraft}
         />
       )}
 
       {digitalProductOpen && (
         <DigitalProductDialog
           open={digitalProductOpen}
-          onOpenChange={setDigitalProductOpen}
+          onOpenChange={(o) => {
+            setDigitalProductOpen(o);
+            if (!o) setDigitalInitialDraft(null);
+          }}
           onAdd={(jobs) => handleDigitalJobsAdd(jobs)}
+          initialDraft={digitalInitialDraft}
         />
       )}
     </div>
