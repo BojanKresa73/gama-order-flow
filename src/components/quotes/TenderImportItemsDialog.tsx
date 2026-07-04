@@ -122,18 +122,37 @@ export function TenderImportItemsDialog({
                       <TableHead>Dim (mm)</TableHead>
                       <TableHead className="text-right">Kol.</TableHead>
                       <TableHead>Materijal</TableHead>
+                      <TableHead />
                     </TableRow>
                   </TableHeader>
                   <TableBody>
                     {parsed.items.map((it, idx) => (
                       <TableRow key={idx}>
                         <TableCell>{it.name}</TableCell>
-                        <TableCell>{it.item_type}</TableCell>
+                        <TableCell>
+                          <Badge variant={it.item_type === "digital" ? "default" : "secondary"} className="capitalize">
+                            {it.item_type === "digital" ? "Digital" : it.item_type === "large_format" ? "Veliki format" : "Razno"}
+                          </Badge>
+                        </TableCell>
                         <TableCell>
                           {it.width_mm && it.height_mm ? `${it.width_mm}×${it.height_mm}` : "—"}
                         </TableCell>
                         <TableCell className="text-right">{it.quantity}</TableCell>
                         <TableCell>{it.material_name ?? "—"}</TableCell>
+                        <TableCell className="text-right">
+                          {it.item_type === "digital" && onDigitalDraft && (
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              onClick={() => {
+                                onDigitalDraft(parsedItemToProductDraft(it));
+                                onOpenChange(false);
+                              }}
+                            >
+                              <Package className="w-3.5 h-3.5 mr-1" /> Digital proizvod
+                            </Button>
+                          )}
+                        </TableCell>
                       </TableRow>
                     ))}
                   </TableBody>
