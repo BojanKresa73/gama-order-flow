@@ -17,7 +17,7 @@ import {
   parseTenderText,
   createQuoteFromTender,
   type ParseTenderResult,
-} from "@/lib/tenderImport";
+} from "@/lib/tenderQuickCreate";
 
 interface Props {
   open: boolean;
