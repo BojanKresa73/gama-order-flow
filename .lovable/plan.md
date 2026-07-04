@@ -1,93 +1,58 @@
 ## Cilj
+GDC Order = source of truth za sve što se tiče uvoza i parsiranja ponuda. U ovom projektu se sve dovodi 1:1 na GDC verziju, bez lokalnih „poboljšanja" koja divergiraju od GDC-a.
 
-Portovati kompletan koncept **Ponuda** iz GDC Order projekta u ovaj projekat 1:1 — bez diranja postojećeg modula Nabavka ploča. Katalog materijala i cenovnici se čitaju **read-only iz GDC baze** kroz već postojeći `supabaseGDC` klijent.
+## Šta se uvozi iz GDC (verbatim, gde god je moguće)
 
-## Šta ostaje netaknuto
+### Edge funkcija
+- `supabase/functions/parse-tender-text/index.ts` → prepiši 1:1 GDC verzijom (sadrži pravila za brošure/kataloge, varijante po boji, shelftalker/wobbler pravila, ø/prečnik, standardne formate).
 
-- `/procurement` (ploče, forecast, arrivals) — ne diramo.
-- `client_plate_prices`, `plate_formats`, `procurement_orders*` — ne diramo.
-- CTP/FILM/DIGITALA/RAZNO radni nalozi — ne diramo (osim konverzije Ponuda → Radni nalog kao novi tok).
+### `src/lib/`
+- `tenderImport.ts` — puna verzija iz GDC: `parseTenderWorkbook` (Excel), `autoMatchMaterials` (Fuse.js + sinonimi), `extractDimensionsMm`, `extractFormat`, `extractQuantity`, `extractPrintSides`, `normalizePrintSides`, `extractFinishing`, `extractMaterial`, `recomputeRow`, tip `ParsedTenderRow`.
+- `quotePricing.ts` — GDC verzija (`computeLargeFormatPricing`, `defaultTonerCostEur`, `EUR_TO_RSD`, `deriveStoredTonerCostPerM2Eur`, montaža).
+- `materialPriceFallback.ts` — `resolveMaterialEurPerM2` (nema ga u projektu).
 
-## Faza 1 — Schema (jedna migracija)
+### `src/hooks/`
+- `useAiCorrections.ts` — `useLogAiCorrection` + tip `CorrectionType` (few-shot learning). Pretpostavlja tabelu `ai_corrections` u bazi (proveriti; ako fali → migracija sa GRANT + RLS).
 
-Uskladiti bazu sa GDC modelom Ponuda. Trenutne `quotes`/`quote_items` proširiti dodatnim kolonama koje nedostaju, dodati prateće tabele.
+### `src/components/quotes/`
+- `ImportTenderDialog.tsx` — puni GDC dijalog (Excel/Word/TXT/EML upload + paste, preview tabela sa Digital/Veliki format badge-ovima, edit UOM/marža/dorada, auto match materijala, cene iz cenovnika, uvoz).
+- Postojeći `PasteItemsDialog.tsx` i `TenderImportItemsDialog.tsx` se **brišu** — `ImportTenderDialog` ih zamenjuje (dva ulaza: `initialMode="file"` i `initialMode="paste"`).
 
-**Nove/proširene tabele:**
-- `quotes` — dodati: `parent_quote_id`, `revision_number`, `target_price_eur`, `sent_at`, `expires_at`, `superseded_at`, `converted_work_order_id`, `sent_to_email`, `sent_snapshot` (jsonb).
-- `quote_items` — dodati sve GDC kolone (digital_spec jsonb, sheet_finishing_*, installation_*, finishing_*, source_category, billable_qty/unit, order_index) — najvećim delom već postoje.
-- `quote_activities` (već postoji trigger `fn_log_quote_change`) — samo verifikacija.
-- **novo:** `quote_collaborators` (već postoji), `quote_expiry_notifications` (postoji).
-- **novo:** `quote_digital_jobs` — GDC odvaja detaljnu digitalnu spec od `quote_items`.
-- **novo:** `quote_material_snapshots` — snapshot GDC materijala/cena na trenutak slanja (za istorijsku tačnost).
+### Zavisnosti koje se pretpostavljaju već postoje
+- `useLargeFormatMaterials` + `useLargeFormatMaterialsWithPrices` (koriste se u projektu — GDC kompatibilne).
+- `digitalCalculations` (`calculateItemPrice`, `calculateItemClickCost`, `calculatePiecesPerSheet`) — postoji.
+- `supabase/functions/_shared/ai-corrections.ts` — postoji.
 
-**RPC funkcije (port iz GDC):**
-- `duplicate_quote(p_quote_id, p_as_new_version)` — već postoji.
-- `next_quote_number()` — već postoji.
-- `expire_old_quotes()` — već postoji (cron).
-- **novo:** `convert_quote_to_work_order(p_quote_id, p_kind)` — kreira `work_orders` + prenesi stavke po tipu.
-- **novo:** `recalculate_quote_totals(p_quote_id)` — server-side rekalkulacija (deo klijent, deo baze).
+## Adaptacije (samo integracija, ne logika)
+`ImportTenderDialog` u GDC-u koristi `useBulkInsertQuoteItems` + `useRecalculateQuoteTotals` iz `useQuotes` i tip `QuoteItem` sa poljima `pages/print_sides/paper_type/paper_gsm/sheet_format/...`. Ovaj projekat koristi `useQuotesPro` sa `useBulkInsertQuoteItemsPro`. Rešenje:
+1. Sve GDC-specifična polja na `quote_items` insertu (pages, print_sides, paper_*, sheet_format, source_category, min_qty_per_order, yearly_qty, custom_price, cost_per_m2, supplier_*, service_*) — mapiraju se na najbliža polja ovog projekta preko `...(digital ?? {})` spread pattern-a koji već postoji. Nepostojeća polja se prosto izostavljaju iz insert payload-a (Supabase klijent ih ignoriše).
+2. `useRecalculateQuoteTotals` → ekvivalent iz `useQuotesPro` (ako postoji) ili tiho izostaviti (totals se već računaju iz `line_total`).
+3. `logCorrection` — koristi se samo ako tabela `ai_corrections` postoji; inače hook interno tiho preskače.
 
-Sve nove tabele dobijaju GRANT za `authenticated`/`service_role` i RLS po istom modelu kao postojeće (autor + saradnici + admin+).
+## Šta se briše iz projekta (jer je zamenjeno GDC-om)
+- `src/lib/printClassifier.ts` — logika je već u parse-tender-text edge funkciji.
+- `src/lib/digitalSpecExtractor.ts` — GDC ne koristi lokalnu re-ekstrakciju; sva polja dolaze direktno iz AI odgovora.
+- `src/lib/parsedItemToProductDraft.ts` — nije deo GDC toka.
+- Prilagođena logika iz trenutnog `tenderImport.ts` (`classifyPrintType` sekundarna klasifikacija, `extractDigitalSpec` post-processing) — GDC to ne radi, AI odgovor je autoritativan.
 
-## Faza 2 — Hookovi (paritetno sa GDC/src/hooks)
+## Ulazne tačke u UI
+- Dugmad u `QuoteDetails.tsx` / drugde koja su otvarala `PasteItemsDialog` / `TenderImportItemsDialog` → sada otvaraju `ImportTenderDialog` sa `initialMode="paste"` odnosno `"file"`.
 
-Portovati:
-- `useQuotes` (list/filter/CRUD, snapshot, konverzija) — proširiti postojeći `useQuotesPro`.
-- `useQuoteActivities` (timeline).
-- `useQuoteCollaborators` (dodavanje/uklanjanje, realtime).
-- `useKasiranjeSettings`, `useFinishingPrices`, `useDigitalPriceList`, `useDigitalPaperTypes`, `useToners`, `useSheetRemnants`, `usePrintingMachines`, `useLargeFormatMaterials` — svi read-only iz GDC baze preko `supabaseGDC`.
-- `useIncomingInvoices` — read-only iz GDC (za info o nabavnim cenama u MaterialsCostPanel).
+## Detalji integracije quote_items schema
+Za digital red iz `handleImport`:
+```
+{ quote_id, item_type: "digital", name, description, quantity,
+  width_mm, height_mm, pages, print_sides, paper_type, paper_gsm,
+  sheet_format, unit_cost, unit_price, line_total, finishing_cost: 0,
+  order_index }
+```
+Za large_format red analogno bez digital polja + `material_id`, `material_name`, `area_m2`, `cost_per_m2`.
 
-## Faza 3 — Komponente (paritetno sa GDC/src/components/quotes)
+## Verifikacija
+1. `tsgo --noEmit` čist.
+2. Paste flow: nalepiti primer katalog/flajer tekst → očekuje se Digital badge, `pages`, `sheet_format`, `sides`, cena iz digital tarife (nije 0).
+3. Excel flow: uvesti test .xlsx tender → očekuje se struktura sa mapiranim materijalima i m² cenama.
 
-Portovati komponente redom prioriteta:
-
-**Kritične (za /quotes/:id):**
-- `AddQuoteItemDialog` (tabovi: Digital / LFP / Sitna / Ostalo)
-- `EditQuoteItemDialog`
-- `QuoteFloatingPriceSummary` (lebdeći totali)
-- `QuoteStatusActions` (draft → sent → accepted/rejected/expired)
-- `SendQuoteDialog` (email sa PDF-om preko edge funkcije)
-- `ConvertToWorkOrderDialog`
-- `MaterialsCostPanel` (nabavna vs prodajna, marža po stavci)
-- `QuoteActivityTimeline`
-- Refactor postojećeg `QuoteItemsTable` da odgovara GDC-u (digital podstavke, inline editori).
-
-**Dodatne (Full 1:1):**
-- `ChangeClientDialog`, `SetTargetPriceDialog`, `WasteOptimizer`
-- `QuoteCollaboratorsCard`, `QuoteVersionHistory`
-- `DigitalItemDetail`, `DigitalJobDialog`, `DigitalJobInlineEditor`, `DigitalWorkspacePanel`
-- `InlineJobName`, `ImportTenderDialog`
-- `QuoteCalculationWorkspace` (glavni orkestrator radne površine)
-
-## Faza 4 — Stranice
-
-- `/quotes` — refactor `Quotes.tsx` prema GDC listi (napredni filteri, kolone, akcije).
-- `/quotes/new` — GDC tok kreiranja.
-- `/quotes/:id` — GDC layout: leva strana stavke + Materials/Cost/Activity paneli, desna strana `QuoteFloatingPriceSummary`, gornji `QuoteStatusActions`.
-
-## Faza 5 — Edge funkcije
-
-Portovati iz GDC:
-- `send-quote-email` (Resend, PDF attachement).
-- `quote-to-pdf` (server render PDF-a stavki i totala).
-- `expire-quotes-cron` (već imamo `expire_old_quotes`).
-
-## Faza 6 — Verifikacija
-
-- Typecheck.
-- Playwright smoke: /quotes → /quotes/new → dodaj 2 stavke (LFP + Digital) → snimi → /quotes/:id → dodaj stavku kroz `AddQuoteItemDialog` → promeni status → screenshot totala.
-
-## Tehničke napomene
-
-- **Read-only GDC pristup:** sve cene se čitaju kroz `supabaseGDC` iz `useLargeFormatPricing`, `useDigitalPriceList` itd. Prilikom slanja ponude, sačuvamo snapshot u `quote_material_snapshots` da istorijski totali ne zavise od budućih izmena cena u GDC-u.
-- **Bez diranja ploča:** svaka nova SQL i UI izmena mora izbeći `procurement_orders*`, `plate_formats`, `client_plate_prices`, `file_entries`.
-- **Radni nalog konverzija:** koristimo postojeći `work_orders` model, mapiramo tip stavke u odgovarajući `kind` (LFP→ROLNA/PLOCA, Digital→DIGITALA, Sitna→RAZNO).
-
-## Isporuka
-
-Zbog obima (~30 fajlova + migracija + edge funkcije), rad ću voditi kroz **više uzastopnih sesija**, po fazama gore. Predlog: krenuti od Faze 1 (migracija) i Faze 2 (hookovi), pa Faze 3 tokom sledećih rundi.
-
-## Pitanje pre početka
-
-Da li da odmah otvorim Fazu 1 migraciju i pošaljem je na tvoju potvrdu?
+## Van scope-a
+- Nikakva nova UI polja niti "poboljšanja" izvan GDC verzije.
+- Ništa se ne menja u `digitalCalculations`, `digitalProductPricing`, `DigitalProductDialog`.

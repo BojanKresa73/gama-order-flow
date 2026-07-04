@@ -44,9 +44,8 @@ import { SetTargetPriceDialog } from "@/components/quotes/SetTargetPriceDialog";
 import { QuoteCalculationWorkspace } from "@/components/quotes/QuoteCalculationWorkspace";
 import { QuoteVersionHistory } from "@/components/quotes/QuoteVersionHistory";
 import { QuoteCollaboratorsCard } from "@/components/quotes/QuoteCollaboratorsCard";
-import { TenderImportItemsDialog } from "@/components/quotes/TenderImportItemsDialog";
+import { ImportTenderDialog } from "@/components/quotes/ImportTenderDialog";
 import { QuoteStatusActions } from "@/components/quotes/QuoteStatusActions";
-import { PasteItemsDialog } from "@/components/quotes/PasteItemsDialog";
 import { DigitalProductDialog } from "@/components/digital/DigitalProductDialog";
 import type { LocalDigitalJob } from "@/components/digital/LocalDigitalJobsTable";
 import type { ProductDraft } from "@/lib/digitalProductPricing";
@@ -624,24 +623,26 @@ export default function QuoteDetails() {
       )}
 
       {tenderImportOpen && (
-        <TenderImportItemsDialog
+        <ImportTenderDialog
           open={tenderImportOpen}
           onOpenChange={setTenderImportOpen}
           quoteId={quote.id}
-          startOrderIndex={items.length}
+          defaultMarkupPercent={Number((quote as any).default_markup_percent) || 300}
+          existingItemsCount={items.length}
+          initialMode="file"
           onImported={refreshAfterImport}
-          onDigitalDraft={openDigitalDraft}
         />
       )}
 
       {pasteItemsOpen && (
-        <PasteItemsDialog
+        <ImportTenderDialog
           open={pasteItemsOpen}
           onOpenChange={setPasteItemsOpen}
           quoteId={quote.id}
-          startOrderIndex={items.length}
+          defaultMarkupPercent={Number((quote as any).default_markup_percent) || 300}
+          existingItemsCount={items.length}
+          initialMode="paste"
           onImported={refreshAfterImport}
-          onDigitalDraft={openDigitalDraft}
         />
       )}
 
