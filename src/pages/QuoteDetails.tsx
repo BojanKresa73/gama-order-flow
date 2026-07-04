@@ -49,6 +49,7 @@ import { QuoteStatusActions } from "@/components/quotes/QuoteStatusActions";
 import { PasteItemsDialog } from "@/components/quotes/PasteItemsDialog";
 import { DigitalProductDialog } from "@/components/digital/DigitalProductDialog";
 import type { LocalDigitalJob } from "@/components/digital/LocalDigitalJobsTable";
+import type { ProductDraft } from "@/lib/digitalProductPricing";
 
 import { generateQuoteProPdf } from "@/lib/quoteProPdf";
 import { useSignerProfile } from "@/hooks/useSignerProfile";
