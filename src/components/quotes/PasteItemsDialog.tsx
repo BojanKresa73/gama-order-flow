@@ -61,6 +61,7 @@ export function PasteItemsDialog({
       line_total: Number(it.unit_price ?? 0) * Number(it.quantity ?? 1),
       finishing_cost: 0,
       order_index: startOrderIndex + i,
+      ...(it.digital ?? {}),
     })) as any[];
     try {
       await bulk.mutateAsync({ quoteId, items });
