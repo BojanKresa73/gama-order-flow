@@ -126,6 +126,44 @@ Deno.serve(async (req) => {
       const marginMm = settings?.side_margin_mm || 0;
       const gapMm = settings?.gap_mm || 0;
       const wastePercent = settings?.waste_percent || 0;
+      const usable = rollWidth - 2 * marginMm;
+
+      // Pre-validate: which items don't fit the roll in any orientation?
+      const allFilmItems = [...payload.items.created, ...payload.items.updated];
+      const invalid = allFilmItems
+        .filter((it) => {
+          const w = Number(it.width_mm) || 0;
+          const h = Number(it.height_mm) || 0;
+          if (!w || !h) return true;
+          const fits0 = w <= usable;
+          const fits90 = h <= usable;
+          return !fits0 && !fits90;
+        })
+        .map((it) => ({
+          file_name: it.file_name || '(bez naziva)',
+          width_mm: it.width_mm,
+          height_mm: it.height_mm,
+        }));
+
+      if (invalid.length > 0) {
+        const list = invalid
+          .map((i) => `• ${i.file_name} (${i.width_mm}×${i.height_mm} mm)`)
+          .join('\n');
+        return new Response(
+          JSON.stringify({
+            ok: false,
+            code: 'FILM_ITEM_TOO_LARGE',
+            error:
+              `Neke stavke ne staju u rolnu od ${rollWidth} mm (iskoristivo ${usable} mm).\n\n` +
+              `${list}\n\n` +
+              `Predlog: smanjite jednu od dimenzija ispod ${usable} mm, ili obrišite/zamenite stavke pre snimanja.`,
+            invalid_items: invalid,
+            roll_width_mm: rollWidth,
+            usable_mm: usable,
+          }),
+          { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
 
       const safeFit = (item: any) => {
         try {
@@ -142,6 +180,7 @@ Deno.serve(async (req) => {
           return { orientation: 0 as const, m_per_piece: 0, total_m: 0, across: 0, rows: 0 };
         }
       };
+
 
       // Recompute created items
       for (const item of payload.items.created) {
