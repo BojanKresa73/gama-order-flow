@@ -463,13 +463,49 @@ const NewWorkOrder = () => {
           }
         );
 
-        if (updateError) throw new Error(updateError.message);
-        if (!updateResponse?.ok) throw new Error(updateResponse?.error || 'Greška pri ažuriranju naloga');
+        // Parse detailed error from edge function's response body (non-2xx)
+        if (updateError) {
+          let detail = updateError.message || 'Greška pri ažuriranju naloga';
+          try {
+            const ctx: any = (updateError as any).context;
+            if (ctx && typeof ctx.json === 'function') {
+              const body = await ctx.json();
+              if (body?.error) detail = body.error;
+            } else if (ctx && typeof ctx.text === 'function') {
+              const txt = await ctx.text();
+              try {
+                const body = JSON.parse(txt);
+                if (body?.error) detail = body.error;
+              } catch {
+                if (txt) detail = txt;
+              }
+            }
+          } catch { /* ignore parse errors */ }
+
+          toast({
+            title: 'Nije moguće sačuvati nalog',
+            description: detail,
+            variant: 'destructive',
+          });
+          setLoading(false);
+          return;
+        }
+
+        if (!updateResponse?.ok) {
+          toast({
+            title: 'Nije moguće sačuvati nalog',
+            description: updateResponse?.error || 'Nepoznata greška',
+            variant: 'destructive',
+          });
+          setLoading(false);
+          return;
+        }
 
         toast({
           title: "Uspeh",
           description: "Radni nalog je ažuriran",
         });
+
 
         navigate(`/work-orders/${id}`, { replace: true });
         setLoading(false);
