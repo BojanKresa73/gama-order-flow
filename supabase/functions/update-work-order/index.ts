@@ -127,17 +127,25 @@ Deno.serve(async (req) => {
       const gapMm = settings?.gap_mm || 0;
       const wastePercent = settings?.waste_percent || 0;
 
+      const safeFit = (item: any) => {
+        try {
+          return fitOnRoll(
+            item.width_mm,
+            item.height_mm,
+            item.quantity || item.qty,
+            rollWidth,
+            marginMm,
+            gapMm,
+            wastePercent / 100
+          );
+        } catch {
+          return { orientation: 0 as const, m_per_piece: 0, total_m: 0, across: 0, rows: 0 };
+        }
+      };
+
       // Recompute created items
       for (const item of payload.items.created) {
-        const result = fitOnRoll(
-          item.width_mm,
-          item.height_mm,
-          item.quantity || item.qty,
-          rollWidth,
-          marginMm,
-          gapMm,
-          wastePercent / 100
-        );
+        const result = safeFit(item);
 
         await supabase.from('film_jobs').insert({
           work_order_id: payload.workOrderId,
@@ -158,15 +166,7 @@ Deno.serve(async (req) => {
 
       // Recompute updated items
       for (const item of payload.items.updated) {
-        const result = fitOnRoll(
-          item.width_mm,
-          item.height_mm,
-          item.quantity || item.qty,
-          rollWidth,
-          marginMm,
-          gapMm,
-          wastePercent / 100
-        );
+        const result = safeFit(item);
 
         await supabase.from('film_jobs').update({
           file_name: item.file_name,
@@ -183,6 +183,7 @@ Deno.serve(async (req) => {
           rows_needed: result.rows,
         }).eq('id', item.id);
       }
+
     } else if (normalizedKind === 'CTP') {
       // Handle CTP items
       for (const item of payload.items.created) {
