@@ -1,0 +1,1 @@
+UPDATE public.film_settings SET roll_width_mm = 505, side_margin_mm = 0, updated_at = now();
