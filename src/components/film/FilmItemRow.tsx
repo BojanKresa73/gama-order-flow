@@ -224,12 +224,12 @@ export default React.memo(function FilmItemRow({ row, index, onCommit, onDelete,
           onPaste={(e) => handlePaste(e, "width_mm")}
           onWheel={(e) => (e.currentTarget as HTMLInputElement).blur()}
           min={10}
-          max={500}
+          max={505}
           className={cn(
             "w-24",
             error && error.includes("širina") && "border-destructive"
           )}
-          placeholder="10-500"
+          placeholder="10-505"
         />
         {error && error.includes("širina") && (
           <p className="text-xs text-destructive mt-1">{error}</p>
