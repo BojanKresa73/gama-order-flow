@@ -51,8 +51,8 @@ export default React.memo(function FilmItemRow({ row, index, onCommit, onDelete,
     if (w <= 0 || h <= 0 || q <= 0) return;
 
     // Validate locally first
-    if (w > 500) {
-      setError("Preširoko za rolu (max 500 mm)");
+    if (w > 505 && h > 505) {
+      setError("Preširoko za rolu (max 505 mm)");
       return;
     }
     if (w < 10) {
@@ -69,7 +69,7 @@ export default React.memo(function FilmItemRow({ row, index, onCommit, onDelete,
     try {
       const { data, error: invokeError } = await supabase.functions.invoke('compute-film-job', {
         body: {
-          roll_width_mm: 500,
+          roll_width_mm: 505,
           margin_mm: 0,
           gap_mm: 0,
           waste_percent: 0,
@@ -224,12 +224,12 @@ export default React.memo(function FilmItemRow({ row, index, onCommit, onDelete,
           onPaste={(e) => handlePaste(e, "width_mm")}
           onWheel={(e) => (e.currentTarget as HTMLInputElement).blur()}
           min={10}
-          max={500}
+          max={505}
           className={cn(
             "w-24",
             error && error.includes("širina") && "border-destructive"
           )}
-          placeholder="10-500"
+          placeholder="10-505"
         />
         {error && error.includes("širina") && (
           <p className="text-xs text-destructive mt-1">{error}</p>
