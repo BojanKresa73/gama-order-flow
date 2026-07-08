@@ -73,7 +73,8 @@ export async function getOrderItems(orderId: string): Promise<UiItem[]> {
       unit: 'tab',
       total: item.computed_total_sheets || 0,
       details: `${item.finished_w_mm}×${item.finished_h_mm} mm, ${item.qty} kom, ${item.pages} str${paperStr}`,
-    }));
+      };
+    });
   }
 
   if (order.order_type === 'ctp') {
