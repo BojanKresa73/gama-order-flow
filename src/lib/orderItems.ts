@@ -52,7 +52,7 @@ export async function getOrderItems(orderId: string): Promise<UiItem[]> {
   if (order.order_type === 'digital') {
     const { data, error } = await supabase
       .from('digital_jobs')
-      .select('id, file_name, finished_w_mm, finished_h_mm, qty, pages, computed_total_sheets')
+      .select('id, file_name, finished_w_mm, finished_h_mm, qty, pages, computed_total_sheets, paper_type, paper_gsm, cover_paper, cover_gsm')
       .eq('work_order_id', orderId)
       .order('order_index');
 
@@ -61,14 +61,20 @@ export async function getOrderItems(orderId: string): Promise<UiItem[]> {
       return [];
     }
 
-    return (data || []).map(item => ({
+    return (data || []).map((item: any) => {
+      const paperParts: string[] = [];
+      if (item.paper_type) paperParts.push(`${item.paper_type}${item.paper_gsm ? ` ${item.paper_gsm}g` : ''}`);
+      if (item.cover_paper) paperParts.push(`korice: ${item.cover_paper}${item.cover_gsm ? ` ${item.cover_gsm}g` : ''}`);
+      const paperStr = paperParts.length ? `, ${paperParts.join(', ')}` : '';
+      return {
       id: item.id,
       label: item.file_name,
       qty: item.qty,
       unit: 'tab',
       total: item.computed_total_sheets || 0,
-      details: `${item.finished_w_mm}×${item.finished_h_mm} mm, ${item.qty} kom, ${item.pages} str`,
-    }));
+      details: `${item.finished_w_mm}×${item.finished_h_mm} mm, ${item.qty} kom, ${item.pages} str${paperStr}`,
+      };
+    });
   }
 
   if (order.order_type === 'ctp') {
