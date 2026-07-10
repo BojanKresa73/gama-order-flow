@@ -684,7 +684,7 @@ body {
 }
 
 .brand-logo {
-  height: 96px;
+  height: 67px;
   width: auto;
   display: block;
 }
