@@ -454,8 +454,8 @@ export default function WorkOrderPrint() {
                 <div className="section-title">Klijent</div>
                 <div className="client-details">
                   <strong>{data.client_name}</strong>
-                  {data.client_email && <div>Email: {data.client_email}</div>}
-                  {data.client_pib && <div>PIB: {data.client_pib}</div>}
+                  {data.client_email && <span>Email: {data.client_email}</span>}
+                  {data.client_pib && <span>PIB: {data.client_pib}</span>}
                 </div>
               </div>
 
@@ -728,8 +728,16 @@ body {
 }
 
 .client-details {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 16px;
   font-size: 12px;
   line-height: 1.5;
+}
+
+.client-details strong {
+  flex-shrink: 0;
 }
 
 .details-grid {
