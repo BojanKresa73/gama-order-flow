@@ -725,33 +725,29 @@ body {
   flex-shrink: 0;
 }
 
-.details-grid {
-  display: grid;
-  grid-template-columns: repeat(5, 1fr);
-  gap: 12px;
+.details-section {
   margin-bottom: 16px;
-}
-
-.detail-box {
-  padding: 10px;
+  padding: 12px;
   background: #f8fafc;
   border-radius: 6px;
-  border-left: 3px solid #e5e7eb;
 }
 
-.detail-box.highlight {
-  border-left-color: #1e40af;
-  background: #eff6ff;
-}
-
-.detail-label {
-  font-size: 10px;
-  color: #666;
-  margin-bottom: 4px;
-}
-
-.detail-value {
+.details-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 24px;
   font-size: 12px;
+  line-height: 1.5;
+}
+
+.details-row strong {
+  color: #666;
+  font-weight: 500;
+}
+
+.details-row .duration-highlight {
+  color: #1e40af;
   font-weight: 600;
 }
 
