@@ -682,16 +682,10 @@ body {
   align-items: flex-start;
 }
 
-.logo-placeholder {
-  min-width: 80px;
-  height: 40px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  background: #f3f4f6;
-  border-radius: 4px;
-  font-size: 11px;
-  padding: 4px 8px;
+.brand-logo {
+  height: 48px;
+  width: auto;
+  display: block;
 }
 
 .company-info {
