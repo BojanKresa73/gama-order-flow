@@ -434,9 +434,7 @@ export default function WorkOrderPrint() {
               {/* Header */}
               <div className="page-header">
                 <div className="brand-section">
-                  <div className="logo-placeholder">
-                    <span className="text-primary font-bold text-xl">GAMA UNITED</span>
-                  </div>
+                  <img src="/gama-united-logo.svg" alt="Gama United" className="brand-logo" />
                   <div className="company-info">
                     <strong>GAMA UNITED d.o.o.</strong><br />
                     Veljka Milićevića 2/10, Beograd<br />
@@ -684,16 +682,10 @@ body {
   align-items: flex-start;
 }
 
-.logo-placeholder {
-  min-width: 80px;
-  height: 40px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  background: #f3f4f6;
-  border-radius: 4px;
-  font-size: 11px;
-  padding: 4px 8px;
+.brand-logo {
+  height: 48px;
+  width: auto;
+  display: block;
 }
 
 .company-info {
