@@ -670,6 +670,7 @@ body {
 .page-header {
   display: flex;
   justify-content: space-between;
+  align-items: flex-start;
   gap: 16px;
   border-bottom: 2px solid #1e40af;
   padding-bottom: 12px;
@@ -678,19 +679,20 @@ body {
 
 .brand-section {
   display: flex;
-  gap: 12px;
+  flex-direction: column;
+  gap: 8px;
   align-items: flex-start;
 }
 
 .brand-logo {
-  height: 48px;
+  height: 96px;
   width: auto;
   display: block;
 }
 
 .company-info {
   font-size: 11px;
-  line-height: 1.4;
+  line-height: 1.5;
 }
 
 .meta-section {
