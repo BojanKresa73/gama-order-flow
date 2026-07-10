@@ -436,8 +436,7 @@ export default function WorkOrderPrint() {
                 <div className="brand-section">
                   <img src="/gama-united-logo.svg" alt="Gama United" className="brand-logo" />
                   <div className="company-info">
-                    <div>Veljka Milićevića 2/10, Beograd &nbsp;|&nbsp; PIB: 1114876455</div>
-                    <div>www.gamaunited.rs</div>
+                    Veljka Milićevića 2/10, Beograd &nbsp;|&nbsp; PIB: 1114876455 &nbsp;|&nbsp; www.gamaunited.rs
                   </div>
                 </div>
                 <div className="meta-section">
@@ -692,6 +691,7 @@ body {
 .company-info {
   font-size: 11px;
   line-height: 1.5;
+  white-space: nowrap;
 }
 
 .meta-section {
