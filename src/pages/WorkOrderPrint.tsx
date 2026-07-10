@@ -436,9 +436,9 @@ export default function WorkOrderPrint() {
                 <div className="brand-section">
                   <img src="/gama-united-logo.svg" alt="Gama United" className="brand-logo" />
                   <div className="company-info">
-                    <strong>GAMA UNITED d.o.o.</strong><br />
                     Veljka Milićevića 2/10, Beograd<br />
-                    PIB: 1114876455
+                    PIB: 1114876455<br />
+                    www.gamaunited.rs
                   </div>
                 </div>
                 <div className="meta-section">
