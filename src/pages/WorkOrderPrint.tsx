@@ -460,35 +460,20 @@ export default function WorkOrderPrint() {
               </div>
 
               {/* Order Details */}
-              <div className="details-grid">
-                <div className="detail-box">
-                  <div className="detail-label">Datum otvaranja</div>
-                  <div className="detail-value">{formatDate(data.created_at)}</div>
+              <div className="details-section">
+                <div className="details-row">
+                  <span><strong>Datum otvaranja:</strong> {formatDate(data.created_at)}</span>
+                  <span><strong>Otvorio:</strong> {creatorName || '-'}</span>
+                  {data.closed_at && (
+                    <>
+                      <span><strong>Datum zatvaranja:</strong> {formatDate(data.closed_at)}</span>
+                      <span><strong>Zatvorio:</strong> {isMixCloser ? 'Mix (više radnika)' : (closerName || '-')}</span>
+                    </>
+                  )}
+                  {duration && (
+                    <span className="duration-highlight"><strong>Trajanje:</strong> {duration}</span>
+                  )}
                 </div>
-                <div className="detail-box">
-                  <div className="detail-label">Otvorio</div>
-                  <div className="detail-value">{creatorName || '-'}</div>
-                </div>
-                {data.closed_at && (
-                  <>
-                    <div className="detail-box">
-                      <div className="detail-label">Datum zatvaranja</div>
-                      <div className="detail-value">{formatDate(data.closed_at)}</div>
-                    </div>
-                    <div className="detail-box">
-                      <div className="detail-label">Zatvorio</div>
-                      <div className="detail-value">
-                        {isMixCloser ? 'Mix (više radnika)' : (closerName || '-')}
-                      </div>
-                    </div>
-                  </>
-                )}
-                {duration && (
-                  <div className="detail-box highlight">
-                    <div className="detail-label">Trajanje</div>
-                    <div className="detail-value">{duration}</div>
-                  </div>
-                )}
               </div>
 
               {/* Mix Closer Details */}
