@@ -449,29 +449,34 @@ export default function WorkOrderPrint() {
                 </div>
               </div>
 
-              {/* Client Info */}
-              <div className="client-section">
-                <div className="section-title">Klijent</div>
-                <div className="client-details">
+              {/* Compact Client + Order Info */}
+              <div className="compact-info-section">
+                <div className="compact-info-row">
+                  <span className="compact-label">Klijent:</span>
                   <strong>{data.client_name}</strong>
-                  {data.client_email && <span>Email: {data.client_email}</span>}
+                  {data.client_email && <span className="compact-sep">|</span>}
+                  {data.client_email && <span>{data.client_email}</span>}
+                  {data.client_pib && <span className="compact-sep">|</span>}
                   {data.client_pib && <span>PIB: {data.client_pib}</span>}
                 </div>
-              </div>
-
-              {/* Order Details */}
-              <div className="details-section">
-                <div className="details-row">
-                  <span><strong>Datum otvaranja:</strong> {formatDate(data.created_at)}</span>
-                  <span><strong>Otvorio:</strong> {creatorName || '-'}</span>
+                <div className="compact-info-row">
+                  <span className="compact-label">Otvaranje:</span>
+                  <span>{formatDate(data.created_at)}</span>
+                  <span className="compact-sep">|</span>
+                  <span>{creatorName || '-'}</span>
                   {data.closed_at && (
                     <>
-                      <span><strong>Datum zatvaranja:</strong> {formatDate(data.closed_at)}</span>
-                      <span><strong>Zatvorio:</strong> {isMixCloser ? 'Mix (više radnika)' : (closerName || '-')}</span>
+                      <span className="compact-sep">|</span>
+                      <span>Zatvoren: {formatDate(data.closed_at)}</span>
+                      <span className="compact-sep">|</span>
+                      <span>{isMixCloser ? 'Mix (više radnika)' : (closerName || '-')}</span>
                     </>
                   )}
                   {duration && (
-                    <span className="duration-highlight"><strong>Trajanje:</strong> {duration}</span>
+                    <>
+                      <span className="compact-sep">|</span>
+                      <span className="duration-highlight">Trajanje: {duration}</span>
+                    </>
                   )}
                 </div>
               </div>
@@ -705,48 +710,39 @@ body {
   border-bottom: 1px solid #e5e7eb;
 }
 
-.client-section {
+.compact-info-section {
   margin-bottom: 16px;
-  padding: 12px;
+  padding: 10px 12px;
   background: #f8fafc;
   border-radius: 6px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
 }
 
-.client-details {
+.compact-info-row {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
-  gap: 16px;
+  gap: 8px;
   font-size: 12px;
-  line-height: 1.5;
+  line-height: 1.4;
 }
 
-.client-details strong {
+.compact-label {
+  color: #1e40af;
+  font-weight: 600;
   flex-shrink: 0;
+  min-width: 58px;
 }
 
-.details-section {
-  margin-bottom: 16px;
-  padding: 12px;
-  background: #f8fafc;
-  border-radius: 6px;
+.compact-sep {
+  color: #9ca3af;
+  font-weight: 400;
+  user-select: none;
 }
 
-.details-row {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 24px;
-  font-size: 12px;
-  line-height: 1.5;
-}
-
-.details-row strong {
-  color: #666;
-  font-weight: 500;
-}
-
-.details-row .duration-highlight {
+.compact-info-row .duration-highlight {
   color: #1e40af;
   font-weight: 600;
 }
