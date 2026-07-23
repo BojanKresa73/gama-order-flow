@@ -152,7 +152,8 @@ const Procurement = () => {
             </TabsTrigger>
           </TabsList>
 
-          <TabsContent value="forecast">
+          <TabsContent value="forecast" className="space-y-4">
+            <ChinaOrderRecommendation plateFormats={plateFormats || []} orders={orders || []} />
             <ProcurementForecast plateFormats={plateFormats || []} orders={orders || []} />
           </TabsContent>
 
