@@ -43,7 +43,7 @@ export const LocalFilmJobsTable = ({ jobs, onChange }: LocalFilmJobsTableProps) 
 
   const handleAddItem = () => {
     const newJob: LocalFilmJob = {
-      id: crypto.randomUUID(),
+      id: `temp-${crypto.randomUUID()}`,
       file_name: `Stavka ${jobs.length + 1}`,
       width_mm: 0,
       height_mm: 0,
@@ -58,7 +58,7 @@ export const LocalFilmJobsTable = ({ jobs, onChange }: LocalFilmJobsTableProps) 
     const startIndex = jobs.length;
     const jobsWithIds = newJobs.map(job => ({
       ...job,
-      id: job.id || crypto.randomUUID(),
+      id: job.id || `temp-${crypto.randomUUID()}`,
     }));
     onChange([...jobs, ...jobsWithIds]);
     
