@@ -1286,17 +1286,18 @@ const NewWorkOrder = () => {
                         return;
                       }
                       // Track deletions
+                      const isTempId = (v: any) => typeof v === 'string' && v.startsWith('temp-');
                       const existingIds = new Set(newJobs.filter(j => j.id).map(j => j.id));
-                      const deletedItems = filmJobs.filter(j => j.id && !existingIds.has(j.id))
+                      const deletedItems = filmJobs.filter(j => j.id && !isTempId(j.id) && !existingIds.has(j.id))
                         .map(j => ({ ...j, __status: 'deleted' as const }));
                       // Mark status for diff tracking
                       const tracked = newJobs.map(job => {
                         const j = job as typeof filmJobs[0];
-                        if (j.id && j.__status !== 'deleted') {
+                        if (j.id && !isTempId(j.id) && j.__status !== 'deleted') {
                           return { ...j, __status: 'updated' as const };
                         }
-                        if (!j.id && !j.tempId) {
-                          return { ...j, tempId: `temp-${Date.now()}-${Math.random()}`, __status: 'created' as const };
+                        if (!j.id || isTempId(j.id)) {
+                          return { ...j, tempId: j.tempId || `temp-${Date.now()}-${Math.random()}`, __status: 'created' as const };
                         }
                         return j;
                       });
