@@ -376,6 +376,14 @@ const NewWorkOrder = () => {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+
+    // Flush any pending debounced input commits (e.g. FilmItemRow onBlur)
+    if (document.activeElement instanceof HTMLElement) {
+      document.activeElement.blur();
+    }
+    await new Promise((r) => setTimeout(r, 450));
+
+
     
     // Validate client selection
     if (!formData.client_id) {

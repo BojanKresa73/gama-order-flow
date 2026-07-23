@@ -185,13 +185,26 @@ Deno.serve(async (req) => {
       // Recompute created items
       for (const item of payload.items.created) {
         const result = safeFit(item);
+        const qty = Number(item.quantity ?? item.qty) || 0;
+        const w = Number(item.width_mm) || 0;
+        const h = Number(item.height_mm) || 0;
 
-        await supabase.from('film_jobs').insert({
+        if (!w || !h || !qty) {
+          return new Response(
+            JSON.stringify({
+              ok: false,
+              error: `Nova stavka "${item.file_name || '(bez naziva)'}" nema validne dimenzije/količinu (${w}×${h}, kom ${qty}). Popunite sva polja i pritisnite Tab pre snimanja.`,
+            }),
+            { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+          );
+        }
+
+        const { error: insErr } = await supabase.from('film_jobs').insert({
           work_order_id: payload.workOrderId,
           file_name: item.file_name,
-          width_mm: item.width_mm,
-          height_mm: item.height_mm,
-          qty: item.quantity || item.qty,
+          width_mm: w,
+          height_mm: h,
+          qty,
           allow_rotate_90: item.allow_rotate_90 ?? true,
           margin_mm: item.margin_mm || 0,
           note: item.note,
@@ -201,13 +214,19 @@ Deno.serve(async (req) => {
           across_count: result.across,
           rows_needed: result.rows,
         });
+        if (insErr) {
+          console.error('film_jobs insert failed', insErr, item);
+          return new Response(
+            JSON.stringify({ ok: false, error: `Greška pri upisu stavke "${item.file_name}": ${insErr.message}` }),
+            { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+          );
+        }
       }
 
       // Recompute updated items
       for (const item of payload.items.updated) {
         const result = safeFit(item);
-
-        await supabase.from('film_jobs').update({
+        const { error: updErr } = await supabase.from('film_jobs').update({
           file_name: item.file_name,
           width_mm: item.width_mm,
           height_mm: item.height_mm,
@@ -221,6 +240,13 @@ Deno.serve(async (req) => {
           across_count: result.across,
           rows_needed: result.rows,
         }).eq('id', item.id);
+        if (updErr) {
+          console.error('film_jobs update failed', updErr, item);
+          return new Response(
+            JSON.stringify({ ok: false, error: `Greška pri ažuriranju stavke "${item.file_name}": ${updErr.message}` }),
+            { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+          );
+        }
       }
 
     } else if (normalizedKind === 'CTP') {
