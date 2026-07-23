@@ -9,6 +9,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ProcurementOrdersList } from "@/components/procurement/ProcurementOrdersList";
 import { ProcurementForecast } from "@/components/procurement/ProcurementForecast";
 import { NewProcurementDialog } from "@/components/procurement/NewProcurementDialog";
+import { ChinaOrderRecommendation } from "@/components/procurement/ChinaOrderRecommendation";
 
 const Procurement = () => {
   const navigate = useNavigate();
