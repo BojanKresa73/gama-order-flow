@@ -21,6 +21,7 @@ import { Label } from "@/components/ui/label";
 
 const Inventory = () => {
   const [plateFormats, setPlateFormats] = useState<any[]>([]);
+  const [pendingByFormat, setPendingByFormat] = useState<Record<string, { qty: number; nextEta: string | null }>>({});
   const [loading, setLoading] = useState(true);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [newFormatName, setNewFormatName] = useState("");
@@ -32,6 +33,7 @@ const Inventory = () => {
   useEffect(() => {
     checkAuth();
     fetchPlateFormats();
+    fetchPending();
   }, []);
 
   const checkAuth = async () => {
@@ -59,6 +61,27 @@ const Inventory = () => {
     } finally {
       setLoading(false);
     }
+  };
+
+  const fetchPending = async () => {
+    const { data } = await supabase
+      .from("procurement_orders")
+      .select("status, expected_arrival_date, procurement_order_items(plate_format_id, quantity)")
+      .not("status", "in", "(arrived,cancelled)");
+
+    const map: Record<string, { qty: number; nextEta: string | null }> = {};
+    (data || []).forEach((o: any) => {
+      (o.procurement_order_items || []).forEach((i: any) => {
+        if (!i.plate_format_id) return;
+        const cur = map[i.plate_format_id] || { qty: 0, nextEta: null };
+        cur.qty += i.quantity || 0;
+        if (o.expected_arrival_date && (!cur.nextEta || o.expected_arrival_date < cur.nextEta)) {
+          cur.nextEta = o.expected_arrival_date;
+        }
+        map[i.plate_format_id] = cur;
+      });
+    });
+    setPendingByFormat(map);
   };
 
   const updateStock = async (id: string, newStock: number) => {
