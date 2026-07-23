@@ -1,48 +1,26 @@
-## Cilj
+## Situacija
 
-Dodati **Brzi kalkulator** (isti kao u GDC Order) na naš sajt. Vidljiv samo za `admin`, `admin_plus`, `superuser`. Cene materijala se čitaju **uživo iz GDC Order baze**.
+Nalog **FILM-2026-000245** je zatvoren i otpremnica poslata **07.07.2026** sa starim dimenzijama. U međuvremenu si ručno korigovao film jobs na:
 
-## Kako će raditi
+- `717×518 … UV LAK` → sada **717×505 mm**, ukupno **0.74 m**
+- `730×353 … UV LAK` → **730×353 mm**, ukupno **0.75 m**
 
-- Novi drugi Supabase klijent (`supabaseGDC`) — čita samo tabele cenovnika iz GDC Order projekta (anon key, read-only za frontend, RLS mora dozvoliti čitanje).
-- Kompletna komponenta `QuickPriceCalculator` sa: unos dimenzija, količina, materijal, štampa 4/0÷4/4, marža, dorada, kasiranje, custom cena, tabovi Kalkulator / Lista stavki / Istorija, sačuvane liste u localStorage, izračun profita, kopiranje rezultata, dugme „Napravi ponudu".
-- **Istorija** (`quick_calc_history`) se čuva u našoj bazi (per-user, RLS).
-- **„Napravi ponudu"** — ovaj projekat trenutno nema modul Ponuda. Predložena varijanta: dugme otvara nov nalog `/work-orders/new` sa predpopunjenim stavkama iz sessionStorage, ili — ako želiš — samo se skloni. **Ovo mi treba potvrda pre finalne implementacije.**
-- Pristup: dugme se pojavljuje u sidebar-u / na dashboardu samo ako je uloga admin+.
+Zapis u `delivery_notes` je već ažuriran na iste vrednosti (verovatno je resnimljen), ali **PDF poslat klijentu i dalje ima stare brojke** — treba ga regenerisati i ponovo poslati.
 
-## Šta mi treba od tebe
+## Plan (jedan korak, bez izmena koda)
 
-1. **Supabase URL i anon key GDC Order projekta** (postavi kao secret: `GDC_SUPABASE_URL` i `GDC_SUPABASE_ANON_KEY`, ili ih prosledi meni). Bez ovoga kalkulator ne može da čita cene.
-2. Potvrda da RLS na GDC Order tabelama (`large_format_materials`, `large_format_prices`, `kasiranje_settings`, `digital_paper_types`, itd.) **dozvoljava anonimno čitanje** — inače moraš omogućiti `SELECT` za `anon` na tim tabelama u GDC Order projektu (to se radi tamo, ne ovde).
-3. Odluka o dugmetu „Napravi ponudu" (vidi gore).
+Postoji već ugrađena "resend" logika u `send-delivery-note` edge funkciji (`resend: true` briše postojeći `delivery_notes` red, pravi novi iz trenutnih `film_jobs`, generiše nov PDF, uploaduje ga u storage i šalje mejl na sve `notification_email*` polja klijenta).
 
-## Tehnički koraci (redom)
+Kad odobriš prelazak u build, uraditi jednu stvar:
 
-```text
-1. Migracija: tabela quick_calc_history (per-user, RLS auth-only) + GRANT
-2. src/integrations/supabase/gdc-client.ts  — drugi Supabase klijent (VITE_GDC_SUPABASE_URL, VITE_GDC_SUPABASE_ANON_KEY)
-3. Kopiraj iz GDC Order:
-   - src/lib/quotePricing.ts, kasiranjeCost.ts, auth/quickCalcAccess.ts
-   - src/hooks/useLargeFormatPricing.ts, useKasiranjeSettings.ts  (izmeni da koriste supabaseGDC)
-   - src/components/quotes/MaterialCombobox.tsx
-   - src/components/calculator/QuickPriceCalculator.tsx  (izmeni: history koristi naš supabase, /quotes/new prilagoditi)
-4. Ugradi u DashboardQuickActions.tsx (dugme za admin+)
-5. Ugradi trigger u AppHeader-u (globalno dostupno)
-6. Test: forma se otvara, materijali se učitavaju iz GDC baze, cena se računa, kopiranje radi, istorija pamti
-```
+1. Pozvati `send-delivery-note` edge funkciju sa telom:
+   ```json
+   { "workOrderId": "0ba319c3-3574-4b9b-962e-2bb0ad0fac8a", "resend": true }
+   ```
+   preko `supabase.functions.invoke` iz kratke skripte (koristeći tvoj auth token — funkcija zahteva JWT).
 
-## Datoteke koje se prave / menjaju
+2. Verifikovati: proveriti da je novi `delivery_notes.sent_at` timestamp od danas, i da PDF u storage bucket-u `delivery-notes` sadrži nove metraže (0.74 m / 0.75 m).
 
-- `supabase/migrations/…_quick_calc_history.sql` (nova)
-- `src/integrations/supabase/gdc-client.ts` (nova)
-- `src/lib/quotePricing.ts`, `src/lib/kasiranjeCost.ts`, `src/lib/auth/quickCalcAccess.ts` (kopije)
-- `src/hooks/useLargeFormatPricing.ts`, `src/hooks/useKasiranjeSettings.ts` (kopije + prebačeno na `supabaseGDC`)
-- `src/components/quotes/MaterialCombobox.tsx` (kopija)
-- `src/components/calculator/QuickPriceCalculator.tsx` (kopija + izmene)
-- `src/components/dashboard/DashboardQuickActions.tsx` (dugme)
-- `src/components/layout/AppHeader.tsx` (globalni trigger — opciono)
-- `.env` dobija `VITE_GDC_SUPABASE_URL` i `VITE_GDC_SUPABASE_ANON_KEY` (kroz secrets)
+## Napomena
 
-## Napomena o rizicima
-
-- Ako GDC Order jednog dana promeni šemu tabela cenovnika, ovaj kalkulator će pući ovde. Preporučeni pravac dugoročno: nightly cron koji sinhronizuje cene u našu bazu. Ali za sada — direktno čitanje kako si tražio.
+Ne diram nikakav kod jer resend mehanizam već postoji i radi tačno ono što treba. Ako želiš, umesto jednokratnog poziva mogu da dodam i UI dugme "Ponovo pošalji otpremnicu" na stranicu detalja naloga (`WorkOrderDetails.tsx`) — reci mi ako to hoćeš, pa ću dopuniti plan.
