@@ -32,8 +32,23 @@ export const CtpInventoryForecast = () => {
 
       if (itemsError) throw itemsError;
 
+      // Fetch pending procurement (on the way from China)
+      const { data: procOrders } = await supabase
+        .from("procurement_orders")
+        .select("status, procurement_order_items(plate_format_id, quantity)")
+        .not("status", "in", "(arrived,cancelled)");
+
+      const pending: Record<string, number> = {};
+      (procOrders || []).forEach((o: any) => {
+        (o.procurement_order_items || []).forEach((i: any) => {
+          if (!i.plate_format_id) return;
+          pending[i.plate_format_id] = (pending[i.plate_format_id] || 0) + (i.quantity || 0);
+        });
+      });
+
       return {
         formats,
+        pending,
         items: ((items || []) as unknown) as Array<{
           plate_format_id: string;
           plate_format_name: string;
@@ -62,14 +77,20 @@ export const CtpInventoryForecast = () => {
     const data = rawData.formats.map(format => {
       const totalConsumption = formatConsumption[format.id] || 0;
       const avgDaily = totalConsumption / 30;
+      const pendingQty = rawData.pending[format.id] || 0;
+      const available = format.current_stock + pendingQty;
       const daysOfCover = avgDaily > 0 ? format.current_stock / avgDaily : 999;
+      const daysOfCoverWithPending = avgDaily > 0 ? available / avgDaily : 999;
 
       return {
         formatId: format.id,
         formatName: format.format_name,
         currentStock: format.current_stock,
+        pending: pendingQty,
+        available,
         avgDaily: avgDaily,
         daysOfCover: daysOfCover,
+        daysOfCoverWithPending,
       };
     });
 
