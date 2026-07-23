@@ -158,29 +158,18 @@ const handler = async (req: Request): Promise<Response> => {
         throw new Error("No film jobs found for this work order");
       }
 
-      // Map film jobs; recompute total meters using the same simple formula
-      // as the work order print view so delivery note always matches print.
-      const ROLL_WIDTH_MM = 500;
-      items = filmJobs.map(job => {
-        const w = Number(job.width_mm ?? 0);
-        const h = Number(job.height_mm ?? 0);
-        const q = Number(job.qty ?? 1);
-        const fit0 = w <= ROLL_WIDTH_MM;
-        const fit90 = h <= ROLL_WIDTH_MM;
-        const use90 = fit90 && (!fit0 || w < h);
-        const pieceM = (use90 ? w : h) / 1000;
-        const recomputedTotalM = q * pieceM;
-        return {
-          id: job.id,
-          filename: job.file_name,
-          quantity: job.qty,
-          file_type: 'film',
-          width_mm: job.width_mm,
-          height_mm: job.height_mm,
-          computed_total_m: recomputedTotalM,
-          note: job.note
-        };
-      });
+      // Use the stored calculation from the film job. It is calculated from
+      // the current film settings when the order is created/edited/closed.
+      items = filmJobs.map(job => ({
+        id: job.id,
+        filename: job.file_name,
+        quantity: job.qty,
+        file_type: 'film',
+        width_mm: job.width_mm,
+        height_mm: job.height_mm,
+        computed_total_m: Number(job.computed_total_m ?? 0),
+        note: job.note
+      }));
       console.log(`Fetched ${items.length} film jobs for work order`);
     } else if (orderType === 'digital') {
       // Fetch digital jobs
@@ -318,6 +307,8 @@ const handler = async (req: Request): Promise<Response> => {
           filename: item.filename,
           quantity: item.quantity,
           file_type: item.file_type,
+          width_mm: item.width_mm,
+          height_mm: item.height_mm,
           computed_total_m: item.computed_total_m,
         })),
         sent_to_email: workOrder.client.notification_email,
