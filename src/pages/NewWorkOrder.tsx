@@ -430,9 +430,12 @@ const NewWorkOrder = () => {
           itemsDiff.updated = ctpItems.filter(it => it.id && it.__status === 'updated');
           itemsDiff.deleted = ctpItems.filter(it => it.id && it.__status === 'deleted').map(it => it.id);
         } else if (orderType === "film") {
-          itemsDiff.created = filmJobs.filter(it => !it.id && it.__status !== 'deleted');
-          itemsDiff.updated = filmJobs.filter(it => it.id && it.__status === 'updated');
-          itemsDiff.deleted = filmJobs.filter(it => it.id && it.__status === 'deleted').map(it => it.id);
+          const isTempId = (v: any) => typeof v === 'string' && v.startsWith('temp-');
+          itemsDiff.created = filmJobs
+            .filter(it => (!it.id || isTempId(it.id)) && it.__status !== 'deleted')
+            .map(({ id, ...rest }: any) => (isTempId(id) ? rest : { id, ...rest }));
+          itemsDiff.updated = filmJobs.filter(it => it.id && !isTempId(it.id) && it.__status === 'updated');
+          itemsDiff.deleted = filmJobs.filter(it => it.id && !isTempId(it.id) && it.__status === 'deleted').map(it => it.id);
         } else if (orderType === "digital") {
           itemsDiff.created = digitalJobsForSave.filter(it => !it.id && it.__status !== 'deleted');
           itemsDiff.updated = digitalJobsForSave.filter(it => it.id && it.__status === 'updated');
