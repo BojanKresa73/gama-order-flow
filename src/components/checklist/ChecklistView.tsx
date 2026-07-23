@@ -103,18 +103,29 @@ type ChecklistSortField = 'order_number' | 'client_name' | 'created_by_name' | '
 type SortDir = 'asc' | 'desc';
 
 const ChecklistView = ({ orderType, onNavigateToSearch }: ChecklistViewProps) => {
+  const SS_KEY = `checklistView:${orderType}`;
+  const initial = (() => {
+    try { const raw = sessionStorage.getItem(SS_KEY); if (raw) return JSON.parse(raw); } catch {}
+    return {} as any;
+  })();
   const [workOrders, setWorkOrders] = useState<WorkOrder[]>([]);
   const [loading, setLoading] = useState(true);
-  const [statusFilter, setStatusFilter] = useState<StatusFilter>("open");
+  const [statusFilter, setStatusFilter] = useState<StatusFilter>(initial.statusFilter || "open");
   const [expandedOrderIds, setExpandedOrderIds] = useState<Set<string>>(new Set());
   const [machineSpeeds, setMachineSpeeds] = useState<MachineSpeed[]>([]);
   const [jobSessions, setJobSessions] = useState<JobSession[]>([]);
   const { toast } = useToast();
   const isMobile = useIsMobile();
   const navigate = useNavigate();
-  const [sortField, setSortField] = useState<ChecklistSortField>('created_at');
-  const [sortDir, setSortDir] = useState<SortDir>('desc');
-  const [searchTerm, setSearchTerm] = useState("");
+  const [sortField, setSortField] = useState<ChecklistSortField>(initial.sortField || 'created_at');
+  const [sortDir, setSortDir] = useState<SortDir>(initial.sortDir || 'desc');
+  const [searchTerm, setSearchTerm] = useState<string>(initial.searchTerm || "");
+
+  useEffect(() => {
+    try {
+      sessionStorage.setItem(SS_KEY, JSON.stringify({ statusFilter, sortField, sortDir, searchTerm }));
+    } catch {}
+  }, [SS_KEY, statusFilter, sortField, sortDir, searchTerm]);
 
   const toggleSort = (field: ChecklistSortField) => {
     if (sortField === field) {
