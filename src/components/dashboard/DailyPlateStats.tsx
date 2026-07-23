@@ -164,6 +164,12 @@ export const DailyPlateStats = () => {
               </div>
             </div>
           )}
+          {totalPending > 0 && (
+            <div className="mt-2 pt-2 border-t border-border flex justify-between items-center text-xs">
+              <span className="text-muted-foreground">Na putu iz Kine</span>
+              <span className="font-semibold text-blue-600">{totalPending.toLocaleString('sr-RS')} ploča</span>
+            </div>
+          )}
         </div>
 
         {/* Per-format breakdown */}
