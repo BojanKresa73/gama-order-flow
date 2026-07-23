@@ -3,7 +3,6 @@ import { useParams, useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Printer } from "lucide-react";
-import { computeFilmUsage } from "@/lib/filmUsage";
 import { format, differenceInHours, differenceInMinutes } from "date-fns";
 import { calculateGroupedPricing, formatTierLabel, type DigitalJobItem } from "@/lib/digitalGroupedPricing";
 
@@ -52,6 +51,11 @@ interface PreparedRow {
   closedBy?: string;
   piecesCount?: number | null;
 }
+
+const getStoredFilmMeters = (item: any): number => {
+  const total = Number(item.computed_total_m ?? 0);
+  return Number.isFinite(total) && total > 0 ? total : 0;
+};
 
 // Digital Pricing Print Section Component
 const DigitalPricingPrintSection = ({ items, prepHours = 0 }: { items: any[]; prepHours?: number }) => {
@@ -332,15 +336,11 @@ export default function WorkOrderPrint() {
 
     if (data.order_type === 'film') {
       return data.items.map((item: any, i: number) => {
-        const fit = computeFilmUsage({
-          widthMm: Number(item.width_mm ?? item.width ?? 0),
-          heightMm: Number(item.height_mm ?? item.height ?? 0),
-          qty: Number(item.qty ?? item.quantity ?? 1),
-        });
+        const totalM = getStoredFilmMeters(item);
         return {
           rbr: i + 1,
           name: item.file_name ?? item.name ?? 'N/A',
-          details: `${item.width_mm}×${item.height_mm}mm | Potrošeno: ${fit.totalM.toFixed(2)} m`,
+          details: `${item.width_mm}×${item.height_mm}mm | Potrošeno: ${totalM > 0 ? totalM.toFixed(2) : '-'} m`,
           qty: Number(item.qty ?? item.quantity ?? 1),
         };
       });
@@ -396,14 +396,7 @@ export default function WorkOrderPrint() {
   // Calculate totals based on order type
   const totalQty = rows.reduce((sum, row) => sum + row.qty, 0);
   const totalFilmMeters = data.order_type === 'film' 
-    ? data.items.reduce((sum: number, item: any) => {
-        const fit = computeFilmUsage({
-          widthMm: Number(item.width_mm ?? 0),
-          heightMm: Number(item.height_mm ?? 0),
-          qty: Number(item.qty ?? 1),
-        });
-        return sum + fit.totalM;
-      }, 0)
+    ? data.items.reduce((sum: number, item: any) => sum + getStoredFilmMeters(item), 0)
     : null;
 
   return (
