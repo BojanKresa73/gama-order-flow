@@ -13,6 +13,7 @@ interface PlateStats {
   current_stock: number;
   today_used: number;
   scheduled: number;
+  pending: number;
 }
 
 export const DailyPlateStats = () => {
@@ -55,6 +56,20 @@ export const DailyPlateStats = () => {
         .eq("work_orders.order_type", "ctp")
         .range(0, 49999);
 
+      // Get pending procurement (on the way)
+      const { data: procOrders } = await supabase
+        .from("procurement_orders")
+        .select("status, procurement_order_items(plate_format_id, quantity)")
+        .not("status", "in", "(arrived,cancelled)");
+
+      const pendingMap: Record<string, number> = {};
+      (procOrders || []).forEach((o: any) => {
+        (o.procurement_order_items || []).forEach((i: any) => {
+          if (!i.plate_format_id) return;
+          pendingMap[i.plate_format_id] = (pendingMap[i.plate_format_id] || 0) + (i.quantity || 0);
+        });
+      });
+
       // Aggregate usage per format
       const usageMap: Record<string, number> = {};
       todayUsage?.forEach((entry) => {
@@ -77,6 +92,7 @@ export const DailyPlateStats = () => {
         current_stock: f.current_stock,
         today_used: usageMap[f.id] || 0,
         scheduled: scheduledMap[f.id] || 0,
+        pending: pendingMap[f.id] || 0,
       }));
 
       return result;
@@ -85,6 +101,7 @@ export const DailyPlateStats = () => {
 
   const totalScheduled = stats?.reduce((sum, s) => sum + s.scheduled, 0) || 0;
   const totalTodayUsed = stats?.reduce((sum, s) => sum + s.today_used, 0) || 0;
+  const totalPending = stats?.reduce((sum, s) => sum + s.pending, 0) || 0;
 
   if (isLoading) {
     return (
@@ -145,6 +162,12 @@ export const DailyPlateStats = () => {
                   style={{ width: `${totalScheduled > 0 ? Math.min((totalTodayUsed / totalScheduled) * 100, 100) : 0}%` }}
                 />
               </div>
+            </div>
+          )}
+          {totalPending > 0 && (
+            <div className="mt-2 pt-2 border-t border-border flex justify-between items-center text-xs">
+              <span className="text-muted-foreground">Na putu iz Kine</span>
+              <span className="font-semibold text-blue-600">{totalPending.toLocaleString('sr-RS')} ploča</span>
             </div>
           )}
         </div>

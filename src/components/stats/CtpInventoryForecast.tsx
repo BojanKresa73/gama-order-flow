@@ -32,8 +32,23 @@ export const CtpInventoryForecast = () => {
 
       if (itemsError) throw itemsError;
 
+      // Fetch pending procurement (on the way from China)
+      const { data: procOrders } = await supabase
+        .from("procurement_orders")
+        .select("status, procurement_order_items(plate_format_id, quantity)")
+        .not("status", "in", "(arrived,cancelled)");
+
+      const pending: Record<string, number> = {};
+      (procOrders || []).forEach((o: any) => {
+        (o.procurement_order_items || []).forEach((i: any) => {
+          if (!i.plate_format_id) return;
+          pending[i.plate_format_id] = (pending[i.plate_format_id] || 0) + (i.quantity || 0);
+        });
+      });
+
       return {
         formats,
+        pending,
         items: ((items || []) as unknown) as Array<{
           plate_format_id: string;
           plate_format_name: string;
@@ -62,14 +77,20 @@ export const CtpInventoryForecast = () => {
     const data = rawData.formats.map(format => {
       const totalConsumption = formatConsumption[format.id] || 0;
       const avgDaily = totalConsumption / 30;
+      const pendingQty = rawData.pending[format.id] || 0;
+      const available = format.current_stock + pendingQty;
       const daysOfCover = avgDaily > 0 ? format.current_stock / avgDaily : 999;
+      const daysOfCoverWithPending = avgDaily > 0 ? available / avgDaily : 999;
 
       return {
         formatId: format.id,
         formatName: format.format_name,
         currentStock: format.current_stock,
+        pending: pendingQty,
+        available,
         avgDaily: avgDaily,
         daysOfCover: daysOfCover,
+        daysOfCoverWithPending,
       };
     });
 
@@ -124,9 +145,11 @@ export const CtpInventoryForecast = () => {
           <TableHeader>
             <TableRow>
               <TableHead>Format</TableHead>
-              <TableHead className="text-right">Lager (kom)</TableHead>
+              <TableHead className="text-right">Lager</TableHead>
+              <TableHead className="text-right">Na putu</TableHead>
               <TableHead className="text-right">Prosek/dan</TableHead>
-              <TableHead className="text-right">Days of Cover</TableHead>
+              <TableHead className="text-right">DoC (lager)</TableHead>
+              <TableHead className="text-right">DoC (+na putu)</TableHead>
             </TableRow>
           </TableHeader>
             <TableBody>
@@ -135,17 +158,23 @@ export const CtpInventoryForecast = () => {
                 <TableRow key={item.formatId} className={getRowColor(item.daysOfCover)}>
                   <TableCell className="font-medium">{item.formatName}</TableCell>
                   <TableCell className="text-right">{item.currentStock}</TableCell>
+                  <TableCell className="text-right text-blue-600">
+                    {item.pending > 0 ? item.pending.toLocaleString('sr-RS') : "—"}
+                  </TableCell>
                   <TableCell className="text-right">
                     {item.avgDaily > 0 ? item.avgDaily.toFixed(1) : "0.0"}
                   </TableCell>
                   <TableCell className="text-right font-semibold">
                     {item.daysOfCover >= 999 ? "∞" : Math.round(item.daysOfCover)}
                   </TableCell>
+                  <TableCell className="text-right font-semibold text-blue-700 dark:text-blue-400">
+                    {item.daysOfCoverWithPending >= 999 ? "∞" : Math.round(item.daysOfCoverWithPending)}
+                  </TableCell>
                 </TableRow>
               ))
             ) : (
               <TableRow>
-                <TableCell colSpan={4} className="text-center text-muted-foreground">
+                <TableCell colSpan={6} className="text-center text-muted-foreground">
                   Nema podataka za prikaz
                 </TableCell>
               </TableRow>
@@ -154,11 +183,15 @@ export const CtpInventoryForecast = () => {
         </Table>
         
         {forecastData && forecastData.length > 0 && (
-          <div className="mt-4 pt-4 border-t flex justify-between items-center">
+          <div className="mt-4 pt-4 border-t flex flex-wrap gap-4 justify-between items-center">
             <span className="text-sm text-muted-foreground">Ukupno formata: {forecastData.length}</span>
-            <span className="text-lg font-semibold">
-              Ukupno ploča: {forecastData.reduce((sum, item) => sum + item.currentStock, 0).toLocaleString('sr-RS')}
-            </span>
+            <div className="flex gap-4 text-sm">
+              <span>Lager: <strong>{forecastData.reduce((s, i) => s + i.currentStock, 0).toLocaleString('sr-RS')}</strong></span>
+              <span className="text-blue-600">Na putu: <strong>{forecastData.reduce((s, i) => s + i.pending, 0).toLocaleString('sr-RS')}</strong></span>
+              <span className="text-lg font-semibold">
+                Dostupno: {forecastData.reduce((s, i) => s + i.available, 0).toLocaleString('sr-RS')}
+              </span>
+            </div>
           </div>
         )}
       </CardContent>
