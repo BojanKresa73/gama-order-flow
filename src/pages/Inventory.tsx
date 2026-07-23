@@ -280,13 +280,19 @@ const Inventory = () => {
                 <TableRow>
                   <TableHead>Format</TableHead>
                   <TableHead>Trenutno stanje</TableHead>
+                  <TableHead>Na putu (Kina)</TableHead>
+                  <TableHead>Ukupno dostupno</TableHead>
                   <TableHead>Minimalno stanje</TableHead>
                   <TableHead>Status</TableHead>
                   <TableHead>Akcije</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {plateFormats.map((format) => (
+                {plateFormats.map((format) => {
+                  const pending = pendingByFormat[format.id];
+                  const pendingQty = pending?.qty || 0;
+                  const available = (format.current_stock || 0) + pendingQty;
+                  return (
                   <TableRow key={format.id}>
                     <TableCell className="font-medium">{format.format_name}</TableCell>
                     <TableCell>
@@ -296,6 +302,23 @@ const Inventory = () => {
                         onChange={(e) => updateStock(format.id, parseInt(e.target.value))}
                         className="w-24"
                       />
+                    </TableCell>
+                    <TableCell>
+                      {pendingQty > 0 ? (
+                        <div>
+                          <div className="font-medium text-blue-600">{pendingQty.toLocaleString('sr-RS')}</div>
+                          {pending?.nextEta && (
+                            <div className="text-xs text-muted-foreground">
+                              ETA: {new Date(pending.nextEta).toLocaleDateString('sr-Latn')}
+                            </div>
+                          )}
+                        </div>
+                      ) : (
+                        <span className="text-muted-foreground">—</span>
+                      )}
+                    </TableCell>
+                    <TableCell className="font-semibold">
+                      {available.toLocaleString('sr-RS')}
                     </TableCell>
                     <TableCell>{format.low_stock_threshold}</TableCell>
                     <TableCell>
@@ -334,16 +357,25 @@ const Inventory = () => {
                       </div>
                     </TableCell>
                   </TableRow>
-                ))}
+                  );
+                })}
               </TableBody>
             </Table>
             
             {plateFormats.length > 0 && (
-              <div className="mt-4 pt-4 border-t flex justify-between items-center">
+              <div className="mt-4 pt-4 border-t flex flex-wrap gap-6 justify-between items-center">
                 <span className="text-sm text-muted-foreground">Ukupno formata: {plateFormats.length}</span>
-                <span className="text-lg font-semibold">
-                  Ukupno ploča: {plateFormats.reduce((sum, f) => sum + (f.current_stock || 0), 0).toLocaleString('sr-RS')}
-                </span>
+                <div className="flex gap-6 text-sm">
+                  <span>
+                    Lager: <strong>{plateFormats.reduce((sum, f) => sum + (f.current_stock || 0), 0).toLocaleString('sr-RS')}</strong>
+                  </span>
+                  <span className="text-blue-600">
+                    Na putu: <strong>{Object.values(pendingByFormat).reduce((s, p) => s + p.qty, 0).toLocaleString('sr-RS')}</strong>
+                  </span>
+                  <span className="text-lg font-semibold">
+                    Ukupno dostupno: {(plateFormats.reduce((sum, f) => sum + (f.current_stock || 0), 0) + Object.values(pendingByFormat).reduce((s, p) => s + p.qty, 0)).toLocaleString('sr-RS')}
+                  </span>
+                </div>
               </div>
             )}
           </CardContent>
