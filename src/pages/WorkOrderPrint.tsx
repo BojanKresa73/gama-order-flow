@@ -356,13 +356,19 @@ export default function WorkOrderPrint() {
     }
 
     if (data.order_type === 'digital') {
-      return data.items.map((item: any, i: number) => ({
-        rbr: i + 1,
-        name: item.file_name ?? item.name ?? 'N/A',
-        details: `Format: ${item.machine_sheet_format || '488×330'} | Štampa: ${item.print_sides ?? 'N/A'} | Obim: ${item.obim || 1}${item.pieces_count ? ` | Komada: ${item.pieces_count}` : ''}`,
-        qty: Number(item.qty ?? item.quantity ?? 1),
-        piecesCount: item.pieces_count || null,
-      }));
+      return data.items.map((item: any, i: number) => {
+        const paperParts: string[] = [];
+        if (item.paper_type) paperParts.push(`${item.paper_type}${item.paper_gsm ? ` ${item.paper_gsm}g` : ''}`);
+        if (item.cover_paper) paperParts.push(`korice: ${item.cover_paper}${item.cover_gsm ? ` ${item.cover_gsm}g` : ''}`);
+        const paperStr = paperParts.length ? ` | Papir: ${paperParts.join(', ')}` : '';
+        return {
+          rbr: i + 1,
+          name: item.file_name ?? item.name ?? 'N/A',
+          details: `Format: ${item.machine_sheet_format || '488×330'} | Štampa: ${item.print_sides ?? 'N/A'} | Obim: ${item.obim || 1}${item.pieces_count ? ` | Komada: ${item.pieces_count}` : ''}${paperStr}`,
+          qty: Number(item.qty ?? item.quantity ?? 1),
+          piecesCount: item.pieces_count || null,
+        };
+      });
     }
 
     // Other/Ostalo
