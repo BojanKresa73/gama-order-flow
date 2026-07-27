@@ -351,7 +351,7 @@ const SearchAndStats = () => {
 
       return true;
     });
-  }, [workOrders, activeTab, searchTerm, selectedClient, selectedFormat, selectedStatus, selectedInvoiceStatus, selectedCreatedBy, selectedClosedBy, dateFrom, dateTo]);
+  }, [workOrders, activeTab, searchTerm, fileNameFilter, selectedClient, selectedFormat, selectedStatus, selectedInvoiceStatus, selectedCreatedBy, selectedClosedBy, dateFrom, dateTo]);
 
   const stats = useMemo(() => {
     const openOrders = filteredOrders.filter((o) => o.status === "open").length;
