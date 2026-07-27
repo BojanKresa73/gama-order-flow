@@ -295,6 +295,14 @@ const SearchAndStats = () => {
         if (!matchesOrderNumber && !matchesFileName) return false;
       }
 
+      if (fileNameFilter.trim()) {
+        const fnLower = fileNameFilter.trim().toLowerCase();
+        const matches = order.file_entries?.some((file) =>
+          file.filename.toLowerCase().includes(fnLower)
+        );
+        if (!matches) return false;
+      }
+
       if (selectedClient !== "all" && order.client_name !== selectedClient) {
         return false;
       }
