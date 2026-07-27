@@ -368,6 +368,7 @@ const SearchAndStats = () => {
 
   const clearFilters = () => {
     setSearchTerm("");
+    setFileNameFilter("");
     setSelectedClient("all");
     setSelectedFormat("all");
     setSelectedStatus("all");
