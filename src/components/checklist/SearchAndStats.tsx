@@ -86,11 +86,11 @@ const SearchAndStats = () => {
   useEffect(() => {
     try {
       sessionStorage.setItem(SS_KEY, JSON.stringify({
-        searchTerm, selectedClient, selectedFormat, selectedStatus,
+        searchTerm, fileNameFilter, selectedClient, selectedFormat, selectedStatus,
         selectedInvoiceStatus, selectedCreatedBy, selectedClosedBy, dateFrom, dateTo,
       }));
     } catch {}
-  }, [searchTerm, selectedClient, selectedFormat, selectedStatus, selectedInvoiceStatus, selectedCreatedBy, selectedClosedBy, dateFrom, dateTo]);
+  }, [searchTerm, fileNameFilter, selectedClient, selectedFormat, selectedStatus, selectedInvoiceStatus, selectedCreatedBy, selectedClosedBy, dateFrom, dateTo]);
 
   useEffect(() => {
     fetchAllWorkOrders();
