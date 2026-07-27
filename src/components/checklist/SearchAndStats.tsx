@@ -68,6 +68,7 @@ const SearchAndStats = () => {
   })();
 
   const [searchTerm, setSearchTerm] = useState(initialFilters.searchTerm || "");
+  const [fileNameFilter, setFileNameFilter] = useState(initialFilters.fileNameFilter || "");
   const [selectedClient, setSelectedClient] = useState(initialFilters.selectedClient || "all");
   const [selectedFormat, setSelectedFormat] = useState(initialFilters.selectedFormat || "all");
   const [selectedStatus, setSelectedStatus] = useState(initialFilters.selectedStatus || "all");
