@@ -17,6 +17,8 @@ interface Worker {
 interface ChecklistFiltersProps {
   searchTerm: string;
   onSearchChange: (value: string) => void;
+  fileNameFilter?: string;
+  onFileNameChange?: (value: string) => void;
   selectedClient: string;
   onClientChange: (value: string) => void;
   selectedFormat: string;
