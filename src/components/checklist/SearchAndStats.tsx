@@ -68,6 +68,7 @@ const SearchAndStats = () => {
   })();
 
   const [searchTerm, setSearchTerm] = useState(initialFilters.searchTerm || "");
+  const [fileNameFilter, setFileNameFilter] = useState(initialFilters.fileNameFilter || "");
   const [selectedClient, setSelectedClient] = useState(initialFilters.selectedClient || "all");
   const [selectedFormat, setSelectedFormat] = useState(initialFilters.selectedFormat || "all");
   const [selectedStatus, setSelectedStatus] = useState(initialFilters.selectedStatus || "all");
@@ -85,11 +86,11 @@ const SearchAndStats = () => {
   useEffect(() => {
     try {
       sessionStorage.setItem(SS_KEY, JSON.stringify({
-        searchTerm, selectedClient, selectedFormat, selectedStatus,
+        searchTerm, fileNameFilter, selectedClient, selectedFormat, selectedStatus,
         selectedInvoiceStatus, selectedCreatedBy, selectedClosedBy, dateFrom, dateTo,
       }));
     } catch {}
-  }, [searchTerm, selectedClient, selectedFormat, selectedStatus, selectedInvoiceStatus, selectedCreatedBy, selectedClosedBy, dateFrom, dateTo]);
+  }, [searchTerm, fileNameFilter, selectedClient, selectedFormat, selectedStatus, selectedInvoiceStatus, selectedCreatedBy, selectedClosedBy, dateFrom, dateTo]);
 
   useEffect(() => {
     fetchAllWorkOrders();
@@ -294,6 +295,14 @@ const SearchAndStats = () => {
         if (!matchesOrderNumber && !matchesFileName) return false;
       }
 
+      if (fileNameFilter.trim()) {
+        const fnLower = fileNameFilter.trim().toLowerCase();
+        const matches = order.file_entries?.some((file) =>
+          file.filename.toLowerCase().includes(fnLower)
+        );
+        if (!matches) return false;
+      }
+
       if (selectedClient !== "all" && order.client_name !== selectedClient) {
         return false;
       }
@@ -342,7 +351,7 @@ const SearchAndStats = () => {
 
       return true;
     });
-  }, [workOrders, activeTab, searchTerm, selectedClient, selectedFormat, selectedStatus, selectedInvoiceStatus, selectedCreatedBy, selectedClosedBy, dateFrom, dateTo]);
+  }, [workOrders, activeTab, searchTerm, fileNameFilter, selectedClient, selectedFormat, selectedStatus, selectedInvoiceStatus, selectedCreatedBy, selectedClosedBy, dateFrom, dateTo]);
 
   const stats = useMemo(() => {
     const openOrders = filteredOrders.filter((o) => o.status === "open").length;
@@ -359,6 +368,7 @@ const SearchAndStats = () => {
 
   const clearFilters = () => {
     setSearchTerm("");
+    setFileNameFilter("");
     setSelectedClient("all");
     setSelectedFormat("all");
     setSelectedStatus("all");
@@ -424,6 +434,8 @@ const SearchAndStats = () => {
           <ChecklistFilters
             searchTerm={searchTerm}
             onSearchChange={setSearchTerm}
+            fileNameFilter={fileNameFilter}
+            onFileNameChange={setFileNameFilter}
             selectedClient={selectedClient}
             onClientChange={setSelectedClient}
             selectedFormat={selectedFormat}
@@ -465,6 +477,8 @@ const SearchAndStats = () => {
           <ChecklistFilters
             searchTerm={searchTerm}
             onSearchChange={setSearchTerm}
+            fileNameFilter={fileNameFilter}
+            onFileNameChange={setFileNameFilter}
             selectedClient={selectedClient}
             onClientChange={setSelectedClient}
             selectedFormat={selectedFormat}
@@ -506,6 +520,8 @@ const SearchAndStats = () => {
           <ChecklistFilters
             searchTerm={searchTerm}
             onSearchChange={setSearchTerm}
+            fileNameFilter={fileNameFilter}
+            onFileNameChange={setFileNameFilter}
             selectedClient={selectedClient}
             onClientChange={setSelectedClient}
             selectedFormat={selectedFormat}

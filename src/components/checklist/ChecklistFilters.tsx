@@ -17,6 +17,8 @@ interface Worker {
 interface ChecklistFiltersProps {
   searchTerm: string;
   onSearchChange: (value: string) => void;
+  fileNameFilter?: string;
+  onFileNameChange?: (value: string) => void;
   selectedClient: string;
   onClientChange: (value: string) => void;
   selectedFormat: string;
@@ -43,6 +45,8 @@ interface ChecklistFiltersProps {
 const ChecklistFilters = ({
   searchTerm,
   onSearchChange,
+  fileNameFilter = "",
+  onFileNameChange,
   selectedClient,
   onClientChange,
   selectedFormat,
@@ -78,6 +82,17 @@ const ChecklistFilters = ({
             onChange={(e) => onSearchChange(e.target.value)}
           />
         </div>
+
+        {onFileNameChange && (
+          <div>
+            <label className="text-sm font-medium mb-2 block">Fajl</label>
+            <Input
+              placeholder="Ime fajla ili deo..."
+              value={fileNameFilter}
+              onChange={(e) => onFileNameChange(e.target.value)}
+            />
+          </div>
+        )}
 
         <div>
           <label className="text-sm font-medium mb-2 block">Klijent</label>
