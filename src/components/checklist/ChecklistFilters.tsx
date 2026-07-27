@@ -45,6 +45,8 @@ interface ChecklistFiltersProps {
 const ChecklistFilters = ({
   searchTerm,
   onSearchChange,
+  fileNameFilter = "",
+  onFileNameChange,
   selectedClient,
   onClientChange,
   selectedFormat,
