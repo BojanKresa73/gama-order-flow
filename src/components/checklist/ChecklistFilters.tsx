@@ -83,6 +83,17 @@ const ChecklistFilters = ({
           />
         </div>
 
+        {onFileNameChange && (
+          <div>
+            <label className="text-sm font-medium mb-2 block">Fajl</label>
+            <Input
+              placeholder="Ime fajla ili deo..."
+              value={fileNameFilter}
+              onChange={(e) => onFileNameChange(e.target.value)}
+            />
+          </div>
+        )}
+
         <div>
           <label className="text-sm font-medium mb-2 block">Klijent</label>
           <Select value={selectedClient} onValueChange={onClientChange}>
