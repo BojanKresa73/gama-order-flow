@@ -434,6 +434,8 @@ const SearchAndStats = () => {
           <ChecklistFilters
             searchTerm={searchTerm}
             onSearchChange={setSearchTerm}
+            fileNameFilter={fileNameFilter}
+            onFileNameChange={setFileNameFilter}
             selectedClient={selectedClient}
             onClientChange={setSelectedClient}
             selectedFormat={selectedFormat}
@@ -475,6 +477,8 @@ const SearchAndStats = () => {
           <ChecklistFilters
             searchTerm={searchTerm}
             onSearchChange={setSearchTerm}
+            fileNameFilter={fileNameFilter}
+            onFileNameChange={setFileNameFilter}
             selectedClient={selectedClient}
             onClientChange={setSelectedClient}
             selectedFormat={selectedFormat}
@@ -516,6 +520,8 @@ const SearchAndStats = () => {
           <ChecklistFilters
             searchTerm={searchTerm}
             onSearchChange={setSearchTerm}
+            fileNameFilter={fileNameFilter}
+            onFileNameChange={setFileNameFilter}
             selectedClient={selectedClient}
             onClientChange={setSelectedClient}
             selectedFormat={selectedFormat}
