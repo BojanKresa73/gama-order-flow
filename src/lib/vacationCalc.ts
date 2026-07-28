@@ -11,15 +11,19 @@ export function countBusinessDaysWithHolidays(
   const cur = new Date(start.getFullYear(), start.getMonth(), start.getDate());
   const last = new Date(end.getFullYear(), end.getMonth(), end.getDate());
   while (cur <= last) {
-    const iso = cur.toISOString().slice(0, 10);
-    if (!holidayIsoDates.has(iso)) days += 1;
+    const dow = cur.getDay(); // 0 = Sun, 6 = Sat
+    const iso = toISO(cur);
+    if (dow !== 0 && dow !== 6 && !holidayIsoDates.has(iso)) days += 1;
     cur.setDate(cur.getDate() + 1);
   }
   return days;
 }
 
 export function toISO(d: Date): string {
-  return d.toISOString().slice(0, 10);
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, "0");
+  const day = String(d.getDate()).padStart(2, "0");
+  return `${y}-${m}-${day}`;
 }
 
 export function daysBetween(a: Date, b: Date): number {
