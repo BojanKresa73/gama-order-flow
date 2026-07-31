@@ -100,5 +100,26 @@ export async function getOrderItems(orderId: string): Promise<UiItem[]> {
     }));
   }
 
-  return [];
+  // Ostalo / veliki format i ostali tipovi — fajlovi su u file_entries
+  const { data, error } = await supabase
+    .from('file_entries')
+    .select('id, filename, quantity, status, file_type, notes, plate_formats(format_name)')
+    .eq('work_order_id', orderId)
+    .order('created_at');
+
+  if (error) {
+    console.error('Error fetching file entries:', error);
+    return [];
+  }
+
+  return (data || []).map((item: any) => ({
+    id: item.id,
+    label: item.filename,
+    qty: item.quantity || 0,
+    unit: 'kom',
+    details: item.plate_formats?.format_name || item.file_type || '-',
+    note: item.notes || undefined,
+    status: item.status,
+  }));
 }
+
