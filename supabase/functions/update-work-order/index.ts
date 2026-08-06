@@ -105,7 +105,7 @@ Deno.serve(async (req) => {
 
     // Get table name for items
     let tableName = '';
-    if (normalizedKind === 'CTP') tableName = 'file_entries';
+    if (normalizedKind === 'CTP' || normalizedKind === 'RAZNO') tableName = 'file_entries';
     else if (normalizedKind === 'FILMOVANJE') tableName = 'film_jobs';
     else if (normalizedKind === 'DIGITALA') tableName = 'digital_jobs';
     else tableName = 'misc_jobs';
@@ -249,24 +249,27 @@ Deno.serve(async (req) => {
         }
       }
 
-    } else if (normalizedKind === 'CTP') {
-      // Handle CTP items
+    } else if (normalizedKind === 'CTP' || normalizedKind === 'RAZNO') {
+      // CTP and OSTALO items are both stored in file_entries
+      const isCtp = normalizedKind === 'CTP';
       for (const item of payload.items.created) {
-        await supabase.from('file_entries').insert({
+        const { error: insertError } = await supabase.from('file_entries').insert({
           work_order_id: payload.workOrderId,
           filename: item.file_name,
-          file_type: 'CTP',
-          plate_format_id: item.plate_format_id || null,
+          file_type: isCtp ? 'CTP' : 'Other',
+          plate_format_id: isCtp ? item.plate_format_id || null : null,
           quantity: item.quantity || null,
         });
+        if (insertError) throw insertError;
       }
 
       for (const item of payload.items.updated) {
-        await supabase.from('file_entries').update({
+        const { error: itemUpdateError } = await supabase.from('file_entries').update({
           filename: item.file_name,
-          plate_format_id: item.plate_format_id || null,
+          plate_format_id: isCtp ? item.plate_format_id || null : null,
           quantity: item.quantity || null,
         }).eq('id', item.id);
+        if (itemUpdateError) throw itemUpdateError;
       }
     } else if (normalizedKind === 'DIGITALA') {
       // Handle digital items with all new fields

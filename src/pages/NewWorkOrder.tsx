@@ -273,7 +273,7 @@ const NewWorkOrder = () => {
       setOrderType(typeMap[order.order_type] || "ctp");
 
       // Load items based on order type
-      if (order.order_type === "ctp") {
+      if (order.order_type === "ctp" || order.order_type === "other") {
         const { data: items } = await supabase
           .from("file_entries")
           .select("*")
@@ -433,7 +433,7 @@ const NewWorkOrder = () => {
         // Prepare diff payload for update
         const itemsDiff: any = {};
         
-        if (orderType === "ctp") {
+        if (orderType === "ctp" || orderType === "other") {
           itemsDiff.created = ctpItems.filter(it => !it.id && it.__status !== 'deleted');
           itemsDiff.updated = ctpItems.filter(it => it.id && it.__status === 'updated');
           itemsDiff.deleted = ctpItems.filter(it => it.id && it.__status === 'deleted').map(it => it.id);
