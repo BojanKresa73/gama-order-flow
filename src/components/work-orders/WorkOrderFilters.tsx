@@ -29,6 +29,7 @@ export interface WorkOrderFiltersState {
   orderType: string; // "all" | "ctp" | "digital" | "film" | "other"
   status: string; // "all" | "open" | "closed"
   searchText: string;
+  fileNameFilter: string;
 }
 
 interface WorkOrderFiltersProps {
