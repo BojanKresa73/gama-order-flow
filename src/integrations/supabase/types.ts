@@ -4732,6 +4732,8 @@ export type Database = {
       next_pasted_quote_number: { Args: never; Returns: string }
       next_quote_number: { Args: never; Returns: string }
       refresh_plate_usage_stats: { Args: never; Returns: undefined }
+      show_limit: { Args: never; Returns: number }
+      show_trgm: { Args: { "": string }; Returns: string[] }
       update_work_order_priority: {
         Args: {
           p_new_priority: number
