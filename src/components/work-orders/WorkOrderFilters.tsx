@@ -198,7 +198,7 @@ export function WorkOrderFilters({ filters, onFiltersChange }: WorkOrderFiltersP
           </div>
 
           {/* Filter Controls */}
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-6 gap-4">
             {/* Date Range */}
             <div className="space-y-2">
               <label className="text-sm font-medium">Period</label>
