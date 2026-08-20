@@ -84,12 +84,55 @@ const WorkOrders = () => {
     fetchWorkOrders();
   }, [filters]);
 
+  // Server-side pretraga po imenu fajla: vraća skup work_order_id iz sve tri tabele fajlova
+  const fetchOrderIdsByFileName = async (needle: string): Promise<string[]> => {
+    const pattern = `%${needle.replace(/[%_]/g, (m) => `\\${m}`)}%`;
+    const PAGE = 1000;
+
+    const collect = async (table: 'file_entries' | 'film_jobs' | 'digital_jobs', column: string) => {
+      const ids: string[] = [];
+      for (let from = 0; ; from += PAGE) {
+        const { data, error } = await supabase
+          .from(table)
+          .select('work_order_id')
+          .ilike(column, pattern)
+          .not('work_order_id', 'is', null)
+          .range(from, from + PAGE - 1);
+        if (error) throw error;
+        (data || []).forEach((r: any) => { if (r.work_order_id) ids.push(r.work_order_id); });
+        if (!data || data.length < PAGE) break;
+      }
+      return ids;
+    };
+
+    const [a, b, c] = await Promise.all([
+      collect('file_entries', 'filename'),
+      collect('film_jobs', 'file_name'),
+      collect('digital_jobs', 'file_name'),
+    ]);
+    return Array.from(new Set([...a, ...b, ...c]));
+  };
+
   const fetchWorkOrders = async () => {
     try {
+      setLoading(true);
+      const fileNeedle = filters.fileNameFilter.trim();
+      let fileOrderIds: string[] | null = null;
+      if (fileNeedle) {
+        fileOrderIds = await fetchOrderIdsByFileName(fileNeedle);
+        if (fileOrderIds.length === 0) {
+          setWorkOrders([]);
+          return;
+        }
+      }
+
       let query = supabase
         .from("work_orders")
         .select(`*, clients (name), profiles!work_orders_created_by_fkey (full_name), email_job_latest_status (status, error_msg), file_entries (quantity, closed_by, filename), film_jobs (computed_total_m, file_name), digital_jobs (file_name)`)
         .is("deleted_at", null);
+
+      if (fileOrderIds) query = query.in("id", fileOrderIds);
+
 
       if (filters.dateRange.from) query = query.gte("created_at", filters.dateRange.from.toISOString());
       if (filters.dateRange.to) {
