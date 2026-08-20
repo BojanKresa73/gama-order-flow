@@ -347,6 +347,19 @@ export function WorkOrderFilters({ filters, onFiltersChange }: WorkOrderFiltersP
               </Popover>
             </div>
 
+            {/* File Name */}
+            <div className="space-y-2">
+              <label className="text-sm font-medium">Fajl</label>
+              <Input
+                placeholder="Ime fajla ili deo..."
+                value={localFilters.fileNameFilter}
+                onChange={(e) =>
+                  setLocalFilters((prev) => ({ ...prev, fileNameFilter: e.target.value }))
+                }
+                onKeyDown={(e) => { if (e.key === "Enter") handleApply(); }}
+              />
+            </div>
+
             {/* Action Buttons */}
             <div className="flex items-end gap-2">
               <Button onClick={handleApply} className="flex-1">
