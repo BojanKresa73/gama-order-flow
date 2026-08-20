@@ -30,6 +30,7 @@ export interface WorkOrderFiltersState {
   status: string; // "all" | "open" | "closed"
   searchText: string;
   fileNameFilter: string;
+  searchNotes: boolean;
 }
 
 interface WorkOrderFiltersProps {
