@@ -8,6 +8,7 @@ export const serializeFiltersToParams = (filters: WorkOrderFiltersState): URLSea
   if (filters.orderType !== "all") params.set("type", filters.orderType);
   if (filters.status !== "all") params.set("status", filters.status);
   if (filters.searchText) params.set("search", filters.searchText);
+  if (filters.fileNameFilter) params.set("file", filters.fileNameFilter);
   return params;
 };
 
@@ -21,5 +22,6 @@ export const parseFiltersFromParams = (params: URLSearchParams): WorkOrderFilter
     orderType: params.get("type") || "all",
     status: params.get("status") || "all",
     searchText: params.get("search") || "",
+    fileNameFilter: params.get("file") || "",
   };
 };

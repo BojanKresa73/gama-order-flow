@@ -88,7 +88,7 @@ const WorkOrders = () => {
     try {
       let query = supabase
         .from("work_orders")
-        .select(`*, clients (name), profiles!work_orders_created_by_fkey (full_name), email_job_latest_status (status, error_msg), file_entries (quantity, closed_by), film_jobs (computed_total_m)`)
+        .select(`*, clients (name), profiles!work_orders_created_by_fkey (full_name), email_job_latest_status (status, error_msg), file_entries (quantity, closed_by, filename), film_jobs (computed_total_m, file_name), digital_jobs (file_name)`)
         .is("deleted_at", null);
 
       if (filters.dateRange.from) query = query.gte("created_at", filters.dateRange.from.toISOString());
@@ -167,8 +167,19 @@ const WorkOrders = () => {
       if (typeof valA === 'number' && typeof valB === 'number') return (valA - valB) * dir;
       return String(valA).localeCompare(String(valB), 'sr') * dir;
     });
+
+    const fileNeedle = filters.fileNameFilter.trim().toLowerCase();
+    if (fileNeedle) {
+      return sorted.filter((order: any) => {
+        const names: string[] = [];
+        (order.file_entries || []).forEach((f: any) => { if (f.filename) names.push(f.filename); });
+        (order.film_jobs || []).forEach((f: any) => { if (f.file_name) names.push(f.file_name); });
+        (order.digital_jobs || []).forEach((f: any) => { if (f.file_name) names.push(f.file_name); });
+        return names.some((n) => n.toLowerCase().includes(fileNeedle));
+      });
+    }
     return sorted;
-  }, [workOrders, sortField, sortDirection]);
+  }, [workOrders, sortField, sortDirection, filters.fileNameFilter]);
 
   const filmOrderIds = useMemo(() => filteredWorkOrders.filter(o => o.order_type === "film").map(o => o.id), [filteredWorkOrders]);
   const ctpOrderIds = useMemo(() => filteredWorkOrders.filter(o => o.order_type === "ctp").map(o => o.id), [filteredWorkOrders]);

@@ -29,6 +29,7 @@ export interface WorkOrderFiltersState {
   orderType: string; // "all" | "ctp" | "digital" | "film" | "other"
   status: string; // "all" | "open" | "closed"
   searchText: string;
+  fileNameFilter: string;
 }
 
 interface WorkOrderFiltersProps {
@@ -94,6 +95,7 @@ export function WorkOrderFilters({ filters, onFiltersChange }: WorkOrderFiltersP
       orderType: "all",
       status: "all",
       searchText: "",
+      fileNameFilter: "",
     };
     setLocalFilters(resetFilters);
     onFiltersChange(resetFilters);
@@ -133,7 +135,8 @@ export function WorkOrderFilters({ filters, onFiltersChange }: WorkOrderFiltersP
     (localFilters.clientIds.length > 0 ? 1 : 0) +
     (localFilters.orderType !== "all" ? 1 : 0) +
     (localFilters.status !== "all" ? 1 : 0) +
-    (localFilters.searchText ? 1 : 0);
+    (localFilters.searchText ? 1 : 0) +
+    (localFilters.fileNameFilter ? 1 : 0);
 
   return (
     <Card className="rounded-2xl shadow-sm">
@@ -195,7 +198,7 @@ export function WorkOrderFilters({ filters, onFiltersChange }: WorkOrderFiltersP
           </div>
 
           {/* Filter Controls */}
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-6 gap-4">
             {/* Date Range */}
             <div className="space-y-2">
               <label className="text-sm font-medium">Period</label>
@@ -342,6 +345,19 @@ export function WorkOrderFilters({ filters, onFiltersChange }: WorkOrderFiltersP
                   </ScrollArea>
                 </PopoverContent>
               </Popover>
+            </div>
+
+            {/* File Name */}
+            <div className="space-y-2">
+              <label className="text-sm font-medium">Fajl</label>
+              <Input
+                placeholder="Ime fajla ili deo..."
+                value={localFilters.fileNameFilter}
+                onChange={(e) =>
+                  setLocalFilters((prev) => ({ ...prev, fileNameFilter: e.target.value }))
+                }
+                onKeyDown={(e) => { if (e.key === "Enter") handleApply(); }}
+              />
             </div>
 
             {/* Action Buttons */}
