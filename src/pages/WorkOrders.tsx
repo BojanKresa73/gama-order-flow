@@ -138,7 +138,11 @@ const WorkOrders = () => {
       const fileNeedle = filters.fileNameFilter.trim();
       let fileOrderIds: string[] | null = null;
       if (fileNeedle) {
-        fileOrderIds = await fetchOrderIdsByFileName(fileNeedle);
+        const [byFile, byNotes] = await Promise.all([
+          fetchOrderIdsByFileName(fileNeedle),
+          filters.searchNotes ? fetchOrderIdsByNotes(fileNeedle) : Promise.resolve([] as string[]),
+        ]);
+        fileOrderIds = Array.from(new Set([...byFile, ...byNotes]));
         if (fileOrderIds.length === 0) {
           setWorkOrders([]);
           return;
