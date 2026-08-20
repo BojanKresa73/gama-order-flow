@@ -135,7 +135,8 @@ export function WorkOrderFilters({ filters, onFiltersChange }: WorkOrderFiltersP
     (localFilters.clientIds.length > 0 ? 1 : 0) +
     (localFilters.orderType !== "all" ? 1 : 0) +
     (localFilters.status !== "all" ? 1 : 0) +
-    (localFilters.searchText ? 1 : 0);
+    (localFilters.searchText ? 1 : 0) +
+    (localFilters.fileNameFilter ? 1 : 0);
 
   return (
     <Card className="rounded-2xl shadow-sm">
