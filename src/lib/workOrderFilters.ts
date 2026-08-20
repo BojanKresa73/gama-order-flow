@@ -9,6 +9,7 @@ export const serializeFiltersToParams = (filters: WorkOrderFiltersState): URLSea
   if (filters.status !== "all") params.set("status", filters.status);
   if (filters.searchText) params.set("search", filters.searchText);
   if (filters.fileNameFilter) params.set("file", filters.fileNameFilter);
+  if (filters.searchNotes) params.set("notes", "1");
   return params;
 };
 
