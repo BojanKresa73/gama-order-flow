@@ -95,6 +95,7 @@ export function WorkOrderFilters({ filters, onFiltersChange }: WorkOrderFiltersP
       orderType: "all",
       status: "all",
       searchText: "",
+      fileNameFilter: "",
     };
     setLocalFilters(resetFilters);
     onFiltersChange(resetFilters);
