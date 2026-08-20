@@ -113,13 +113,36 @@ const WorkOrders = () => {
     return Array.from(new Set([...a, ...b, ...c]));
   };
 
+  // Pretraga po napomeni naloga (server-side)
+  const fetchOrderIdsByNotes = async (needle: string): Promise<string[]> => {
+    const pattern = `%${needle.replace(/[%_]/g, (m) => `\\${m}`)}%`;
+    const PAGE = 1000;
+    const ids: string[] = [];
+    for (let from = 0; ; from += PAGE) {
+      const { data, error } = await supabase
+        .from('work_orders')
+        .select('id')
+        .ilike('notes', pattern)
+        .is('deleted_at', null)
+        .range(from, from + PAGE - 1);
+      if (error) throw error;
+      (data || []).forEach((r: any) => ids.push(r.id));
+      if (!data || data.length < PAGE) break;
+    }
+    return ids;
+  };
+
   const fetchWorkOrders = async () => {
     try {
       setLoading(true);
       const fileNeedle = filters.fileNameFilter.trim();
       let fileOrderIds: string[] | null = null;
       if (fileNeedle) {
-        fileOrderIds = await fetchOrderIdsByFileName(fileNeedle);
+        const [byFile, byNotes] = await Promise.all([
+          fetchOrderIdsByFileName(fileNeedle),
+          filters.searchNotes ? fetchOrderIdsByNotes(fileNeedle) : Promise.resolve([] as string[]),
+        ]);
+        fileOrderIds = Array.from(new Set([...byFile, ...byNotes]));
         if (fileOrderIds.length === 0) {
           setWorkOrders([]);
           return;

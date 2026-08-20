@@ -30,6 +30,7 @@ export interface WorkOrderFiltersState {
   status: string; // "all" | "open" | "closed"
   searchText: string;
   fileNameFilter: string;
+  searchNotes: boolean;
 }
 
 interface WorkOrderFiltersProps {
@@ -96,6 +97,7 @@ export function WorkOrderFilters({ filters, onFiltersChange }: WorkOrderFiltersP
       status: "all",
       searchText: "",
       fileNameFilter: "",
+      searchNotes: false,
     };
     setLocalFilters(resetFilters);
     onFiltersChange(resetFilters);
@@ -358,6 +360,18 @@ export function WorkOrderFilters({ filters, onFiltersChange }: WorkOrderFiltersP
                 }
                 onKeyDown={(e) => { if (e.key === "Enter") handleApply(); }}
               />
+              <div className="flex items-center space-x-2">
+                <Checkbox
+                  id="search-notes"
+                  checked={localFilters.searchNotes}
+                  onCheckedChange={(checked) =>
+                    setLocalFilters((prev) => ({ ...prev, searchNotes: checked === true }))
+                  }
+                />
+                <label htmlFor="search-notes" className="text-xs font-normal cursor-pointer">
+                  Traži i u napomeni
+                </label>
+              </div>
             </div>
 
             {/* Action Buttons */}
