@@ -211,18 +211,10 @@ const WorkOrders = () => {
       return String(valA).localeCompare(String(valB), 'sr') * dir;
     });
 
-    const fileNeedle = filters.fileNameFilter.trim().toLowerCase();
-    if (fileNeedle) {
-      return sorted.filter((order: any) => {
-        const names: string[] = [];
-        (order.file_entries || []).forEach((f: any) => { if (f.filename) names.push(f.filename); });
-        (order.film_jobs || []).forEach((f: any) => { if (f.file_name) names.push(f.file_name); });
-        (order.digital_jobs || []).forEach((f: any) => { if (f.file_name) names.push(f.file_name); });
-        return names.some((n) => n.toLowerCase().includes(fileNeedle));
-      });
-    }
+    // Filtriranje po imenu fajla se radi server-side u fetchWorkOrders
     return sorted;
-  }, [workOrders, sortField, sortDirection, filters.fileNameFilter]);
+  }, [workOrders, sortField, sortDirection]);
+
 
   const filmOrderIds = useMemo(() => filteredWorkOrders.filter(o => o.order_type === "film").map(o => o.id), [filteredWorkOrders]);
   const ctpOrderIds = useMemo(() => filteredWorkOrders.filter(o => o.order_type === "ctp").map(o => o.id), [filteredWorkOrders]);
