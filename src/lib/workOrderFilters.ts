@@ -24,5 +24,6 @@ export const parseFiltersFromParams = (params: URLSearchParams): WorkOrderFilter
     status: params.get("status") || "all",
     searchText: params.get("search") || "",
     fileNameFilter: params.get("file") || "",
+    searchNotes: params.get("notes") === "1",
   };
 };
