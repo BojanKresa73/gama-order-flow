@@ -4704,6 +4704,13 @@ export type Database = {
           order_type: string
         }[]
       }
+      get_plate_usage_last_12_months: {
+        Args: never
+        Returns: {
+          month_start: string
+          plates: number
+        }[]
+      }
       get_unread_priority_notifications_count: { Args: never; Returns: number }
       get_work_order_full: { Args: { p_identifier: string }; Returns: Json }
       has_admin_access: { Args: { _user_id: string }; Returns: boolean }
