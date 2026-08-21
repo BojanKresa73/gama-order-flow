@@ -23,12 +23,14 @@ export function DigitalStatsCards({ filters }: DigitalStatsCardsProps) {
             status,
             created_at,
             client_id,
-            deleted_at
+            deleted_at,
+            invalidated_at
           )
         `)
         .gte("work_order.created_at", filters.dateRange.from.toISOString())
         .lte("work_order.created_at", filters.dateRange.to.toISOString())
-        .is("work_order.deleted_at", null);
+        .is("work_order.deleted_at", null)
+        .is("work_order.invalidated_at", null);
 
       const { data: digitalJobs, error } = await query.range(0, 49999);
 
