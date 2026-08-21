@@ -53,11 +53,13 @@ export const DailyPlateStats = () => {
         .select(`
           plate_format_id,
           quantity,
-          work_orders!inner(status, order_type)
+          work_orders!inner(status, order_type, deleted_at, invalidated_at)
         `)
         .eq("status", "open")
         .eq("work_orders.status", "open")
         .eq("work_orders.order_type", "ctp")
+        .is("work_orders.deleted_at", null)
+        .is("work_orders.invalidated_at", null)
         .range(0, 49999);
 
       // Get pending procurement (on the way)
