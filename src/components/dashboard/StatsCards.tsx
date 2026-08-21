@@ -16,13 +16,15 @@ export const StatsCards = () => {
           .from("work_orders")
           .select("id", { count: "exact", head: true })
           .is("deleted_at", null)
+          .is("invalidated_at", null)
           .eq("status", "open"),
         supabase
           .from("work_orders")
           .select("id", { count: "exact", head: true })
           .is("deleted_at", null)
+          .is("invalidated_at", null)
           .eq("status", "closed")
-          .gte("created_at", startOfMonth),
+          .gte("closed_at", startOfMonth),
         supabase
           .from("clients")
           .select("id", { count: "exact", head: true }),
