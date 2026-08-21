@@ -2,7 +2,7 @@ import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
-import { AreaChart, Area, XAxis, YAxis, CartesianGrid, ResponsiveContainer, Tooltip } from "recharts";
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, ResponsiveContainer, Tooltip } from "recharts";
 import { useMemo } from "react";
 
 const CustomTooltip = ({ active, payload }: any) => {
@@ -90,13 +90,7 @@ export const ClosedOrdersChart = () => {
       </CardHeader>
       <CardContent className="flex-1 pt-4 pb-4">
         <ResponsiveContainer width="100%" height="100%">
-          <AreaChart data={ordersTimeline}>
-            <defs>
-              <linearGradient id="colorCount" x1="0" y1="0" x2="0" y2="1">
-                <stop offset="5%" stopColor="#3b82f6" stopOpacity={0.2}/>
-                <stop offset="95%" stopColor="#3b82f6" stopOpacity={0}/>
-              </linearGradient>
-            </defs>
+          <BarChart data={ordersTimeline} margin={{ top: 4, right: 8, left: -12, bottom: 0 }}>
             <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" opacity={0.5} />
             <XAxis 
               dataKey="date" 
@@ -106,17 +100,11 @@ export const ClosedOrdersChart = () => {
             <YAxis 
               tick={{ fontSize: 12, fill: "hsl(var(--muted-foreground))" }}
               stroke="hsl(var(--border))"
+              allowDecimals={false}
             />
-            <Tooltip content={<CustomTooltip />} />
-            <Area 
-              type="monotone" 
-              dataKey="count" 
-              stroke="#3b82f6" 
-              strokeWidth={2} 
-              fill="url(#colorCount)"
-              strokeLinecap="round"
-            />
-          </AreaChart>
+            <Tooltip content={<CustomTooltip />} cursor={{ fill: "hsl(var(--muted))", opacity: 0.3 }} />
+            <Bar dataKey="count" fill="#3b82f6" radius={[4, 4, 0, 0]} />
+          </BarChart>
         </ResponsiveContainer>
       </CardContent>
     </Card>

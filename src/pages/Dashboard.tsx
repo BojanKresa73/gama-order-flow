@@ -9,6 +9,7 @@ import { OnlineUsersCard } from "@/components/dashboard/OnlineUsersCard";
 import { OrdersByTypeChart } from "@/components/dashboard/OrdersByTypeChart";
 import { ClosedOrdersChart } from "@/components/dashboard/ClosedOrdersChart";
 import { MonthlyPlateUsageChart } from "@/components/dashboard/MonthlyPlateUsageChart";
+import { YearlyPlateUsageChart } from "@/components/dashboard/YearlyPlateUsageChart";
 import { RecentOrders } from "@/components/dashboard/RecentOrders";
 import { DailyPlateStats } from "@/components/dashboard/DailyPlateStats";
 import { TopClientsCard } from "@/components/dashboard/TopClientsCard";
@@ -104,6 +105,10 @@ const Dashboard = () => {
 
               <div className="col-span-1 sm:col-span-2 md:col-span-6 xl:col-span-4 min-w-0">
                 <DailyPlateStats />
+              </div>
+
+              <div className="col-span-1 sm:col-span-2 md:col-span-12 min-w-0">
+                <YearlyPlateUsageChart />
               </div>
 
               <div className="col-span-1 sm:col-span-2 md:col-span-6 xl:col-span-4 min-w-0">
