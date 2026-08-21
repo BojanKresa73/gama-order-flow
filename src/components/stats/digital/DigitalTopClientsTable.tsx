@@ -24,12 +24,14 @@ export function DigitalTopClientsTable({ filters }: DigitalTopClientsTableProps)
             created_at,
             client_id,
             clients(id, name),
-            deleted_at
+            deleted_at,
+            invalidated_at
           )
         `)
         .gte("work_order.created_at", filters.dateRange.from.toISOString())
         .lte("work_order.created_at", filters.dateRange.to.toISOString())
         .is("work_order.deleted_at", null)
+        .is("work_order.invalidated_at", null)
         .range(0, 49999);
 
       if (error) throw error;

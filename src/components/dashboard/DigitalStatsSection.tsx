@@ -70,7 +70,9 @@ export const DigitalStatsSection = () => {
           )
         `)
         .gte("work_order.created_at", monthStart.toISOString())
-        .is("work_order.deleted_at", null);
+        .is("work_order.deleted_at", null)
+        .is("work_order.invalidated_at", null)
+        .range(0, 49999);
 
       // Fetch digital work orders for chart data (last 30 days)
       const { data: recentOrders } = await supabase
@@ -78,6 +80,7 @@ export const DigitalStatsSection = () => {
         .select("id, status, created_at, closed_at, client_id")
         .eq("order_type", "digital")
         .is("deleted_at", null)
+        .is("invalidated_at", null)
         .gte("created_at", last30Days.toISOString())
         .order("created_at", { ascending: true });
 
