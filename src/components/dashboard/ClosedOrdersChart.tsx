@@ -32,6 +32,7 @@ export const ClosedOrdersChart = () => {
         .select("closed_at")
         .eq("status", "closed")
         .is("deleted_at", null)
+        .is("invalidated_at", null)
         .gte("closed_at", sevenDaysAgo.toISOString())
         .range(0, 49999);
 
@@ -41,19 +42,22 @@ export const ClosedOrdersChart = () => {
 
   const ordersTimeline = useMemo(() => {
     const dailyCounts: Record<string, number> = {};
-    
+
+    // Local (Belgrade) calendar day key, not UTC
+    const localKey = (d: Date) =>
+      `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+
     // Initialize all 7 days with 0
     for (let i = 6; i >= 0; i--) {
       const date = new Date();
       date.setDate(date.getDate() - i);
-      const dateStr = date.toISOString().split("T")[0];
-      dailyCounts[dateStr] = 0;
+      dailyCounts[localKey(date)] = 0;
     }
 
     // Count orders per day
     rawData?.forEach((order) => {
       if (order.closed_at) {
-        const dateStr = order.closed_at.split("T")[0];
+        const dateStr = localKey(new Date(order.closed_at));
         if (dailyCounts[dateStr] !== undefined) {
           dailyCounts[dateStr]++;
         }

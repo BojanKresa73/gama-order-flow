@@ -32,9 +32,13 @@ export const DailyPlateStats = () => {
 
       if (!formats) return [];
 
-      // Get today's usage from inventory_history
-      const todayStart = `${today}T00:00:00`;
-      const todayEnd = `${today}T23:59:59`;
+      // Get today's usage from inventory_history (local day boundaries, sent as UTC)
+      const now = new Date();
+      const dayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+      const dayEnd = new Date(now.getFullYear(), now.getMonth(), now.getDate() + 1);
+      const todayStart = dayStart.toISOString();
+      const todayEnd = new Date(dayEnd.getTime() - 1).toISOString();
+      
       
       const { data: todayUsage } = await supabase
         .from("inventory_history")
@@ -49,11 +53,13 @@ export const DailyPlateStats = () => {
         .select(`
           plate_format_id,
           quantity,
-          work_orders!inner(status, order_type)
+          work_orders!inner(status, order_type, deleted_at, invalidated_at)
         `)
         .eq("status", "open")
         .eq("work_orders.status", "open")
         .eq("work_orders.order_type", "ctp")
+        .is("work_orders.deleted_at", null)
+        .is("work_orders.invalidated_at", null)
         .range(0, 49999);
 
       // Get pending procurement (on the way)
