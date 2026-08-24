@@ -39,6 +39,7 @@ import { PushNotificationToggle } from "@/components/portal/PushNotificationTogg
 import { EmailNotificationToggle } from "@/components/portal/EmailNotificationToggle";
 import { PortalUserGuide } from "@/components/portal/PortalUserGuide";
 import { PortalOrderStats } from "@/components/portal/PortalOrderStats";
+import { PortalComplaintsSection } from "@/components/portal/PortalComplaintsSection";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { Badge } from "@/components/ui/badge";
 
