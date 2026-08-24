@@ -12,6 +12,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { REDIZAJN_V2_HTML } from "./templates/redizajnHtml";
+import { REKLAMACIJE_HTML } from "./templates/reklamacijeHtml";
 
 type BlockType = "heading" | "text" | "image" | "button" | "divider" | "contact" | "rawHtml";
 
