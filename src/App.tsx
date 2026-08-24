@@ -111,6 +111,8 @@ const App = () => {
                 <Route path="/reports/delivery-notes" element={<InternalUserGuard><ClientDeliveryReport /></InternalUserGuard>} />
                 <Route path="/vacations" element={<InternalUserGuard><Vacations /></InternalUserGuard>} />
                 <Route path="/quotes" element={<AdminGuard><Quotes /></AdminGuard>} />
+                <Route path="/reklamacije" element={<InternalUserGuard><Complaints /></InternalUserGuard>} />
+
                 {import.meta.env.VITE_SHOW_DEV_PREVIEW === "true" && (
                 <>
                     <Route path="/dev/preview" element={<DevPreview />} />
