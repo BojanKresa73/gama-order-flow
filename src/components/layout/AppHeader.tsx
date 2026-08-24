@@ -86,6 +86,13 @@ export const AppHeader = ({ userName, showBackButton, title }: AppHeaderProps) =
 
 
           {isSuper && (
+            <Button variant="outline" onClick={() => navigate("/reklamacije")}>
+              <AlertTriangle className="h-4 w-4 mr-2" />
+              Reklamacije
+            </Button>
+          )}
+
+          {isSuper && (
             <Button variant="outline" onClick={() => navigate("/admin/users")}>
               Administracija
             </Button>
