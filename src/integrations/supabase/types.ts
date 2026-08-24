@@ -387,6 +387,254 @@ export type Database = {
         }
         Relationships: []
       }
+      complaint_attachments: {
+        Row: {
+          complaint_id: string
+          created_at: string
+          file_name: string
+          id: string
+          mime_type: string | null
+          size_bytes: number | null
+          storage_path: string
+          uploaded_by: string | null
+        }
+        Insert: {
+          complaint_id: string
+          created_at?: string
+          file_name: string
+          id?: string
+          mime_type?: string | null
+          size_bytes?: number | null
+          storage_path: string
+          uploaded_by?: string | null
+        }
+        Update: {
+          complaint_id?: string
+          created_at?: string
+          file_name?: string
+          id?: string
+          mime_type?: string | null
+          size_bytes?: number | null
+          storage_path?: string
+          uploaded_by?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "complaint_attachments_complaint_id_fkey"
+            columns: ["complaint_id"]
+            isOneToOne: false
+            referencedRelation: "complaints"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      complaint_counters: {
+        Row: {
+          last_number: number
+          year: number
+        }
+        Insert: {
+          last_number?: number
+          year: number
+        }
+        Update: {
+          last_number?: number
+          year?: number
+        }
+        Relationships: []
+      }
+      complaint_events: {
+        Row: {
+          actor_id: string | null
+          complaint_id: string
+          created_at: string
+          event_type: string
+          id: string
+          new_status: Database["public"]["Enums"]["complaint_status"] | null
+          note: string | null
+          old_status: Database["public"]["Enums"]["complaint_status"] | null
+        }
+        Insert: {
+          actor_id?: string | null
+          complaint_id: string
+          created_at?: string
+          event_type: string
+          id?: string
+          new_status?: Database["public"]["Enums"]["complaint_status"] | null
+          note?: string | null
+          old_status?: Database["public"]["Enums"]["complaint_status"] | null
+        }
+        Update: {
+          actor_id?: string | null
+          complaint_id?: string
+          created_at?: string
+          event_type?: string
+          id?: string
+          new_status?: Database["public"]["Enums"]["complaint_status"] | null
+          note?: string | null
+          old_status?: Database["public"]["Enums"]["complaint_status"] | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "complaint_events_complaint_id_fkey"
+            columns: ["complaint_id"]
+            isOneToOne: false
+            referencedRelation: "complaints"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      complaint_messages: {
+        Row: {
+          author_id: string | null
+          author_name: string | null
+          body: string
+          complaint_id: string
+          created_at: string
+          id: string
+          is_from_client: boolean
+          is_internal: boolean
+        }
+        Insert: {
+          author_id?: string | null
+          author_name?: string | null
+          body: string
+          complaint_id: string
+          created_at?: string
+          id?: string
+          is_from_client?: boolean
+          is_internal?: boolean
+        }
+        Update: {
+          author_id?: string | null
+          author_name?: string | null
+          body?: string
+          complaint_id?: string
+          created_at?: string
+          id?: string
+          is_from_client?: boolean
+          is_internal?: boolean
+        }
+        Relationships: [
+          {
+            foreignKeyName: "complaint_messages_complaint_id_fkey"
+            columns: ["complaint_id"]
+            isOneToOne: false
+            referencedRelation: "complaints"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      complaints: {
+        Row: {
+          about_user_id: string | null
+          category: Database["public"]["Enums"]["complaint_category"]
+          client_id: string
+          complaint_number: string
+          created_at: string
+          created_by: string | null
+          description: string
+          due_at: string
+          id: string
+          resolution_note: string | null
+          resolved_at: string | null
+          resolved_by: string | null
+          severity: number
+          status: Database["public"]["Enums"]["complaint_status"]
+          subject: string
+          updated_at: string
+          work_order_id: string | null
+        }
+        Insert: {
+          about_user_id?: string | null
+          category?: Database["public"]["Enums"]["complaint_category"]
+          client_id: string
+          complaint_number: string
+          created_at?: string
+          created_by?: string | null
+          description: string
+          due_at?: string
+          id?: string
+          resolution_note?: string | null
+          resolved_at?: string | null
+          resolved_by?: string | null
+          severity?: number
+          status?: Database["public"]["Enums"]["complaint_status"]
+          subject: string
+          updated_at?: string
+          work_order_id?: string | null
+        }
+        Update: {
+          about_user_id?: string | null
+          category?: Database["public"]["Enums"]["complaint_category"]
+          client_id?: string
+          complaint_number?: string
+          created_at?: string
+          created_by?: string | null
+          description?: string
+          due_at?: string
+          id?: string
+          resolution_note?: string | null
+          resolved_at?: string | null
+          resolved_by?: string | null
+          severity?: number
+          status?: Database["public"]["Enums"]["complaint_status"]
+          subject?: string
+          updated_at?: string
+          work_order_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "complaints_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "complaints_work_order_id_fkey"
+            columns: ["work_order_id"]
+            isOneToOne: false
+            referencedRelation: "v_ctp_items"
+            referencedColumns: ["work_order_id"]
+          },
+          {
+            foreignKeyName: "complaints_work_order_id_fkey"
+            columns: ["work_order_id"]
+            isOneToOne: false
+            referencedRelation: "work_orders"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "complaints_work_order_id_fkey"
+            columns: ["work_order_id"]
+            isOneToOne: false
+            referencedRelation: "work_orders_ctp"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "complaints_work_order_id_fkey"
+            columns: ["work_order_id"]
+            isOneToOne: false
+            referencedRelation: "work_orders_digitala"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "complaints_work_order_id_fkey"
+            columns: ["work_order_id"]
+            isOneToOne: false
+            referencedRelation: "work_orders_filmovanje"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "complaints_work_order_id_fkey"
+            columns: ["work_order_id"]
+            isOneToOne: false
+            referencedRelation: "work_orders_razno"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       ctp_job_sessions: {
         Row: {
           created_at: string
@@ -4736,6 +4984,7 @@ export type Database = {
         Returns: boolean
       }
       is_superuser: { Args: { p_uid: string }; Returns: boolean }
+      next_complaint_number: { Args: never; Returns: string }
       next_pasted_quote_number: { Args: never; Returns: string }
       next_quote_number: { Args: never; Returns: string }
       refresh_plate_usage_stats: { Args: never; Returns: undefined }
@@ -4803,6 +5052,13 @@ export type Database = {
         | "Blocked"
         | "Done"
         | "NA"
+      complaint_category: "job" | "quality" | "employee" | "deadline" | "other"
+      complaint_status:
+        | "new"
+        | "in_review"
+        | "in_progress"
+        | "resolved"
+        | "rejected"
       large_format_type: "roll" | "rigid"
       rigid_material_type:
         | "forex"
@@ -4966,6 +5222,14 @@ export const Constants = {
         "client_user",
       ],
       checklist_item_status: ["Pending", "InProgress", "Blocked", "Done", "NA"],
+      complaint_category: ["job", "quality", "employee", "deadline", "other"],
+      complaint_status: [
+        "new",
+        "in_review",
+        "in_progress",
+        "resolved",
+        "rejected",
+      ],
       large_format_type: ["roll", "rigid"],
       rigid_material_type: [
         "forex",
