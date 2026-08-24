@@ -123,6 +123,12 @@ const TEMPLATES: { name: string; blocks: Block[] }[] = [
     ],
   },
   {
+    name: "Reklamacije preko portala (full HTML)",
+    blocks: [
+      { id: "rk-1", type: "rawHtml", content: { html: REKLAMACIJE_HTML } },
+    ],
+  },
+  {
     name: "Prazan šablon",
     blocks: [...DEFAULT_BLOCKS],
   },
