@@ -8,7 +8,7 @@ import { useIsMobile } from "@/hooks/use-mobile";
 import gamaLogo from "@/assets/gama-united-logo.svg";
 import { MobileNav } from "./MobileNav";
 import { PriorityNotificationBell } from "@/components/priority/PriorityNotificationBell";
-import { Flag, Calculator, UserCog, FileText } from "lucide-react";
+import { Flag, Calculator, UserCog, FileText, AlertTriangle } from "lucide-react";
 import { QuickPriceCalculator } from "@/components/calculator/QuickPriceCalculator";
 import { ProfileSettingsDialog } from "@/components/profile/ProfileSettingsDialog";
 
