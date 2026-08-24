@@ -12,6 +12,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { REDIZAJN_V2_HTML } from "./templates/redizajnHtml";
+import { REKLAMACIJE_HTML } from "./templates/reklamacijeHtml";
 
 type BlockType = "heading" | "text" | "image" | "button" | "divider" | "contact" | "rawHtml";
 
@@ -119,6 +120,12 @@ const TEMPLATES: { name: string; blocks: Block[] }[] = [
     name: "Redizajn sajta v2 (full HTML)",
     blocks: [
       { id: "rd2-1", type: "rawHtml", content: { html: REDIZAJN_V2_HTML } },
+    ],
+  },
+  {
+    name: "Reklamacije preko portala (full HTML)",
+    blocks: [
+      { id: "rk-1", type: "rawHtml", content: { html: REKLAMACIJE_HTML } },
     ],
   },
   {
