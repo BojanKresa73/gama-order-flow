@@ -54,3 +54,7 @@ verify_jwt = false
 [functions.send-film-price-increase-newsletter]
 verify_jwt = false
 
+[functions.seed-reklamacije-campaign]
+verify_jwt = false
+
+
