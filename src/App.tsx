@@ -40,6 +40,7 @@ const SretenjeNewsletter = lazy(() => import("./pages/SretenjeNewsletter"));
 const AdminNewsletter = lazy(() => import("./pages/AdminNewsletter"));
 const Vacations = lazy(() => import("./pages/Vacations"));
 const Quotes = lazy(() => import("./pages/Quotes"));
+const Complaints = lazy(() => import("./pages/Complaints"));
 const NotFound = lazy(() => import("./pages/NotFound"));
 
 // Guards are small - keep synchronous
