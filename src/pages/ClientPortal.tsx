@@ -571,6 +571,15 @@ const ClientPortal = () => {
           </CardContent>
         </Card>
 
+        {/* Complaints */}
+        {portalUser?.client_id && (
+          <PortalComplaintsSection
+            clientId={portalUser.client_id}
+            clientName={portalUser.clients?.name || "Klijent"}
+            authorName={portalUser.full_name}
+          />
+        )}
+
         {/* Priority legend */}
         <Card className="mt-6">
           <CardContent className="pt-6">
