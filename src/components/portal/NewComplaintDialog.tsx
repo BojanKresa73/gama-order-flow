@@ -115,6 +115,7 @@ export const NewComplaintDialog = ({
       if (error) throw error;
 
       // Upload attachments
+      let failedAttachments = 0;
       for (const file of files) {
         const path = `${clientId}/${complaint.id}/${crypto.randomUUID()}-${file.name}`;
         const { error: upErr } = await supabase.storage
@@ -122,9 +123,10 @@ export const NewComplaintDialog = ({
           .upload(path, file, { contentType: file.type || undefined });
         if (upErr) {
           console.error("Upload failed", upErr);
+          failedAttachments++;
           continue;
         }
-        await supabase.from("complaint_attachments").insert({
+        const { error: rowErr } = await supabase.from("complaint_attachments").insert({
           complaint_id: complaint.id,
           storage_path: path,
           file_name: file.name,
@@ -132,7 +134,20 @@ export const NewComplaintDialog = ({
           size_bytes: file.size,
           uploaded_by: user?.id ?? null,
         } as any);
+        if (rowErr) {
+          console.error("Attachment insert failed", rowErr);
+          failedAttachments++;
+        }
       }
+
+      if (failedAttachments > 0) {
+        toast({
+          title: "Prilozi nisu sačuvani",
+          description: `${failedAttachments} priloga nije moguće sačuvati. Reklamacija je poslata — priloge možete poslati dodatno.`,
+          variant: "destructive",
+        });
+      }
+
 
       try {
         await supabase.functions.invoke("notify-complaint", {
