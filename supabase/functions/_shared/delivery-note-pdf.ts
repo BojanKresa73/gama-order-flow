@@ -42,7 +42,7 @@ const CONFIG = {
   pageHeight: 841.89, // A4 height
   margin: 40,
   marginRight: 40,
-  logo: { width: 80 },
+  logo: { width: 175 },
   table: {
     cols: { rbr: 40, filename: 260, details: 130, quantity: 85 },
     rowHeight: 32,
@@ -146,7 +146,8 @@ async function loadAssets(pdfDoc: any) {
   const notoBold = await pdfDoc.embedFont(cachedBoldFont, { subset: true });
 
   if (!cachedLogo) {
-    const logoUrl = Deno.env.get('LOGO_URL');
+    const logoUrl = Deno.env.get('LOGO_URL') ||
+      'https://ytophmlfbrnhmqtwpijn.supabase.co/storage/v1/object/public/newsletter-assets/gama-united-white.png';
     if (logoUrl) {
       try {
         const logoResp = await fetch(logoUrl);
@@ -243,29 +244,29 @@ export async function generateDeliveryNotePDF(
       });
 
       let leftY = pageHeight - 35;
-      
-      // Logo
+      const textX = margin;
+
+      // Logo (zamenjuje tekst "GAMA UNITED")
       if (logoImg) {
         page.drawImage(logoImg, {
           x: margin,
-          y: leftY - logoHeight + 8,
+          y: leftY - logoHeight + 12,
           width: CONFIG.logo.width,
           height: logoHeight,
         });
+      } else {
+        page.drawText('GAMA UNITED', {
+          x: textX,
+          y: leftY,
+          size: 26,
+          font: notoBold,
+          color: COLORS.white,
+        });
       }
-
-      // Company name - large and bold
-      page.drawText('GAMA UNITED', {
-        x: margin + (logoImg ? CONFIG.logo.width + 15 : 0),
-        y: leftY,
-        size: 26,
-        font: notoBold,
-        color: COLORS.white,
-      });
 
       // Subtitle
       page.drawText('All you can print..', {
-        x: margin + (logoImg ? CONFIG.logo.width + 15 : 0),
+        x: textX,
         y: leftY - 18,
         size: 10,
         font: notoFont,
@@ -275,7 +276,7 @@ export async function generateDeliveryNotePDF(
 
       // Address line
       page.drawText('Veljka Milićevića 2/10, Beograd | ctp@gamaunited.rs', {
-        x: margin + (logoImg ? CONFIG.logo.width + 15 : 0),
+        x: textX,
         y: leftY - 30,
         size: 8,
         font: notoFont,
@@ -285,13 +286,14 @@ export async function generateDeliveryNotePDF(
 
       // PIB line
       page.drawText('PIB: 114876455', {
-        x: margin + (logoImg ? CONFIG.logo.width + 15 : 0),
+        x: textX,
         y: leftY - 40,
         size: 8,
         font: notoFont,
         color: rgb(1, 1, 1),
         opacity: 0.6,
       });
+
 
       // Right side - Document badge
       const rightX = pageWidth - marginRight;
