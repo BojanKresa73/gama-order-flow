@@ -13,6 +13,7 @@ interface WorkOrder {
   invalidated_at?: string;
   deleted_at?: string;
   invalid_reason?: string;
+  notes?: string | null;
   clients?: { name: string };
   profiles?: { full_name: string };
   _closedByName?: string;
