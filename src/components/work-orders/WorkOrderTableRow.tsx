@@ -127,12 +127,12 @@ export const WorkOrderTableRow = ({
             </TooltipProvider>
           )}
         </div>
-        {order.notes && (
+        {order.job_name && (
           <span
             className="text-xs text-muted-foreground block mt-0.5 max-w-[260px] truncate font-normal"
-            title={order.notes}
+            title={order.job_name}
           >
-            {order.notes}
+            {order.job_name}
           </span>
         )}
         {order.invalid_reason && (
