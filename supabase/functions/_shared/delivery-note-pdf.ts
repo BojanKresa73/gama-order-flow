@@ -42,7 +42,7 @@ const CONFIG = {
   pageHeight: 841.89, // A4 height
   margin: 40,
   marginRight: 40,
-  logo: { width: 80 },
+  logo: { width: 175 },
   table: {
     cols: { rbr: 40, filename: 260, details: 130, quantity: 85 },
     rowHeight: 32,
@@ -146,7 +146,8 @@ async function loadAssets(pdfDoc: any) {
   const notoBold = await pdfDoc.embedFont(cachedBoldFont, { subset: true });
 
   if (!cachedLogo) {
-    const logoUrl = Deno.env.get('LOGO_URL');
+    const logoUrl = Deno.env.get('LOGO_URL') ||
+      'https://ytophmlfbrnhmqtwpijn.supabase.co/storage/v1/object/public/newsletter-assets/gama-united-white.png';
     if (logoUrl) {
       try {
         const logoResp = await fetch(logoUrl);
