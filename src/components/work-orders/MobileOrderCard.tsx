@@ -13,6 +13,7 @@ interface WorkOrder {
   invalidated_at?: string;
   deleted_at?: string;
   invalid_reason?: string;
+  notes?: string | null;
   clients?: { name: string };
   profiles?: { full_name: string };
   _closedByName?: string;
@@ -82,6 +83,11 @@ export const MobileOrderCard = ({
         <div className="flex items-start justify-between mb-3">
           <div>
             <p className="font-semibold text-base">{displayOrderNumber(order)}</p>
+            {order.notes && (
+              <p className="text-xs text-muted-foreground mt-0.5 line-clamp-2">
+                {order.notes}
+              </p>
+            )}
             <p className="text-sm text-muted-foreground mt-0.5">
               {order.clients?.name || "—"}
             </p>

@@ -127,11 +127,20 @@ export const WorkOrderTableRow = ({
             </TooltipProvider>
           )}
         </div>
+        {order.notes && (
+          <span
+            className="text-xs text-muted-foreground block mt-0.5 max-w-[260px] truncate font-normal"
+            title={order.notes}
+          >
+            {order.notes}
+          </span>
+        )}
         {order.invalid_reason && (
           <span className="text-xs text-destructive block mt-1">
             Razlog: {order.invalid_reason}
           </span>
         )}
+
       </TableCell>
       <TableCell>{order.clients?.name}</TableCell>
       <TableCell>{getOrderTypeLabel(order.order_type)}</TableCell>
