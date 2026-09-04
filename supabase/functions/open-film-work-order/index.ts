@@ -17,6 +17,8 @@ interface OpenFilmOrderRequest {
   client_id: string;
   order_type: string;
   client_email?: string;
+  sales_rep_name?: string | null;
+  sales_rep_email?: string | null;
   note?: string;
   items: FilmItem[];
 }
@@ -210,6 +212,8 @@ Deno.serve(async (req) => {
         serial: serial,
         year: currentYear,
         notes: payload.note,
+        sales_rep_name: payload.sales_rep_name || null,
+        sales_rep_email: payload.sales_rep_email || null,
       })
       .select()
       .single();

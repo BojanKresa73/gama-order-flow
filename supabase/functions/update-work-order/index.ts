@@ -21,6 +21,8 @@ interface UpdateWorkOrderRequest {
     trial_print?: boolean;
     trial_sheets?: number;
     prep_hours?: number;
+    sales_rep_name?: string | null;
+    sales_rep_email?: string | null;
   };
   items: {
     created: any[];

@@ -946,7 +946,9 @@ const handler = async (req: Request): Promise<Response> => {
       <p>Zatvorio: ${closedByName} u ${closedAtFormatted}</p>
     `;
 
-    const clientEmail = workOrder.clients?.notification_email || workOrder.clients?.email;
+    const clientEmail = (workOrder.sales_rep_email || '').trim()
+      || workOrder.clients?.notification_email
+      || workOrder.clients?.email;
     let clientEmailStatus = 'skipped';
     let clientEmailMessage = '';
     
