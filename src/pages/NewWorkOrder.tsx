@@ -201,6 +201,36 @@ const NewWorkOrder = () => {
     setClients(data || []);
   };
 
+  // Load sales reps (komercijalisti) for selected client
+  useEffect(() => {
+    let cancelled = false;
+    const load = async () => {
+      if (!formData.client_id) {
+        setClientContacts([]);
+        return;
+      }
+      const { data } = await supabase
+        .from("client_contacts")
+        .select("id, name, email")
+        .eq("client_id", formData.client_id)
+        .eq("is_active", true)
+        .order("name");
+      if (cancelled) return;
+      const list = data || [];
+      setClientContacts(list);
+      // Preselect matching contact when editing an existing order
+      setFormData((prev) => {
+        if (prev.sales_rep_id || !prev.sales_rep_email) return prev;
+        const match = list.find((c: any) => c.email === prev.sales_rep_email);
+        return match ? { ...prev, sales_rep_id: match.id } : prev;
+      });
+    };
+    void load();
+    return () => {
+      cancelled = true;
+    };
+  }, [formData.client_id, formData.sales_rep_email]);
+
   const fetchPlateFormats = async () => {
     const { data } = await supabase.from("plate_formats").select("*").order("format_name");
     setPlateFormats(data || []);
