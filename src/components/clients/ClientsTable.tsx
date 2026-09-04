@@ -33,6 +33,7 @@ import {
   Eye,
   FileSpreadsheet,
   Receipt,
+  Users,
 } from "lucide-react";
 import * as XLSX from 'xlsx';
 
@@ -51,6 +52,7 @@ export const ClientsTable = ({ clients, onEdit }: ClientsTableProps) => {
   const [itemsPerPage, setItemsPerPage] = useState(25);
   const [quickViewClient, setQuickViewClient] = useState<Client | null>(null);
   const [platePricesClient, setPlatePricesClient] = useState<Client | null>(null);
+  const [contactsClient, setContactsClient] = useState<Client | null>(null);
   const queryClient = useQueryClient();
   const [columnVisibility, setColumnVisibility] = useState({
     name: true,
@@ -584,6 +586,17 @@ export const ClientsTable = ({ clients, onEdit }: ClientsTableProps) => {
                         <Receipt className="h-4 w-4" />
                       </Button>
                       <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setContactsClient(client);
+                        }}
+                        title="Komercijalisti"
+                      >
+                        <Users className="h-4 w-4" />
+                      </Button>
+                      <Button
                         variant="outline"
                         size="sm"
                         onClick={(e) => {
@@ -642,6 +655,14 @@ export const ClientsTable = ({ clients, onEdit }: ClientsTableProps) => {
         open={!!quickViewClient}
         onOpenChange={(open) => !open && setQuickViewClient(null)}
         onEdit={onEdit}
+      />
+
+      {/* Client Contacts Dialog */}
+      <ClientContactsDialog
+        open={!!contactsClient}
+        onOpenChange={(open) => !open && setContactsClient(null)}
+        clientId={contactsClient?.id || ""}
+        clientName={contactsClient?.name || ""}
       />
 
       {/* Plate Prices Dialog */}
