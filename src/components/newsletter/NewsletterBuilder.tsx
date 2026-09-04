@@ -13,6 +13,7 @@ import { useToast } from "@/hooks/use-toast";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { REDIZAJN_V2_HTML } from "./templates/redizajnHtml";
 import { REKLAMACIJE_HTML } from "./templates/reklamacijeHtml";
+import { BRANDBOX_HTML } from "./templates/brandboxHtml";
 
 type BlockType = "heading" | "text" | "image" | "button" | "divider" | "contact" | "rawHtml";
 
@@ -126,6 +127,12 @@ const TEMPLATES: { name: string; blocks: Block[] }[] = [
     name: "Reklamacije preko portala (full HTML)",
     blocks: [
       { id: "rk-1", type: "rawHtml", content: { html: REKLAMACIJE_HTML } },
+    ],
+  },
+  {
+    name: "Brand Box — otpremnica na mail (full HTML)",
+    blocks: [
+      { id: "bb-1", type: "rawHtml", content: { html: BRANDBOX_HTML } },
     ],
   },
   {
