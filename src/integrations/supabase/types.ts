@@ -202,6 +202,47 @@ export type Database = {
           },
         ]
       }
+      client_contacts: {
+        Row: {
+          client_id: string
+          created_at: string
+          email: string
+          id: string
+          is_active: boolean
+          name: string
+          phone: string | null
+          updated_at: string
+        }
+        Insert: {
+          client_id: string
+          created_at?: string
+          email: string
+          id?: string
+          is_active?: boolean
+          name: string
+          phone?: string | null
+          updated_at?: string
+        }
+        Update: {
+          client_id?: string
+          created_at?: string
+          email?: string
+          id?: string
+          is_active?: boolean
+          name?: string
+          phone?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "client_contacts_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       client_plate_prices: {
         Row: {
           client_id: string
@@ -4072,6 +4113,8 @@ export type Database = {
           print_spec: string | null
           priority: number
           run_quantity: number | null
+          sales_rep_email: string | null
+          sales_rep_name: string | null
           serial: number | null
           sheets_used: number | null
           status: Database["public"]["Enums"]["work_order_status"]
@@ -4117,6 +4160,8 @@ export type Database = {
           print_spec?: string | null
           priority?: number
           run_quantity?: number | null
+          sales_rep_email?: string | null
+          sales_rep_name?: string | null
           serial?: number | null
           sheets_used?: number | null
           status?: Database["public"]["Enums"]["work_order_status"]
@@ -4162,6 +4207,8 @@ export type Database = {
           print_spec?: string | null
           priority?: number
           run_quantity?: number | null
+          sales_rep_email?: string | null
+          sales_rep_name?: string | null
           serial?: number | null
           sheets_used?: number | null
           status?: Database["public"]["Enums"]["work_order_status"]

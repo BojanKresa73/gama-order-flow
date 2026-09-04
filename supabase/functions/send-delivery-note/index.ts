@@ -311,7 +311,7 @@ const handler = async (req: Request): Promise<Response> => {
           height_mm: item.height_mm,
           computed_total_m: item.computed_total_m,
         })),
-        sent_to_email: workOrder.client.notification_email,
+        sent_to_email: (workOrder.sales_rep_email || '').trim() || workOrder.client.notification_email,
       })
       .select()
       .single();
@@ -360,6 +360,12 @@ const handler = async (req: Request): Promise<Response> => {
 
     // Collect notification emails
     const notificationEmails: string[] = [];
+    const salesRepEmail = (workOrder.sales_rep_email || '').trim();
+    if (salesRepEmail) {
+      // Order is assigned to a specific sales rep - notify only them
+      notificationEmails.push(salesRepEmail);
+      console.log('[send-delivery-note] Sales rep assigned, sending only to:', salesRepEmail);
+    } else {
     if (workOrder.client.notification_email) {
       notificationEmails.push(workOrder.client.notification_email);
     }
@@ -368,6 +374,7 @@ const handler = async (req: Request): Promise<Response> => {
     }
     if (workOrder.client.notification_email_3) {
       notificationEmails.push(workOrder.client.notification_email_3);
+    }
     }
 
     // Send email if notification email(s) exist

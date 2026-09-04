@@ -22,6 +22,8 @@ interface CreateWorkOrderInput {
   film_note?: string;
   kind?: string;
   prep_hours?: number;
+  sales_rep_name?: string | null;
+  sales_rep_email?: string | null;
 }
 
 const prefixFor = (t?: string) => ({
@@ -119,6 +121,8 @@ Deno.serve(async (req) => {
         lamination: input.lamination,
         film_note: input.film_note,
         prep_hours: input.prep_hours || 0,
+        sales_rep_name: input.sales_rep_name || null,
+        sales_rep_email: input.sales_rep_email || null,
         created_by: user.id,
         status: 'open',
       })
