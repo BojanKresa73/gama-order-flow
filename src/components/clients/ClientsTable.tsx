@@ -2,6 +2,7 @@ import { useState, useMemo } from "react";
 import { Client, useClients } from "@/hooks/useClients";
 import { ClientQuickView } from "./ClientQuickView";
 import { ClientPlatePricesDialog } from "./ClientPlatePricesDialog";
+import { ClientContactsDialog } from "./ClientContactsDialog";
 import { supabase } from "@/integrations/supabase/client";
 import { useQueryClient } from "@tanstack/react-query";
 import {
