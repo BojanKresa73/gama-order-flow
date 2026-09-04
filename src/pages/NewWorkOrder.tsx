@@ -86,6 +86,7 @@ const NewWorkOrder = () => {
   const isEditMode = !!id;
   const [searchParams] = useSearchParams();
   const [clients, setClients] = useState<any[]>([]);
+  const [clientContacts, setClientContacts] = useState<any[]>([]);
   const [plateFormats, setPlateFormats] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
   const [loadingOrder, setLoadingOrder] = useState(isEditMode);
@@ -96,6 +97,9 @@ const NewWorkOrder = () => {
   const [formData, setFormData] = useState({
     client_id: searchParams.get("clientId") || "",
     notification_email: "",
+    sales_rep_id: "",
+    sales_rep_name: "",
+    sales_rep_email: "",
     notes: "",
     // CTP fields
     trial_print: false,
@@ -244,6 +248,9 @@ const NewWorkOrder = () => {
       setFormData({
         client_id: order.client_id,
         notification_email: order.clients?.notification_email || "",
+        sales_rep_id: "",
+        sales_rep_name: order.sales_rep_name || "",
+        sales_rep_email: order.sales_rep_email || "",
         notes: order.notes || "",
         trial_print: order.trial_print || false,
         trial_sheets: order.trial_sheets || 0,
@@ -468,6 +475,8 @@ const NewWorkOrder = () => {
                 trial_print: formData.trial_print,
                 trial_sheets: formData.trial_sheets,
                 prep_hours: formData.prep_hours,
+                sales_rep_name: formData.sales_rep_name || null,
+                sales_rep_email: formData.sales_rep_email || null,
               },
               items: itemsDiff,
             },
@@ -539,6 +548,8 @@ const NewWorkOrder = () => {
             body: {
               client_id: formData.client_id,
               client_email: formData.notification_email,
+              sales_rep_name: formData.sales_rep_name || null,
+              sales_rep_email: formData.sales_rep_email || null,
               order_type: 'film',
               note: formData.notes,
               items: filmJobs.map(job => ({
@@ -586,6 +597,8 @@ const NewWorkOrder = () => {
         lamination: formData.lamination,
         film_note: formData.notes,
         prep_hours: formData.prep_hours,
+        sales_rep_name: formData.sales_rep_name || null,
+        sales_rep_email: formData.sales_rep_email || null,
       };
 
       // Call edge function to create work order with proper serial number
@@ -844,7 +857,10 @@ const NewWorkOrder = () => {
                     setFormData({ 
                       ...formData, 
                       client_id: value,
-                      notification_email: selectedClient?.notification_email || ""
+                      notification_email: selectedClient?.notification_email || "",
+                      sales_rep_id: "",
+                      sales_rep_name: "",
+                      sales_rep_email: "",
                     });
                   }}
                   required
@@ -873,6 +889,45 @@ const NewWorkOrder = () => {
                     value={formData.notification_email}
                     onChange={(e) => setFormData({ ...formData, notification_email: e.target.value })}
                   />
+                </div>
+              )}
+
+              {clientContacts.length > 0 && (
+                <div className="space-y-2">
+                  <Label htmlFor="sales_rep">Komercijalista (primalac obaveštenja)</Label>
+                  <Select
+                    value={formData.sales_rep_id || "none"}
+                    onValueChange={(value) => {
+                      if (value === "none") {
+                        setFormData({ ...formData, sales_rep_id: "", sales_rep_name: "", sales_rep_email: "" });
+                        return;
+                      }
+                      const c = clientContacts.find((x) => x.id === value);
+                      setFormData({
+                        ...formData,
+                        sales_rep_id: value,
+                        sales_rep_name: c?.name || "",
+                        sales_rep_email: c?.email || "",
+                      });
+                    }}
+                  >
+                    <SelectTrigger id="sales_rep">
+                      <SelectValue placeholder="Bez komercijaliste (glavni email klijenta)" />
+                    </SelectTrigger>
+                    <SelectContent className="bg-popover z-50">
+                      <SelectItem value="none">Bez komercijaliste (glavni email klijenta)</SelectItem>
+                      {clientContacts.map((c) => (
+                        <SelectItem key={c.id} value={c.id}>
+                          {c.name} — {c.email}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  {formData.sales_rep_email && (
+                    <p className="text-xs text-muted-foreground">
+                      Obaveštenje sa otpremnicom ide samo na: {formData.sales_rep_email}
+                    </p>
+                  )}
                 </div>
               )}
 
