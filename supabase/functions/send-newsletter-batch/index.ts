@@ -137,8 +137,13 @@ Deno.serve(async (req) => {
 
     let sent = 0, failed = 0;
 
+    let processed = 0;
+
     for (let i = 0; i < sends.length; i++) {
+      // Stay inside the wall-clock budget; unclaimed rows go back to pending.
+      if (Date.now() - startedAt > TIME_BUDGET_MS) break;
       const send: any = sends[i];
+      processed++;
       try {
         const unsubToken = send.newsletter_recipients?.unsubscribe_token;
         const unsubUrl = `${unsubBaseUrl}?token=${unsubToken}`;
