@@ -3582,6 +3582,33 @@ export type Database = {
         }
         Relationships: []
       }
+      system_maintenance_log: {
+        Row: {
+          deleted_http_rows: number
+          deleted_job_runs: number
+          disabled_jobs: string[]
+          id: number
+          notes: string | null
+          ran_at: string
+        }
+        Insert: {
+          deleted_http_rows?: number
+          deleted_job_runs?: number
+          disabled_jobs?: string[]
+          id?: number
+          notes?: string | null
+          ran_at?: string
+        }
+        Update: {
+          deleted_http_rows?: number
+          deleted_job_runs?: number
+          disabled_jobs?: string[]
+          id?: number
+          notes?: string | null
+          ran_at?: string
+        }
+        Relationships: []
+      }
       user_roles: {
         Row: {
           created_at: string
@@ -5035,6 +5062,7 @@ export type Database = {
       next_pasted_quote_number: { Args: never; Returns: string }
       next_quote_number: { Args: never; Returns: string }
       refresh_plate_usage_stats: { Args: never; Returns: undefined }
+      run_system_maintenance: { Args: never; Returns: undefined }
       show_limit: { Args: never; Returns: number }
       show_trgm: { Args: { "": string }; Returns: string[] }
       update_work_order_priority: {
