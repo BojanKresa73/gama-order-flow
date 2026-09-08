@@ -49,8 +49,12 @@ Deno.serve(async (req) => {
     let body: any = {};
     try { body = await req.json(); } catch { /* allow empty */ }
     const campaign_id: string | undefined = body.campaign_id;
-    const batchSize: number = Math.min(Math.max(body.batch_size ?? 40, 1), 100);
-    const delayMs: number = Math.max(body.delay_ms ?? 2500, 1100);
+    const batchSize: number = Math.min(Math.max(body.batch_size ?? 20, 1), 40);
+    const delayMs: number = Math.max(body.delay_ms ?? 1200, 1100);
+    // Hard wall-clock budget so the function never hits the edge timeout mid-send.
+    const startedAt = Date.now();
+    const TIME_BUDGET_MS = 45_000;
+    const STALE_SENDING_MS = 15 * 60 * 1000;
 
     if (!campaign_id) throw new Error("Missing campaign_id");
 
