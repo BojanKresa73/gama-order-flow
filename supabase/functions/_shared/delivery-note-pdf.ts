@@ -42,7 +42,7 @@ const CONFIG = {
   pageHeight: 841.89, // A4 height
   margin: 40,
   marginRight: 40,
-  logo: { width: 90 },
+  logo: { width: 100 },
   table: {
     cols: { rbr: 40, filename: 260, details: 130, quantity: 85 },
     rowHeight: 32,
