@@ -42,7 +42,7 @@ const CONFIG = {
   pageHeight: 841.89, // A4 height
   margin: 40,
   marginRight: 40,
-  logo: { width: 175 },
+  logo: { width: 100 },
   table: {
     cols: { rbr: 40, filename: 260, details: 130, quantity: 85 },
     rowHeight: 32,
@@ -146,7 +146,8 @@ async function loadAssets(pdfDoc: any) {
   const notoBold = await pdfDoc.embedFont(cachedBoldFont, { subset: true });
 
   if (!cachedLogo) {
-    const logoUrl = Deno.env.get('LOGO_URL') ||
+    // Own storage first; LOGO_URL is only a fallback (it may point to an old project).
+    const logoUrl =
       'https://ytophmlfbrnhmqtwpijn.supabase.co/storage/v1/object/public/newsletter-assets/gama-united-white.png';
     if (logoUrl) {
       try {
@@ -250,7 +251,7 @@ export async function generateDeliveryNotePDF(
       if (logoImg) {
         page.drawImage(logoImg, {
           x: margin,
-          y: leftY - logoHeight + 12,
+          y: leftY - 4,
           width: CONFIG.logo.width,
           height: logoHeight,
         });

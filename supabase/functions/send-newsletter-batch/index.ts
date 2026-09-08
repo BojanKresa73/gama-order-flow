@@ -49,8 +49,12 @@ Deno.serve(async (req) => {
     let body: any = {};
     try { body = await req.json(); } catch { /* allow empty */ }
     const campaign_id: string | undefined = body.campaign_id;
-    const batchSize: number = Math.min(Math.max(body.batch_size ?? 40, 1), 100);
-    const delayMs: number = Math.max(body.delay_ms ?? 2500, 1100);
+    const batchSize: number = Math.min(Math.max(body.batch_size ?? 20, 1), 40);
+    const delayMs: number = Math.max(body.delay_ms ?? 1200, 1100);
+    // Hard wall-clock budget so the function never hits the edge timeout mid-send.
+    const startedAt = Date.now();
+    const TIME_BUDGET_MS = 45_000;
+    const STALE_SENDING_MS = 15 * 60 * 1000;
 
     if (!campaign_id) throw new Error("Missing campaign_id");
 
@@ -60,21 +64,12 @@ Deno.serve(async (req) => {
       .from("newsletter_campaigns").select("*").eq("id", campaign_id).single();
     if (campErr || !campaign) throw new Error("Campaign not found");
 
-    const { data: sends, error: sErr } = await supabase
-      .from("newsletter_sends")
-      .select("*, newsletter_recipients!inner(unsubscribe_token, email)")
-      .eq("campaign_id", campaign_id)
-      .eq("status", "pending")
-      .limit(batchSize);
-    if (sErr) throw sErr;
-
-    if (!sends || sends.length === 0) {
-      // No pending: mark campaign sent (totals) and unschedule cron
+    const finish = async () => {
       const { count: sentCnt } = await supabase
-        .from("newsletter_sends").select("*", { count: "exact", head: true })
+        .from("newsletter_sends").select("id", { count: "exact", head: true })
         .eq("campaign_id", campaign_id).eq("status", "sent");
       const { count: failCnt } = await supabase
-        .from("newsletter_sends").select("*", { count: "exact", head: true })
+        .from("newsletter_sends").select("id", { count: "exact", head: true })
         .eq("campaign_id", campaign_id).eq("status", "failed");
       await supabase.from("newsletter_campaigns").update({
         status: "sent", sent_count: sentCnt ?? 0, failed_count: failCnt ?? 0,
@@ -88,7 +83,49 @@ Deno.serve(async (req) => {
       return new Response(JSON.stringify({ done: true, sent: sentCnt, failed: failCnt }), {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
+    };
+
+    // Campaign already finished (e.g. leftover cron tick): stop immediately.
+    if (campaign.status === "sent" || campaign.status === "cancelled") {
+      return await finish();
     }
+
+    // Rows left claimed by a previous invocation that timed out mid-send are
+    // marked failed (never re-sent) so nobody receives the newsletter twice.
+    await supabase
+      .from("newsletter_sends")
+      .update({ status: "failed", error_msg: "Prekinuto slanje (timeout) - nije ponovljeno" })
+      .eq("campaign_id", campaign_id)
+      .eq("status", "sending")
+      .lt("claimed_at", new Date(Date.now() - STALE_SENDING_MS).toISOString());
+
+    const { data: sends, error: sErr } = await supabase
+      .from("newsletter_sends")
+      .select("id, recipient_email, newsletter_recipients!inner(unsubscribe_token)")
+      .eq("campaign_id", campaign_id)
+      .eq("status", "pending")
+      .limit(batchSize);
+    if (sErr) throw sErr;
+
+    if (!sends || sends.length === 0) {
+      // Still rows being processed by another invocation? wait for next tick.
+      const { count: inflight } = await supabase
+        .from("newsletter_sends").select("id", { count: "exact", head: true })
+        .eq("campaign_id", campaign_id).eq("status", "sending");
+      if ((inflight ?? 0) > 0) {
+        return new Response(JSON.stringify({ done: false, waiting_for: inflight }), {
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+      return await finish();
+    }
+
+    // Claim the batch up-front: a crash/timeout can no longer resend these rows.
+    const claimIds = sends.map((s: any) => s.id);
+    await supabase
+      .from("newsletter_sends")
+      .update({ status: "sending", claimed_at: new Date().toISOString() })
+      .in("id", claimIds);
 
     if (campaign.status !== "sending") {
       await supabase.from("newsletter_campaigns").update({ status: "sending" }).eq("id", campaign_id);
@@ -100,8 +137,13 @@ Deno.serve(async (req) => {
 
     let sent = 0, failed = 0;
 
+    let processed = 0;
+
     for (let i = 0; i < sends.length; i++) {
+      // Stay inside the wall-clock budget; unclaimed rows go back to pending.
+      if (Date.now() - startedAt > TIME_BUDGET_MS) break;
       const send: any = sends[i];
+      processed++;
       try {
         const unsubToken = send.newsletter_recipients?.unsubscribe_token;
         const unsubUrl = `${unsubBaseUrl}?token=${unsubToken}`;
@@ -153,6 +195,14 @@ Deno.serve(async (req) => {
       }
 
       if (i < sends.length - 1) await sleep(delayMs);
+    }
+
+    // Release rows we claimed but never got to (time budget hit).
+    const leftover = claimIds.slice(processed);
+    if (leftover.length > 0) {
+      await supabase.from("newsletter_sends")
+        .update({ status: "pending", claimed_at: null })
+        .in("id", leftover);
     }
 
     return new Response(JSON.stringify({ done: false, batch_sent: sent, batch_failed: failed }), {
