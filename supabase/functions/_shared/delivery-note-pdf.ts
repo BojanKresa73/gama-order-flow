@@ -146,7 +146,8 @@ async function loadAssets(pdfDoc: any) {
   const notoBold = await pdfDoc.embedFont(cachedBoldFont, { subset: true });
 
   if (!cachedLogo) {
-    const logoUrl = Deno.env.get('LOGO_URL') ||
+    // Own storage first; LOGO_URL is only a fallback (it may point to an old project).
+    const logoUrl =
       'https://ytophmlfbrnhmqtwpijn.supabase.co/storage/v1/object/public/newsletter-assets/gama-united-white.png';
     if (logoUrl) {
       try {
