@@ -197,6 +197,14 @@ Deno.serve(async (req) => {
       if (i < sends.length - 1) await sleep(delayMs);
     }
 
+    // Release rows we claimed but never got to (time budget hit).
+    const leftover = claimIds.slice(processed);
+    if (leftover.length > 0) {
+      await supabase.from("newsletter_sends")
+        .update({ status: "pending", claimed_at: null })
+        .in("id", leftover);
+    }
+
     return new Response(JSON.stringify({ done: false, batch_sent: sent, batch_failed: failed }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
