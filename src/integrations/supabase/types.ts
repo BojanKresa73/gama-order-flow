@@ -2335,6 +2335,7 @@ export type Database = {
       newsletter_sends: {
         Row: {
           campaign_id: string
+          claimed_at: string | null
           created_at: string
           error_msg: string | null
           id: string
@@ -2345,6 +2346,7 @@ export type Database = {
         }
         Insert: {
           campaign_id: string
+          claimed_at?: string | null
           created_at?: string
           error_msg?: string | null
           id?: string
@@ -2355,6 +2357,7 @@ export type Database = {
         }
         Update: {
           campaign_id?: string
+          claimed_at?: string | null
           created_at?: string
           error_msg?: string | null
           id?: string
