@@ -876,6 +876,47 @@ export type Database = {
         }
         Relationships: []
       }
+      ctp_monthly_report_log: {
+        Row: {
+          client_id: string
+          created_at: string
+          error_message: string | null
+          id: string
+          period: string
+          recipients: string[]
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          client_id: string
+          created_at?: string
+          error_message?: string | null
+          id?: string
+          period: string
+          recipients?: string[]
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          client_id?: string
+          created_at?: string
+          error_message?: string | null
+          id?: string
+          period?: string
+          recipients?: string[]
+          status?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ctp_monthly_report_log_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       delivery_notes: {
         Row: {
           client_name: string
@@ -4907,6 +4948,10 @@ export type Database = {
       }
       expire_old_quotes: { Args: never; Returns: undefined }
       generate_order_number: { Args: never; Returns: string }
+      get_client_ctp_monthly: {
+        Args: { p_client_id: string; p_year: number }
+        Returns: Json
+      }
       get_client_stats: { Args: { p_client_id: string }; Returns: Json }
       get_ctp_area_m2: {
         Args: {

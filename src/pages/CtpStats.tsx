@@ -12,6 +12,7 @@ import { CtpExportButtons } from "@/components/stats/CtpExportButtons";
 import { CtpInventoryForecast } from "@/components/stats/CtpInventoryForecast";
 import { CtpFormatConsumption } from "@/components/stats/CtpFormatConsumption";
 import { CtpPriceIncreaseAnalysis } from "@/components/stats/CtpPriceIncreaseAnalysis";
+import { CtpMonthlyReportCard } from "@/components/stats/CtpMonthlyReportCard";
 import { SavedReportsDropdown } from "@/components/stats/SavedReportsDropdown";
 import { subDays } from "date-fns";
 import { ChevronLeft } from "lucide-react";
@@ -89,6 +90,7 @@ const CtpStats = () => {
 
             <CtpFormatConsumption filters={filters} />
             <CtpInventoryForecast />
+            <CtpMonthlyReportCard />
           </TabsContent>
 
           <TabsContent value="price-increase" className="mt-4">

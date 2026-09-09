@@ -58,3 +58,6 @@ verify_jwt = false
 verify_jwt = false
 
 
+
+[functions.send-ctp-monthly-report]
+verify_jwt = false
