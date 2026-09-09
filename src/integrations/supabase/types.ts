@@ -4907,6 +4907,7 @@ export type Database = {
       }
       expire_old_quotes: { Args: never; Returns: undefined }
       generate_order_number: { Args: never; Returns: string }
+      get_client_stats: { Args: { p_client_id: string }; Returns: Json }
       get_ctp_area_m2: {
         Args: {
           p_client_ids?: string[]
