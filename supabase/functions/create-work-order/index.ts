@@ -73,6 +73,9 @@ Deno.serve(async (req) => {
       },
     });
 
+    // Separate service-role client (no user JWT override) for admin auth calls.
+    const adminClient = createClient(supabaseUrl, supabaseKey);
+
     // Get user from auth header
     const { data: { user }, error: userError } = await supabase.auth.getUser();
     if (userError || !user) {
@@ -186,7 +189,7 @@ Deno.serve(async (req) => {
           for (const pu of portalUsers) {
             try {
               // Get user email from auth
-              const { data: authUser } = await supabase.auth.admin.getUserById(pu.user_id);
+              const { data: authUser } = await adminClient.auth.admin.getUserById(pu.user_id);
               const userEmail = authUser?.user?.email;
               if (!userEmail) continue;
 
