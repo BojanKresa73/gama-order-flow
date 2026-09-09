@@ -144,6 +144,29 @@ function buildHtml(opts: {
   <tr><td style="padding:24px;">
     <h2 style="font:bold 20px Arial,sans-serif;color:#1a2366;margin:0 0 4px;">Mesečni izveštaj potrošnje CTP ploča</h2>
     <p style="font:14px Arial,sans-serif;color:#666;margin:0 0 18px;">${esc(clientName)} &nbsp;|&nbsp; Januar – ${MONTHS[upToMonth]} ${year}.</p>
+${
+  showIntro
+    ? `
+    <div style="border:1px solid #dbe6f5;background:#ffffff;border-radius:8px;padding:16px 18px;margin:0 0 18px;">
+      <p style="font:bold 15px Arial,sans-serif;color:#1a2366;margin:0 0 8px;">Poštovani saradnici,</p>
+      <p style="font:14px Arial,sans-serif;color:#333;line-height:1.65;margin:0 0 10px;">
+        U <strong>Gama United</strong> neprekidno radimo na podizanju nivoa usluge i na tome da saradnja sa nama bude
+        jednostavnija, brža i transparentnija. U tom duhu uvodimo novu mogućnost: <strong>svakog prvog u mesecu</strong>
+        dobijaćete automatski izveštaj o vašoj potrošnji CTP ploča, za sve mesece od januara do prethodnog meseca.
+      </p>
+      <p style="font:14px Arial,sans-serif;color:#333;line-height:1.65;margin:0 0 10px;">
+        Cilj nam je da vam damo jasan i uvek dostupan uvid u sopstvenu potrošnju — radi lakših kalkulacija, planiranja
+        nabavke, kontrole troškova i preciznijeg praćenja trendova u vašoj proizvodnji. Izveštaj sadrži pregled po
+        mesecima, poređenje sa prethodnim mesecom, prosečnu i ukupnu potrošnju, a po potrebi i razradu po formatima ploča.
+      </p>
+      <p style="font:14px Arial,sans-serif;color:#333;line-height:1.65;margin:0;">
+        Ispod se nalazi vaš prvi izveštaj. Ukoliko želite dodatne podatke ili drugačiji prikaz, javite nam — rado ćemo
+        ga prilagoditi vašim potrebama.
+      </p>
+    </div>`
+    : ""
+}
+
 
     <div style="background:#eef3fa;border-left:4px solid #1F4E79;padding:12px 14px;border-radius:6px;font:14px Arial,sans-serif;color:#22314f;">
       ${summary}
