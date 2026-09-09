@@ -43,8 +43,9 @@ function buildHtml(opts: {
   formats: FormatRow[];
   prevYearMonths: MonthRow[];
   unsubscribeUrl: string | null;
+  showIntro?: boolean;
 }) {
-  const { clientName, year, upToMonth, months, formats, prevYearMonths, unsubscribeUrl } = opts;
+  const { clientName, year, upToMonth, months, formats, prevYearMonths, unsubscribeUrl, showIntro } = opts;
 
   const byMonth = new Array(upToMonth + 1).fill(0);
   months.forEach((m) => {
