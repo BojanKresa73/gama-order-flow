@@ -13,7 +13,7 @@ const MONTHS = [
 
 const MIN_PLATES_YEAR = 5; // klijenti sa manje od ovoga se preskaču
 const LOGO_URL =
-  "https://ytophmlfbrnhmqtwpijn.supabase.co/storage/v1/object/public/company-assets/gama-united-logo.png";
+  "https://ytophmlfbrnhmqtwpijn.supabase.co/storage/v1/object/public/newsletter-assets/gama-united-white.png";
 
 interface MonthRow { month: string; plates: number }
 interface FormatRow { month: string; format_name: string; plates: number }
