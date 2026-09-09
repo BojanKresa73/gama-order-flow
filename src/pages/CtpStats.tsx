@@ -90,6 +90,7 @@ const CtpStats = () => {
 
             <CtpFormatConsumption filters={filters} />
             <CtpInventoryForecast />
+            <CtpMonthlyReportCard />
           </TabsContent>
 
           <TabsContent value="price-increase" className="mt-4">
