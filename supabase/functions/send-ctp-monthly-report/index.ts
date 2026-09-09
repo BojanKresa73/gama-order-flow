@@ -197,7 +197,8 @@ Deno.serve(async (req) => {
 
     // --- Autorizacija: CRON_SECRET ili superuser ---
     let authorized = false;
-    if (cronSecret && cron_secret === cronSecret) {
+    const headerSecret = req.headers.get("x-cron-secret");
+    if (cronSecret && (cron_secret === cronSecret || headerSecret === cronSecret)) {
       authorized = true;
     } else {
       const authHeader = req.headers.get("Authorization");
