@@ -217,7 +217,7 @@ Deno.serve(async (req) => {
 
   try {
     const body = await req.json().catch(() => ({}));
-    const { client_id, preview, preview_to, force, cron_secret } = body ?? {};
+    const { client_id, preview, preview_to, force, cron_secret, include_intro } = body ?? {};
 
     // --- Autorizacija: CRON_SECRET ili superuser ---
     let authorized = false;
@@ -370,6 +370,8 @@ Deno.serve(async (req) => {
           formats,
           prevYearMonths,
           unsubscribeUrl: null,
+          // Uvodni tekst ide samo na prvom (septembarskom) slanju za period 2026-08
+          showIntro: include_intro !== undefined ? !!include_intro : period === "2026-08-01",
         });
 
         const subject = `Mesečni izveštaj potrošnje CTP ploča — ${MONTHS[upToMonth]} ${year}.`;
