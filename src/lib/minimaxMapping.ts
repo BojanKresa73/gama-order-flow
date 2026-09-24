@@ -117,6 +117,7 @@ export const PIB_TO_MINIMAX_STRANKA: Record<string, string> = {
   
   // I
   "101670560": "196", // Idea Marketi
+  "101453714": "391", // ILIJANUM
   "100000129": "118", // IGEPA DEUS
   "104990791": "117", // IKEA SRBIJA
   "110920508": "49",  // INFINITY MOBILE
