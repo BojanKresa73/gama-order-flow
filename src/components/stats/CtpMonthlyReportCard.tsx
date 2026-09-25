@@ -41,8 +41,8 @@ export const CtpMonthlyReportCard = () => {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("ctp_monthly_report_log")
-        .select("period, status, recipients, sent_at, clients(name)")
-        .order("sent_at", { ascending: false })
+        .select("period, status, recipients, created_at, clients(name)")
+        .order("created_at", { ascending: false })
         .limit(10);
       if (error) throw error;
       return data || [];
