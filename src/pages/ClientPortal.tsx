@@ -39,6 +39,7 @@ import { PushNotificationToggle } from "@/components/portal/PushNotificationTogg
 import { EmailNotificationToggle } from "@/components/portal/EmailNotificationToggle";
 import { PortalUserGuide } from "@/components/portal/PortalUserGuide";
 import { PortalOrderStats } from "@/components/portal/PortalOrderStats";
+import { PortalMonthlyStats } from "@/components/portal/PortalMonthlyStats";
 import { PortalComplaintsSection } from "@/components/portal/PortalComplaintsSection";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { Badge } from "@/components/ui/badge";
@@ -467,6 +468,7 @@ const ClientPortal = () => {
       </header>
 
       <main className="container mx-auto px-4 py-8">
+        {portalUser?.client_id && <PortalMonthlyStats clientId={portalUser.client_id} />}
         <Card>
           <CardHeader>
             <CardTitle>Vaši radni nalozi</CardTitle>
