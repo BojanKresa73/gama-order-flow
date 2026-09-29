@@ -5082,6 +5082,7 @@ export type Database = {
           plates: number
         }[]
       }
+      get_portal_monthly_stats: { Args: { p_year: number }; Returns: Json }
       get_unread_priority_notifications_count: { Args: never; Returns: number }
       get_work_order_full: { Args: { p_identifier: string }; Returns: Json }
       has_admin_access: { Args: { _user_id: string }; Returns: boolean }
