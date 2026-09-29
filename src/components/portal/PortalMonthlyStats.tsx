@@ -246,12 +246,12 @@ export function PortalMonthlyStats({ clientId }: Props) {
                     <p className="text-2xl font-semibold leading-none text-muted-foreground">
                       {qPlatesPrev.toLocaleString("sr-Latn")}
                     </p>
-                    <p className="text-xs text-muted-foreground mt-1">{year - 1}.</p>
+                    <p className="text-xs text-muted-foreground mt-1">{prevQLabel}</p>
                   </div>
                 </div>
                 <Delta
                   value={pctChange(qPlatesCur, qPlatesPrev)}
-                  label="ploče, isti period prošle godine"
+                  label="ploče, u odnosu na prethodni kvartal"
                 />
                 <Delta
                   value={pctChange(qOrdersCur, qOrdersPrev)}
