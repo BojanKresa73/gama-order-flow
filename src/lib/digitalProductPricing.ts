@@ -42,22 +42,32 @@ export function isBookletBinding(variant?: string | null): boolean {
   return BOOKLET_BINDING_VARIANTS.includes(variant);
 }
 
+// Impozicija (kao Kodak Preps): svaki komad = format posle obreza + napust za obrez
+// sa svake strane; tabak ima neštampajuću ivicu (hvataljka/margina mašine).
+export const BLEED_MM = 3;          // napust za obrez po strani
+export const SHEET_MARGIN_MM = 5;   // neštampajuća ivica tabaka po strani
+
+function usableSheet(sheetFormat: string) {
+  const dim = MACHINE_SHEET_DIMS[sheetFormat] ?? MACHINE_SHEET_DIMS["488x330"];
+  return { w: dim.w - 2 * SHEET_MARGIN_MM, h: dim.h - 2 * SHEET_MARGIN_MM };
+}
+
 /**
- * Does a spread (2 finished pages side-by-side) of pageW × pageH fit on the given sheet?
- * Tries both orientations of the spread.
+ * Da li tabak (2 strane jedna pored druge, bez napusta u hrbatu) staje na tabak,
+ * uz napust za obrez sa spoljnih strana i marginu tabaka.
  */
 export function spreadFitsOnSheet(
   pageW: number,
   pageH: number,
   sheetFormat: string
 ): boolean {
-  const dim = MACHINE_SHEET_DIMS[sheetFormat];
-  if (!dim || pageW <= 0 || pageH <= 0) return false;
-  const spreadW = pageW * 2;
-  const spreadH = pageH;
+  if (!MACHINE_SHEET_DIMS[sheetFormat] || pageW <= 0 || pageH <= 0) return false;
+  const u = usableSheet(sheetFormat);
+  const spreadW = pageW * 2 + 2 * BLEED_MM;
+  const spreadH = pageH + 2 * BLEED_MM;
   return (
-    (spreadW <= dim.w && spreadH <= dim.h) ||
-    (spreadH <= dim.w && spreadW <= dim.h)
+    (spreadW <= u.w && spreadH <= u.h) ||
+    (spreadH <= u.w && spreadW <= u.h)
   );
 }
 
@@ -77,18 +87,20 @@ export function minSheetForBooklet(
 }
 
 /**
- * How many finished pages of a given format fit on one machine sheet.
- * Simple capacity-fit (no rotation optimization beyond basic both-orientations check).
+ * Koliko komada staje na tabak: ćelija = (format + 2×napust), koristi se
+ * štampajuća površina tabaka (bez margine), proba obe orijentacije.
  */
 export function pagesPerSheet(
   pageW: number,
   pageH: number,
   sheetFormat: string
 ): number {
-  const dim = MACHINE_SHEET_DIMS[sheetFormat] ?? MACHINE_SHEET_DIMS["488x330"];
   if (pageW <= 0 || pageH <= 0) return 1;
-  const a = Math.floor(dim.w / pageW) * Math.floor(dim.h / pageH);
-  const b = Math.floor(dim.w / pageH) * Math.floor(dim.h / pageW);
+  const u = usableSheet(sheetFormat);
+  const cw = pageW + 2 * BLEED_MM;
+  const ch = pageH + 2 * BLEED_MM;
+  const a = Math.floor(u.w / cw) * Math.floor(u.h / ch);
+  const b = Math.floor(u.w / ch) * Math.floor(u.h / cw);
   return Math.max(1, a, b);
 }
 
