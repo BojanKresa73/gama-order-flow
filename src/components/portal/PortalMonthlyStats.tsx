@@ -107,21 +107,29 @@ export function PortalMonthlyStats({ clientId }: Props) {
   const prevMonth = get(prevMonthY, prevMonthM);
   const lastYearSame = get(year - 1, month);
 
-  // Quarter (like-for-like: months of the quarter up to the selected month)
+  // Kvartal (poređenje sa prethodnim kvartalom, isti broj meseci)
   const qStart = Math.floor(month / 3) * 3;
   const quarterNo = Math.floor(month / 3) + 1;
+  const elapsed = month - qStart + 1;
   const qMonths: number[] = [];
   for (let m = qStart; m <= month; m++) qMonths.push(m);
-  const sumQ = (y: number, key: "plates" | "orders") =>
-    qMonths.reduce((s, m) => s + get(y, m)[key], 0);
-  const qPlatesCur = sumQ(year, "plates");
-  const qPlatesPrev = sumQ(year - 1, "plates");
-  const qOrdersCur = sumQ(year, "orders");
-  const qOrdersPrev = sumQ(year - 1, "orders");
-  const partialQuarter = month !== qStart + 2;
+  // Prethodni kvartal: poslednjih `elapsed` meseci prethodnog kvartala
+  const prevQYear = qStart === 0 ? year - 1 : year;
+  const prevQNo = qStart === 0 ? 4 : quarterNo - 1;
+  const prevQEnd = qStart === 0 ? 11 : qStart - 1;
+  const prevQMonths: number[] = [];
+  for (let k = 0; k < elapsed; k++) prevQMonths.push(prevQEnd - k);
+  const sumQ = (y: number, ms: number[], key: "plates" | "orders") =>
+    ms.reduce((s, m) => s + get(y, m)[key], 0);
+  const qPlatesCur = sumQ(year, qMonths, "plates");
+  const qPlatesPrev = sumQ(prevQYear, prevQMonths, "plates");
+  const qOrdersCur = sumQ(year, qMonths, "orders");
+  const qOrdersPrev = sumQ(prevQYear, prevQMonths, "orders");
+  const partialQuarter = elapsed < 3;
   const qLabel = partialQuarter
     ? `${quarterNo}. kvartal (${MONTHS[qStart].toLowerCase()} – ${MONTHS[month].toLowerCase()})`
     : `${quarterNo}. kvartal`;
+  const prevQLabel = `${prevQNo}. kvartal ${prevQYear}.`;
 
   const chartData = MONTHS_SHORT.map((label, m) => ({
     name: label,
