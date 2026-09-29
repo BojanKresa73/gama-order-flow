@@ -194,18 +194,27 @@ ${
     ${(() => {
       const qStart = Math.floor(upToMonth / 3) * 3;
       const qNo = qStart / 3 + 1;
+      const elapsed = upToMonth - qStart + 1;
       let cur = 0, prv = 0;
       for (let i = qStart; i <= upToMonth; i++) cur += byMonth[i] || 0;
-      prevYearMonths.forEach((m) => {
-        const i = monthIndex(m.month);
-        if (i >= qStart && i <= upToMonth) prv += Number(m.plates) || 0;
-      });
+      // Prethodni kvartal: poslednjih `elapsed` meseci prethodnog kvartala
+      const prevQYear = qStart === 0 ? year - 1 : year;
+      const prevQNo = qStart === 0 ? 4 : qNo - 1;
+      if (qStart === 0) {
+        const lastIdx = 11;
+        prevYearMonths.forEach((m) => {
+          const i = monthIndex(m.month);
+          if (i >= lastIdx - elapsed + 1 && i <= lastIdx) prv += Number(m.plates) || 0;
+        });
+      } else {
+        for (let i = qStart - elapsed; i <= qStart - 1; i++) prv += byMonth[i] || 0;
+      }
       const range = qStart === upToMonth ? MONTHS[qStart] : `${MONTHS[qStart]} – ${MONTHS[upToMonth]}`;
       const d = pct(cur, prv);
       const color = prv > 0 && cur >= prv ? "#1a7f37" : prv > 0 ? "#b42318" : "#555";
       return `
-    <h3 style="font:bold 16px Arial,sans-serif;color:#1F4E79;margin:26px 0 10px;">${qNo}. kvartal – poređenje sa prošlom godinom</h3>
-    <p style="font:12px Arial,sans-serif;color:#777;margin:0 0 8px;">${range}${upToMonth - qStart < 2 ? " (kvartal u toku, poređeni isti meseci)" : ""}</p>
+    <h3 style="font:bold 16px Arial,sans-serif;color:#1F4E79;margin:26px 0 10px;">${qNo}. kvartal – poređenje sa prethodnim kvartalom</h3>
+    <p style="font:12px Arial,sans-serif;color:#777;margin:0 0 8px;">${range} ${year}. naspram ${prevQNo}. kvartala ${prevQYear}.${upToMonth - qStart < 2 ? " (kvartal u toku, poređeni isti broj meseci)" : ""}</p>
     <table width="100%" cellpadding="0" cellspacing="0" style="border-collapse:collapse;">
       <tr>
         <td style="padding:12px;background:#f7f9fc;border-radius:8px;font:13px Arial,sans-serif;color:#555;">
@@ -213,7 +222,7 @@ ${
         </td>
         <td width="12"></td>
         <td style="padding:12px;background:#f7f9fc;border-radius:8px;font:13px Arial,sans-serif;color:#555;">
-          ${qNo}. kvartal ${year - 1}.<br><span style="font:bold 20px Arial,sans-serif;color:#1a2366;">${prv} ploča</span>
+          ${prevQNo}. kvartal ${prevQYear}.<br><span style="font:bold 20px Arial,sans-serif;color:#1a2366;">${prv} ploča</span>
         </td>
         <td width="12"></td>
         <td style="padding:12px;background:#f7f9fc;border-radius:8px;font:13px Arial,sans-serif;color:#555;">
