@@ -59,6 +59,8 @@ import {
   buildProductJobs,
   isBookletBinding,
   spreadFitsOnSheet,
+  BLEED_MM,
+  SHEET_MARGIN_MM,
   minSheetForBooklet,
   MACHINE_SHEET_DIMS,
   type ProductDraft,
