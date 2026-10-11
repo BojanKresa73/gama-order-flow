@@ -59,6 +59,8 @@ import {
   buildProductJobs,
   isBookletBinding,
   spreadFitsOnSheet,
+  BLEED_MM,
+  SHEET_MARGIN_MM,
   minSheetForBooklet,
   MACHINE_SHEET_DIMS,
   type ProductDraft,
@@ -246,9 +248,10 @@ export const DigitalProductDialog = ({
       pageW: draft.page_width_mm,
       pageH: draft.page_height_mm,
       sheet,
-      sheetW: dim?.w ?? 0,
-      sheetH: dim?.h ?? 0,
-      spreadW: draft.page_width_mm * 2,
+      sheetW: Math.max(0, (dim?.w ?? 0) - 2 * SHEET_MARGIN_MM),
+      sheetH: Math.max(0, (dim?.h ?? 0) - 2 * SHEET_MARGIN_MM),
+      spreadW: draft.page_width_mm * 2 + 2 * BLEED_MM,
+      spreadH: draft.page_height_mm + 2 * BLEED_MM,
       suggested,
     };
   }, [
@@ -297,8 +300,8 @@ export const DigitalProductDialog = ({
                 Klamovanje / šivenje zahteva spread štampu — format ne staje na mašinski tabak.
               </div>
               <div className="opacity-90">
-                Strana {bookletWarning.pageW}×{bookletWarning.pageH} mm → potreban spread {bookletWarning.spreadW}×{bookletWarning.pageH} mm,
-                a tabak {bookletWarning.sheet} je {bookletWarning.sheetW}×{bookletWarning.sheetH} mm.
+                Strana {bookletWarning.pageW}×{bookletWarning.pageH} mm → potreban spread sa napustom {bookletWarning.spreadW}×{bookletWarning.spreadH} mm,
+                a štampajuća površina tabaka {bookletWarning.sheet} (bez ivice {SHEET_MARGIN_MM} mm) je {bookletWarning.sheetW}×{bookletWarning.sheetH} mm.
                 {bookletWarning.suggested
                   ? ` Predlog: koristi ${bookletWarning.suggested}.`
                   : " Nijedan dostupan tabak ne staje — promeni format strane ili povez."}

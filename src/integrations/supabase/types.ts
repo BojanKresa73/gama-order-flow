@@ -5134,6 +5134,15 @@ export type Database = {
         }
         Returns: Json
       }
+      get_ctp_unpriced_plates: {
+        Args: { p_from: string; p_to: string }
+        Returns: {
+          client_name: string
+          format_name: string
+          orders: number
+          plates: number
+        }[]
+      }
       get_current_nbs_rate: { Args: { p_currency?: string }; Returns: number }
       get_film_price_for_date: {
         Args: { p_date: string }

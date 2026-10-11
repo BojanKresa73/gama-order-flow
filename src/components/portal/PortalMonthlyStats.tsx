@@ -105,7 +105,6 @@ export function PortalMonthlyStats({ clientId }: Props) {
   const prevMonthY = month === 0 ? year - 1 : year;
   const prevMonthM = month === 0 ? 11 : month - 1;
   const prevMonth = get(prevMonthY, prevMonthM);
-  const lastYearSame = get(year - 1, month);
 
   // Kvartal (poređenje sa prethodnim kvartalom, isti broj meseci)
   const qStart = Math.floor(month / 3) * 3;
@@ -134,10 +133,9 @@ export function PortalMonthlyStats({ clientId }: Props) {
   const chartData = MONTHS_SHORT.map((label, m) => ({
     name: label,
     [String(year)]: isFuture(year, m) ? null : get(year, m).plates,
-    [String(year - 1)]: get(year - 1, m).plates,
   }));
 
-  const yearOptions = [now.getFullYear(), now.getFullYear() - 1];
+  const yearOptions = [now.getFullYear(), now.getFullYear() - 1].filter((y) => y >= 2026);
 
   return (
     <Card className="mb-6">
@@ -208,25 +206,21 @@ export function PortalMonthlyStats({ clientId }: Props) {
                   value={pctChange(cur.plates, prevMonth.plates)}
                   label={`u odnosu na ${MONTHS[prevMonthM].toLowerCase()}`}
                 />
-                <Delta
-                  value={pctChange(cur.plates, lastYearSame.plates)}
-                  label={`u odnosu na ${MONTHS[month].toLowerCase()} ${year - 1}.`}
-                />
               </div>
 
-              {/* Same month last year */}
+              {/* Previous month */}
               <div className="rounded-lg border p-4 bg-muted/30">
                 <p className="text-xs uppercase tracking-wide text-muted-foreground">
-                  {MONTHS[month]} {year - 1}
+                  {MONTHS[prevMonthM]} {prevMonthY}
                 </p>
                 <p className="text-3xl font-bold mt-1 leading-none">
-                  {lastYearSame.plates.toLocaleString("sr-Latn")}
+                  {prevMonth.plates.toLocaleString("sr-Latn")}
                   <span className="text-sm font-normal text-muted-foreground ml-1">ploča</span>
                 </p>
                 <p className="text-sm text-muted-foreground mt-2">
-                  {lastYearSame.orders} {lastYearSame.orders === 1 ? "nalog" : "naloga"}
+                  {prevMonth.orders} {prevMonth.orders === 1 ? "nalog" : "naloga"}
                 </p>
-                <p className="text-xs text-muted-foreground mt-1">Isti mesec prošle godine</p>
+                <p className="text-xs text-muted-foreground mt-1">Prethodni mesec</p>
               </div>
 
               {/* Quarter comparison */}
@@ -261,7 +255,7 @@ export function PortalMonthlyStats({ clientId }: Props) {
             </div>
 
             <p className="text-sm font-medium mb-2">
-              Potrošnja ploča po mesecima: {year}. u odnosu na {year - 1}.
+              Potrošnja ploča po mesecima u {year}.
             </p>
             <div className="h-64 w-full">
               <ResponsiveContainer width="100%" height="100%">
@@ -279,7 +273,6 @@ export function PortalMonthlyStats({ clientId }: Props) {
                     formatter={(v: number, name: string) => [`${v ?? 0} ploča`, `${name}.`]}
                   />
                   <Legend formatter={(v) => `${v}.`} />
-                  <Bar dataKey={String(year - 1)} fill="hsl(var(--muted-foreground) / 0.45)" radius={[3, 3, 0, 0]} />
                   <Bar dataKey={String(year)} fill="hsl(var(--primary))" radius={[3, 3, 0, 0]} />
                 </BarChart>
               </ResponsiveContainer>

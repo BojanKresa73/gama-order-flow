@@ -15,6 +15,13 @@
       "when": 1791754713030,
       "tag": "0001_fix_ctp_consumption_price_dup",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1791755052509,
+      "tag": "0002_grant_has_role_anon_and_strict_price",
+      "breakpoints": true
     }
   ]
 }
