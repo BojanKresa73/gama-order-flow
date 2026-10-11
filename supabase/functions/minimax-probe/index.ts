@@ -1,9 +1,35 @@
-// READ-ONLY Minimax probe: lists organisations visible to the API user. Imports nothing, writes nothing.
+// READ-ONLY Minimax OAuth diagnostics + organisation list. Imports nothing, writes nothing.
+// Never returns or logs secrets/tokens. No fallback values (Client Secret must be configured explicitly).
 import { corsHeaders } from "npm:@supabase/supabase-js@2/cors";
 import { createClient } from "npm:@supabase/supabase-js@2";
 
 const json = (b: unknown, s = 200) =>
   new Response(JSON.stringify(b), { status: s, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+
+const TOKEN_URL = "https://moj.minimax.rs/RS/AUT/OAuth20/Token";
+const ORGS_URL = "https://moj.minimax.rs/RS/API/api/currentuser/orgs";
+const GDC_ORG_ID = "52515";
+const UNITED_PIB = "114876455";
+const NAMES = ["MINIMAX_CLIENT_ID", "MINIMAX_CLIENT_SECRET", "MINIMAX_USERNAME", "MINIMAX_PASSWORD"] as const;
+
+function sanitize(text: string, secrets: string[]) {
+  let t = text.slice(0, 400);
+  for (const s of secrets) if (s && s.length >= 3) t = t.split(s).join("[skriveno]");
+  return t.replace(/("?(access_token|refresh_token|password|client_secret)"?\s*[:=]\s*)"?[^",&\s}]+/gi, "$1[skriveno]");
+}
+
+function classify(status: number, code: string | null, desc: string) {
+  const d = desc.toLowerCase();
+  if (code === "invalid_client") {
+    if (d.includes("secret")) return { cause: "client_secret", fix: "Minimax odbija Client Secret. Unesite tačan Client Secret registrovane API aplikacije (MINIMAX_CLIENT_SECRET)." };
+    return { cause: "client_id", fix: "Minimax ne prepoznaje Client ID. Proverite MINIMAX_CLIENT_ID." };
+  }
+  if (code === "invalid_grant") return { cause: "user_credentials", fix: "Client ID/Secret su prihvaćeni, ali korisničko ime ili API lozinka nisu tačni (MINIMAX_USERNAME / MINIMAX_PASSWORD)." };
+  if (code === "unauthorized_client" || code === "access_denied" || status === 403) return { cause: "authorization", fix: "Aplikacija ili korisnik nemaju ovlašćenje za API pristup. Proverite u Minimax-u dozvolu za API." };
+  if (code === "invalid_scope") return { cause: "scope", fix: "Neispravan scope; očekuje se minimax.rs." };
+  if (status >= 500) return { cause: "minimax_server", fix: "Greška na strani Minimax-a. Pokušajte kasnije." };
+  return { cause: "unknown", fix: "Nepoznata greška pri prijavi; proverite sva četiri podatka." };
+}
 
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
@@ -15,36 +41,69 @@ Deno.serve(async (req) => {
   const { data: allowed } = await db.rpc("has_finance_access" as any);
   if (!allowed) return json({ error: "Nemate pristup" }, 403);
 
-  const env = (k: string) => Deno.env.get(k);
-  const [cid, csec, user, pass] = ["MINIMAX_CLIENT_ID", "MINIMAX_CLIENT_SECRET", "MINIMAX_USERNAME", "MINIMAX_PASSWORD"].map(env);
-  if (!cid || !csec || !user || !pass) return json({ error: "Minimax pristupni podaci nisu uneti" }, 400);
+  const body = await req.json().catch(() => ({}));
+  const mode = body?.mode === "login" ? "login" : "check"; // default: no network call to Minimax
 
-  const tokRes = await fetch("https://moj.minimax.rs/RS/AUT/oauth20/token", {
+  const values = NAMES.map((n) => Deno.env.get(n) ?? "");
+  const configured = Object.fromEntries(NAMES.map((n, i) => [n, values[i].trim().length > 0]));
+  const missing = NAMES.filter((n) => !configured[n]);
+
+  if (mode === "check" || missing.length) {
+    return json({
+      step: "configuration",
+      configured,
+      missing,
+      login_attempted: false,
+      fix: missing.length ? `Nedostaje: ${missing.join(", ")}` : "Sva četiri parametra su podešena. Prijava se pokreće samo na vaš zahtev.",
+    }, missing.length && mode === "login" ? 400 : 200);
+  }
+
+  const [cid, csec, user, pass] = values;
+  const tokRes = await fetch(TOKEN_URL, {
     method: "POST",
+    signal: AbortSignal.timeout(20000),
     headers: { "Content-Type": "application/x-www-form-urlencoded" },
     body: new URLSearchParams({ grant_type: "password", client_id: cid, client_secret: csec, username: user, password: pass, scope: "minimax.rs" }),
   });
-  if (!tokRes.ok) return json({ error: `Prijava na Minimax nije uspela (${tokRes.status})`, detail: (await tokRes.text()).slice(0, 300) }, 502);
+  if (!tokRes.ok) {
+    const raw = await tokRes.text();
+    let code: string | null = null, desc = "";
+    try { const j = JSON.parse(raw); code = j.error ?? null; desc = j.error_description ?? ""; } catch { desc = raw; }
+    const c = classify(tokRes.status, code, desc);
+    return json({
+      step: "oauth_token", configured, login_attempted: true, success: false,
+      http_status: tokRes.status, oauth_error: code, message: sanitize(desc, values),
+      rejected: c.cause, fix: c.fix,
+    });
+  }
   const { access_token } = await tokRes.json();
 
-  const orgRes = await fetch("https://moj.minimax.rs/RS/API/api/currentuser/orgs", {
-    headers: { Authorization: `Bearer ${access_token}` },
-  });
-  if (!orgRes.ok) return json({ error: `Čitanje organizacija nije uspelo (${orgRes.status})` }, 502);
+  const orgRes = await fetch(ORGS_URL, { signal: AbortSignal.timeout(20000), headers: { Authorization: `Bearer ${access_token}` } });
+  if (!orgRes.ok) {
+    return json({ step: "organisations", configured, login_attempted: true, success: false, http_status: orgRes.status,
+      rejected: "authorization", fix: "Prijava uspela, ali korisnik ne sme da čita spisak organizacija." });
+  }
   const orgs = await orgRes.json();
   const rows = (orgs?.Rows ?? orgs ?? []).map((o: any) => ({
-    organisation_id: o.Organisation?.ID ?? o.ID,
-    name: o.Organisation?.Name ?? o.Name,
-    api_access: o.APIAccess,
-    mobile_access: o.MobileAccess,
+    organisation_id: String(o.Organisation?.ID ?? o.ID ?? ""),
+    name: o.Organisation?.Name ?? o.Name ?? null,
+    api_access: o.APIAccess ?? null,
+    pib: null as string | null,
   }));
-  // Read-only lookup of name + PIB for each organisation (no business documents)
+  // Read-only: organisation header only (name + PIB). No invoices, journals or other business data.
   for (const r of rows) {
     try {
-      const d = await fetch(`https://moj.minimax.rs/RS/API/api/orgs/${r.organisation_id}`, { headers: { Authorization: `Bearer ${access_token}` } });
-      if (d.ok) { const o = await d.json(); r.pib = o.TaxNumber ?? o.VATIdentificationNumber ?? null; r.registration_number = o.RegistrationNumber ?? null; r.full_name = o.Title ?? o.Name ?? r.name; }
+      const d = await fetch(`https://moj.minimax.rs/RS/API/api/orgs/${r.organisation_id}`, { signal: AbortSignal.timeout(15000), headers: { Authorization: `Bearer ${access_token}` } });
+      if (d.ok) { const o = await d.json(); r.pib = String(o.TaxNumber ?? o.VATIdentificationNumber ?? "").replace(/\D/g, "") || null; r.name = o.Title ?? o.Name ?? r.name; }
     } catch { /* ignore */ }
-    r.is_gdc = String(r.organisation_id) === "52515";
   }
-  return json({ credentials_valid: true, organisations: rows });
+  const united = rows.filter((r: any) => r.pib === UNITED_PIB && r.organisation_id !== GDC_ORG_ID);
+  return json({
+    step: "done", configured, login_attempted: true, success: true,
+    organisations: rows.map((r: any) => ({ ...r, is_gdc: r.organisation_id === GDC_ORG_ID })),
+    gama_united: united.length === 1 ? united[0] : null,
+    note: united.length === 1 ? "Pronađena Gama United po PIB-u. Čeka se vaša potvrda pre bilo kakvog uvoza."
+      : united.length > 1 ? "Više organizacija sa istim PIB-om — potrebna ručna potvrda."
+      : `Organizacija sa PIB-om ${UNITED_PIB} nije dodeljena ovom API korisniku.`,
+  });
 });
