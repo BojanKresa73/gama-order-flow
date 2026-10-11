@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
-import { FileText, BarChart3, ChevronDown, Mail, Palmtree, Calculator } from "lucide-react";
+import { FileText, BarChart3, ChevronDown, Mail, Palmtree, Calculator, Brain } from "lucide-react";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -9,6 +9,8 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { useAuthz } from "@/hooks/useAuthz";
+import { useQuery } from "@tanstack/react-query";
+import { supabase } from "@/integrations/supabase/client";
 import { QuickPriceCalculator } from "@/components/calculator/QuickPriceCalculator";
 
 interface DashboardQuickActionsProps {
@@ -18,6 +20,7 @@ interface DashboardQuickActionsProps {
 
 export const DashboardQuickActions = ({ canViewStats, isSuper }: DashboardQuickActionsProps) => {
   const navigate = useNavigate();
+  const { data: hasBoris } = useQuery({ queryKey: ["finance-access"], queryFn: async () => (await supabase.rpc("has_finance_access")).data === true });
   const { isAdmin } = useAuthz();
   const [quickCalcOpen, setQuickCalcOpen] = useState(false);
 
@@ -111,6 +114,12 @@ export const DashboardQuickActions = ({ canViewStats, isSuper }: DashboardQuickA
               </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
+        )}
+        {hasBoris && (
+          <Button onClick={() => navigate("/boris")}>
+            <Brain className="h-4 w-4 mr-2" />
+            Boris AI
+          </Button>
         )}
         {isSuper && (
           <Button variant="outline" onClick={() => navigate("/admin/newsletter")}>

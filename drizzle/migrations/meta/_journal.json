@@ -1,0 +1,20 @@
+{
+  "version": "7",
+  "dialect": "postgresql",
+  "entries": [
+    {
+      "idx": 0,
+      "version": "7",
+      "when": 1791754534914,
+      "tag": "0000_boris_ai_brain",
+      "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1791754713030,
+      "tag": "0001_fix_ctp_consumption_price_dup",
+      "breakpoints": true
+    }
+  ]
+}
