@@ -38,5 +38,13 @@ Deno.serve(async (req) => {
     api_access: o.APIAccess,
     mobile_access: o.MobileAccess,
   }));
-  return json({ organisations: rows });
+  // Read-only lookup of name + PIB for each organisation (no business documents)
+  for (const r of rows) {
+    try {
+      const d = await fetch(`https://moj.minimax.rs/RS/API/api/orgs/${r.organisation_id}`, { headers: { Authorization: `Bearer ${access_token}` } });
+      if (d.ok) { const o = await d.json(); r.pib = o.TaxNumber ?? o.VATIdentificationNumber ?? null; r.registration_number = o.RegistrationNumber ?? null; r.full_name = o.Title ?? o.Name ?? r.name; }
+    } catch { /* ignore */ }
+    r.is_gdc = String(r.organisation_id) === "52515";
+  }
+  return json({ credentials_valid: true, organisations: rows });
 });
