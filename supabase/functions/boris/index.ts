@@ -28,6 +28,9 @@ Pravila:
 - Nalozi: CTP (ploče), film (metri filma), digital, large_format, other. Poništeni i obrisani nalozi se ne računaju.
 - Potrošnja ploča računa se po datumu otvaranja naloga (created_at), otvoreni i zatvoreni nalozi.
 - Nabavka ploča: rok od Kine ~3 meseca; cilj je da pri dolasku ostane bar dupla mesečna potrošnja.
+- NIKAD ne mešaj ove veličine: broj ploča (kom), kvadratura (m²), prodajna vrednost po cenovniku (EUR, procena iz naloga) i stvarno fakturisano (iz Minimax-a). Uvek ih navedi odvojeno i imenuj tačno.
+- Prodajna vrednost koristi cenu koja je važila na dan otvaranja naloga. Kad prikazuješ vrednost, pozovi ctp_unpriced_plates i jasno upozori ako postoje ploče bez poznate istorijske cene (one ulaze u vrednost kao 0).
+- Lager i roba na putu (search_materials) su zalihe, NISU proizvodnja ni potrošnja — nikad ih ne sabiraj sa potrošnjom.
 - Finansijski podaci iz Minimax-a (fakture, plaćanja, dug) JOŠ NISU povezani — ako se pitanje odnosi na njih, reci da ta veza dolazi u sledećoj fazi i ponudi šta možeš iz naloga (vrednost, fakturisano/nefakturisano).
 - Ti samo čitaš podatke. Nikad ne menjaš naloge ni bilo šta u bazi.
 Današnji datum: ${new Date().toISOString().slice(0, 10)}.`;
@@ -106,7 +109,7 @@ function buildTools(db: SupabaseClient) {
         }
         const rows = await fetchAll<any>((f, t) => {
           let q = db.from("work_orders")
-            .select("id, order_type, status, created_at, file_entries(quantity, plate_format_id), film_jobs(computed_total_m), digital_jobs(computed_total_sheets, computed_line_total)")
+            .select("id, order_type, status, created_at, file_entries(quantity, plate_format_id, file_type), film_jobs(computed_total_m), digital_jobs(computed_total_sheets, computed_line_total)")
             .is("deleted_at", null).is("invalidated_at", null)
             .gte("created_at", a.date_from).lte("created_at", a.date_to + "T23:59:59")
             .order("created_at").range(f, t);
@@ -123,7 +126,7 @@ function buildTools(db: SupabaseClient) {
           byType[r.order_type] = (byType[r.order_type] ?? 0) + 1;
           if (r.status === "open") open++;
           if (r.order_type === "ctp") {
-            const p = (r.file_entries ?? []).filter((x: any) => x.plate_format_id).reduce((s: number, x: any) => s + (x.quantity ?? 0), 0);
+            const p = (r.file_entries ?? []).filter((x: any) => x.plate_format_id && x.file_type === "CTP").reduce((s: number, x: any) => s + (x.quantity ?? 0), 0);
             plates += p; byMonth[m].ctp_plates += p;
           }
           const fm = (r.film_jobs ?? []).reduce((s: number, x: any) => s + Number(x.computed_total_m ?? 0), 0);
@@ -154,6 +157,15 @@ function buildTools(db: SupabaseClient) {
           p_from: a.date_from, p_to: a.date_to, p_client_ids: null, p_plate_format_ids: null,
         } as any);
         return error ? { error: error.message } : data;
+      },
+    }),
+
+    ctp_unpriced_plates: tool({
+      description: "CTP ploče u periodu za koje klijent NEMA cenu važeću na dan naloga (upozorenje za prodajnu vrednost).",
+      inputSchema: z.object({ date_from: z.string(), date_to: z.string() }),
+      execute: async (a) => {
+        const { data, error } = await db.rpc("get_ctp_unpriced_plates" as any, { p_from: a.date_from, p_to: a.date_to });
+        return error ? { error: error.message } : { rows: data, total_unpriced_plates: (data ?? []).reduce((s: number, r: any) => s + Number(r.plates), 0) };
       },
     }),
 
