@@ -14,6 +14,68 @@ export type Database = {
   }
   public: {
     Tables: {
+      ai_conversations: {
+        Row: {
+          created_at: string
+          id: string
+          title: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          title?: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          title?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      ai_messages: {
+        Row: {
+          content: string
+          conversation_id: string
+          created_at: string
+          id: string
+          role: string
+          tools_used: Json | null
+          user_id: string
+        }
+        Insert: {
+          content: string
+          conversation_id: string
+          created_at?: string
+          id?: string
+          role: string
+          tools_used?: Json | null
+          user_id: string
+        }
+        Update: {
+          content?: string
+          conversation_id?: string
+          created_at?: string
+          id?: string
+          role?: string
+          tools_used?: Json | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ai_messages_conversation_id_fkey"
+            columns: ["conversation_id"]
+            isOneToOne: false
+            referencedRelation: "ai_conversations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       audit_log: {
         Row: {
           action: string
@@ -1959,6 +2021,24 @@ export type Database = {
           tail_trim_mm?: number
           updated_at?: string | null
           waste_percent?: number
+        }
+        Relationships: []
+      }
+      finance_access_grants: {
+        Row: {
+          granted_at: string
+          note: string | null
+          user_id: string
+        }
+        Insert: {
+          granted_at?: string
+          note?: string | null
+          user_id: string
+        }
+        Update: {
+          granted_at?: string
+          note?: string | null
+          user_id?: string
         }
         Relationships: []
       }
@@ -5091,6 +5171,7 @@ export type Database = {
         Args: { p_roles: Database["public"]["Enums"]["app_role"][] }
         Returns: boolean
       }
+      has_finance_access: { Args: never; Returns: boolean }
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"]
