@@ -5,7 +5,9 @@ import { AppHeader } from "@/components/layout/AppHeader";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Loader2 } from "lucide-react";
+import { Loader2, AlertTriangle } from "lucide-react";
+import { BookkeeperTab } from "@/components/finance/BookkeeperTab";
+import { PROFIT_WARNING } from "@/lib/bookkeeperReport";
 
 const fmt = (v: unknown) => (v == null ? "—" : Number(v).toLocaleString("sr-RS", { maximumFractionDigits: 2 }));
 const KIND: Record<string, string> = {
@@ -54,12 +56,13 @@ export default function FinanceControl() {
         </div>
         {isLoading || !c ? <Loader2 className="animate-spin" /> : (
           <Tabs defaultValue="kontrola">
-            <TabsList>
+            <TabsList className="h-auto flex-wrap justify-start">
               <TabsTrigger value="kontrola">Kontrola podataka</TabsTrigger>
               <TabsTrigger value="provera">Potrebna provera ({c.review.length})</TabsTrigger>
               <TabsTrigger value="usaglasavanje">Usaglašavanje</TabsTrigger>
               <TabsTrigger value="banke">Banke</TabsTrigger>
               <TabsTrigger value="rezultat">Privremeni rezultat</TabsTrigger>
+              <TabsTrigger value="knjigovodja">Izveštaj za knjigovođu</TabsTrigger>
             </TabsList>
 
             <TabsContent value="kontrola" className="space-y-4">
@@ -107,7 +110,7 @@ export default function FinanceControl() {
 
             <TabsContent value="provera">
               <Card className="p-4 overflow-x-auto">
-                <table className="w-full text-sm"><thead><tr className="text-left text-muted-foreground"><th>Partner</th><th>Broj</th><th>Datum</th><th>Valuta</th><th>Ukupno RSD</th><th>Problem</th><th>Povezana knjiženja</th><th>Šta proveriti</th></tr></thead>
+                <table className="w-full text-sm min-w-[900px]"><thead><tr className="text-left text-muted-foreground"><th>Partner</th><th>Broj</th><th>Datum</th><th>Valuta</th><th>Ukupno RSD</th><th>Problem</th><th>Povezana knjiženja</th><th>Šta proveriti</th></tr></thead>
                   <tbody>{c.review.map((r: any) => (
                     <tr key={r.direction + r.minimax_id} className="border-t align-top"><td>{r.partner}</td><td>{r.number}</td><td>{r.date}</td><td>{r.currency}</td><td>{fmt(r.total_rsd)}</td><td>{r.reason}</td>
                       <td>{r.journals.length ? r.journals.map((j: any) => <div key={j.id}>{j.type} {j.date}</div>) : "nema"}</td>
@@ -141,7 +144,7 @@ export default function FinanceControl() {
                   <table className="w-full"><thead><tr className="text-left text-muted-foreground"><th>Konto</th><th>Naziv</th><th>Vrsta</th><th>Početno</th><th>Duguje</th><th>Potražuje</th><th>Saldo</th><th>Poslednje knjiženje</th></tr></thead>
                     <tbody>{rec.banks.map((b: any) => <tr key={b.code} className="border-t"><td>{b.code}</td><td>{b.name}</td><td>{b.transit ? "Prelazni" : "Bankarski"}</td><td>{fmt(b.opening)}</td><td>{fmt(b.debit)}</td><td>{fmt(b.credit)}</td><td className="font-medium">{fmt(b.closing)}</td><td>{b.last_date}</td></tr>)}</tbody></table>
                 </Card>
-                <Card className="p-4 text-sm space-y-1">
+                <Card className="p-4 text-sm space-y-1 overflow-x-auto">
                   <h2 className="font-medium">Prelazni računi – uparivanje bez menjanja knjiženja</h2>
                   <div>Stavki: {rec.transit.rows} · isti iznos upareno: {rec.transit.paired} ({fmt(rec.transit.paired_amount)}) · devizne konverzije istog dana: {rec.transit.fx_paired} ({fmt(rec.transit.fx_paired_amount)}, razlika kursa {fmt(rec.transit.fx_diff_total)})</div>
                   <div>Neupareno: <b>{rec.transit.unpaired_count}</b> stavki, neto <b>{fmt(rec.transit.unpaired_net)}</b></div>
@@ -151,13 +154,18 @@ export default function FinanceControl() {
               </>}
             </TabsContent>
 
+            <TabsContent value="knjigovodja">
+              {rec && pc ? <BookkeeperTab c={c} rec={rec} pc={pc} /> : <Loader2 className="animate-spin" />}
+            </TabsContent>
+
             <TabsContent value="rezultat">
+              <div className="mb-4 flex gap-2 items-start rounded border border-destructive/50 bg-destructive/10 p-3 text-sm"><AlertTriangle className="h-4 w-4 mt-0.5 text-destructive shrink-0" /><span>{PROFIT_WARNING}</span></div>
               {pc && <Card className="p-4 text-sm space-y-1 mb-4">
                 <h2 className="font-medium">Provera rezultata {pc.year}. – privremeno prema dostupnim knjiženjima</h2>
                 <div>Kontrolna vrednost: <b>{fmt(pc.check_value)}</b> · sada izračunato: <b>{fmt(pc.result)}</b> · zbir meseci: {fmt(pc.sum_of_months)} {Math.abs(pc.result - pc.sum_of_months) < 1 ? <Badge variant="secondary">Slaže se</Badge> : <Badge variant="destructive">Ne slaže se</Badge>}</div>
                 <div>Uključeno: proknjiženi prihodi ({fmt(pc.revenue)}) i rashodi ({fmt(pc.expenses)}) klasa 6 i 5, bez zaključnih i početnih knjiženja; poslednje knjiženje {pc.last_entry}.</div>
                 <div>Amortizacija knjižena: <b>{fmt(pc.depreciation_booked)}</b> (prethodna godina: {fmt(pc.depreciation_prev_year)}) {Number(pc.depreciation_booked) === 0 && <Badge variant="outline">Nije uključena</Badge>}</div>
-                <div>Kursne razlike neto: {fmt(pc.fx_net)} · konta zaliha korišćena: {pc.inventory_accounts_used === 0 ? "ne – nabavka ploča ide direktno u trošak, lager na kraju perioda nije umanjio trošak" : pc.inventory_accounts_used} · dati avansi (150): {fmt(pc.advances_paid_150)}</div>
+                <div>Kursne razlike neto: {fmt(pc.fx_net)} · konta zaliha korišćena: {pc.inventory_accounts_used <= 2 ? "praktično ne (jedno knjiženje i njegov storno) – nabavka ploča ide direktno u trošak, lager na kraju perioda nije umanjio trošak" : pc.inventory_accounts_used} · dati avansi (150): {fmt(pc.advances_paid_150)}</div>
                 <div className="text-muted-foreground">Računovodstvena dobit nije poreska osnovica (porez na dobit nije obračunat) niti novac na računu.</div>
               </Card>}
               <Card className="p-4 overflow-x-auto space-y-2">
