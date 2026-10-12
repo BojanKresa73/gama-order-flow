@@ -51,6 +51,34 @@ function buildTools(db: SupabaseClient) {
   const year = new Date().getFullYear();
 
   return {
+    finance_control: tool({
+      description: "Minimax Gama United (org 79412) – kontrola podataka: broj dokumenata baza vs Minimax, zbirovi po vrsti/godini, valute, status plaćanja, otvorena potraživanja/obaveze (iz dokumenata i iz glavne knjige), stanja po klasama konta i dokumenti 'Potrebna provera'. Neusaglašeno nikad ne predstavljati kao potvrđeno.",
+      inputSchema: z.object({}),
+      execute: async () => { const { data, error } = await db.rpc("mm_control_summary" as any); return error ? { error: error.message } : data; },
+    }),
+    finance_profit: tool({
+      description: "Računovodstveni rezultat po mesecima za godinu iz glavne knjige (klase 5 i 6, bez zaključnih knjiženja): prihodi, rashodi, materijal (50/51), zarade (52), proizvodne usluge (53), amortizacija (54), ostalo, privremeni rezultat, oznake nedostajuće amortizacije i neproknjiženih dokumenata. Ovo je privremeni rezultat, ne zvanični bilans.",
+      inputSchema: z.object({ year: z.number().int() }),
+      execute: async (a) => { const { data, error } = await db.rpc("mm_profit_by_month" as any, { p_year: a.year }); return error ? { error: error.message } : data; },
+    }),
+    finance_documents: tool({
+      description: "Pretraga Minimax dokumenata Gama United (izlazni 'issued' / ulazni 'received') po partneru, vrsti, periodu ili statusu provere.",
+      inputSchema: z.object({
+        direction: z.enum(["issued", "received"]).nullable(), partner: z.string().nullable(), kind: z.string().nullable(),
+        date_from: z.string().nullable(), date_to: z.string().nullable(), only_review: z.boolean().nullable(), limit: z.number().int().nullable(),
+      }),
+      execute: async (a) => {
+        let q = db.from("mm_documents" as any).select("direction,number,kind,doc_date,partner_name,currency,total_rsd,paid_rsd,open_rsd,base_rsd,vat_rsd,non_deductible_rsd,payment_status,review_status,review_reason")
+          .order("doc_date", { ascending: false }).limit(Math.min(a.limit ?? 30, 100));
+        if (a.direction) q = q.eq("direction", a.direction);
+        if (a.partner) q = q.ilike("partner_name", `%${a.partner.replace(/[%,()]/g, " ")}%`);
+        if (a.kind) q = q.eq("kind", a.kind);
+        if (a.date_from) q = q.gte("doc_date", a.date_from);
+        if (a.date_to) q = q.lte("doc_date", a.date_to);
+        if (a.only_review) q = q.neq("review_status", "ok");
+        const { data, error } = await q; return error ? { error: error.message } : data;
+      },
+    }),
     search_work_orders: tool({
       description: "Pretraga radnih naloga po tekstu (broj naloga, naziv posla, napomena), tipu, statusu, klijentu i periodu.",
       inputSchema: z.object({

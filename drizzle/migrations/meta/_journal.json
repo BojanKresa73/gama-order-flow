@@ -29,6 +29,13 @@
       "when": 1791792195101,
       "tag": "0003_minimax_united_finance_mirror",
       "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "7",
+      "when": 1791794287313,
+      "tag": "0004_mm_rpc_year_journals",
+      "breakpoints": true
     }
   ]
 }
