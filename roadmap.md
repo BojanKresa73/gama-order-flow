@@ -8,7 +8,7 @@
 - [ ] Sistem zaštite: dnevno automatsko čišćenje logova + auto-gašenje newsletter cron zadataka kada je kampanja završena
 - [x] Promeniti ime AI agenta u Natalija (stranica, putanja /natalija, dugme, serverska funkcija `natalija`)
 - [x] Dijagnostika kupaca, dobavljača, 120 dokumenata, dobiti 2026, banaka (izveštaj 12.10.2026)
-- [ ] Ispraviti zbir konta 204/435 (ne sabirati otvaranje 2026) i povezivanje ulaznih dokumenata po referenci — čeka potvrdu
+- [x] Ispravljen zbir konta 204/435 i povezivanje ulaznih dokumenata (120 → 66 spornih)
 - [ ] Knjigovođa: stari dugovi kupaca 4,80 mil., 7 dobavljača 0,39 mil., 57 dokumenata, prelazni računi, amortizacija 2026
 - [ ] Usaglašavanje banaka — čeka izvode na isti datum
-- [ ] Ispravka obračuna po dokumentu „Natalija je završila dijagnostiku" (duplo računanje, povezivanje 63 dok., stari dugovi, banke/prelazna konta, dobit, testovi) — čeka nastavak
+- [x] Ispravka obračuna: kartice Usaglašavanje, Banke, provera dobiti; Natalija koristi iste funkcije; testovi
