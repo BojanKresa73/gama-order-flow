@@ -4,7 +4,7 @@ import { corsHeaders } from "npm:@supabase/supabase-js@2/cors";
 import { createClient } from "npm:@supabase/supabase-js@2";
 import {
   UNITED_ORG_ID, BLOCKED_ORG_IDS, assertUnitedOrg, classifyIssued, openReceivable, classifyReceived, openAmount,
-  accountCodeFromName, summarizeVat, receivedJournalKey,
+  accountCodeFromName, summarizeVat, receivedJournalKey, journalDescriptionKey,
 } from "../_shared/minimaxFinance.ts";
 
 const json = (b: unknown, s = 200) =>
