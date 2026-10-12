@@ -44,7 +44,7 @@ Deno.serve(async (req) => {
   const body = await req.json().catch(() => ({}));
   const mode = body?.mode === "login" ? "login" : "check"; // default: no network call to Minimax
 
-  const values = NAMES.map((n) => Deno.env.get(n) ?? "");
+  const values = NAMES.map((n) => (Deno.env.get(n) ?? "").trim());
   const configured = Object.fromEntries(NAMES.map((n, i) => [n, values[i].trim().length > 0]));
   const missing = NAMES.filter((n) => !configured[n]);
 
