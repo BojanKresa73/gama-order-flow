@@ -13,4 +13,6 @@
 - [ ] Knjigovođa odgovara na pitanja: stari dugovi kupaca 4,80 mil., 7 dobavljača 0,39 mil., 66 dokumenata, prelazni računi, amortizacija 2026
 - [ ] Usaglašavanje banaka — čeka izvode na isti datum
 - [x] Ispravka obračuna: kartice Usaglašavanje, Banke, provera dobiti; Natalija koristi iste funkcije; testovi
+- [x] Ažurnost knjigovodstva i izvoda, objašnjenje stanja banke i glavne knjige
+- [ ] Upis poslednjih izvoda iz banke (Natalija)
 - [ ] Objavljivanje – čeka odluku vlasnika
