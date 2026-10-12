@@ -32,6 +32,15 @@ export default function FinanceControl() {
     queryFn: async () => { const { data, error } = await supabase.rpc("mm_profit_by_month" as any, { p_year: year }); if (error) throw error; return (data ?? []) as any[]; },
   });
 
+  const { data: rec } = useQuery({
+    queryKey: ["mm-rec"], enabled: access === true,
+    queryFn: async () => { const { data, error } = await supabase.rpc("mm_reconciliation" as any); if (error) throw error; return data as any; },
+  });
+  const { data: pc } = useQuery({
+    queryKey: ["mm-profit-check", year], enabled: access === true,
+    queryFn: async () => { const { data, error } = await supabase.rpc("mm_profit_check" as any, { p_year: year }); if (error) throw error; return data as any; },
+  });
+
   if (al) return <div className="p-8"><Loader2 className="animate-spin" /></div>;
   if (!access) return <><AppHeader /><div className="p-8 text-muted-foreground">Nemate pristup finansijskim podacima.</div></>;
 
@@ -48,6 +57,8 @@ export default function FinanceControl() {
             <TabsList>
               <TabsTrigger value="kontrola">Kontrola podataka</TabsTrigger>
               <TabsTrigger value="provera">Potrebna provera ({c.review.length})</TabsTrigger>
+              <TabsTrigger value="usaglasavanje">Usaglašavanje</TabsTrigger>
+              <TabsTrigger value="banke">Banke</TabsTrigger>
               <TabsTrigger value="rezultat">Privremeni rezultat</TabsTrigger>
             </TabsList>
 
@@ -104,7 +115,51 @@ export default function FinanceControl() {
               </Card>
             </TabsContent>
 
+            <TabsContent value="usaglasavanje" className="space-y-4">
+              {!rec ? <Loader2 className="animate-spin" /> : <>
+                {(["kupci", "dobavljaci"] as const).map((k) => { const o = rec.open_items[k]; return (
+                  <Card key={k} className="p-4 text-sm space-y-1">
+                    <h2 className="font-medium">{k === "kupci" ? "Kupci – konto 204" : "Dobavljači – konto 435"}</h2>
+                    <div>Prethodni iznos (zbir svih godina): <b>{fmt(o.previous)}</b></div>
+                    <div>Uzrok: otvaranje {rec.first_year + 1}. ponavlja stavke iz {rec.first_year}. koje su već u knjizi – korekcija <b>−{fmt(o.carried_double)}</b></div>
+                    <div>Novi iznos konta: <b>{fmt(o.new)}</b></div>
+                    <div className="pt-1">Od toga: otvorene fakture <b>{fmt(o.docs_open)}</b> + početno stanje {rec.first_year}. (pre Minimax-a) <b>{fmt(o.opening_first_year)}</b> + neobjašnjeno <b>{fmt(o.unexplained)}</b></div>
+                    <div className="text-muted-foreground">Kontrola: {fmt(o.docs_open)} + {fmt(o.opening_first_year)} + ({fmt(o.unexplained)}) = {fmt(o.new)} · izvor: nalog otvaranja {o.sources.map((x: any) => `${x.type} ${x.year}`).join(", ")}</div>
+                    <table className="w-full mt-2"><thead><tr className="text-left text-muted-foreground"><th>Partner</th><th>Konto</th><th>Otvorene fakture</th><th>Početno {rec.first_year}.</th><th>Fakturisano</th><th>Uplate</th><th>Neobjašnjeno</th><th>Status</th></tr></thead>
+                      <tbody>{(rec.partners[k] ?? []).slice(0, 40).map((p: any, i: number) => (
+                        <tr key={i} className="border-t"><td>{p.partner}</td><td>{fmt(p.ledger)}</td><td>{fmt(p.docs_open)}</td><td>{fmt(p.opening)}</td><td>{fmt(p.invoiced)}</td><td>{fmt(p.payments)}</td><td>{fmt(p.residual)}</td>
+                          <td>{Math.abs(p.residual) <= 10 ? (Math.abs(p.opening) > 1 ? <Badge variant="outline">Stari dug – potvrditi</Badge> : <Badge variant="secondary">Objašnjeno</Badge>) : <Badge variant="destructive">Potrebna provera</Badge>}</td></tr>))}</tbody></table>
+                  </Card>); })}
+                <p className="text-xs text-muted-foreground">Početna stanja se ne uklanjaju automatski i ne proglašavaju se nenaplativim – potvrđuje knjigovođa.</p>
+              </>}
+            </TabsContent>
+
+            <TabsContent value="banke" className="space-y-4">
+              {!rec ? <Loader2 className="animate-spin" /> : <>
+                <Card className="p-4 text-sm overflow-x-auto">
+                  <p className="mb-2"><Badge variant="destructive">Nije potvrđeno</Badge> {rec.bank_note}</p>
+                  <table className="w-full"><thead><tr className="text-left text-muted-foreground"><th>Konto</th><th>Naziv</th><th>Vrsta</th><th>Početno</th><th>Duguje</th><th>Potražuje</th><th>Saldo</th><th>Poslednje knjiženje</th></tr></thead>
+                    <tbody>{rec.banks.map((b: any) => <tr key={b.code} className="border-t"><td>{b.code}</td><td>{b.name}</td><td>{b.transit ? "Prelazni" : "Bankarski"}</td><td>{fmt(b.opening)}</td><td>{fmt(b.debit)}</td><td>{fmt(b.credit)}</td><td className="font-medium">{fmt(b.closing)}</td><td>{b.last_date}</td></tr>)}</tbody></table>
+                </Card>
+                <Card className="p-4 text-sm space-y-1">
+                  <h2 className="font-medium">Prelazni računi – uparivanje bez menjanja knjiženja</h2>
+                  <div>Stavki: {rec.transit.rows} · isti iznos upareno: {rec.transit.paired} ({fmt(rec.transit.paired_amount)}) · devizne konverzije istog dana: {rec.transit.fx_paired} ({fmt(rec.transit.fx_paired_amount)}, razlika kursa {fmt(rec.transit.fx_diff_total)})</div>
+                  <div>Neupareno: <b>{rec.transit.unpaired_count}</b> stavki, neto <b>{fmt(rec.transit.unpaired_net)}</b></div>
+                  <table className="w-full mt-2"><thead><tr className="text-left text-muted-foreground"><th>Konto</th><th>Datum</th><th>Strana</th><th>Iznos</th><th>Opis</th></tr></thead>
+                    <tbody>{rec.transit.unpaired.slice(0, 30).map((u: any, i: number) => <tr key={i} className="border-t"><td>{u.account}</td><td>{u.date}</td><td>{u.side === "D" ? "Duguje" : "Potražuje"}</td><td>{fmt(u.amount)}</td><td className="text-muted-foreground">{u.description}</td></tr>)}</tbody></table>
+                </Card>
+              </>}
+            </TabsContent>
+
             <TabsContent value="rezultat">
+              {pc && <Card className="p-4 text-sm space-y-1 mb-4">
+                <h2 className="font-medium">Provera rezultata {pc.year}. – privremeno prema dostupnim knjiženjima</h2>
+                <div>Kontrolna vrednost: <b>{fmt(pc.check_value)}</b> · sada izračunato: <b>{fmt(pc.result)}</b> · zbir meseci: {fmt(pc.sum_of_months)} {Math.abs(pc.result - pc.sum_of_months) < 1 ? <Badge variant="secondary">Slaže se</Badge> : <Badge variant="destructive">Ne slaže se</Badge>}</div>
+                <div>Uključeno: proknjiženi prihodi ({fmt(pc.revenue)}) i rashodi ({fmt(pc.expenses)}) klasa 6 i 5, bez zaključnih i početnih knjiženja; poslednje knjiženje {pc.last_entry}.</div>
+                <div>Amortizacija knjižena: <b>{fmt(pc.depreciation_booked)}</b> (prethodna godina: {fmt(pc.depreciation_prev_year)}) {Number(pc.depreciation_booked) === 0 && <Badge variant="outline">Nije uključena</Badge>}</div>
+                <div>Kursne razlike neto: {fmt(pc.fx_net)} · konta zaliha korišćena: {pc.inventory_accounts_used === 0 ? "ne – nabavka ploča ide direktno u trošak, lager na kraju perioda nije umanjio trošak" : pc.inventory_accounts_used} · dati avansi (150): {fmt(pc.advances_paid_150)}</div>
+                <div className="text-muted-foreground">Računovodstvena dobit nije poreska osnovica (porez na dobit nije obračunat) niti novac na računu.</div>
+              </Card>}
               <Card className="p-4 overflow-x-auto space-y-2">
                 <div className="flex gap-2">{[2025, 2026].map((y) => <button key={y} onClick={() => setYear(y)} className={`px-3 py-1 rounded border text-sm ${y === year ? "bg-primary text-primary-foreground" : ""}`}>{y}</button>)}</div>
                 <p className="text-xs text-muted-foreground">Iz konta glavne knjige (klase 5 i 6), bez zaključnih knjiženja. Privremeni rezultat, nije zvanični bilans.</p>

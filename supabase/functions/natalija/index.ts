@@ -31,7 +31,7 @@ Pravila:
 - NIKAD ne mešaj ove veličine: broj ploča (kom), kvadratura (m²), prodajna vrednost po cenovniku (EUR, procena iz naloga) i stvarno fakturisano (iz Minimax-a). Uvek ih navedi odvojeno i imenuj tačno.
 - Prodajna vrednost koristi cenu koja je važila na dan otvaranja naloga. Kad prikazuješ vrednost, pozovi ctp_unpriced_plates i jasno upozori ako postoje ploče bez poznate istorijske cene (one ulaze u vrednost kao 0).
 - Lager i roba na putu (search_materials) su zalihe, NISU proizvodnja ni potrošnja — nikad ih ne sabiraj sa potrošnjom.
-- Finansijski podaci iz Minimax-a (izlazne i ulazne fakture, predračuni, avansi, storna, knjižna odobrenja, plaćanja, potraživanja i obaveze, rezultat po mesecima) SU povezani i dostupni kroz alate finance_control, finance_profit i finance_documents — za takva pitanja uvek pozovi te alate i odgovaraj iz njihovih brojeva. Novčani iznosi su u RSD osim ako nije drugačije navedeno.
+- Finansijski podaci iz Minimax-a (izlazne i ulazne fakture, predračuni, avansi, storna, knjižna odobrenja, plaćanja, potraživanja i obaveze, rezultat po mesecima) SU povezani i dostupni kroz alate finance_control, finance_reconciliation, finance_profit, finance_profit_check i finance_documents. Za potraživanja, obaveze i banke koristi finance_reconciliation (ispravljeni iznosi bez duplog otvaranja). Kod dobiti uvek objasni šta je uključeno (proknjiženi prihodi i rashodi klasa 5 i 6), a šta nije (amortizacija ako nije knjižena, porez na dobit, zalihe ploča ako se vode direktno kao trošak, nepotpun tekući mesec); računovodstvena dobit nije poreska osnovica ni novac na računu — za takva pitanja uvek pozovi te alate i odgovaraj iz njihovih brojeva. Novčani iznosi su u RSD osim ako nije drugačije navedeno.
 - Ti samo čitaš podatke. Nikad ne menjaš naloge ni bilo šta u bazi.
 Današnji datum: ${new Date().toISOString().slice(0, 10)}.`;
 
@@ -60,6 +60,16 @@ function buildTools(db: SupabaseClient) {
       description: "Računovodstveni rezultat po mesecima za godinu iz glavne knjige (klase 5 i 6, bez zaključnih knjiženja): prihodi, rashodi, materijal (50/51), zarade (52), proizvodne usluge (53), amortizacija (54), ostalo, privremeni rezultat, oznake nedostajuće amortizacije i neproknjiženih dokumenata. Ovo je privremeni rezultat, ne zvanični bilans.",
       inputSchema: z.object({ year: z.number().int() }),
       execute: async (a) => { const { data, error } = await db.rpc("mm_profit_by_month" as any, { p_year: a.year }); return error ? { error: error.message } : data; },
+    }),
+    finance_reconciliation: tool({
+      description: "Usaglašavanje Gama United: otvorena potraživanja (204) i obaveze (435) – prethodni iznos, dvostruko preneto otvaranje 2026, novi iznos, početno stanje 2025, neobjašnjeni ostatak, izvorna knjiženja; razlike po kupcu/dobavljaču; svaki bankarski i prelazni račun (početno, knjiženja po vrsti, saldo) i uparivanje prenosa na prelaznim računima. Bankarski saldo NIJE potvrđen novac dok se ne uporedi sa izvodima.",
+      inputSchema: z.object({}),
+      execute: async () => { const { data, error } = await db.rpc("mm_reconciliation" as any); return error ? { error: error.message } : data; },
+    }),
+    finance_profit_check: tool({
+      description: "Provera privremene računovodstvene dobiti za godinu: kontrolna vrednost (2026: 16,93 mil.), prihodi, rashodi, zbir meseci, grupe konta, knjižena amortizacija (i prošlogodišnja za poređenje), kursne razlike, da li postoje konta zaliha, dati avansi (150), poslednje knjiženje. Dobit NIJE poreska osnovica ni raspoloživ novac.",
+      inputSchema: z.object({ year: z.number().int() }),
+      execute: async (a) => { const { data, error } = await db.rpc("mm_profit_check" as any, { p_year: a.year }); return error ? { error: error.message } : data; },
     }),
     finance_documents: tool({
       description: "Pretraga Minimax dokumenata Gama United (izlazni 'issued' / ulazni 'received') po partneru, vrsti, periodu ili statusu provere.",

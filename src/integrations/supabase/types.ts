@@ -5505,7 +5505,35 @@ export type Database = {
       }
       is_superuser: { Args: { p_uid: string }; Returns: boolean }
       mm_control_summary: { Args: never; Returns: Json }
+      mm_ledger_clean: {
+        Args: never
+        Returns: {
+          account_code: string | null
+          account_minimax_id: number | null
+          account_name: string | null
+          credit_rsd: number
+          currency: string | null
+          debit_rsd: number
+          description: string | null
+          entry_date: string | null
+          journal_minimax_id: number
+          journal_type: string | null
+          minimax_id: number
+          org_id: string
+          partner_minimax_id: number | null
+          synced_at: string
+          year: number | null
+        }[]
+        SetofOptions: {
+          from: "*"
+          to: "mm_ledger_rows"
+          isOneToOne: false
+          isSetofReturn: true
+        }
+      }
       mm_profit_by_month: { Args: { p_year: number }; Returns: Json }
+      mm_profit_check: { Args: { p_year: number }; Returns: Json }
+      mm_reconciliation: { Args: never; Returns: Json }
       next_complaint_number: { Args: never; Returns: string }
       next_pasted_quote_number: { Args: never; Returns: string }
       next_quote_number: { Args: never; Returns: string }

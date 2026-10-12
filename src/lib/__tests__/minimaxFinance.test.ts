@@ -77,3 +77,29 @@ describe("ulazni dokumenti i sinhronizacija", () => {
   it("serverska kopija pravila je identična testiranoj", () =>
     expect(readFileSync("supabase/functions/_shared/minimaxFinance.ts", "utf8")).toBe(readFileSync("src/lib/minimaxFinance.ts", "utf8")));
 });
+
+import { ledgerBalance, carriedOpening, classifyIssued as ci2, openReceivable as or2 } from "../minimaxFinance";
+describe("bez duplog računanja", () => {
+  // Konto 204: početno 2025 = 100, faktura 2025 = 50, ista faktura preneta 01.01.2026 (OTV) = 50, faktura 2026 = 30
+  const rows = [
+    { year: 2025, journal_type: "OTV", debit: 100, credit: 0 },
+    { year: 2025, journal_type: "IR", debit: 50, credit: 0 },
+    { year: 2026, journal_type: "OTV", debit: 50, credit: 0 },
+    { year: 2026, journal_type: "IR", debit: 30, credit: 0 },
+  ];
+  it("preneta faktura iz 2025 se ne računa dvaput", () => expect(ledgerBalance(rows, "debit")).toBe(180));
+  it("prvo početno stanje ostaje uključeno", () => expect(ledgerBalance(rows.slice(0, 1), "debit")).toBe(100));
+  it("iznos duplog prenosa je izdvojen", () => expect(carriedOpening(rows, "debit")).toBe(50));
+  it("obaveze (potražna strana) isto", () =>
+    expect(ledgerBalance(rows.map((r) => ({ ...r, debit: r.credit, credit: r.debit })), "credit")).toBe(180));
+  it("PR opis sa ; i AR prefiksom se povezuje", () => {
+    expect(journalDescriptionKey("PR;2025-138;GCEMEARSD0000212839")).toBe("2025-138;GCEMEARSD0000212839");
+    expect(journalDescriptionKey("PR:AR2025-1;25-3C1-000159")).toBe("2025-1;25-3C1-000159");
+  });
+  it("storno i originalna faktura se ne zatvaraju dvaput", () => {
+    const f = { IssuedInvoiceId: 1, InvoiceType: "R", DocumentNumbering: { Name: "IR" }, InvoiceValue: 1000, PaidValue: 1000 };
+    const st = { IssuedInvoiceId: 2, InvoiceType: "R", DocumentNumbering: { Name: "Storno" }, InvoiceValue: -1000, PaidValue: 1000 };
+    expect(ci2(st)).toBe("storno");
+    expect((or2(f) ?? 0) + (or2(st) ?? 0)).toBe(0);
+  });
+});
