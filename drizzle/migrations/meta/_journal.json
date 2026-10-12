@@ -50,6 +50,13 @@
       "when": 1791821738448,
       "tag": "0006_mm_control_summary_clean_ledger",
       "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "7",
+      "when": 1791821876728,
+      "tag": "0007_mm_reconciliation_fx_pairing",
+      "breakpoints": true
     }
   ]
 }
