@@ -11,3 +11,4 @@
 - [ ] Ispraviti zbir konta 204/435 (ne sabirati otvaranje 2026) i povezivanje ulaznih dokumenata po referenci — čeka potvrdu
 - [ ] Knjigovođa: stari dugovi kupaca 4,80 mil., 7 dobavljača 0,39 mil., 57 dokumenata, prelazni računi, amortizacija 2026
 - [ ] Usaglašavanje banaka — čeka izvode na isti datum
+- [ ] Ispravka obračuna po dokumentu „Natalija je završila dijagnostiku" (duplo računanje, povezivanje 63 dok., stari dugovi, banke/prelazna konta, dobit, testovi) — čeka nastavak

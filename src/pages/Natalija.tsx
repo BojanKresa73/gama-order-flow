@@ -38,7 +38,7 @@ export default function Natalija() {
       (await supabase.from("ai_conversations").select("id, title, updated_at").order("updated_at", { ascending: false }).limit(30)).data ?? [],
   });
 
-  useEffect(() => endRef.current?.scrollIntoView({ behavior: "smooth" }), [msgs, busy]);
+  useEffect(() => { endRef.current?.scrollIntoView({ behavior: "smooth" }); }, [msgs, busy]);
 
   const openConv = async (id: string) => {
     setConvId(id); setErr(null);
