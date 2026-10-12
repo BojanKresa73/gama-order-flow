@@ -63,7 +63,7 @@ export function BookkeeperTab({ c, rec, pc }: { c: any; rec: any; pc: any }) {
           {(Object.keys(CATEGORY_LABEL) as IssueCategory[]).map((k) => (
             <button key={k} onClick={() => setCat(cat === k ? "all" : k)} className={`text-left rounded border p-2 ${cat === k ? "border-primary bg-accent" : ""}`}>
               <div className="text-muted-foreground text-xs">{CATEGORY_LABEL[k]}</div>
-              <div className="font-medium">{totals[k]?.count ?? 0} · {fmtRsd(totals[k]?.amount ?? 0)}</div>
+              <div className="font-medium">{totals[k]?.count ?? 0}{issues.some((i) => i.category === k && i.amount != null) ? ` · ${fmtRsd(totals[k]?.amount ?? 0)} RSD` : " · iznos nije poznat"}</div>
               <div className="text-xs text-muted-foreground">razjašnjeno {issues.filter((i) => i.category === k && res[i.key]).length}</div>
             </button>))}
         </div>
