@@ -165,7 +165,7 @@ export default function FinanceControl() {
                 <div>Kontrolna vrednost: <b>{fmt(pc.check_value)}</b> · sada izračunato: <b>{fmt(pc.result)}</b> · zbir meseci: {fmt(pc.sum_of_months)} {Math.abs(pc.result - pc.sum_of_months) < 1 ? <Badge variant="secondary">Slaže se</Badge> : <Badge variant="destructive">Ne slaže se</Badge>}</div>
                 <div>Uključeno: proknjiženi prihodi ({fmt(pc.revenue)}) i rashodi ({fmt(pc.expenses)}) klasa 6 i 5, bez zaključnih i početnih knjiženja; poslednje knjiženje {pc.last_entry}.</div>
                 <div>Amortizacija knjižena: <b>{fmt(pc.depreciation_booked)}</b> (prethodna godina: {fmt(pc.depreciation_prev_year)}) {Number(pc.depreciation_booked) === 0 && <Badge variant="outline">Nije uključena</Badge>}</div>
-                <div>Kursne razlike neto: {fmt(pc.fx_net)} · konta zaliha korišćena: {pc.inventory_accounts_used === 0 ? "ne – nabavka ploča ide direktno u trošak, lager na kraju perioda nije umanjio trošak" : pc.inventory_accounts_used} · dati avansi (150): {fmt(pc.advances_paid_150)}</div>
+                <div>Kursne razlike neto: {fmt(pc.fx_net)} · konta zaliha korišćena: {pc.inventory_accounts_used <= 2 ? "praktično ne (jedno knjiženje i njegov storno) – nabavka ploča ide direktno u trošak, lager na kraju perioda nije umanjio trošak" : pc.inventory_accounts_used} · dati avansi (150): {fmt(pc.advances_paid_150)}</div>
                 <div className="text-muted-foreground">Računovodstvena dobit nije poreska osnovica (porez na dobit nije obračunat) niti novac na računu.</div>
               </Card>}
               <Card className="p-4 overflow-x-auto space-y-2">
