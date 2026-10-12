@@ -6,6 +6,7 @@ import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Loader2, AlertTriangle } from "lucide-react";
+import { FreshnessSummary, FreshnessTab, useFreshness } from "@/components/finance/Freshness";
 import { BookkeeperTab } from "@/components/finance/BookkeeperTab";
 import { PROFIT_WARNING } from "@/lib/bookkeeperReport";
 
@@ -43,6 +44,8 @@ export default function FinanceControl() {
     queryFn: async () => { const { data, error } = await supabase.rpc("mm_profit_check" as any, { p_year: year }); if (error) throw error; return data as any; },
   });
 
+  const { data: fresh } = useFreshness(access === true);
+
   if (al) return <div className="p-8"><Loader2 className="animate-spin" /></div>;
   if (!access) return <><AppHeader /><div className="p-8 text-muted-foreground">Nemate pristup finansijskim podacima.</div></>;
 
@@ -54,10 +57,12 @@ export default function FinanceControl() {
           <h1 className="text-2xl font-semibold">Finansije – Gama United</h1>
           <p className="text-sm text-muted-foreground">Minimax organizacija 79412 · samo čitanje · podaci GDC i Gama Studio nisu uključeni</p>
         </div>
+        {fresh && <FreshnessSummary f={fresh} />}
         {isLoading || !c ? <Loader2 className="animate-spin" /> : (
           <Tabs defaultValue="kontrola">
             <TabsList className="h-auto flex-wrap justify-start">
               <TabsTrigger value="kontrola">Kontrola podataka</TabsTrigger>
+              <TabsTrigger value="azurnost">Ažurnost izvoda</TabsTrigger>
               <TabsTrigger value="provera">Potrebna provera ({c.review.length})</TabsTrigger>
               <TabsTrigger value="usaglasavanje">Usaglašavanje</TabsTrigger>
               <TabsTrigger value="banke">Banke</TabsTrigger>
@@ -99,7 +104,7 @@ export default function FinanceControl() {
                 <Card className="p-4 text-sm">
                   <h2 className="font-medium mb-2">Glavna knjiga</h2>
                   {c.ledger_years.map((y: any) => <div key={y.year}>{y.year}: {fmt(y.rows)} stavki · duguje {fmt(y.debit)} · potražuje {fmt(y.credit)}
-                    {Math.abs(y.debit - y.credit) > 1 && <Badge variant="destructive" className="ml-1">Neuravnoteženo</Badge>}</div>)}
+                    {Math.abs(y.debit - y.credit) > 1 && <Badge variant="outline" className="ml-1">Razlika samo zbog prelaza godine – vidi Ažurnost izvoda</Badge>}</div>)}
                   <h3 className="font-medium mt-3">Po klasama konta</h3>
                   {c.accounts_by_class.map((a: any) => <div key={a.class}>Klasa {a.class}: saldo {fmt(a.balance)}</div>)}
                   <h3 className="font-medium mt-3">Valute</h3>
@@ -153,6 +158,8 @@ export default function FinanceControl() {
                 </Card>
               </>}
             </TabsContent>
+
+            <TabsContent value="azurnost">{fresh ? <FreshnessTab f={fresh} /> : <Loader2 className="animate-spin" />}</TabsContent>
 
             <TabsContent value="knjigovodja">
               {rec && pc ? <BookkeeperTab c={c} rec={rec} pc={pc} /> : <Loader2 className="animate-spin" />}
