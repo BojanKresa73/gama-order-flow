@@ -97,9 +97,9 @@ export function buildIssues(c: any, rec: any, pc: any): Issue[] {
       question: `Kada i u kom iznosu će biti obračunata amortizacija za ${pc.year}. (prethodna godina: ${fmtRsd(pc.depreciation_prev_year)} RSD, knjižena tek 31.12.)?`,
       source: "Glavna knjiga, konta 540",
     });
-    if (!pc.inventory_accounts_used) out.push({
+    out.push({
       key: `zalihe:${pc.year}`, category: "zalihe", title: "Ploče na lageru", amount: null,
-      question: "Nabavka ploča ide direktno u trošak, a konta zaliha se ne koriste. Da li na kraju godine treba evidentirati ploče na lageru kao zalihu i umanjiti trošak?",
+      question: `Nabavka ploča ide direktno u trošak; konta zaliha (klasa 1) praktično se ne koriste (${pc.inventory_accounts_used ?? 0} stavki, jedno knjiženje i njegov storno). Da li na kraju godine treba evidentirati ploče na lageru kao zalihu i umanjiti trošak?`,
       source: "Glavna knjiga, klase 1 i 5",
     });
   }
