@@ -71,6 +71,11 @@ function buildTools(db: SupabaseClient) {
       inputSchema: z.object({ year: z.number().int() }),
       execute: async (a) => { const { data, error } = await db.rpc("mm_profit_check" as any, { p_year: a.year }); return error ? { error: error.message } : data; },
     }),
+    finance_books_freshness: tool({
+      description: "Ažurnost knjigovodstva i bankarskih izvoda: za svaki račun poslednji proknjižen izvod (BD), poslednji izvod koji je vlasnik upisao iz banke, stanje u knjigama i na izvodu, poslednje preuzimanje iz Minimaxa; razlika obračuna banke (samo bankarski računi prema kontu 241 sa prelaznim); provera glavne knjige po godinama i knjiženja koja prelaze godinu. Kašnjenje se tvrdi samo ako postoji upisan noviji izvod.",
+      inputSchema: z.object({}),
+      execute: async () => { const { data, error } = await db.rpc("mm_books_freshness" as any); return error ? { error: error.message } : data; },
+    }),
     finance_bookkeeper_resolutions: tool({
       description: "Pitanja za knjigovođu koja je vlasnik označio kao razjašnjena (ključ, oblast, naziv, iznos, dokument potvrde, datum potvrde, napomena). Sve što nije ovde je još otvoreno.",
       inputSchema: z.object({}),
