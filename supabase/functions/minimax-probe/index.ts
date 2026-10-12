@@ -93,21 +93,39 @@ Deno.serve(async (req) => {
         if (!r.ok) { out[kind] = { error: r.status, message: sanitize(await r.text(), values) }; continue; }
         const j = await r.json();
         const rows = (j?.Rows ?? []).slice(0, 5);
+        const idKey = kind === "izlazne" ? "IssuedInvoiceId" : "ReceivedInvoiceId";
+        const details: any[] = [];
+        for (const d of rows) {
+          try {
+            const dr = await fetch(`${base}/${path}/${d[idKey]}`, { signal: AbortSignal.timeout(20000), headers: H });
+            details.push(dr.ok ? await dr.json() : null);
+          } catch { details.push(null); }
+        }
+        const vatInfo = (x: any) => {
+          if (!x) return { base: null, vat: null, keys: [] };
+          const vr = x.IssuedInvoiceVatRows ?? x.ReceivedInvoiceVatRows ?? x.VatRows ?? x.ReceivedInvoiceRowsVAT ?? null;
+          if (Array.isArray(vr) && vr.length) {
+            const sum = (k: string[]) => vr.reduce((a: number, r: any) => a + Number(k.map((kk) => r[kk]).find((v) => v != null) ?? 0), 0);
+            return { base: sum(["Base", "TaxBase", "Value", "BaseAmount"]), vat: sum(["VatAmount", "VAT", "Amount", "TaxAmount"]), keys: Object.keys(vr[0]) };
+          }
+          const ir = x.IssuedInvoiceRows ?? x.ReceivedInvoiceRows ?? [];
+          return { base: null, vat: null, keys: Object.keys(x).filter((k) => /vat|tax|row|value|amount/i.test(k)), rowKeys: ir[0] ? Object.keys(ir[0]) : [] };
+        };
         out[kind] = {
           total_in_minimax: j?.TotalRows ?? null,
           field_names: rows[0] ? Object.keys(rows[0]) : [],
-          docs: rows.map((d: any) => ({
+          docs: rows.map((d: any, i: number) => { const v = vatInfo(details[i]); return {
+            vat_keys: v.keys, row_keys: (v as any).rowKeys,
             number: d.InvoiceNumber ?? d.DocumentNumber ?? d.Number ?? null,
             type: d.InvoiceType ?? d.DocumentType ?? d.Type ?? null,
             status: d.Status ?? null,
             partner: d.Customer?.Name ?? d.Supplier?.Name ?? d.Customer?.Title ?? null,
             date: d.DateIssued ?? d.DateReceived ?? d.Date ?? null,
             currency: d.Currency?.Name ?? d.Currency?.Code ?? null,
-            base: d.InvoiceValue != null && d.VatAmount != null ? d.InvoiceValue - d.VatAmount : (d.Amount ?? d.BaseAmount ?? null),
-            vat: d.VatAmount ?? d.VAT ?? null,
+            base: v.base, vat: v.vat,
             total: d.InvoiceValue ?? d.AmountWithVAT ?? d.TotalAmount ?? null,
             org_check: String(d.Organisation?.ID ?? ORG) === ORG,
-          })),
+          }; }),
         };
       } catch (e) { out[kind] = { error: String(e).slice(0, 200) }; }
     }
