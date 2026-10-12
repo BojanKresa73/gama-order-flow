@@ -60,7 +60,7 @@ export async function exportPdf(issues: Issue[], res: Res, profit: { year: numbe
   const t = categoryTotals(issues);
   for (const k of Object.keys(CATEGORY_LABEL)) {
     const items = issues.filter((i) => i.category === k);
-    text(`${CATEGORY_LABEL[k as keyof typeof CATEGORY_LABEL]}: ${t[k]?.count ?? 0} stavki, ${fmtRsd(t[k]?.amount ?? 0)} RSD, razjašnjeno ${items.filter((i) => res[i.key]).length}`, f, 9);
+    text(`${CATEGORY_LABEL[k as keyof typeof CATEGORY_LABEL]}: ${t[k]?.count ?? 0} stavki, ${items.some((i) => i.amount != null) ? fmtRsd(t[k]?.amount ?? 0) + " RSD" : "iznos nije poznat"}, razjašnjeno ${items.filter((i) => res[i.key]).length}`, f, 9);
   }
   if (profit) { y -= 4; text(`Privremena dobit ${profit.year}: ${fmtRsd(profit.result)} RSD`, b, 10); text(PROFIT_WARNING, f, 8, rgb(0.7, 0.1, 0.1)); }
   for (const k of Object.keys(CATEGORY_LABEL)) {
