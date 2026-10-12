@@ -109,6 +109,11 @@ Deno.serve(async (req) => {
             return { base: sum(["Base", "TaxBase", "Value", "BaseAmount"]), vat: sum(["VatAmount", "VAT", "Amount", "TaxAmount"]), keys: Object.keys(vr[0]) };
           }
           const ir = x.IssuedInvoiceRows ?? x.ReceivedInvoiceRows ?? [];
+          if (ir.length && ir[0].Value != null) {
+            const b = ir.reduce((a: number, r: any) => a + Number(r.Value ?? 0), 0);
+            const v = ir.reduce((a: number, r: any) => a + Number(r.Value ?? 0) * Number(r.VATPercent ?? r.VatRatePercentage ?? 0) / 100, 0);
+            return { base: Math.round(b * 100) / 100, vat: Math.round(v * 100) / 100, keys: [] };
+          }
           return { base: null, vat: null, keys: Object.keys(x).filter((k) => /vat|tax|row|value|amount/i.test(k)), rowKeys: ir[0] ? Object.keys(ir[0]) : [] };
         };
         out[kind] = {
