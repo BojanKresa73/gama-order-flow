@@ -44,7 +44,7 @@ Deno.serve(async (req) => {
   if (!allowed) return json({ error: "Nemate pristup" }, 403);
 
   const body = await req.json().catch(() => ({}));
-  const mode = body?.mode === "login" || body?.mode === "sample" ? "login" : "check"; // default: no network call to Minimax
+  const mode = ["login","sample","get"].includes(body?.mode) ? "login" : "check"; // default: no network call to Minimax
 
   const values = NAMES.map((n) => (Deno.env.get(n) ?? "").trim());
   const configured = Object.fromEntries(NAMES.map((n, i) => [n, values[i].trim().length > 0]));
