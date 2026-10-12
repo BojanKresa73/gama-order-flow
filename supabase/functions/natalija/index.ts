@@ -71,6 +71,11 @@ function buildTools(db: SupabaseClient) {
       inputSchema: z.object({ year: z.number().int() }),
       execute: async (a) => { const { data, error } = await db.rpc("mm_profit_check" as any, { p_year: a.year }); return error ? { error: error.message } : data; },
     }),
+    finance_bookkeeper_resolutions: tool({
+      description: "Pitanja za knjigovođu koja je vlasnik označio kao razjašnjena (ključ, oblast, naziv, iznos, dokument potvrde, datum potvrde, napomena). Sve što nije ovde je još otvoreno.",
+      inputSchema: z.object({}),
+      execute: async () => { const { data, error } = await db.from("mm_review_resolutions").select("issue_key,category,title,amount_rsd,confirmation_document,confirmed_on,note"); return error ? { error: error.message } : data; },
+    }),
     finance_documents: tool({
       description: "Pretraga Minimax dokumenata Gama United (izlazni 'issued' / ulazni 'received') po partneru, vrsti, periodu ili statusu provere.",
       inputSchema: z.object({
