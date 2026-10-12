@@ -162,12 +162,19 @@ Deno.serve(async (req) => {
     if (step === "link_vat") {
       // Received invoice base/VAT only from PR journal VAT records. No 1.2 division. Unmatched -> Potrebna provera.
       let from = 0, linked = 0, review = 0;
+      // All PR journals once, keyed by normalized description (handles "PR:", "PR;", "AR" prefix).
+      const prByKey = new Map<string, number[]>();
+      for (let f = 0; ; f += 1000) {
+        const { data } = await db.from("mm_journals").select("minimax_id,description").eq("journal_type", "PR").range(f, f + 999);
+        if (!data?.length) break;
+        for (const j of data as any[]) { const k = journalDescriptionKey(j.description ?? ""); prByKey.set(k, [...(prByKey.get(k) ?? []), j.minimax_id]); }
+        if (data.length < 1000) break;
+      }
       for (;;) {
         const { data: docs } = await db.from("mm_documents").select("minimax_id,kind,total_rsd,currency,journal_key").eq("direction", "received").range(from, from + 499);
         if (!docs?.length) break;
         for (const doc of docs as any[]) {
-          const { data: js } = await db.from("mm_journals").select("minimax_id").eq("journal_type", "PR").in("description", [doc.journal_key, `PR:${doc.journal_key}`]);
-          const ids = (js ?? []).map((j: any) => j.minimax_id);
+          const ids = prByKey.get(doc.journal_key ?? "") ?? [];
           let rows: any[] = [];
           if (ids.length) { const { data } = await db.from("mm_vat_rows").select("raw").in("journal_minimax_id", ids); rows = (data ?? []).flatMap((r: any) => r.raw?.VatEntryRows ?? []); }
           const s = summarizeVat(rows, doc.total_rsd);
