@@ -80,6 +80,16 @@ Deno.serve(async (req) => {
   }
   const { access_token } = await tokRes.json();
 
+  if (body?.mode === "get") {
+    // Read-only diagnostic GET, org fixed server-side; path is relative and sanitized.
+    const p = String(body?.path ?? "");
+    if (!/^[a-zA-Z]+(\/[0-9]+)?(\/[a-zA-Z]+)?(\?[A-Za-z0-9=&%._-]*)?$/.test(p)) return json({ error: "Neispravna putanja" }, 400);
+    const r = await fetch(`https://moj.minimax.rs/RS/API/api/orgs/${UNITED_ORG_ID}/${p}`, { method: "GET", signal: AbortSignal.timeout(25000), headers: { Authorization: `Bearer ${access_token}` } });
+    const t = await r.text();
+    let data: unknown = null; try { data = JSON.parse(t); } catch { data = sanitize(t, values); }
+    return json({ step: "get", organisation_id: UNITED_ORG_ID, http_status: r.status, data });
+  }
+
   if (body?.mode === "sample") {
     // Organisation is fixed server-side. Never taken from request.
     const ORG = UNITED_ORG_ID;
