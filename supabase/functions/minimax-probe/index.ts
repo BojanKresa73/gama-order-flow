@@ -9,6 +9,8 @@ const json = (b: unknown, s = 200) =>
 const TOKEN_URL = "https://moj.minimax.rs/RS/AUT/OAuth20/Token";
 const ORGS_URL = "https://moj.minimax.rs/RS/API/api/currentuser/orgs";
 const GDC_ORG_ID = "52515";
+const STUDIO_ORG_ID = "51495";
+const UNITED_ORG_ID = "79412"; // confirmed by owner 12.10.2026; the only org allowed for business data
 const UNITED_PIB = "114876455";
 const NAMES = ["MINIMAX_CLIENT_ID", "MINIMAX_CLIENT_SECRET", "MINIMAX_USERNAME", "MINIMAX_PASSWORD"] as const;
 
@@ -42,7 +44,7 @@ Deno.serve(async (req) => {
   if (!allowed) return json({ error: "Nemate pristup" }, 403);
 
   const body = await req.json().catch(() => ({}));
-  const mode = body?.mode === "login" ? "login" : "check"; // default: no network call to Minimax
+  const mode = body?.mode === "login" || body?.mode === "sample" ? "login" : "check"; // default: no network call to Minimax
 
   const values = NAMES.map((n) => (Deno.env.get(n) ?? "").trim());
   const configured = Object.fromEntries(NAMES.map((n, i) => [n, values[i].trim().length > 0]));
@@ -77,6 +79,64 @@ Deno.serve(async (req) => {
     });
   }
   const { access_token } = await tokRes.json();
+
+  if (body?.mode === "sample") {
+    // Organisation is fixed server-side. Never taken from request.
+    const ORG = UNITED_ORG_ID;
+    if (ORG === GDC_ORG_ID || ORG === STUDIO_ORG_ID) return json({ error: "Zabranjena organizacija" }, 403);
+    const H = { Authorization: `Bearer ${access_token}` };
+    const base = `https://moj.minimax.rs/RS/API/api/orgs/${ORG}`;
+    const out: Record<string, unknown> = { organisation_id: ORG };
+    for (const [kind, path] of [["izlazne", "issuedinvoices"], ["ulazne", "receivedinvoices"]] as const) {
+      try {
+        const r = await fetch(`${base}/${path}?PageSize=5&CurrentPage=1`, { signal: AbortSignal.timeout(20000), headers: H });
+        if (!r.ok) { out[kind] = { error: r.status, message: sanitize(await r.text(), values) }; continue; }
+        const j = await r.json();
+        const rows = (j?.Rows ?? []).slice(0, 5);
+        const idKey = kind === "izlazne" ? "IssuedInvoiceId" : "ReceivedInvoiceId";
+        const details: any[] = [];
+        for (const d of rows) {
+          try {
+            const dr = await fetch(`${base}/${path}/${d[idKey]}`, { signal: AbortSignal.timeout(20000), headers: H });
+            details.push(dr.ok ? await dr.json() : null);
+          } catch { details.push(null); }
+        }
+        const vatInfo = (x: any) => {
+          if (!x) return { base: null, vat: null, keys: [] };
+          const vr = x.IssuedInvoiceVatRows ?? x.ReceivedInvoiceVatRows ?? x.VatRows ?? x.ReceivedInvoiceRowsVAT ?? null;
+          if (Array.isArray(vr) && vr.length) {
+            const sum = (k: string[]) => vr.reduce((a: number, r: any) => a + Number(k.map((kk) => r[kk]).find((v) => v != null) ?? 0), 0);
+            return { base: sum(["Base", "TaxBase", "Value", "BaseAmount"]), vat: sum(["VatAmount", "VAT", "Amount", "TaxAmount"]), keys: Object.keys(vr[0]) };
+          }
+          const ir = x.IssuedInvoiceRows ?? x.ReceivedInvoiceRows ?? [];
+          if (ir.length && ir[0].Value != null) {
+            const b = ir.reduce((a: number, r: any) => a + Number(r.Value ?? 0), 0);
+            const v = ir.reduce((a: number, r: any) => a + Number(r.Value ?? 0) * Number(r.VATPercent ?? r.VatRatePercentage ?? 0) / 100, 0);
+            return { base: Math.round(b * 100) / 100, vat: Math.round(v * 100) / 100, keys: [] };
+          }
+          return { base: null, vat: null, keys: Object.keys(x).filter((k) => /vat|tax|row|value|amount/i.test(k)), rowKeys: ir[0] ? Object.keys(ir[0]) : [] };
+        };
+        out[kind] = {
+          total_in_minimax: j?.TotalRows ?? null,
+          field_names: rows[0] ? Object.keys(rows[0]) : [],
+          docs: rows.map((d: any, i: number) => { const v = vatInfo(details[i]); return {
+            vat_keys: v.keys, row_keys: (v as any).rowKeys,
+            number: d.InvoiceNumber ?? d.DocumentNumber ?? d.Number ?? null,
+            type: d.InvoiceType ?? d.DocumentType ?? d.Type ?? null,
+            status: d.Status ?? null,
+            partner: d.Customer?.Name ?? d.Supplier?.Name ?? d.Customer?.Title ?? null,
+            date: d.DateIssued ?? d.DateReceived ?? d.Date ?? null,
+            currency: d.Currency?.Name ?? d.Currency?.Code ?? null,
+            base: v.base, vat: v.vat,
+            total: d.InvoiceValue ?? d.AmountWithVAT ?? d.TotalAmount ?? null,
+            org_check: String(d.Organisation?.ID ?? ORG) === ORG,
+          }; }),
+        };
+      } catch (e) { out[kind] = { error: String(e).slice(0, 200) }; }
+    }
+    return json({ step: "sample", success: true, ...out });
+  }
+
 
   const orgRes = await fetch(ORGS_URL, { signal: AbortSignal.timeout(20000), headers: { Authorization: `Bearer ${access_token}` } });
   if (!orgRes.ok) {
