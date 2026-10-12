@@ -57,6 +57,13 @@
       "when": 1791821876728,
       "tag": "0007_mm_reconciliation_fx_pairing",
       "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "7",
+      "when": 1791822390470,
+      "tag": "0008_migration",
+      "breakpoints": true
     }
   ]
 }

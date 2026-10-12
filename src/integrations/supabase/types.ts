@@ -2540,6 +2540,45 @@ export type Database = {
         }
         Relationships: []
       }
+      mm_review_resolutions: {
+        Row: {
+          amount_rsd: number | null
+          category: string
+          confirmation_document: string
+          confirmed_on: string
+          issue_key: string
+          note: string | null
+          question: string | null
+          resolved_at: string
+          resolved_by: string
+          title: string
+        }
+        Insert: {
+          amount_rsd?: number | null
+          category: string
+          confirmation_document: string
+          confirmed_on: string
+          issue_key: string
+          note?: string | null
+          question?: string | null
+          resolved_at?: string
+          resolved_by?: string
+          title: string
+        }
+        Update: {
+          amount_rsd?: number | null
+          category?: string
+          confirmation_document?: string
+          confirmed_on?: string
+          issue_key?: string
+          note?: string | null
+          question?: string | null
+          resolved_at?: string
+          resolved_by?: string
+          title?: string
+        }
+        Relationships: []
+      }
       mm_sync_state: {
         Row: {
           entity: string
