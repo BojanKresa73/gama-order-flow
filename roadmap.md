@@ -9,6 +9,6 @@
 - [x] Promeniti ime AI agenta u Natalija (stranica, putanja /natalija, dugme, serverska funkcija `natalija`)
 - [x] Dijagnostika kupaca, dobavljača, 120 dokumenata, dobiti 2026, banaka (izveštaj 12.10.2026)
 - [x] Ispravljen zbir konta 204/435 i povezivanje ulaznih dokumenata (120 → 66 spornih)
-- [ ] Knjigovođa: stari dugovi kupaca 4,80 mil., 7 dobavljača 0,39 mil., 57 dokumenata, prelazni računi, amortizacija 2026
+- [ ] Knjigovođa: stari dugovi kupaca 4,80 mil., 7 dobavljača 0,39 mil., 66 dokumenata, prelazni računi, amortizacija 2026
 - [ ] Usaglašavanje banaka — čeka izvode na isti datum
 - [x] Ispravka obračuna: kartice Usaglašavanje, Banke, provera dobiti; Natalija koristi iste funkcije; testovi
