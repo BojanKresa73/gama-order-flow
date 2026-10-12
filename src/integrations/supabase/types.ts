@@ -2324,6 +2324,45 @@ export type Database = {
         }
         Relationships: []
       }
+      mm_bank_statements: {
+        Row: {
+          account_code: string
+          account_number: string | null
+          bank_name: string | null
+          closing_balance: number | null
+          entered_at: string
+          entered_by: string
+          id: string
+          note: string | null
+          statement_date: string
+          statement_number: string | null
+        }
+        Insert: {
+          account_code: string
+          account_number?: string | null
+          bank_name?: string | null
+          closing_balance?: number | null
+          entered_at?: string
+          entered_by?: string
+          id?: string
+          note?: string | null
+          statement_date: string
+          statement_number?: string | null
+        }
+        Update: {
+          account_code?: string
+          account_number?: string | null
+          bank_name?: string | null
+          closing_balance?: number | null
+          entered_at?: string
+          entered_by?: string
+          id?: string
+          note?: string | null
+          statement_date?: string
+          statement_number?: string | null
+        }
+        Relationships: []
+      }
       mm_documents: {
         Row: {
           base_rsd: number | null
@@ -5543,6 +5582,7 @@ export type Database = {
         Returns: boolean
       }
       is_superuser: { Args: { p_uid: string }; Returns: boolean }
+      mm_books_freshness: { Args: never; Returns: Json }
       mm_control_summary: { Args: never; Returns: Json }
       mm_ledger_clean: {
         Args: never
