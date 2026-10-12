@@ -68,7 +68,7 @@ export default function Natalija() {
   if (accessLoading) return <div className="flex min-h-screen items-center justify-center"><Loader2 className="h-8 w-8 animate-spin" /></div>;
   if (!access) return (
     <div className="min-h-screen bg-background"><AppHeader />
-      <p className="p-10 text-center text-muted-foreground">Nemate pristup Borisu.</p></div>
+      <p className="p-10 text-center text-muted-foreground">Nemate pristup Nataliji.</p></div>
   );
 
   return (
