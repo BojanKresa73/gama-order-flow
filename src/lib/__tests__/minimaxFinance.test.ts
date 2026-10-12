@@ -57,3 +57,21 @@ describe("povezivanje i duplikati", () => {
   it("EUR stavke se preračunavaju po kursu dokumenta (110 € × 117,3875)", () => expect(toRsd(110, 117.3875)).toBe(12912.63));
   it("bez kursa nema iznosa", () => expect(toRsd(110, null)).toBeNull());
 });
+
+import { classifyReceived, openAmount, accountCodeFromName, deductibleVat } from "../minimaxFinance";
+import { readFileSync } from "node:fs";
+
+describe("ulazni dokumenti i sinhronizacija", () => {
+  it("nacrt nije faktura", () => expect(classifyReceived({ Status: "O", InvoiceValue: 100 })).toBe("nacrt"));
+  it("negativan ulazni = odobrenje dobavljača", () => expect(classifyReceived({ Status: "P", InvoiceValue: -500 })).toBe("knjizno_odobrenje_dobavljaca"));
+  it("avans dobavljaču", () => expect(classifyReceived({ Status: "P", InvoiceValue: 10, DocumentReference: "Avans 12" })).toBe("avans_dobavljacu"));
+  it("nepoznato plaćeno -> otvoreno je null", () => expect(openAmount(1000, null)).toBeNull());
+  it("otvoreno = ukupno - plaćeno", () => expect(openAmount(1000, 400)).toBe(600));
+  it("šifra konta iz naziva", () => expect(accountCodeFromName("4392 - Ostale obaveze iz poslovanja")).toBe("4392"));
+  it("nepriznati PDV nije odbitni", () => {
+    const s = summarizeVat([{ VatBase: 100, Vat: 20, ServicesVatBase: 0, ServicesVat: 0, NonDeductibleVatBase: 0, NonDeductibleVat: 10, ServicesNonDeductibleVatBase: 0, ServicesNonDeductibleVat: 0 }], 130);
+    expect(deductibleVat(s)).toBe(20);
+  });
+  it("serverska kopija pravila je identična testiranoj", () =>
+    expect(readFileSync("supabase/functions/_shared/minimaxFinance.ts", "utf8")).toBe(readFileSync("src/lib/minimaxFinance.ts", "utf8")));
+});

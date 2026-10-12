@@ -22,6 +22,13 @@
       "when": 1791755052509,
       "tag": "0002_grant_has_role_anon_and_strict_price",
       "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "7",
+      "when": 1791792195101,
+      "tag": "0003_minimax_united_finance_mirror",
+      "breakpoints": true
     }
   ]
 }

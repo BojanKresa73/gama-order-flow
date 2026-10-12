@@ -2297,6 +2297,312 @@ export type Database = {
           },
         ]
       }
+      mm_accounts: {
+        Row: {
+          allowed_posting: string | null
+          code: string
+          minimax_id: number
+          name: string | null
+          org_id: string
+          synced_at: string
+        }
+        Insert: {
+          allowed_posting?: string | null
+          code: string
+          minimax_id: number
+          name?: string | null
+          org_id?: string
+          synced_at?: string
+        }
+        Update: {
+          allowed_posting?: string | null
+          code?: string
+          minimax_id?: number
+          name?: string | null
+          org_id?: string
+          synced_at?: string
+        }
+        Relationships: []
+      }
+      mm_documents: {
+        Row: {
+          base_rsd: number | null
+          currency: string | null
+          direction: string
+          doc_date: string | null
+          due_date: string | null
+          journal_key: string | null
+          kind: string
+          minimax_id: number
+          non_deductible_rsd: number | null
+          number: string | null
+          open_rsd: number | null
+          org_id: string
+          paid_rsd: number | null
+          partner_minimax_id: number | null
+          partner_name: string | null
+          payment_status: string | null
+          raw: Json | null
+          review_reason: string | null
+          review_status: string
+          status: string | null
+          synced_at: string
+          total_rsd: number | null
+          vat_rsd: number | null
+          vat_status: string | null
+          year: number | null
+        }
+        Insert: {
+          base_rsd?: number | null
+          currency?: string | null
+          direction: string
+          doc_date?: string | null
+          due_date?: string | null
+          journal_key?: string | null
+          kind: string
+          minimax_id: number
+          non_deductible_rsd?: number | null
+          number?: string | null
+          open_rsd?: number | null
+          org_id?: string
+          paid_rsd?: number | null
+          partner_minimax_id?: number | null
+          partner_name?: string | null
+          payment_status?: string | null
+          raw?: Json | null
+          review_reason?: string | null
+          review_status?: string
+          status?: string | null
+          synced_at?: string
+          total_rsd?: number | null
+          vat_rsd?: number | null
+          vat_status?: string | null
+          year?: number | null
+        }
+        Update: {
+          base_rsd?: number | null
+          currency?: string | null
+          direction?: string
+          doc_date?: string | null
+          due_date?: string | null
+          journal_key?: string | null
+          kind?: string
+          minimax_id?: number
+          non_deductible_rsd?: number | null
+          number?: string | null
+          open_rsd?: number | null
+          org_id?: string
+          paid_rsd?: number | null
+          partner_minimax_id?: number | null
+          partner_name?: string | null
+          payment_status?: string | null
+          raw?: Json | null
+          review_reason?: string | null
+          review_status?: string
+          status?: string | null
+          synced_at?: string
+          total_rsd?: number | null
+          vat_rsd?: number | null
+          vat_status?: string | null
+          year?: number | null
+        }
+        Relationships: []
+      }
+      mm_journals: {
+        Row: {
+          description: string | null
+          detail_loaded: boolean
+          entries_count: number | null
+          journal_date: string | null
+          journal_type: string | null
+          minimax_id: number
+          org_id: string
+          row_version: string | null
+          status: string | null
+          synced_at: string
+          vat_count: number | null
+          year: number | null
+        }
+        Insert: {
+          description?: string | null
+          detail_loaded?: boolean
+          entries_count?: number | null
+          journal_date?: string | null
+          journal_type?: string | null
+          minimax_id: number
+          org_id?: string
+          row_version?: string | null
+          status?: string | null
+          synced_at?: string
+          vat_count?: number | null
+          year?: number | null
+        }
+        Update: {
+          description?: string | null
+          detail_loaded?: boolean
+          entries_count?: number | null
+          journal_date?: string | null
+          journal_type?: string | null
+          minimax_id?: number
+          org_id?: string
+          row_version?: string | null
+          status?: string | null
+          synced_at?: string
+          vat_count?: number | null
+          year?: number | null
+        }
+        Relationships: []
+      }
+      mm_ledger_rows: {
+        Row: {
+          account_code: string | null
+          account_minimax_id: number | null
+          account_name: string | null
+          credit_rsd: number
+          currency: string | null
+          debit_rsd: number
+          description: string | null
+          entry_date: string | null
+          journal_minimax_id: number
+          journal_type: string | null
+          minimax_id: number
+          org_id: string
+          partner_minimax_id: number | null
+          synced_at: string
+          year: number | null
+        }
+        Insert: {
+          account_code?: string | null
+          account_minimax_id?: number | null
+          account_name?: string | null
+          credit_rsd?: number
+          currency?: string | null
+          debit_rsd?: number
+          description?: string | null
+          entry_date?: string | null
+          journal_minimax_id: number
+          journal_type?: string | null
+          minimax_id: number
+          org_id?: string
+          partner_minimax_id?: number | null
+          synced_at?: string
+          year?: number | null
+        }
+        Update: {
+          account_code?: string | null
+          account_minimax_id?: number | null
+          account_name?: string | null
+          credit_rsd?: number
+          currency?: string | null
+          debit_rsd?: number
+          description?: string | null
+          entry_date?: string | null
+          journal_minimax_id?: number
+          journal_type?: string | null
+          minimax_id?: number
+          org_id?: string
+          partner_minimax_id?: number | null
+          synced_at?: string
+          year?: number | null
+        }
+        Relationships: []
+      }
+      mm_partners: {
+        Row: {
+          code: string | null
+          minimax_id: number
+          name: string | null
+          org_id: string
+          raw: Json | null
+          synced_at: string
+          tax_number: string | null
+          usage: string | null
+        }
+        Insert: {
+          code?: string | null
+          minimax_id: number
+          name?: string | null
+          org_id?: string
+          raw?: Json | null
+          synced_at?: string
+          tax_number?: string | null
+          usage?: string | null
+        }
+        Update: {
+          code?: string | null
+          minimax_id?: number
+          name?: string | null
+          org_id?: string
+          raw?: Json | null
+          synced_at?: string
+          tax_number?: string | null
+          usage?: string | null
+        }
+        Relationships: []
+      }
+      mm_sync_state: {
+        Row: {
+          entity: string
+          fetched: number
+          last_error: string | null
+          next_page: number
+          org_id: string
+          status: string
+          total_remote: number | null
+          updated_at: string
+        }
+        Insert: {
+          entity: string
+          fetched?: number
+          last_error?: string | null
+          next_page?: number
+          org_id?: string
+          status?: string
+          total_remote?: number | null
+          updated_at?: string
+        }
+        Update: {
+          entity?: string
+          fetched?: number
+          last_error?: string | null
+          next_page?: number
+          org_id?: string
+          status?: string
+          total_remote?: number | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      mm_vat_rows: {
+        Row: {
+          base: number | null
+          journal_minimax_id: number
+          non_deductible: number | null
+          org_id: string
+          raw: Json | null
+          row_index: number
+          vat: number | null
+        }
+        Insert: {
+          base?: number | null
+          journal_minimax_id: number
+          non_deductible?: number | null
+          org_id?: string
+          raw?: Json | null
+          row_index: number
+          vat?: number | null
+        }
+        Update: {
+          base?: number | null
+          journal_minimax_id?: number
+          non_deductible?: number | null
+          org_id?: string
+          raw?: Json | null
+          row_index?: number
+          vat?: number | null
+        }
+        Relationships: []
+      }
       nbs_exchange_rates: {
         Row: {
           currency_code: string
@@ -5198,6 +5504,8 @@ export type Database = {
         Returns: boolean
       }
       is_superuser: { Args: { p_uid: string }; Returns: boolean }
+      mm_control_summary: { Args: never; Returns: Json }
+      mm_profit_by_month: { Args: { p_year: number }; Returns: Json }
       next_complaint_number: { Args: never; Returns: string }
       next_pasted_quote_number: { Args: never; Returns: string }
       next_quote_number: { Args: never; Returns: string }

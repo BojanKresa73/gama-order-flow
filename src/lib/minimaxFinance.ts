@@ -90,3 +90,37 @@ export function toRsd(amountDocCurrency: number, exchangeRate: number | null | u
   if (exchangeRate == null || !(exchangeRate > 0)) return null;
   return Math.round(amountDocCurrency * exchangeRate * 100) / 100;
 }
+
+export type ReceivedKind = "nacrt" | "avans_dobavljacu" | "knjizno_odobrenje_dobavljaca" | "faktura";
+
+export interface ReceivedDoc {
+  Status?: string | null; InvoiceValue: number | null; InvoiceAmount?: number | null;
+  DocumentReference?: string | null; DocumentNumbering?: { Name?: string | null } | null;
+}
+
+/** Received docs: draft (O) is never posted; negative = supplier credit note; "avans" numbering = advance to supplier. */
+export function classifyReceived(d: ReceivedDoc): ReceivedKind {
+  if (d.Status === "O") return "nacrt";
+  const v = d.InvoiceValue ?? d.InvoiceAmount ?? 0;
+  if (v < 0) return "knjizno_odobrenje_dobavljaca";
+  const tag = `${d.DocumentNumbering?.Name ?? ""} ${d.DocumentReference ?? ""}`.toLowerCase();
+  if (tag.includes("avans")) return "avans_dobavljacu";
+  return "faktura";
+}
+
+/** Open payable/receivable from header values; null when unknown (never 0). */
+export function openAmount(total: number | null | undefined, paid: number | null | undefined): number | null {
+  if (total == null || paid == null) return null;
+  return Math.round((total - paid) * 100) / 100;
+}
+
+/** "4392 - Ostale obaveze" -> "4392" */
+export function accountCodeFromName(name: string | null | undefined): string | null {
+  const m = /^\s*([0-9]+)\s*-/.exec(name ?? "");
+  return m ? m[1] : null;
+}
+
+/** Deductible VAT excludes non-deductible VAT. */
+export function deductibleVat(s: VatSummary): number | null {
+  return s.status === "ok" ? s.vat : null;
+}
