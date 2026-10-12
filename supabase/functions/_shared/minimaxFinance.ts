@@ -70,8 +70,9 @@ export function summarizeVat(rows: VatRow[] | null | undefined, totalRsd: number
 export function receivedJournalKey(year: number, number: number, docRef: string | null | undefined) {
   return `${year}-${number};${(docRef ?? "").trim()}`;
 }
+/** Minimax PR descriptions vary: "PR:2025-1;ref", "PR;2025-1;ref", "PR:AR2025-1;ref" (advance numbering). */
 export function journalDescriptionKey(desc: string) {
-  return desc.replace(/^PR:/, "").trim();
+  return desc.trim().replace(/^PR[:;]\s*/, "").replace(/^AR(?=\d{4}-)/, "").trim();
 }
 
 /** Idempotent upsert by original Minimax ID. */
@@ -124,4 +125,26 @@ export function accountCodeFromName(name: string | null | undefined): string | n
 /** Deductible VAT excludes non-deductible VAT. */
 export function deductibleVat(s: VatSummary): number | null {
   return s.status === "ok" ? s.vat : null;
+}
+
+export interface LedgerRow { year: number; journal_type: string; debit: number; credit: number }
+
+/** Account balance across years without double counting: an opening entry (OTV) in a later year only
+ * carries forward rows already present in earlier years, so it is excluded. The first year's OTV is
+ * the real pre-Minimax opening balance and stays. side = which side increases the balance. */
+export function ledgerBalance(rows: LedgerRow[], side: "debit" | "credit"): number {
+  if (!rows.length) return 0;
+  const first = Math.min(...rows.map((r) => r.year));
+  const s = rows.filter((r) => !(r.journal_type === "OTV" && r.year > first))
+    .reduce((a, r) => a + (side === "debit" ? r.debit - r.credit : r.credit - r.debit), 0);
+  return Math.round(s * 100) / 100;
+}
+
+/** Carry-forward amount that a naive sum would double count. */
+export function carriedOpening(rows: LedgerRow[], side: "debit" | "credit"): number {
+  if (!rows.length) return 0;
+  const first = Math.min(...rows.map((r) => r.year));
+  const s = rows.filter((r) => r.journal_type === "OTV" && r.year > first)
+    .reduce((a, r) => a + (side === "debit" ? r.debit - r.credit : r.credit - r.debit), 0);
+  return Math.round(s * 100) / 100;
 }
