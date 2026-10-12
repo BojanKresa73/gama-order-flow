@@ -77,5 +77,5 @@ export async function exportPdf(issues: Issue[], res: Res, profit: { year: numbe
   }
   const pages = pdf.getPages();
   pages.forEach((p, i) => p.drawText(`Strana ${i + 1} / ${pages.length}`, { x: W - M - 60, y: 20, size: 7, font: f, color: rgb(0.5, 0.5, 0.5) }));
-  download(new Blob([await pdf.save()], { type: "application/pdf" }), `Gama_United_izvestaj_knjigovodja_${date}.pdf`);
+  download(new Blob([(await pdf.save()).slice().buffer as ArrayBuffer], { type: "application/pdf" }), `Gama_United_izvestaj_knjigovodja_${date}.pdf`);
 }
