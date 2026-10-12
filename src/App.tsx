@@ -41,7 +41,7 @@ const AdminNewsletter = lazy(() => import("./pages/AdminNewsletter"));
 const Vacations = lazy(() => import("./pages/Vacations"));
 const Quotes = lazy(() => import("./pages/Quotes"));
 const Complaints = lazy(() => import("./pages/Complaints"));
-const Boris = lazy(() => import("./pages/Boris"));
+const Natalija = lazy(() => import("./pages/Natalija"));
 const FinanceControl = lazy(() => import("./pages/FinanceControl"));
 const NotFound = lazy(() => import("./pages/NotFound"));
 
@@ -113,7 +113,7 @@ const App = () => {
                 <Route path="/reports/delivery-notes" element={<InternalUserGuard><ClientDeliveryReport /></InternalUserGuard>} />
                 <Route path="/vacations" element={<InternalUserGuard><Vacations /></InternalUserGuard>} />
                 <Route path="/quotes" element={<AdminGuard><Quotes /></AdminGuard>} />
-                <Route path="/boris" element={<InternalUserGuard><Boris /></InternalUserGuard>} />
+                <Route path="/natalija" element={<InternalUserGuard><Natalija /></InternalUserGuard>} />
                 <Route path="/finansije" element={<InternalUserGuard><FinanceControl /></InternalUserGuard>} />
                 <Route path="/reklamacije" element={<InternalUserGuard><Complaints /></InternalUserGuard>} />
 
