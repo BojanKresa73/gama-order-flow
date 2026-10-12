@@ -36,6 +36,13 @@
       "when": 1791794287313,
       "tag": "0004_mm_rpc_year_journals",
       "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "7",
+      "when": 1791821693957,
+      "tag": "0005_mm_reconciliation",
+      "breakpoints": true
     }
   ]
 }
