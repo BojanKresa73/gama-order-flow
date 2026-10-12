@@ -20,7 +20,7 @@ interface DashboardQuickActionsProps {
 
 export const DashboardQuickActions = ({ canViewStats, isSuper }: DashboardQuickActionsProps) => {
   const navigate = useNavigate();
-  const { data: hasBoris } = useQuery({ queryKey: ["finance-access"], queryFn: async () => (await supabase.rpc("has_finance_access")).data === true });
+  const { data: hasNatalija } = useQuery({ queryKey: ["finance-access"], queryFn: async () => (await supabase.rpc("has_finance_access")).data === true });
   const { isAdmin } = useAuthz();
   const [quickCalcOpen, setQuickCalcOpen] = useState(false);
 
@@ -115,13 +115,13 @@ export const DashboardQuickActions = ({ canViewStats, isSuper }: DashboardQuickA
             </DropdownMenuContent>
           </DropdownMenu>
         )}
-        {hasBoris && (
-          <Button onClick={() => navigate("/boris")}>
+        {hasNatalija && (
+          <Button onClick={() => navigate("/natalija")}>
             <Brain className="h-4 w-4 mr-2" />
-            Boris AI
+            Natalija AI
           </Button>
         )}
-        {hasBoris && (
+        {hasNatalija && (
           <Button variant="outline" onClick={() => navigate("/finansije")}>
             Finansije
           </Button>
