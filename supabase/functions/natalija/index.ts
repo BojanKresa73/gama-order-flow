@@ -1,4 +1,4 @@
-// Boris — Gama AI Brain. Read-only business assistant for Gama United.
+// Natalija — Gama AI Brain. Read-only business assistant for Gama United.
 // Access: only users listed in finance_access_grants (checked via has_finance_access()).
 import { corsHeaders } from "npm:@supabase/supabase-js@2/cors";
 import { createClient, type SupabaseClient } from "npm:@supabase/supabase-js@2";
@@ -18,7 +18,7 @@ const BodySchema = z.object({
   message: z.string().min(1).max(4000),
 });
 
-const SYSTEM = `Ti si Boris, AI poslovni analitičar firme Gama United d.o.o. (Beograd) — CTP osvetljavanje ofset ploča, filmovanje, digitalna tabak štampa, veliki formati i ostale usluge.
+const SYSTEM = `Ti si Natalija, AI poslovni analitičar firme Gama United d.o.o. (Beograd) — CTP osvetljavanje ofset ploča, filmovanje, digitalna tabak štampa, veliki formati i ostale usluge.
 Odgovaraj ISKLJUČIVO na srpskom jeziku, latinicom, bez hrvatskih izraza (koristi: tabak, štampa, nedelja, januar...).
 Pravila:
 - Koristi alate da pronađeš PRAVE podatke. Nikad ne izmišljaj brojeve. Ako podatak ne postoji, reci to jasno.
@@ -274,7 +274,7 @@ Deno.serve(async (req) => {
     const { data: u, error: ue } = await db.auth.getUser(auth.slice(7));
     if (ue || !u.user) return json({ error: "Niste prijavljeni" }, 401);
     const { data: allowed } = await db.rpc("has_finance_access" as any);
-    if (!allowed) return json({ error: "Nemate pristup Borisu" }, 403);
+    if (!allowed) return json({ error: "Nemate pristup Nataliji" }, 403);
 
     const parsed = BodySchema.safeParse(await req.json());
     if (!parsed.success) return json({ error: "Neispravan zahtev" }, 400);
@@ -325,7 +325,7 @@ Deno.serve(async (req) => {
       const e: any = streamError;
       const status = e?.statusCode ?? 500;
       const msg = status === 402 ? "Nema dovoljno AI kredita. Dopunite kredite u podešavanjima." :
-        status === 429 ? "Previše zahteva, pokušajte za minut." : (e?.message ?? "Boris nije uspeo da odgovori.");
+        status === 429 ? "Previše zahteva, pokušajte za minut." : (e?.message ?? "Natalija nije uspela da odgovori.");
       return json({ error: msg, conversation_id: conversationId }, status === 402 || status === 429 || status === 403 ? status : 500);
     }
     const steps = await result.steps;
@@ -334,7 +334,7 @@ Deno.serve(async (req) => {
     await db.from("ai_conversations").update({ updated_at: new Date().toISOString() }).eq("id", conversationId);
     return json({ conversation_id: conversationId, answer: text, tools_used: toolsUsed });
   } catch (e) {
-    console.error("boris error", e);
+    console.error("natalija error", e);
     return json({ error: e instanceof Error ? e.message : "Greška" }, 500);
   }
 });
