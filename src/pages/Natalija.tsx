@@ -17,7 +17,7 @@ const EXAMPLES = [
   "Koliko zatvorenih naloga još nije fakturisano ovog meseca?",
 ];
 
-export default function Boris() {
+export default function Natalija() {
   const qc = useQueryClient();
   const [convId, setConvId] = useState<string | null>(null);
   const [msgs, setMsgs] = useState<Msg[]>([]);
@@ -51,12 +51,12 @@ export default function Boris() {
     if (!message || busy) return;
     setInput(""); setErr(null); setBusy(true);
     setMsgs((m) => [...m, { role: "user", content: message }]);
-    const { data, error } = await supabase.functions.invoke("boris", { body: { conversation_id: convId, message } });
+    const { data, error } = await supabase.functions.invoke("natalija", { body: { conversation_id: convId, message } });
     setBusy(false);
     if (error || data?.error) {
       let msg = data?.error;
       try { msg = msg ?? (await (error as any)?.context?.json())?.error; } catch { /* ignore */ }
-      setErr(msg ?? "Boris nije uspeo da odgovori.");
+      setErr(msg ?? "Natalija nije uspela da odgovori.");
       setInput(message);
       return;
     }
@@ -93,7 +93,7 @@ export default function Boris() {
           <div className="flex items-center gap-2 border-b p-4">
             <Brain className="h-6 w-6 text-primary" />
             <div>
-              <h1 className="font-bold text-lg">Boris — Gama AI Brain</h1>
+              <h1 className="font-bold text-lg">Natalija — Gama AI Brain</h1>
               <p className="text-xs text-muted-foreground">Analiza naloga, ploča, filma, klijenata i nabavke iz stvarnih podataka. Samo čita, ništa ne menja.</p>
             </div>
           </div>
@@ -117,13 +117,13 @@ export default function Boris() {
                 )}
               </div>
             ))}
-            {busy && <div className="flex items-center gap-2 text-sm text-muted-foreground"><Loader2 className="h-4 w-4 animate-spin" /> Boris analizira podatke...</div>}
+            {busy && <div className="flex items-center gap-2 text-sm text-muted-foreground"><Loader2 className="h-4 w-4 animate-spin" /> Natalija analizira podatke...</div>}
             {err && <div className="text-sm text-destructive">{err}</div>}
             <div ref={endRef} />
           </div>
 
           <div className="border-t p-3 flex gap-2">
-            <Textarea value={input} onChange={(e) => setInput(e.target.value)} rows={2} placeholder="Pitajte Borisa bilo šta o poslovanju..."
+            <Textarea value={input} onChange={(e) => setInput(e.target.value)} rows={2} placeholder="Pitajte Nataliju bilo šta o poslovanju..."
               onKeyDown={(e) => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); send(); } }} />
             <Button onClick={() => send()} disabled={busy || !input.trim()} className="self-end"><Send className="h-4 w-4" /></Button>
           </div>
