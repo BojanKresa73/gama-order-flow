@@ -121,6 +121,11 @@ export const DashboardQuickActions = ({ canViewStats, isSuper }: DashboardQuickA
             Boris AI
           </Button>
         )}
+        {hasBoris && (
+          <Button variant="outline" onClick={() => navigate("/finansije")}>
+            Finansije
+          </Button>
+        )}
         {isSuper && (
           <Button variant="outline" onClick={() => navigate("/admin/newsletter")}>
             <Mail className="h-4 w-4 mr-2" />

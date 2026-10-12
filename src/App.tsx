@@ -42,6 +42,7 @@ const Vacations = lazy(() => import("./pages/Vacations"));
 const Quotes = lazy(() => import("./pages/Quotes"));
 const Complaints = lazy(() => import("./pages/Complaints"));
 const Boris = lazy(() => import("./pages/Boris"));
+const FinanceControl = lazy(() => import("./pages/FinanceControl"));
 const NotFound = lazy(() => import("./pages/NotFound"));
 
 // Guards are small - keep synchronous
@@ -113,6 +114,7 @@ const App = () => {
                 <Route path="/vacations" element={<InternalUserGuard><Vacations /></InternalUserGuard>} />
                 <Route path="/quotes" element={<AdminGuard><Quotes /></AdminGuard>} />
                 <Route path="/boris" element={<InternalUserGuard><Boris /></InternalUserGuard>} />
+                <Route path="/finansije" element={<InternalUserGuard><FinanceControl /></InternalUserGuard>} />
                 <Route path="/reklamacije" element={<InternalUserGuard><Complaints /></InternalUserGuard>} />
 
                 {import.meta.env.VITE_SHOW_DEV_PREVIEW === "true" && (

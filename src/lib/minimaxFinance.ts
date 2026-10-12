@@ -34,8 +34,7 @@ export function classifyIssued(d: IssuedDoc): IssuedKind {
 export function openReceivable(d: IssuedDoc): number | null {
   const k = classifyIssued(d);
   if (k === "predracun" || k === "avansni_racun") return 0; // proforma: no claim; advance: cash already received
-  if (d.InvoiceValue == null || d.PaidValue == null) return null;
-  return Math.round((d.InvoiceValue - d.PaidValue) * 100) / 100;
+  return openAmount(d.InvoiceValue, d.PaidValue);
 }
 
 /** Credit notes, storno and proformas are never a cash inflow. Cash comes only from bank journals. */
@@ -89,4 +88,40 @@ export function mergeById<T extends { key: string }>(existing: T[], incoming: T[
 export function toRsd(amountDocCurrency: number, exchangeRate: number | null | undefined): number | null {
   if (exchangeRate == null || !(exchangeRate > 0)) return null;
   return Math.round(amountDocCurrency * exchangeRate * 100) / 100;
+}
+
+export type ReceivedKind = "nacrt" | "avans_dobavljacu" | "knjizno_odobrenje_dobavljaca" | "faktura";
+
+export interface ReceivedDoc {
+  Status?: string | null; InvoiceValue: number | null; InvoiceAmount?: number | null;
+  DocumentReference?: string | null; DocumentNumbering?: { Name?: string | null } | null;
+}
+
+/** Received docs: draft (O) is never posted; negative = supplier credit note; "avans" numbering = advance to supplier. */
+export function classifyReceived(d: ReceivedDoc): ReceivedKind {
+  if (d.Status === "O") return "nacrt";
+  const v = d.InvoiceValue ?? d.InvoiceAmount ?? 0;
+  if (v < 0) return "knjizno_odobrenje_dobavljaca";
+  const tag = `${d.DocumentNumbering?.Name ?? ""} ${d.DocumentReference ?? ""}`.toLowerCase();
+  if (tag.includes("avans")) return "avans_dobavljacu";
+  return "faktura";
+}
+
+/** Open payable/receivable from header values; null when unknown (never 0). */
+export function openAmount(total: number | null | undefined, paid: number | null | undefined): number | null {
+  if (total == null || paid == null) return null;
+  // Minimax reports PaidValue as an absolute (closed) amount, also for storno/credit notes with negative totals.
+  const open = Math.sign(total) * (Math.abs(total) - Math.abs(paid));
+  return Math.round(open * 100) / 100 || 0;
+}
+
+/** "4392 - Ostale obaveze" -> "4392" */
+export function accountCodeFromName(name: string | null | undefined): string | null {
+  const m = /^\s*([0-9]+)\s*-/.exec(name ?? "");
+  return m ? m[1] : null;
+}
+
+/** Deductible VAT excludes non-deductible VAT. */
+export function deductibleVat(s: VatSummary): number | null {
+  return s.status === "ok" ? s.vat : null;
 }
