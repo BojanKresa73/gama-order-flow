@@ -67,6 +67,8 @@ describe("ulazni dokumenti i sinhronizacija", () => {
   it("avans dobavljaču", () => expect(classifyReceived({ Status: "P", InvoiceValue: 10, DocumentReference: "Avans 12" })).toBe("avans_dobavljacu"));
   it("nepoznato plaćeno -> otvoreno je null", () => expect(openAmount(1000, null)).toBeNull());
   it("otvoreno = ukupno - plaćeno", () => expect(openAmount(1000, 400)).toBe(600));
+  it("zatvoren storno nije dvostruko otvoren", () => expect(openAmount(-32361.66, 32361.66)).toBe(0));
+  it("delimično zatvoreno odobrenje ostaje negativno", () => expect(openAmount(-1000, 400)).toBe(-600));
   it("šifra konta iz naziva", () => expect(accountCodeFromName("4392 - Ostale obaveze iz poslovanja")).toBe("4392"));
   it("nepriznati PDV nije odbitni", () => {
     const s = summarizeVat([{ VatBase: 100, Vat: 20, ServicesVatBase: 0, ServicesVat: 0, NonDeductibleVatBase: 0, NonDeductibleVat: 10, ServicesNonDeductibleVatBase: 0, ServicesNonDeductibleVat: 0 }], 130);

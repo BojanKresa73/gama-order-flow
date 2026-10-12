@@ -34,8 +34,7 @@ export function classifyIssued(d: IssuedDoc): IssuedKind {
 export function openReceivable(d: IssuedDoc): number | null {
   const k = classifyIssued(d);
   if (k === "predracun" || k === "avansni_racun") return 0; // proforma: no claim; advance: cash already received
-  if (d.InvoiceValue == null || d.PaidValue == null) return null;
-  return Math.round((d.InvoiceValue - d.PaidValue) * 100) / 100;
+  return openAmount(d.InvoiceValue, d.PaidValue);
 }
 
 /** Credit notes, storno and proformas are never a cash inflow. Cash comes only from bank journals. */
@@ -111,7 +110,9 @@ export function classifyReceived(d: ReceivedDoc): ReceivedKind {
 /** Open payable/receivable from header values; null when unknown (never 0). */
 export function openAmount(total: number | null | undefined, paid: number | null | undefined): number | null {
   if (total == null || paid == null) return null;
-  return Math.round((total - paid) * 100) / 100;
+  // Minimax reports PaidValue as an absolute (closed) amount, also for storno/credit notes with negative totals.
+  const open = Math.sign(total) * (Math.abs(total) - Math.abs(paid));
+  return Math.round(open * 100) / 100 || 0;
 }
 
 /** "4392 - Ostale obaveze" -> "4392" */
