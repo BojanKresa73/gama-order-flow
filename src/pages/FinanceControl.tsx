@@ -80,7 +80,14 @@ export default function FinanceControl() {
                 <table className="w-full text-sm"><thead><tr className="text-left text-muted-foreground"><th>Podaci</th><th>Minimax</th><th>U bazi</th><th>Stanje</th></tr></thead>
                   <tbody>{c.sync.map((s: any) => {
                     const ok = s.status === "done" && (s.remote == null || s.remote === s.local);
-                    return <tr key={s.entity} className="border-t"><td>{ENTITY[s.entity] ?? s.entity.replace("journals_", "Nalozi za knjiženje ")}</td><td>{fmt(s.remote)}</td><td>{fmt(s.local)}</td>
+                    const note = "text-muted-foreground text-xs";
+                    const remote = s.remote != null ? fmt(s.remote)
+                      : s.entity === "journal_details" ? <span className={note}>preuzeto za svaki nalog posebno</span>
+                      : s.entity === "link_vat" ? <span className={note}>računa se iz knjiženja</span>
+                      : s.entity.startsWith("journals_") && s.status === "done" ? "0"
+                      : <span className={note}>Minimax ne daje zbir</span>;
+                    const local = s.local != null ? fmt(s.local) : s.entity === "link_vat" ? <span className={note}>povezano sa ulaznim dokumentima</span> : fmt(s.local);
+                    return <tr key={s.entity} className="border-t"><td>{ENTITY[s.entity] ?? s.entity.replace("journals_", "Nalozi za knjiženje ")}</td><td>{remote}</td><td>{local}</td>
                       <td>{ok ? <Badge variant="secondary">Usaglašeno</Badge> : <Badge variant="destructive">{s.error ?? s.status}</Badge>}</td></tr>;
                   })}</tbody></table>
               </Card>
