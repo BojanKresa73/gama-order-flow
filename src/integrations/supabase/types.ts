@@ -5613,6 +5613,7 @@ export type Database = {
       mm_profit_by_month: { Args: { p_year: number }; Returns: Json }
       mm_profit_check: { Args: { p_year: number }; Returns: Json }
       mm_reconciliation: { Args: never; Returns: Json }
+      mm_vat_by_month: { Args: { p_year: number }; Returns: Json }
       next_complaint_number: { Args: never; Returns: string }
       next_pasted_quote_number: { Args: never; Returns: string }
       next_quote_number: { Args: never; Returns: string }
