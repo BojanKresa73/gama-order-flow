@@ -10,6 +10,7 @@ import { FreshnessSummary, FreshnessTab, useFreshness } from "@/components/finan
 import { BookkeeperTab } from "@/components/finance/BookkeeperTab";
 import { PROFIT_WARNING } from "@/lib/bookkeeperReport";
 import { VatTab } from "@/components/finance/VatTab";
+import { SyncPrompt } from "@/components/finance/SyncPrompt";
 
 const fmt = (v: unknown) => (v == null ? "—" : Number(v).toLocaleString("sr-RS", { maximumFractionDigits: 2 }));
 const KIND: Record<string, string> = {
@@ -53,6 +54,7 @@ export default function FinanceControl() {
   return (
     <div className="min-h-screen bg-background">
       <AppHeader />
+      <SyncPrompt />
       <main className="container mx-auto p-4 space-y-4">
         <div>
           <h1 className="text-2xl font-semibold">Finansije – Gama United</h1>
