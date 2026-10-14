@@ -31,7 +31,7 @@ Pravila:
 - NIKAD ne mešaj ove veličine: broj ploča (kom), kvadratura (m²), prodajna vrednost po cenovniku (EUR, procena iz naloga) i stvarno fakturisano (iz Minimax-a). Uvek ih navedi odvojeno i imenuj tačno.
 - Prodajna vrednost koristi cenu koja je važila na dan otvaranja naloga. Kad prikazuješ vrednost, pozovi ctp_unpriced_plates i jasno upozori ako postoje ploče bez poznate istorijske cene (one ulaze u vrednost kao 0).
 - Lager i roba na putu (search_materials) su zalihe, NISU proizvodnja ni potrošnja — nikad ih ne sabiraj sa potrošnjom.
-- Finansijski podaci iz Minimax-a (izlazne i ulazne fakture, predračuni, avansi, storna, knjižna odobrenja, plaćanja, potraživanja i obaveze, rezultat po mesecima) SU povezani i dostupni kroz alate finance_control, finance_reconciliation, finance_profit, finance_profit_check i finance_documents. Za potraživanja, obaveze i banke koristi finance_reconciliation (ispravljeni iznosi bez duplog otvaranja). Kod dobiti uvek objasni šta je uključeno (proknjiženi prihodi i rashodi klasa 5 i 6), a šta nije (amortizacija ako nije knjižena, porez na dobit, zalihe ploča ako se vode direktno kao trošak, nepotpun tekući mesec); računovodstvena dobit nije poreska osnovica ni novac na računu — za takva pitanja uvek pozovi te alate i odgovaraj iz njihovih brojeva. Novčani iznosi su u RSD osim ako nije drugačije navedeno.
+- Finansijski podaci iz Minimax-a (izlazne i ulazne fakture, predračuni, avansi, storna, knjižna odobrenja, plaćanja, potraživanja i obaveze, rezultat po mesecima) SU povezani i dostupni kroz alate finance_control, finance_reconciliation, finance_profit, finance_profit_check, finance_vat i finance_documents. Za PDV pozovi finance_vat i naglasi da je tekući mesec privremen, a konačan iznos je PP PDV prijava. Za potraživanja, obaveze i banke koristi finance_reconciliation (ispravljeni iznosi bez duplog otvaranja). Kod dobiti uvek objasni šta je uključeno (proknjiženi prihodi i rashodi klasa 5 i 6), a šta nije (amortizacija ako nije knjižena, porez na dobit, zalihe ploča ako se vode direktno kao trošak, nepotpun tekući mesec); računovodstvena dobit nije poreska osnovica ni novac na računu — za takva pitanja uvek pozovi te alate i odgovaraj iz njihovih brojeva. Novčani iznosi su u RSD osim ako nije drugačije navedeno.
 - Ti samo čitaš podatke. Nikad ne menjaš naloge ni bilo šta u bazi.
 Današnji datum: ${new Date().toISOString().slice(0, 10)}.`;
 
@@ -70,6 +70,11 @@ function buildTools(db: SupabaseClient) {
       description: "Provera privremene računovodstvene dobiti za godinu: kontrolna vrednost (2026: 16,93 mil.), prihodi, rashodi, zbir meseci, grupe konta, knjižena amortizacija (i prošlogodišnja za poređenje), kursne razlike, da li postoje konta zaliha, dati avansi (150), poslednje knjiženje. Dobit NIJE poreska osnovica ni raspoloživ novac.",
       inputSchema: z.object({ year: z.number().int() }),
       execute: async (a) => { const { data, error } = await db.rpc("mm_profit_check" as any, { p_year: a.year }); return error ? { error: error.message } : data; },
+    }),
+    finance_vat: tool({
+      description: "Trenutni PDV po mesecima (mesečni obveznik) iz glavne knjige: izlazni PDV (470-478), prethodni/ulazni PDV (270-278), neto obaveza (+ za uplatu, − poreski kredit), proknjiženo DDV zatvaranje i razlika, nezatvorena obaveza na 4790. Tekući mesec je nepotpun dok se sve ne proknjiži; konačan iznos je PP PDV prijava knjigovođe.",
+      inputSchema: z.object({ year: z.number().int() }),
+      execute: async (a) => { const { data, error } = await db.rpc("mm_vat_by_month" as any, { p_year: a.year }); return error ? { error: error.message } : data; },
     }),
     finance_books_freshness: tool({
       description: "Ažurnost knjigovodstva i bankarskih izvoda: za svaki račun poslednji proknjižen izvod (BD), poslednji izvod koji je vlasnik upisao iz banke, stanje u knjigama i na izvodu, poslednje preuzimanje iz Minimaxa; razlika obračuna banke (samo bankarski računi prema kontu 241 sa prelaznim); provera glavne knjige po godinama i knjiženja koja prelaze godinu. Kašnjenje se tvrdi samo ako postoji upisan noviji izvod.",

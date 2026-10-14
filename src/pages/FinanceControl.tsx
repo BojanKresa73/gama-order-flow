@@ -9,6 +9,7 @@ import { Loader2, AlertTriangle } from "lucide-react";
 import { FreshnessSummary, FreshnessTab, useFreshness } from "@/components/finance/Freshness";
 import { BookkeeperTab } from "@/components/finance/BookkeeperTab";
 import { PROFIT_WARNING } from "@/lib/bookkeeperReport";
+import { VatTab } from "@/components/finance/VatTab";
 
 const fmt = (v: unknown) => (v == null ? "—" : Number(v).toLocaleString("sr-RS", { maximumFractionDigits: 2 }));
 const KIND: Record<string, string> = {
@@ -67,6 +68,7 @@ export default function FinanceControl() {
               <TabsTrigger value="usaglasavanje">Usaglašavanje</TabsTrigger>
               <TabsTrigger value="banke">Banke</TabsTrigger>
               <TabsTrigger value="rezultat">Privremeni rezultat</TabsTrigger>
+              <TabsTrigger value="pdv">PDV</TabsTrigger>
               <TabsTrigger value="knjigovodja">Izveštaj za knjigovođu</TabsTrigger>
             </TabsList>
 
@@ -184,6 +186,8 @@ export default function FinanceControl() {
                       <td className="space-x-1">{m.missing_depreciation && <Badge variant="outline">Nema amortizacije</Badge>}{m.unposted_docs > 0 && <Badge variant="destructive">{m.unposted_docs} neusagl. ulaznih</Badge>}</td></tr>))}</tbody></table>
               </Card>
             </TabsContent>
+
+            <TabsContent value="pdv"><VatTab year={year} setYear={setYear} /></TabsContent>
           </Tabs>
         )}
       </main>
