@@ -4,12 +4,14 @@ import { supabase } from "@/integrations/supabase/client";
 import { Receipt, CheckCircle, XCircle, Loader2 } from "lucide-react";
 import { Progress } from "@/components/ui/progress";
 import { useNavigate } from "react-router-dom";
+import { staleCutoffIso } from "@/lib/invoicing";
 
 interface InvoiceStats {
   total: number;
   invoiced: number;
   notInvoiced: number;
   invoicedPercentage: number;
+  staleUninvoiced: number;
 }
 
 export function InvoiceStatsCard() {
@@ -31,7 +33,7 @@ export function InvoiceStatsCard() {
         .is("deleted_at", null)
         .is("invalidated_at", null);
 
-      const [totalRes, invoicedRes] = await Promise.all([
+      const [totalRes, invoicedRes, staleRes] = await Promise.all([
         baseFilter,
         supabase
           .from("work_orders")
@@ -40,7 +42,16 @@ export function InvoiceStatsCard() {
           .is("deleted_at", null)
           .is("invalidated_at", null)
           .not("invoiced_at", "is", null),
+        supabase
+          .from("work_orders")
+          .select("id", { count: "exact", head: true })
+          .eq("status", "closed")
+          .is("deleted_at", null)
+          .is("invalidated_at", null)
+          .is("invoiced_at", null)
+          .lt("closed_at", staleCutoffIso()),
       ]);
+      if (staleRes.error) throw staleRes.error;
 
       if (totalRes.error) throw totalRes.error;
       if (invoicedRes.error) throw invoicedRes.error;
@@ -50,7 +61,7 @@ export function InvoiceStatsCard() {
       const notInvoiced = total - invoiced;
       const invoicedPercentage = total > 0 ? Math.round((invoiced / total) * 100) : 0;
 
-      setStats({ total, invoiced, notInvoiced, invoicedPercentage });
+      setStats({ total, invoiced, notInvoiced, invoicedPercentage, staleUninvoiced: staleRes.count || 0 });
     } catch (error) {
       console.error("Error fetching invoice stats:", error);
     } finally {
@@ -124,6 +135,15 @@ export function InvoiceStatsCard() {
             </div>
           </button>
         </div>
+
+        <button
+          onClick={() => navigate("/work-orders?status=not_invoiced_old")}
+          className="w-full flex items-center justify-between p-3 rounded-lg border hover:bg-muted/50 transition-colors text-left"
+        >
+          <span className="text-sm">Zatvoreni pre više od 10 dana, nefakturisani</span>
+          <span className="text-lg font-bold text-destructive">{stats?.staleUninvoiced ?? 0}</span>
+        </button>
+        <p className="text-xs text-muted-foreground">Prema oznaci fakturisanja u nalozima, ne prema Minimaxu.</p>
 
         {/* Total */}
         <div className="pt-2 border-t text-center">

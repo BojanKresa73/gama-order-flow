@@ -52,6 +52,7 @@ const STATUS_OPTIONS = [
   { value: "closed", label: "Zatvoreni" },
   { value: "invoiced", label: "Fakturisano" },
   { value: "not_invoiced", label: "Nije fakturisano" },
+  { value: "not_invoiced_old", label: "Nefakturisano > 10 dana" },
 ];
 
 export function WorkOrderFilters({ filters, onFiltersChange }: WorkOrderFiltersProps) {
