@@ -1,3 +1,4 @@
+import { useFinanceAccess } from "@/hooks/useFinanceAccess";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -14,8 +15,7 @@ interface Props {
 }
 
 export const CtpFormatConsumption = ({ filters }: Props) => {
-  const { isAdminPlus } = useAuthz();
-  const canViewRevenue = isAdminPlus;
+  const { hasFinance: canViewRevenue } = useFinanceAccess();
 
   const { data, isLoading } = useQuery({
     queryKey: ["ctp-consumption-by-format", filters],

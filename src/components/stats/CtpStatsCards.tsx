@@ -1,3 +1,4 @@
+import { useFinanceAccess } from "@/hooks/useFinanceAccess";
 import { useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
@@ -13,8 +14,7 @@ interface CtpStatsCardsProps {
 }
 
 export const CtpStatsCards = ({ filters }: CtpStatsCardsProps) => {
-  const { isSuper, isAdminPlus } = useAuthz();
-  const canViewFinancials = isSuper || isAdminPlus;
+  const { hasFinance: canViewFinancials } = useFinanceAccess();
 
   const { data: stats, isLoading } = useQuery({
     queryKey: ["ctp-stats-rpc", filters],
