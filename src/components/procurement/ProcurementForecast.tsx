@@ -7,6 +7,7 @@ import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { AlertTriangle, TrendingUp, Package, Calendar, Clock, BarChart3 } from "lucide-react";
 import { Progress } from "@/components/ui/progress";
+import { avgDailySince, daysOfCover, fetchAllPages, pendingForFormat } from "@/lib/plateForecast";
 
 interface ProcurementForecastProps {
   plateFormats: any[];
@@ -48,22 +49,14 @@ export function ProcurementForecast({ plateFormats, orders }: ProcurementForecas
   const { data: consumptionData, isLoading: loadingConsumption } = useQuery({
     queryKey: ["plate-consumption"],
     queryFn: async () => {
-      const { data, error } = await supabase
+      // All negative movements, paged (server caps each request at 1000 rows).
+      const data = await fetchAllPages<{ plate_format_id: string; change_amount: number; created_at: string }>((from, to) => supabase
         .from("inventory_history")
         .select("plate_format_id, change_amount, created_at")
         .lt("change_amount", 0)
         .order("created_at", { ascending: true })
-        .range(0, 49999);
-
-      if (error) throw error;
-      
-      if (data && data.length > 0) {
-        const firstDate = new Date(data[0].created_at);
-        const lastDate = new Date(data[data.length - 1].created_at);
-        const actualDays = Math.max(1, Math.ceil((lastDate.getTime() - firstDate.getTime()) / (1000 * 60 * 60 * 24)) + 1);
-        return { entries: data, actualDays, firstDate, lastDate };
-      }
-      return { entries: [], actualDays: 1, firstDate: new Date(), lastDate: new Date() };
+        .range(from, to));
+      return { entries: data };
     },
     staleTime: 60000,
   });
@@ -73,6 +66,7 @@ export function ProcurementForecast({ plateFormats, orders }: ProcurementForecas
     if (!plateFormats.length) return [];
 
     const now = new Date();
+    const todayIso = now.toISOString().slice(0, 10);
     
     // Build monthly stats from file_entries data (primary source)
     const monthlyStatsByFormat = new Map<string, { 
@@ -123,6 +117,7 @@ export function ProcurementForecast({ plateFormats, orders }: ProcurementForecas
       let trend = 1;
       let avgDaily = 0;
       let totalConsumed = 0;
+      let fallbackDays = 0;
       
       if (monthlyStats && monthlyStats.totals.length > 0) {
         totalConsumed = monthlyStats.totalPlates;
@@ -165,12 +160,13 @@ export function ProcurementForecast({ plateFormats, orders }: ProcurementForecas
           const formatConsumption = consumptionData.entries.filter(
             (c) => c.plate_format_id === format.id
           );
-          totalConsumed = formatConsumption.reduce(
-            (sum, c) => sum + Math.abs(c.change_amount),
-            0
-          );
-          if (consumptionData.actualDays > 0 && totalConsumed > 0) {
-            avgDaily = totalConsumed / consumptionData.actualDays;
+          totalConsumed = formatConsumption.reduce((sum, c) => sum + Math.abs(c.change_amount), 0);
+          // Window per format: from its first movement until TODAY (not until last movement),
+          // so a short/old series is not inflated.
+          const { avg, days } = avgDailySince(totalConsumed, formatConsumption[0]?.created_at ?? null, todayIso);
+          if (avg > 0) {
+            avgDaily = avg;
+            fallbackDays = days;
             monthlyAvg = avgDaily * 30;
             activeMonths = 1; // Estimate
           }
@@ -180,21 +176,16 @@ export function ProcurementForecast({ plateFormats, orders }: ProcurementForecas
       // Current stock (protect against negative display)
       const currentStock = format.current_stock || 0;
 
-      // Plates on the way (from active orders)
-      const pendingPlates = orders
-        .filter((o) => o.status !== "arrived" && o.status !== "cancelled")
-        .reduce((sum, order) => {
-          const items = order.procurement_order_items || [];
-          const formatItems = items.filter((i: any) => i.plate_format_id === format.id);
-          return sum + formatItems.reduce((s: number, i: any) => s + (i.quantity || 0), 0);
-        }, 0);
+      // Plates on the way: count only from expected arrival day (physical stock is used first).
+      const pend = pendingForFormat(orders, format.id, todayIso);
+      const pendingPlates = pend.total;
 
       // Days until stockout (without pending orders)
-      const daysUntilStockout = avgDaily > 0 ? Math.floor(Math.max(0, currentStock) / avgDaily) : 999;
+      const daysUntilStockout = Math.floor(daysOfCover(currentStock, avgDaily));
 
-      // Total available (current + pending) - use max 0 for negative stock
       const totalAvailable = Math.max(0, currentStock) + pendingPlates;
-      const daysWithPending = avgDaily > 0 ? Math.floor(totalAvailable / avgDaily) : 999;
+      const daysWithPending = Math.floor(daysOfCover(currentStock, avgDaily, pend.arrivals));
+      const uncertainPlates = pend.uncertain;
 
       // When to order: need stock for shipping time + buffer
       const minDaysNeeded = SHIPPING_DAYS + SAFETY_BUFFER_DAYS;
@@ -214,7 +205,9 @@ export function ProcurementForecast({ plateFormats, orders }: ProcurementForecas
         currentStock,
         pendingPlates,
         totalConsumed,
-        actualDays: consumptionData?.actualDays || 0,
+        actualDays: fallbackDays,
+        uncertainPlates,
+        totalAvailable,
         avgDaily: avgDaily.toFixed(1),
         monthlyAvg: Math.round(monthlyAvg),
         activeMonths,
@@ -349,6 +342,16 @@ export function ProcurementForecast({ plateFormats, orders }: ProcurementForecas
                           <Package className="h-3 w-3" />
                           {row.pendingPlates}
                         </Badge>
+                      ) : (
+                        "-"
+                      )}
+                      {row.uncertainPlates > 0 && (
+                        <span className="block text-xs text-orange-600" title="Bez očekivanog datuma ili rok dolaska prošao — ne računa se u dane do 0">
+                          {row.uncertainPlates} bez potvrđenog dolaska
+                        </span>
+                      )}
+                      {false ? (
+                        null
                       ) : (
                         "-"
                       )}
