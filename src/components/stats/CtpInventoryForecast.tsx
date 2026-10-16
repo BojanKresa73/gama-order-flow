@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button";
 import { useNavigate } from "react-router-dom";
 import { Package } from "lucide-react";
 import { subDays } from "date-fns";
+import { daysOfCover as daysOfCoverCalc, fetchAllPages, pendingForFormat } from "@/lib/plateForecast";
 
 export const CtpInventoryForecast = () => {
   const navigate = useNavigate();
@@ -23,28 +24,25 @@ export const CtpInventoryForecast = () => {
 
       if (formatsError) throw formatsError;
 
-      // Fetch CTP items from last 30 days (global, no filters)
+      // Fetch ALL CTP items from last 30 days (paged — server returns max 1000 rows per request)
       const thirtyDaysAgo = subDays(new Date(), 30).toISOString().split("T")[0];
-      const { data: items, error: itemsError } = await supabase
+      const items = await fetchAllPages<any>((from, to) => supabase
         .from("v_ctp_items" as any)
         .select("plate_format_id, plate_format_name, plates_qty, closed_on")
-        .gte("closed_on", thirtyDaysAgo);
+        .gte("closed_on", thirtyDaysAgo)
+        .order("closed_on", { ascending: true })
+        .range(from, to) as any);
 
-      if (itemsError) throw itemsError;
-
-      // Fetch pending procurement (on the way from China)
-      const { data: procOrders } = await supabase
+      // Pending procurement (on the way from China) — counted only from expected arrival
+      const { data: procOrders, error: procError } = await supabase
         .from("procurement_orders")
-        .select("status, procurement_order_items(plate_format_id, quantity)")
+        .select("status, expected_arrival_date, actual_arrival_date, procurement_order_items(plate_format_id, quantity)")
         .not("status", "in", "(arrived,cancelled)");
+      if (procError) throw procError;
 
-      const pending: Record<string, number> = {};
-      (procOrders || []).forEach((o: any) => {
-        (o.procurement_order_items || []).forEach((i: any) => {
-          if (!i.plate_format_id) return;
-          pending[i.plate_format_id] = (pending[i.plate_format_id] || 0) + (i.quantity || 0);
-        });
-      });
+      const today = new Date().toISOString().slice(0, 10);
+      const pending: Record<string, ReturnType<typeof pendingForFormat>> = {};
+      (formats || []).forEach((f) => { pending[f.id] = pendingForFormat(procOrders || [], f.id, today); });
 
       return {
         formats,
@@ -77,10 +75,12 @@ export const CtpInventoryForecast = () => {
     const data = rawData.formats.map(format => {
       const totalConsumption = formatConsumption[format.id] || 0;
       const avgDaily = totalConsumption / 30;
-      const pendingQty = rawData.pending[format.id] || 0;
+      const pend = rawData.pending[format.id] || { arrivals: [], uncertain: 0, total: 0 };
+      const pendingQty = pend.total;
       const available = format.current_stock + pendingQty;
-      const daysOfCover = avgDaily > 0 ? format.current_stock / avgDaily : 999;
-      const daysOfCoverWithPending = avgDaily > 0 ? available / avgDaily : 999;
+      const daysOfCover = daysOfCoverCalc(format.current_stock, avgDaily);
+      // Naručene ploče pomažu tek od očekivanog dolaska; bez datuma / sa probijenim rokom ne računaju se.
+      const daysOfCoverWithPending = daysOfCoverCalc(format.current_stock, avgDaily, pend.arrivals);
 
       return {
         formatId: format.id,

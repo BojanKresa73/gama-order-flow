@@ -7,7 +7,8 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { Loader2, Mail, Send, Eye, ArrowUp, ArrowDown, ArrowUpDown } from "lucide-react";
+import { Loader2, Mail, Send, Eye, ArrowUp, ArrowDown, ArrowUpDown, AlertTriangle } from "lucide-react";
+import { sumAmounts, summarizeResults, toAmount, type SendResult } from "@/lib/dunning";
 import { toast } from "sonner";
 import { BarChart, Bar, XAxis, YAxis, Tooltip, Legend, ResponsiveContainer, CartesianGrid } from "recharts";
 
@@ -25,7 +26,7 @@ const cellValue = (p: any, key: SortKey): string | number => {
 
 export function DunningTab() {
   const qc = useQueryClient();
-  const { data, isLoading } = useQuery({
+  const { data, isLoading, isError, error, refetch } = useQuery({
     queryKey: ["mm-aging"],
     queryFn: async () => { const { data, error } = await supabase.rpc("mm_receivables_aging" as any); if (error) throw error; return data as any; },
   });
@@ -36,6 +37,7 @@ export function DunningTab() {
   const [detail, setDetail] = useState<any>(null);
   const [preview, setPreview] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+  const [failures, setFailures] = useState<SendResult[] | null>(null);
 
   const allPartners = useMemo(() => (data?.partners ?? []), [data]);
   const notOverdue = useMemo(() => allPartners.filter((p: any) => !(Number(p.overdue_rsd) > 0.5)).length, [allPartners]);
@@ -52,7 +54,7 @@ export function DunningTab() {
     return arr;
   }, [allPartners, search, onlyOverdue, sort]);
 
-  const totals = useMemo(() => list.reduce((a: any, p: any) => ({ open: a.open + p.open_rsd, over: a.over + p.overdue_rsd }), { open: 0, over: 0 }), [list]);
+  const totals = useMemo(() => sumAmounts(list), [list]);
 
   // Prvi klik = od najmanjeg ka najvećem, drugi klik = obrnuto.
   const toggleSort = (key: SortKey) => setSort((s) => s.key === key ? { key, dir: s.dir === 1 ? -1 : 1 } : { key, dir: 1 });
@@ -85,15 +87,24 @@ export function DunningTab() {
     setBusy(true);
     try {
       const r = await call({ partner_ids: ids, test });
-      const ok = r.results.filter((x: any) => !x.error).length;
-      const bad = r.results.filter((x: any) => x.error);
-      toast.success(`Poslato: ${ok}${bad.length ? `, nije poslato: ${bad.length}` : ""}`);
-      bad.slice(0, 5).forEach((x: any) => toast.error(`${x.partner ?? x.id}: ${x.error}`));
+      const { sent, failed } = summarizeResults(ids, r?.results);
+      const warned = sent.filter((x) => x.warning);
+      if (sent.length) toast.success(`Poslato: ${sent.length} od ${ids.length}`);
+      if (failed.length || warned.length) setFailures([...failed, ...warned.map((x) => ({ ...x, error: `Poslato, ali: ${x.warning}` }))]);
       qc.invalidateQueries({ queryKey: ["mm-aging"] });
-    } catch (e: any) { toast.error(e.message); } finally { setBusy(false); }
+    } catch (e: any) {
+      setFailures(ids.map((id) => ({ id, error: `Nije potvrđeno slanje: ${e.message}` })));
+    } finally { setBusy(false); }
   };
 
-  if (isLoading || !data) return <Loader2 className="animate-spin" />;
+  if (isLoading) return <Loader2 className="animate-spin" />;
+  if (isError || !data) return (
+    <Card className="p-6 space-y-3">
+      <div className="flex items-center gap-2 text-destructive font-medium"><AlertTriangle className="h-4 w-4" />Spisak dužnika nije učitan.</div>
+      <p className="text-sm text-muted-foreground">{(error as any)?.message ?? "Nepoznata greška"}. Ništa nije poslato.</p>
+      <Button variant="outline" onClick={() => refetch()}>Pokušaj ponovo</Button>
+    </Card>
+  );
   const toggle = (id: number) => setSel((s) => { const n = new Set(s); n.has(id) ? n.delete(id) : n.add(id); return n; });
 
   return (
@@ -139,12 +150,13 @@ export function DunningTab() {
                 <td className="px-3 py-2.5 align-middle max-w-[340px]"><button className="text-left hover:underline font-medium" onClick={() => setDetail(p)}>{p.partner}</button></td>
                 <td className="px-3 py-2.5 align-middle"><div>{p.contact ?? "—"}</div><div className="text-xs text-muted-foreground break-all">{p.email ?? <Badge variant="outline">Nema email-a</Badge>}</div></td>
                 <td className="px-3 py-2.5 align-middle text-right tabular-nums whitespace-nowrap">{fmt(p.open_rsd)}</td>
-                <td className="px-3 py-2.5 align-middle text-right font-medium text-destructive tabular-nums whitespace-nowrap">{p.overdue_rsd > 0 ? fmt(p.overdue_rsd) : "—"}</td>
+                <td className="px-3 py-2.5 align-middle text-right font-medium text-destructive tabular-nums whitespace-nowrap">{toAmount(p.overdue_rsd) > 0 ? fmt(p.overdue_rsd) : "—"}</td>
                 <td className="px-3 py-2.5 align-middle text-center tabular-nums whitespace-nowrap">{p.overdue_docs}/{p.docs}</td>
                 <td className="px-3 py-2.5 align-middle text-center">{p.max_days ? <Badge variant={p.max_days > 60 ? "destructive" : "outline"}>{p.max_days} dana</Badge> : "—"}</td>
                 <td className="px-3 py-2.5 align-middle text-right text-xs tabular-nums">{p.last_sent ? new Date(p.last_sent).toLocaleDateString("sr-RS") : "—"}</td>
                 <td className="px-3 py-2.5 align-middle text-right"><Button size="sm" variant="ghost" onClick={() => doPreview(p)} aria-label="Pregled"><Eye className="h-4 w-4" /></Button></td>
-              </tr>))}</tbody>
+              </tr>))}
+              {list.length === 0 && <tr><td colSpan={9} className="px-3 py-8 text-center text-muted-foreground">{allPartners.length === 0 ? "Nema kupaca sa otvorenim fakturama." : "Nijedan kupac ne odgovara filteru ili pretrazi."}</td></tr>}</tbody>
           </table>
         </div>
       </Card>
@@ -176,6 +188,13 @@ export function DunningTab() {
               <Button variant="outline" disabled={busy} onClick={() => send([detail.partner_minimax_id], true)}><Mail className="h-4 w-4 mr-1" />Proba meni</Button>
             </div>
           </div>}
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={!!failures} onOpenChange={(o) => !o && setFailures(null)}>
+        <DialogContent className="max-w-xl max-h-[80vh] overflow-y-auto">
+          <DialogHeader><DialogTitle>Nije poslato ili nije potpuno zabeleženo: {failures?.length}</DialogTitle></DialogHeader>
+          <ul className="text-sm divide-y">{failures?.map((f) => <li key={f.id} className="py-2"><b>{f.partner ?? f.id}</b><div className="text-destructive">{f.error}</div></li>)}</ul>
         </DialogContent>
       </Dialog>
 
