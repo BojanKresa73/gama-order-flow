@@ -73,21 +73,28 @@ export function DunningTab() {
           <Button disabled={busy || !sel.size} onClick={() => send([...sel], false)}>{busy ? <Loader2 className="h-4 w-4 mr-1 animate-spin" /> : <Send className="h-4 w-4 mr-1" />}Pošalji izabranima ({sel.size})</Button>
         </div>
         <div className="overflow-x-auto">
-          <table className="w-full text-sm min-w-[900px]">
-            <thead><tr className="text-left text-muted-foreground">
-              <th><Checkbox checked={sel.size > 0 && list.every((p: any) => sel.has(p.partner_minimax_id))} onCheckedChange={(c) => setSel(c ? new Set(list.filter((p: any) => p.email).map((p: any) => p.partner_minimax_id)) : new Set())} /></th>
-              <th>Kupac</th><th>Kontakt / email</th><th className="text-right">Otvoreno</th><th className="text-right">Van valute</th><th>Faktura</th><th>Najduže kasni</th><th>Poslednja opomena</th><th></th></tr></thead>
+          <table className="w-full text-sm min-w-[1000px]">
+            <thead><tr className="text-left text-muted-foreground border-b">
+              <th className="w-10 px-3 py-2.5"><Checkbox checked={sel.size > 0 && list.every((p: any) => sel.has(p.partner_minimax_id))} onCheckedChange={(c) => setSel(c ? new Set(list.filter((p: any) => p.email).map((p: any) => p.partner_minimax_id)) : new Set())} /></th>
+              <th className="px-3 py-2.5">Kupac</th>
+              <th className="px-3 py-2.5 min-w-[220px]">Kontakt / email</th>
+              <th className="px-3 py-2.5 text-right">Otvoreno</th>
+              <th className="px-3 py-2.5 text-right">Van valute</th>
+              <th className="px-3 py-2.5 text-center">Faktura</th>
+              <th className="px-3 py-2.5 text-center">Najduže kasni</th>
+              <th className="px-3 py-2.5 text-right">Poslednja opomena</th>
+              <th className="w-12 px-3 py-2.5"></th></tr></thead>
             <tbody>{list.map((p: any) => (
-              <tr key={p.partner_minimax_id} className="border-t">
-                <td><Checkbox checked={sel.has(p.partner_minimax_id)} onCheckedChange={() => toggle(p.partner_minimax_id)} /></td>
-                <td><button className="text-left hover:underline font-medium" onClick={() => setDetail(p)}>{p.partner}</button></td>
-                <td>{p.contact ?? "—"}<div className="text-xs text-muted-foreground">{p.email ?? <Badge variant="outline">Nema email-a</Badge>}</div></td>
-                <td className="text-right">{fmt(p.open_rsd)}</td>
-                <td className="text-right font-medium text-destructive">{p.overdue_rsd > 0 ? fmt(p.overdue_rsd) : "—"}</td>
-                <td>{p.overdue_docs}/{p.docs}</td>
-                <td>{p.max_days ? <Badge variant={p.max_days > 60 ? "destructive" : "outline"}>{p.max_days} dana</Badge> : "—"}</td>
-                <td className="text-xs">{p.last_sent ? new Date(p.last_sent).toLocaleDateString("sr-RS") : "—"}</td>
-                <td><Button size="sm" variant="ghost" onClick={() => doPreview(p)}><Eye className="h-4 w-4" /></Button></td>
+              <tr key={p.partner_minimax_id} className="border-b last:border-0 hover:bg-muted/40 transition-colors">
+                <td className="px-3 py-2.5 align-top"><Checkbox checked={sel.has(p.partner_minimax_id)} onCheckedChange={() => toggle(p.partner_minimax_id)} /></td>
+                <td className="px-3 py-2.5 align-middle max-w-[340px]"><button className="text-left hover:underline font-medium" onClick={() => setDetail(p)}>{p.partner}</button></td>
+                <td className="px-3 py-2.5 align-middle"><div>{p.contact ?? "—"}</div><div className="text-xs text-muted-foreground break-all">{p.email ?? <Badge variant="outline">Nema email-a</Badge>}</div></td>
+                <td className="px-3 py-2.5 align-middle text-right tabular-nums whitespace-nowrap">{fmt(p.open_rsd)}</td>
+                <td className="px-3 py-2.5 align-middle text-right font-medium text-destructive tabular-nums whitespace-nowrap">{p.overdue_rsd > 0 ? fmt(p.overdue_rsd) : "—"}</td>
+                <td className="px-3 py-2.5 align-middle text-center tabular-nums whitespace-nowrap">{p.overdue_docs}/{p.docs}</td>
+                <td className="px-3 py-2.5 align-middle text-center">{p.max_days ? <Badge variant={p.max_days > 60 ? "destructive" : "outline"}>{p.max_days} dana</Badge> : "—"}</td>
+                <td className="px-3 py-2.5 align-middle text-right text-xs tabular-nums">{p.last_sent ? new Date(p.last_sent).toLocaleDateString("sr-RS") : "—"}</td>
+                <td className="px-3 py-2.5 align-middle text-right"><Button size="sm" variant="ghost" onClick={() => doPreview(p)} aria-label="Pregled"><Eye className="h-4 w-4" /></Button></td>
               </tr>))}</tbody>
           </table>
         </div>
@@ -112,8 +119,8 @@ export function DunningTab() {
               </ResponsiveContainer>
             </div>
             <div className="overflow-x-auto"><table className="w-full text-sm">
-              <thead><tr className="text-left text-muted-foreground"><th>Broj</th><th>Datum</th><th>Rok</th><th className="text-right">Iznos</th><th className="text-right">Otvoreno</th><th>Kasni</th></tr></thead>
-              <tbody>{detail.invoices.map((i: any) => <tr key={i.number} className="border-t"><td>{i.number}</td><td>{d(i.date)}</td><td>{d(i.due)}</td><td className="text-right">{fmt(i.total)}</td><td className="text-right">{fmt(i.open)}</td><td>{i.days > 0 ? <Badge variant="destructive">{i.days} d</Badge> : "u roku"}</td></tr>)}</tbody>
+              <thead><tr className="text-left text-muted-foreground border-b"><th className="px-3 py-2">Broj</th><th className="px-3 py-2">Datum</th><th className="px-3 py-2">Rok</th><th className="px-3 py-2 text-right">Iznos</th><th className="px-3 py-2 text-right">Otvoreno</th><th className="px-3 py-2 text-center">Kasni</th></tr></thead>
+              <tbody>{detail.invoices.map((i: any) => <tr key={i.number} className="border-b last:border-0 hover:bg-muted/40"><td className="px-3 py-2 whitespace-nowrap">{i.number}</td><td className="px-3 py-2 tabular-nums">{d(i.date)}</td><td className="px-3 py-2 tabular-nums">{d(i.due)}</td><td className="px-3 py-2 text-right tabular-nums whitespace-nowrap">{fmt(i.total)}</td><td className="px-3 py-2 text-right tabular-nums whitespace-nowrap">{fmt(i.open)}</td><td className="px-3 py-2 text-center">{i.days > 0 ? <Badge variant="destructive">{i.days} d</Badge> : "u roku"}</td></tr>)}</tbody>
             </table></div>
             <div className="flex gap-2 justify-end">
               <Button variant="outline" onClick={() => doPreview(detail)}><Eye className="h-4 w-4 mr-1" />Pregled opomene</Button>
