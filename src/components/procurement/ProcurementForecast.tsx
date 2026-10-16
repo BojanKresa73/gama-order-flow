@@ -350,11 +350,6 @@ export function ProcurementForecast({ plateFormats, orders }: ProcurementForecas
                           {row.uncertainPlates} bez potvrđenog dolaska
                         </span>
                       )}
-                      {false ? (
-                        null
-                      ) : (
-                        "-"
-                      )}
                     </TableCell>
                     <TableCell className="text-right hidden sm:table-cell">
                       <div className="text-sm">
