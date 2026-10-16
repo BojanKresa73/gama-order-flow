@@ -39,7 +39,6 @@ export function buildHtml(p: any, today: string) {
 <tr><td style="background:#1a365d;padding:24px;text-align:center"><img src="${LOGO}" height="58" alt="Gama United"></td></tr>
 <tr><td style="padding:28px">
 <p style="font-size:16px">${greet}</p>
-<p style="font-size:15px;line-height:1.6">Zahvaljujemo vam na dugogodišnjem poverenju i saradnji sa Gama United-om.</p>
 <p style="font-size:15px;line-height:1.6">Ovim putem vas ljubazno obaveštavamo da, prema našoj evidenciji na dan ${d(today)}, vaša dugovanja prema Gama United-u <b>van valute</b> iznose:</p>
 <div style="background:#fff5f5;border:1px solid #feb2b2;border-radius:10px;padding:18px;text-align:center;margin:18px 0">
   <div style="font-size:13px;color:#742a2a">Dospelo, a neplaćeno</div>
@@ -59,7 +58,7 @@ ${overdue.length > 25 ? `<p style="font-size:12px;color:#718096">… i još ${ov
 <p style="font-size:14px;line-height:1.6;margin-top:24px">Ukoliko ste uplatu već izvršili, molimo vas da ovu poruku zanemarite. Za sva pitanja ili usaglašavanje stanja stojimo vam na raspolaganju.</p>
 <p style="font-size:14px;line-height:1.6">Srdačan pozdrav,<br><b>Gama United d.o.o.</b></p>
 </td></tr>
-<tr><td style="background:#edf2f7;padding:16px;font-size:12px;color:#4a5568;text-align:center">GAMA UNITED d.o.o. · Veljka Milićevića 2/10, 11000 Beograd · PIB 114876455<br>+381 11 316 16 29 · ctp@gamaunited.rs</td></tr>
+<tr><td style="background:#edf2f7;padding:16px;font-size:12px;color:#4a5568;text-align:center">GAMA UNITED d.o.o. · Veljka Milićevića 2/10, 11000 Beograd · PIB 114876455<br>Kontakt za finansije: <b>Natalija Kresović</b> · 063 689 993 · natalija.kresovic@gamaunited.rs</td></tr>
 </table></td></tr></table></body></html>`;
 }
 
@@ -95,7 +94,7 @@ Deno.serve(async (req) => {
       if (!to) { results.push({ id, partner: p.partner, error: "Nema email-a" }); continue; }
       let err: string | null = null;
       try {
-        await sendMail({ to, subject: `${test ? "[PROBA] " : ""}Podsetnik o dospelim dugovanjima – Gama United`, html, replyTo: "ctp@gamaunited.rs" });
+        await sendMail({ to, subject: `${test ? "[PROBA] " : ""}Podsetnik o dospelim dugovanjima – Gama United`, html, replyTo: "natalija.kresovic@gamaunited.rs" });
       } catch (e) { err = (e as Error).message; }
       await admin.from("mm_dunning_log").insert({ partner_minimax_id: id, partner_name: p.partner, email: to!, overdue_rsd: p.overdue_rsd, is_test: test, sent_by: u.user.id, error: err });
       results.push({ id, partner: p.partner, to, error: err });
