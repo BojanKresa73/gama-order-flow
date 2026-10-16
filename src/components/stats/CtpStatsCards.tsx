@@ -7,7 +7,6 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { CtpFiltersState } from "@/pages/CtpStats";
 import { buildCtpRpcParams } from "@/lib/ctpRpcHelpers";
 import { FileText, Package, TrendingUp, Users, Euro, ArrowUpDown, Ruler } from "lucide-react";
-import { useAuthz } from "@/hooks/useAuthz";
 
 interface CtpStatsCardsProps {
   filters: CtpFiltersState;

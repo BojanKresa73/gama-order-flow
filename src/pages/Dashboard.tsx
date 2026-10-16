@@ -24,6 +24,7 @@ import { DashboardQuickActions } from "@/components/dashboard/DashboardQuickActi
 
 const Dashboard = () => {
   const navigate = useNavigate();
+  const { hasFinance } = useFinanceAccess();
   const { toast } = useToast();
   const { isSuper, isAdmin } = useAuthz();
 
@@ -112,9 +113,11 @@ const Dashboard = () => {
                 <YearlyPlateUsageChart />
               </div>
 
-              <div className="col-span-1 sm:col-span-2 md:col-span-6 xl:col-span-4 min-w-0">
-                <InvoiceStatsCard />
-              </div>
+              {hasFinance && (
+                <div className="col-span-1 sm:col-span-2 md:col-span-6 xl:col-span-4 min-w-0">
+                  <InvoiceStatsCard />
+                </div>
+              )}
             </>
           )}
 
