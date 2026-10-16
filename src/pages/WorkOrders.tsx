@@ -166,7 +166,10 @@ const WorkOrders = () => {
       }
       if (filters.clientIds.length > 0) query = query.in("client_id", filters.clientIds);
       if (filters.orderType !== "all") query = query.eq("order_type", filters.orderType as any);
-      if (filters.status !== "all") {
+      // Pregledi fakturisanja samo za vlasnike finansija; ostalima se zanemaruju (i iz linka).
+      const invoiceStatus = ["invoiced", "not_invoiced", "not_invoiced_old"].includes(filters.status);
+      const hasFinance = invoiceStatus ? (await supabase.rpc("has_finance_access")).data === true : false;
+      if (filters.status !== "all" && (!invoiceStatus || hasFinance)) {
         if (filters.status === "invoiced") query = query.not("invoiced_at", "is", null);
         // Nefakturisano ima smisla samo za zatvorene, važeće naloge.
         else if (filters.status === "not_invoiced") query = query.is("invoiced_at", null).eq("status", "closed").is("invalidated_at", null);
