@@ -150,12 +150,13 @@ export function DunningTab() {
                 <td className="px-3 py-2.5 align-middle max-w-[340px]"><button className="text-left hover:underline font-medium" onClick={() => setDetail(p)}>{p.partner}</button></td>
                 <td className="px-3 py-2.5 align-middle"><div>{p.contact ?? "—"}</div><div className="text-xs text-muted-foreground break-all">{p.email ?? <Badge variant="outline">Nema email-a</Badge>}</div></td>
                 <td className="px-3 py-2.5 align-middle text-right tabular-nums whitespace-nowrap">{fmt(p.open_rsd)}</td>
-                <td className="px-3 py-2.5 align-middle text-right font-medium text-destructive tabular-nums whitespace-nowrap">{p.overdue_rsd > 0 ? fmt(p.overdue_rsd) : "—"}</td>
+                <td className="px-3 py-2.5 align-middle text-right font-medium text-destructive tabular-nums whitespace-nowrap">{toAmount(p.overdue_rsd) > 0 ? fmt(p.overdue_rsd) : "—"}</td>
                 <td className="px-3 py-2.5 align-middle text-center tabular-nums whitespace-nowrap">{p.overdue_docs}/{p.docs}</td>
                 <td className="px-3 py-2.5 align-middle text-center">{p.max_days ? <Badge variant={p.max_days > 60 ? "destructive" : "outline"}>{p.max_days} dana</Badge> : "—"}</td>
                 <td className="px-3 py-2.5 align-middle text-right text-xs tabular-nums">{p.last_sent ? new Date(p.last_sent).toLocaleDateString("sr-RS") : "—"}</td>
                 <td className="px-3 py-2.5 align-middle text-right"><Button size="sm" variant="ghost" onClick={() => doPreview(p)} aria-label="Pregled"><Eye className="h-4 w-4" /></Button></td>
-              </tr>))}</tbody>
+              </tr>))}
+              {list.length === 0 && <tr><td colSpan={9} className="px-3 py-8 text-center text-muted-foreground">{allPartners.length === 0 ? "Nema kupaca sa otvorenim fakturama." : "Nijedan kupac ne odgovara filteru ili pretrazi."}</td></tr>}</tbody>
           </table>
         </div>
       </Card>
@@ -187,6 +188,13 @@ export function DunningTab() {
               <Button variant="outline" disabled={busy} onClick={() => send([detail.partner_minimax_id], true)}><Mail className="h-4 w-4 mr-1" />Proba meni</Button>
             </div>
           </div>}
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={!!failures} onOpenChange={(o) => !o && setFailures(null)}>
+        <DialogContent className="max-w-xl max-h-[80vh] overflow-y-auto">
+          <DialogHeader><DialogTitle>Nije poslato ili nije potpuno zabeleženo: {failures?.length}</DialogTitle></DialogHeader>
+          <ul className="text-sm divide-y">{failures?.map((f) => <li key={f.id} className="py-2"><b>{f.partner ?? f.id}</b><div className="text-destructive">{f.error}</div></li>)}</ul>
         </DialogContent>
       </Dialog>
 
