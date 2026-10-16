@@ -20,8 +20,18 @@ export function isValidEmail(v: unknown): v is string {
   return typeof v === "string" && v.length <= 254 && /^[^\s@,;<>"'()]+@[^\s@,;<>"'()]+\.[A-Za-z]{2,}$/.test(v.trim());
 }
 
-/** Start of the given YYYY-MM-DD day in UTC (ISO) — window for "already sent today". */
-export const dayStartIso = (today: string) => `${today}T00:00:00Z`;
+/** Start of the given YYYY-MM-DD calendar day in Europe/Belgrade, as UTC ISO (handles DST). */
+export function dayStartIso(today: string): string {
+  const utcMidnight = Date.parse(`${today}T00:00:00Z`);
+  const off = new Intl.DateTimeFormat("en-US", { timeZone: "Europe/Belgrade", timeZoneName: "longOffset" })
+    .formatToParts(new Date(utcMidnight)).find((p) => p.type === "timeZoneName")?.value ?? "GMT+00:00";
+  const m = off.match(/GMT([+-])(\d{2}):?(\d{2})?/);
+  const mins = m ? (m[1] === "-" ? -1 : 1) * (Number(m[2]) * 60 + Number(m[3] ?? 0)) : 0;
+  return new Date(utcMidnight - mins * 60000).toISOString();
+}
+
+/** Postgres unique-violation = a real reminder for this customer already exists today. */
+export const isUniqueViolation = (e: { code?: string } | null | undefined) => e?.code === "23505";
 
 /** Among same-day real-send claims (sent/pending) for one partner, only the earliest one may send. */
 export function isWinningClaim(myId: string, claims: { id: string; sent_at: string }[]): boolean {

@@ -1,3 +1,4 @@
+import { staleCutoffIso, updateOutcome } from "@/lib/invoicing";
 import { useEffect, useState, useMemo, useCallback } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
@@ -167,7 +168,9 @@ const WorkOrders = () => {
       if (filters.orderType !== "all") query = query.eq("order_type", filters.orderType as any);
       if (filters.status !== "all") {
         if (filters.status === "invoiced") query = query.not("invoiced_at", "is", null);
-        else if (filters.status === "not_invoiced") query = query.is("invoiced_at", null);
+        // Nefakturisano ima smisla samo za zatvorene, važeće naloge.
+        else if (filters.status === "not_invoiced") query = query.is("invoiced_at", null).eq("status", "closed").is("invalidated_at", null);
+        else if (filters.status === "not_invoiced_old") query = query.is("invoiced_at", null).eq("status", "closed").is("invalidated_at", null).lt("closed_at", staleCutoffIso());
         else query = query.eq("status", filters.status as any);
       }
 
@@ -427,9 +430,14 @@ const WorkOrders = () => {
     setIsInvoicing(true);
     try {
       const orderIds = Array.from(exportSelectedOrders);
-      const { error } = await supabase.from('work_orders').update({ invoiced_at: new Date().toISOString(), invoice_number: invoiceNumber || null }).in('id', orderIds);
+      // Samo zatvoreni, još nefakturisani nalozi; postojeći broj fakture se ne prepisuje.
+      const { data: changedRows, error } = await supabase.from('work_orders')
+        .update({ invoiced_at: new Date().toISOString(), invoice_number: invoiceNumber || null })
+        .in('id', orderIds).eq('status', 'closed').is('invoiced_at', null).select('id');
       if (error) throw error;
-      toast({ title: "Uspešno", description: `${orderIds.length} ${orderIds.length === 1 ? 'nalog označen' : 'naloga označeno'} kao fakturisano.` });
+      const { changed, skipped } = updateOutcome(orderIds.length, changedRows);
+      if (changed === 0) throw new Error("Nijedan nalog nije označen (nisu zatvoreni, već su fakturisani ili nemate dozvolu).");
+      toast({ title: "Uspešno", description: `${changed} označeno kao fakturisano.${skipped ? ` Preskočeno: ${skipped} (nije zatvoren, već fakturisan ili bez dozvole).` : ''}`, variant: skipped ? "destructive" : undefined });
       setBulkInvoiceDialogOpen(false);
       setExportSelectedOrders(new Set());
       fetchWorkOrders();

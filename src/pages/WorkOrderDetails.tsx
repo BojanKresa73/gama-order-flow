@@ -261,15 +261,17 @@ const WorkOrderDetails = () => {
   const handleMarkInvoiced = async (invoiceNumber: string) => {
     setMarkingInvoiced(true);
     try {
-      const { error } = await supabase
+      const { data: changedRows, error } = await supabase
         .from("work_orders")
         .update({
           invoiced_at: new Date().toISOString(),
           invoice_number: invoiceNumber || null,
         })
-        .eq("id", id);
+        .eq("id", id)
+        .select("id");
 
       if (error) throw error;
+      if (!changedRows?.length) throw new Error("Izmena nije sačuvana (nemate dozvolu ili nalog više ne postoji).");
 
       toast.success("Nalog označen kao fakturisan");
       setInvoiceDialogOpen(false);
@@ -283,15 +285,17 @@ const WorkOrderDetails = () => {
 
   const handleRemoveInvoiced = async () => {
     try {
-      const { error } = await supabase
+      const { data, error } = await supabase
         .from("work_orders")
         .update({
           invoiced_at: null,
           invoice_number: null,
         })
-        .eq("id", id);
+        .eq("id", id)
+        .select("id");
 
       if (error) throw error;
+      if (!data?.length) throw new Error("Izmena nije sačuvana (nemate dozvolu ili nalog više ne postoji).");
 
       toast.success("Status fakturisanja uklonjen");
       fetchWorkOrder();

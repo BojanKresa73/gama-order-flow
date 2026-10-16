@@ -2,7 +2,7 @@
 import { createClient } from "npm:@supabase/supabase-js@2";
 import { corsHeaders } from "npm:@supabase/supabase-js@2/cors";
 import { sendMail } from "../_shared/email-provider.ts";
-import { parsePartnerIds, isValidEmail, isWinningClaim, dayStartIso, LOG_PENDING } from "../_shared/dunningRules.ts";
+import { parsePartnerIds, isValidEmail, isWinningClaim, dayStartIso, isUniqueViolation, LOG_PENDING } from "../_shared/dunningRules.ts";
 
 const LOGO = "https://ytophmlfbrnhmqtwpijn.supabase.co/storage/v1/object/public/newsletter-assets/gama-united-white.png";
 const json = (b: unknown, s = 200) => new Response(JSON.stringify(b), { status: s, headers: { ...corsHeaders, "Content-Type": "application/json" } });
@@ -111,6 +111,7 @@ Deno.serve(async (req) => {
           partner_minimax_id: id, partner_name: p.partner, email: to, overdue_rsd: overdue,
           is_test: false, sent_by: u.user.id, error: LOG_PENDING,
         }).select("id, sent_at").single();
+        if (isUniqueViolation(cErr)) { results.push({ id, partner: p.partner, error: "Opomena je danas već poslata ovom kupcu" }); continue; }
         if (cErr || !claim) { results.push({ id, partner: p.partner, error: "Nije poslato: evidencija nije upisana" }); continue; }
         logId = claim.id;
         const { data: claims, error: qErr } = await admin.from("mm_dunning_log")
