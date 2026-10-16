@@ -3,7 +3,7 @@ import { createClient } from "npm:@supabase/supabase-js@2";
 import { corsHeaders } from "npm:@supabase/supabase-js@2/cors";
 import { sendMail } from "../_shared/email-provider.ts";
 
-const LOGO = "https://ytophmlfbrnhmqtwpijn.supabase.co/storage/v1/object/public/assets/gama-united-white.png";
+const LOGO = "https://ytophmlfbrnhmqtwpijn.supabase.co/storage/v1/object/public/newsletter-assets/gama-united-white.png";
 const json = (b: unknown, s = 200) => new Response(JSON.stringify(b), { status: s, headers: { ...corsHeaders, "Content-Type": "application/json" } });
 const rsd = (v: number) => Number(v).toLocaleString("sr-RS", { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + " RSD";
 const d = (s: string) => s ? s.split("-").reverse().join(".") + "." : "—";
