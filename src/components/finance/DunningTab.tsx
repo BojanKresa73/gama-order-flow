@@ -6,14 +6,22 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Switch } from "@/components/ui/switch";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { Loader2, Mail, Send, Eye } from "lucide-react";
+import { Loader2, Mail, Send, Eye, ArrowUp, ArrowDown, ArrowUpDown } from "lucide-react";
 import { toast } from "sonner";
 import { BarChart, Bar, XAxis, YAxis, Tooltip, Legend, ResponsiveContainer, CartesianGrid } from "recharts";
 
 const fmt = (v: unknown) => (v == null ? "—" : Number(v).toLocaleString("sr-RS", { maximumFractionDigits: 2 }));
 const d = (s?: string) => (s ? s.split("-").reverse().join(".") + "." : "—");
+
+type SortKey = "partner" | "open_rsd" | "overdue_rsd" | "docs" | "max_days" | "last_sent";
+
+const cellValue = (p: any, key: SortKey): string | number => {
+  if (key === "partner") return String(p.partner ?? "");
+  if (key === "last_sent") return p.last_sent ? new Date(p.last_sent).getTime() : -Infinity;
+  const n = Number(p[key]);
+  return Number.isFinite(n) ? n : -Infinity;
+};
 
 export function DunningTab() {
   const qc = useQueryClient();
@@ -23,15 +31,46 @@ export function DunningTab() {
   });
   const [search, setSearch] = useState("");
   const [onlyOverdue, setOnlyOverdue] = useState(true);
+  const [sort, setSort] = useState<{ key: SortKey; dir: 1 | -1 }>({ key: "overdue_rsd", dir: -1 });
   const [sel, setSel] = useState<Set<number>>(new Set());
   const [detail, setDetail] = useState<any>(null);
   const [preview, setPreview] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
 
-  const list = useMemo(() => (data?.partners ?? []).filter((p: any) =>
-    (!onlyOverdue || p.overdue_rsd > 0) &&
-    (!search || `${p.partner} ${p.client_name ?? ""} ${p.pib ?? ""}`.toLowerCase().includes(search.toLowerCase()))), [data, search, onlyOverdue]);
+  const allPartners = useMemo(() => (data?.partners ?? []), [data]);
+  const notOverdue = useMemo(() => allPartners.filter((p: any) => !(Number(p.overdue_rsd) > 0.5)).length, [allPartners]);
+
+  const list = useMemo(() => {
+    const arr = allPartners.filter((p: any) =>
+      (!onlyOverdue || Number(p.overdue_rsd) > 0.5) &&
+      (!search || `${p.partner} ${p.client_name ?? ""} ${p.pib ?? ""}`.toLowerCase().includes(search.toLowerCase())));
+    arr.sort((a: any, b: any) => {
+      const av = cellValue(a, sort.key), bv = cellValue(b, sort.key);
+      if (typeof av === "string" || typeof bv === "string") return sort.dir * String(av).localeCompare(String(bv), "sr");
+      return sort.dir * (Number(av) - Number(bv));
+    });
+    return arr;
+  }, [allPartners, search, onlyOverdue, sort]);
+
   const totals = useMemo(() => list.reduce((a: any, p: any) => ({ open: a.open + p.open_rsd, over: a.over + p.overdue_rsd }), { open: 0, over: 0 }), [list]);
+
+  const toggleSort = (key: SortKey) => setSort((s) => s.key === key ? { key, dir: s.dir === 1 ? -1 : 1 } : { key, dir: key === "partner" ? 1 : -1 });
+
+  const sortHead = (key: SortKey, label: string, align: "left" | "right" | "center" = "left", extra = "") => {
+    const active = sort.key === key;
+    return (
+      <th className={`px-3 py-2.5 ${align === "right" ? "text-right" : align === "center" ? "text-center" : "text-left"} ${extra}`}
+        aria-sort={active ? (sort.dir === 1 ? "ascending" : "descending") : "none"}>
+        <button type="button" onClick={() => toggleSort(key)} title="Kliknite za sortiranje"
+          className={`inline-flex items-center gap-1 font-medium transition-colors hover:text-foreground ${active ? "text-foreground" : ""}`}>
+          <span>{label}</span>
+          {active
+            ? (sort.dir === 1 ? <ArrowUp className="h-3.5 w-3.5 shrink-0" /> : <ArrowDown className="h-3.5 w-3.5 shrink-0" />)
+            : <ArrowUpDown className="h-3.5 w-3.5 shrink-0 opacity-40" />}
+        </button>
+      </th>
+    );
+  };
 
   const call = async (body: any) => {
     const { data, error } = await supabase.functions.invoke("send-dunning", { body });
@@ -67,22 +106,31 @@ export function DunningTab() {
       <Card className="p-4 space-y-3">
         <div className="flex flex-wrap gap-3 items-center">
           <Input placeholder="Pretraga kupca ili PIB-a" value={search} onChange={(e) => setSearch(e.target.value)} className="max-w-xs" />
-          <label className="flex items-center gap-2 text-sm"><Switch checked={onlyOverdue} onCheckedChange={setOnlyOverdue} /> Samo van valute</label>
+          <div className="inline-flex items-center rounded-md border p-0.5" role="group" aria-label="Filter dugovanja">
+            <Button size="sm" variant={onlyOverdue ? "outline" : "default"} className="h-8 rounded-[5px] px-3 text-xs" onClick={() => setOnlyOverdue(false)}>Svi kupci</Button>
+            <Button size="sm" variant={onlyOverdue ? "default" : "outline"} className="h-8 rounded-[5px] px-3 text-xs" onClick={() => setOnlyOverdue(true)}>Samo van valute</Button>
+          </div>
           <div className="flex-1" />
           <Button variant="outline" disabled={busy} onClick={() => send([...sel], true)}><Mail className="h-4 w-4 mr-1" />Pošalji meni probu</Button>
           <Button disabled={busy || !sel.size} onClick={() => send([...sel], false)}>{busy ? <Loader2 className="h-4 w-4 mr-1 animate-spin" /> : <Send className="h-4 w-4 mr-1" />}Pošalji izabranima ({sel.size})</Button>
         </div>
+        <p className="text-xs text-muted-foreground">
+          {onlyOverdue
+            ? <>{list.length} kupaca ima dug van valute. <button type="button" className="underline hover:text-foreground" onClick={() => setOnlyOverdue(false)}>{notOverdue} kupaca</button> ima otvorene fakture koje još nisu dospele — prikaži ih.</>
+            : <>Prikazani su svi kupci sa otvorenim fakturama. {notOverdue} njih još nema dug van valute.</>}
+          <span className="ml-1 opacity-70">Kliknite na naslov kolone (strelica) za sortiranje od najmanjeg ka najvećem ili obrnuto.</span>
+        </p>
         <div className="overflow-x-auto">
           <table className="w-full text-sm min-w-[1000px]">
             <thead><tr className="text-left text-muted-foreground border-b">
               <th className="w-10 px-3 py-2.5"><Checkbox checked={sel.size > 0 && list.every((p: any) => sel.has(p.partner_minimax_id))} onCheckedChange={(c) => setSel(c ? new Set(list.filter((p: any) => p.email).map((p: any) => p.partner_minimax_id)) : new Set())} /></th>
-              <th className="px-3 py-2.5">Kupac</th>
+              {sortHead("partner", "Kupac")}
               <th className="px-3 py-2.5 min-w-[220px]">Kontakt / email</th>
-              <th className="px-3 py-2.5 text-right">Otvoreno</th>
-              <th className="px-3 py-2.5 text-right">Van valute</th>
-              <th className="px-3 py-2.5 text-center">Faktura</th>
-              <th className="px-3 py-2.5 text-center">Najduže kasni</th>
-              <th className="px-3 py-2.5 text-right">Poslednja opomena</th>
+              {sortHead("open_rsd", "Otvoreno", "right")}
+              {sortHead("overdue_rsd", "Van valute", "right")}
+              {sortHead("docs", "Faktura", "center")}
+              {sortHead("max_days", "Najduže kasni", "center")}
+              {sortHead("last_sent", "Poslednja opomena", "right")}
               <th className="w-12 px-3 py-2.5"></th></tr></thead>
             <tbody>{list.map((p: any) => (
               <tr key={p.partner_minimax_id} className="border-b last:border-0 hover:bg-muted/40 transition-colors">
