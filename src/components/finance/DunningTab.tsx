@@ -54,7 +54,8 @@ export function DunningTab() {
 
   const totals = useMemo(() => list.reduce((a: any, p: any) => ({ open: a.open + p.open_rsd, over: a.over + p.overdue_rsd }), { open: 0, over: 0 }), [list]);
 
-  const toggleSort = (key: SortKey) => setSort((s) => s.key === key ? { key, dir: s.dir === 1 ? -1 : 1 } : { key, dir: key === "partner" ? 1 : -1 });
+  // Prvi klik = od najmanjeg ka najvećem, drugi klik = obrnuto.
+  const toggleSort = (key: SortKey) => setSort((s) => s.key === key ? { key, dir: s.dir === 1 ? -1 : 1 } : { key, dir: 1 });
 
   const sortHead = (key: SortKey, label: string, align: "left" | "right" | "center" = "left", extra = "") => {
     const active = sort.key === key;
