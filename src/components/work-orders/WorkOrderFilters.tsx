@@ -1,3 +1,4 @@
+import { useFinanceAccess } from "@/hooks/useFinanceAccess";
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Calendar } from "@/components/ui/calendar";
@@ -54,9 +55,12 @@ const STATUS_OPTIONS = [
   { value: "not_invoiced", label: "Nije fakturisano" },
   { value: "not_invoiced_old", label: "Nefakturisano > 10 dana" },
 ];
+export const INVOICE_STATUSES = ["invoiced", "not_invoiced", "not_invoiced_old"];
 
 export function WorkOrderFilters({ filters, onFiltersChange }: WorkOrderFiltersProps) {
   const [localFilters, setLocalFilters] = useState(filters);
+  const { hasFinance } = useFinanceAccess();
+  const statusOptions = hasFinance ? STATUS_OPTIONS : STATUS_OPTIONS.filter((o) => !INVOICE_STATUSES.includes(o.value));
   const [clientsOpen, setClientsOpen] = useState(false);
   const [clientSearch, setClientSearch] = useState("");
 
@@ -289,7 +293,7 @@ export function WorkOrderFilters({ filters, onFiltersChange }: WorkOrderFiltersP
                   <SelectValue placeholder="Svi statusi" />
                 </SelectTrigger>
                 <SelectContent>
-                  {STATUS_OPTIONS.map((option) => (
+                  {statusOptions.map((option) => (
                     <SelectItem key={option.value} value={option.value}>
                       {option.label}
                     </SelectItem>
