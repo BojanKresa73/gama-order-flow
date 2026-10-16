@@ -94,7 +94,7 @@ Deno.serve(async (req) => {
       if (!to) { results.push({ id, partner: p.partner, error: "Nema email-a" }); continue; }
       let err: string | null = null;
       try {
-        await sendMail({ to, subject: `${test ? "[PROBA] " : ""}Podsetnik o dospelim dugovanjima – Gama United`, html, replyTo: "ctp@gamaunited.rs" });
+        await sendMail({ to, subject: `${test ? "[PROBA] " : ""}Podsetnik o dospelim dugovanjima – Gama United`, html, replyTo: "natalija.kresovic@gamaunited.rs" });
       } catch (e) { err = (e as Error).message; }
       await admin.from("mm_dunning_log").insert({ partner_minimax_id: id, partner_name: p.partner, email: to!, overdue_rsd: p.overdue_rsd, is_test: test, sent_by: u.user.id, error: err });
       results.push({ id, partner: p.partner, to, error: err });
