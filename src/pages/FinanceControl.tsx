@@ -11,6 +11,7 @@ import { BookkeeperTab } from "@/components/finance/BookkeeperTab";
 import { PROFIT_WARNING } from "@/lib/bookkeeperReport";
 import { VatTab } from "@/components/finance/VatTab";
 import { SyncPrompt } from "@/components/finance/SyncPrompt";
+import { DunningTab } from "@/components/finance/DunningTab";
 
 const fmt = (v: unknown) => (v == null ? "—" : Number(v).toLocaleString("sr-RS", { maximumFractionDigits: 2 }));
 const KIND: Record<string, string> = {
@@ -71,6 +72,7 @@ export default function FinanceControl() {
               <TabsTrigger value="banke">Banke</TabsTrigger>
               <TabsTrigger value="rezultat">Privremeni rezultat</TabsTrigger>
               <TabsTrigger value="pdv">PDV</TabsTrigger>
+              <TabsTrigger value="opomene">Slanje opomena</TabsTrigger>
               <TabsTrigger value="knjigovodja">Izveštaj za knjigovođu</TabsTrigger>
             </TabsList>
 
@@ -196,6 +198,7 @@ export default function FinanceControl() {
               </Card>
             </TabsContent>
 
+            <TabsContent value="opomene"><DunningTab /></TabsContent>
             <TabsContent value="pdv"><VatTab year={year} setYear={setYear} /></TabsContent>
           </Tabs>
         )}

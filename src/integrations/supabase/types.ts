@@ -2447,6 +2447,42 @@ export type Database = {
         }
         Relationships: []
       }
+      mm_dunning_log: {
+        Row: {
+          email: string
+          error: string | null
+          id: string
+          is_test: boolean
+          overdue_rsd: number | null
+          partner_minimax_id: number
+          partner_name: string | null
+          sent_at: string
+          sent_by: string
+        }
+        Insert: {
+          email: string
+          error?: string | null
+          id?: string
+          is_test?: boolean
+          overdue_rsd?: number | null
+          partner_minimax_id: number
+          partner_name?: string | null
+          sent_at?: string
+          sent_by: string
+        }
+        Update: {
+          email?: string
+          error?: string | null
+          id?: string
+          is_test?: boolean
+          overdue_rsd?: number | null
+          partner_minimax_id?: number
+          partner_name?: string | null
+          sent_at?: string
+          sent_by?: string
+        }
+        Relationships: []
+      }
       mm_journals: {
         Row: {
           description: string | null
@@ -5612,6 +5648,7 @@ export type Database = {
       }
       mm_profit_by_month: { Args: { p_year: number }; Returns: Json }
       mm_profit_check: { Args: { p_year: number }; Returns: Json }
+      mm_receivables_aging: { Args: never; Returns: Json }
       mm_reconciliation: { Args: never; Returns: Json }
       mm_vat_by_month: { Args: { p_year: number }; Returns: Json }
       next_complaint_number: { Args: never; Returns: string }
