@@ -1,3 +1,4 @@
+import { useFinanceAccess } from "@/hooks/useFinanceAccess";
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
@@ -29,6 +30,7 @@ export interface CtpFiltersState {
 
 const CtpStats = () => {
   const navigate = useNavigate();
+  const { hasFinance } = useFinanceAccess();
   const [filters, setFilters] = useState<CtpFiltersState>({
     dateRange: {
       from: subDays(new Date(), 30),
@@ -70,7 +72,7 @@ const CtpStats = () => {
         <Tabs defaultValue="overview">
           <TabsList>
             <TabsTrigger value="overview">Pregled</TabsTrigger>
-            <TabsTrigger value="price-increase">Rast cena</TabsTrigger>
+            {hasFinance && <TabsTrigger value="price-increase">Rast cena</TabsTrigger>}
           </TabsList>
 
           <TabsContent value="overview" className="space-y-6 mt-4">
@@ -93,9 +95,9 @@ const CtpStats = () => {
             <CtpMonthlyReportCard />
           </TabsContent>
 
-          <TabsContent value="price-increase" className="mt-4">
+          {hasFinance && <TabsContent value="price-increase" className="mt-4">
             <CtpPriceIncreaseAnalysis />
-          </TabsContent>
+          </TabsContent>}
         </Tabs>
       </main>
     </div>

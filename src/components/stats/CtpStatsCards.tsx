@@ -1,3 +1,4 @@
+import { useFinanceAccess } from "@/hooks/useFinanceAccess";
 import { useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
@@ -6,15 +7,13 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { CtpFiltersState } from "@/pages/CtpStats";
 import { buildCtpRpcParams } from "@/lib/ctpRpcHelpers";
 import { FileText, Package, TrendingUp, Users, Euro, ArrowUpDown, Ruler } from "lucide-react";
-import { useAuthz } from "@/hooks/useAuthz";
 
 interface CtpStatsCardsProps {
   filters: CtpFiltersState;
 }
 
 export const CtpStatsCards = ({ filters }: CtpStatsCardsProps) => {
-  const { isSuper, isAdminPlus } = useAuthz();
-  const canViewFinancials = isSuper || isAdminPlus;
+  const { hasFinance: canViewFinancials } = useFinanceAccess();
 
   const { data: stats, isLoading } = useQuery({
     queryKey: ["ctp-stats-rpc", filters],
