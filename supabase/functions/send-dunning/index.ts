@@ -2,6 +2,7 @@
 import { createClient } from "npm:@supabase/supabase-js@2";
 import { corsHeaders } from "npm:@supabase/supabase-js@2/cors";
 import { sendMail } from "../_shared/email-provider.ts";
+import { parsePartnerIds, isValidEmail, isWinningClaim, dayStartIso, LOG_PENDING } from "../_shared/dunningRules.ts";
 
 const LOGO = "https://ytophmlfbrnhmqtwpijn.supabase.co/storage/v1/object/public/newsletter-assets/gama-united-white.png";
 const json = (b: unknown, s = 200) => new Response(JSON.stringify(b), { status: s, headers: { ...corsHeaders, "Content-Type": "application/json" } });
@@ -74,30 +75,65 @@ Deno.serve(async (req) => {
     if (ok !== true) return json({ error: "Nemate pristup" }, 403);
 
     const body = await req.json().catch(() => ({}));
-    const ids: number[] = Array.isArray(body.partner_ids) ? body.partner_ids.map(Number).filter(Number.isFinite).slice(0, 300) : [];
+    const parsed = parsePartnerIds(body?.partner_ids);
+    if (parsed.error) return json({ error: parsed.error }, 400);
+    const ids = parsed.ids;
     const test = body.test === true;
     const preview = body.preview === true;
-    const testTo = typeof body.test_email === "string" && body.test_email.includes("@") ? body.test_email : u.user.email;
-    if (!ids.length) return json({ error: "Nije izabran nijedan klijent" }, 400);
+    // Probe idu ISKLJUČIVO na adresu prijavljenog korisnika; proizvoljna adresa se ne prihvata.
+    const testTo = u.user.email ?? null;
+    if (test && !isValidEmail(testTo)) return json({ error: "Vaš nalog nema ispravnu email adresu za probu" }, 400);
+    if (test && typeof body.test_email === "string" && body.test_email.trim().toLowerCase() !== testTo!.toLowerCase())
+      return json({ error: "Proba se može poslati samo na vašu adresu" }, 400);
 
     const { data: aging, error } = await user.rpc("mm_receivables_aging");
     if (error) return json({ error: error.message }, 500);
+    const today: string = (aging as any).today;
+    const partners: any[] = (aging as any)?.partners ?? [];
     const admin = createClient(url, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!);
     const results: any[] = [];
     for (const id of ids) {
-      const p = (aging as any).partners.find((x: any) => x.partner_minimax_id === id);
+      const p = partners.find((x: any) => Number(x.partner_minimax_id) === id);
       if (!p) { results.push({ id, error: "Nema otvorenih faktura" }); continue; }
-      const html = buildHtml(p, (aging as any).today);
+      const html = buildHtml(p, today);
       if (preview) return json({ html });
-      if (!(p.overdue_rsd > 0)) { results.push({ id, partner: p.partner, error: "Nema duga van valute" }); continue; }
-      const to = test ? testTo : p.email;
+      const overdue = Number(p.overdue_rsd);
+      if (!(overdue > 0.5)) { results.push({ id, partner: p.partner, error: "Nema duga van valute" }); continue; }
+      const to = test ? testTo! : (typeof p.email === "string" ? p.email.trim() : "");
       if (!to) { results.push({ id, partner: p.partner, error: "Nema email-a" }); continue; }
+      if (!isValidEmail(to)) { results.push({ id, partner: p.partner, error: "Neispravan email kupca" }); continue; }
+
+      let logId: string | null = null;
+      if (!test) {
+        // Zaštita od ponavljanja i paralelnih slanja: najpre upiši "pending" zahtev,
+        // pa šalje samo najraniji zahtev za istog kupca u toku dana (uspešan ili u toku).
+        const { data: claim, error: cErr } = await admin.from("mm_dunning_log").insert({
+          partner_minimax_id: id, partner_name: p.partner, email: to, overdue_rsd: overdue,
+          is_test: false, sent_by: u.user.id, error: LOG_PENDING,
+        }).select("id, sent_at").single();
+        if (cErr || !claim) { results.push({ id, partner: p.partner, error: "Nije poslato: evidencija nije upisana" }); continue; }
+        logId = claim.id;
+        const { data: claims, error: qErr } = await admin.from("mm_dunning_log")
+          .select("id, sent_at").eq("partner_minimax_id", id).eq("is_test", false)
+          .gte("sent_at", dayStartIso(today)).or(`error.is.null,error.eq.${LOG_PENDING}`);
+        if (qErr || !isWinningClaim(logId!, claims ?? [])) {
+          await admin.from("mm_dunning_log").update({ error: qErr ? "Nije poslato: provera duplikata nije uspela" : "Preskočeno: opomena je danas već poslata" }).eq("id", logId);
+          results.push({ id, partner: p.partner, error: qErr ? "Provera duplikata nije uspela" : "Opomena je danas već poslata ovom kupcu" });
+          continue;
+        }
+      }
+
       let err: string | null = null;
       try {
         await sendMail({ to, subject: `${test ? "[PROBA] " : ""}Podsetnik o dospelim dugovanjima – Gama United`, html, replyTo: "natalija.kresovic@gamaunited.rs" });
-      } catch (e) { err = (e as Error).message; }
-      await admin.from("mm_dunning_log").insert({ partner_minimax_id: id, partner_name: p.partner, email: to!, overdue_rsd: p.overdue_rsd, is_test: test, sent_by: u.user.id, error: err });
-      results.push({ id, partner: p.partner, to, error: err });
+      } catch (e) { err = (e as Error).message || "Greška pri slanju"; }
+
+      let warning: string | null = null;
+      const logRes = logId
+        ? await admin.from("mm_dunning_log").update({ error: err }).eq("id", logId)
+        : await admin.from("mm_dunning_log").insert({ partner_minimax_id: id, partner_name: p.partner, email: to, overdue_rsd: overdue, is_test: true, sent_by: u.user.id, error: err });
+      if (logRes.error) warning = "Evidencija slanja nije ažurirana";
+      results.push({ id, partner: p.partner, to, error: err, warning });
     }
     return json({ results });
   } catch (e) {
