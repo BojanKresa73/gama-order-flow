@@ -5656,6 +5656,10 @@ export type Database = {
       next_quote_number: { Args: never; Returns: string }
       refresh_plate_usage_stats: { Args: never; Returns: undefined }
       run_system_maintenance: { Args: never; Returns: undefined }
+      search_work_order_ids: {
+        Args: { p_include_notes?: boolean; p_needle: string }
+        Returns: string[]
+      }
       show_limit: { Args: never; Returns: number }
       show_trgm: { Args: { "": string }; Returns: string[] }
       update_work_order_priority: {
