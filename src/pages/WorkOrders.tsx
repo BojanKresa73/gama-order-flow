@@ -139,11 +139,13 @@ const WorkOrders = () => {
       const fileNeedle = filters.fileNameFilter.trim();
       let fileOrderIds: string[] | null = null;
       if (fileNeedle) {
-        const [byFile, byNotes] = await Promise.all([
-          fetchOrderIdsByFileName(fileNeedle),
-          filters.searchNotes ? fetchOrderIdsByNotes(fileNeedle) : Promise.resolve([] as string[]),
-        ]);
-        fileOrderIds = Array.from(new Set([...byFile, ...byNotes]));
+        // Jedan brz serverski upit umesto 4 paralelna (izbegava statement timeout)
+        const { data: ids, error: searchError } = await (supabase as any).rpc('search_work_order_ids', {
+          p_needle: fileNeedle,
+          p_include_notes: !!filters.searchNotes,
+        });
+        if (searchError) throw searchError;
+        fileOrderIds = Array.from(new Set(((ids as any[]) || []).map((r: any) => (typeof r === 'string' ? r : r.search_work_order_ids ?? r.id))));
         if (fileOrderIds.length === 0) {
           setWorkOrders([]);
           return;
