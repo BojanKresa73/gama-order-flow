@@ -72,3 +72,29 @@ d3("oznaka Copy", () => {
   });
 });
 
+
+import { groupEntriesForExport as g4, invoiceJobName as ij4 } from "../ctpExportGrouping";
+import { describe as d4, it as i4, expect as e4 } from "vitest";
+d4("dodatna pravila spajanja", () => {
+  const f = (names: string[], q = 4) => g4(names.map((filename) => ({ filename, quantity: q, format_name: "x" })), () => 1);
+  i4("Birograf _001_A/_001_B spaja u jednu stavku", () => {
+    const g = f(["Birograf_1060x795_4042travelKBA8_001_A.new.pdf", "Birograf_1060x795_4042travelKBA8_001_B.new.pdf", "Birograf_1060x795_4042travelKBA8_014_B.new.pdf"]);
+    e4(g).toHaveLength(1);
+    e4(g[0].quantity).toBe(12);
+    e4(ij4(g[0].baseName)).toBe("4042travelKBA8");
+  });
+  i4("TAB 01..05 u sredini naziva spaja", () => {
+    const g = f([1, 2, 3, 4, 5].map((n) => `la mantini 745x605 Beobasta omot 482x130mm TAB 0${n}    05 10 2026  Tabak B2.new.pdf`));
+    e4(g).toHaveLength(1);
+    e4(g[0].quantity).toBe(20);
+  });
+  i4(".p0001 - Copy spaja, Copy ostaje", () => {
+    const g = f(["Flajeri_A5.p0001 - Copy.pdf", "Flajeri_A5.p0002 - Copy.pdf"]);
+    e4(g).toHaveLength(1);
+    e4(g[0].baseName).toBe("Flajeri_A5 - Copy");
+    e4(g[0].quantity).toBe(8);
+  });
+  i4("3D Print HIPP 0010A ostaje odvojeno", () => {
+    e4(f(["HIPP 0010A.pdf", "HIPP 0020A.pdf"], 1)).toHaveLength(2);
+  });
+});
