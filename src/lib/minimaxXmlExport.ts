@@ -1,4 +1,4 @@
-import { groupEntriesForExport } from "@/lib/ctpExportGrouping";
+import { groupEntriesForExport, invoiceJobName } from "@/lib/ctpExportGrouping";
 import { format } from "date-fns";
 import { 
   getMinimaxArtikalSifra, 
@@ -150,9 +150,8 @@ export function generateMinimaxOrderXml(workOrder: WorkOrderData): string {
       
       // Opis: "Usluga: [naziv klijenta kraci] [format] [broj naloga] [naziv posla] (N ploča)"
       const clientShort = getClientShortName(client.name);
-      const jobName = group.merged
-        ? `${truncate(group.baseName, 60)} (${group.quantity} ploča)`
-        : truncate(group.entries[0].filename, 60);
+      const cleanName = truncate(invoiceJobName(group.baseName), 60);
+      const jobName = group.merged ? `${cleanName} (${group.quantity} ploča)` : cleanName;
       const posaoOpis = `Usluga: ${clientShort} ${formatName} ${orderNumber} ${jobName}`;
       
       const artikalDisplay = minimaxNaziv;
