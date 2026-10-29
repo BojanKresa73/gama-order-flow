@@ -52,3 +52,23 @@ d2("brojač tabaka", () => {
     e2(jb2("26500_ED_eaq 1-2027 large_tabaci.pdf")).toBe("26500_ED_eaq 1-2027 large_tabaci");
   });
 });
+
+import { jobBaseName as jb3, groupEntriesForExport as g3 } from "../ctpExportGrouping";
+import { describe as d3, it as i3, expect as e3 } from "vitest";
+d3("oznaka Copy", () => {
+  i3("Copy ostaje u nazivu posla", () => {
+    e3(jb3("70.007 - Copy.pdf")).toBe("70.007 - Copy");
+    e3(jb3("70.007 - Copy.new.pdf")).toBe("70.007 - Copy");
+  });
+  i3("Copy se ne spaja sa originalom", () => {
+    const entries = [
+      { filename: "70.007.pdf", quantity: 12, format_name: "1040x800" },
+      { filename: "70.007 - Copy.pdf", quantity: 12, format_name: "1040x800" },
+    ];
+    const g = g3(entries, () => 2.4);
+    e3(g).toHaveLength(2);
+    e3(g.map((x) => x.baseName)).toEqual(["70.007", "70.007 - Copy"]);
+    e3(g.map((x) => x.quantity)).toEqual([12, 12]);
+  });
+});
+
