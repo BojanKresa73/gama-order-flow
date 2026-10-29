@@ -32,8 +32,10 @@ export function jobBaseName(filename: string): string {
  * Prefiks se skida samo ako se dimenzija pojavi među prve 3 reči i iza nje ostane tekst.
  */
 export function invoiceJobName(baseName: string): string {
-  const m = baseName.match(/^((?:\S+\s+){0,2}?)\d{3,4}\s*[x×]\s*\d{3,4}(?:mm)?[\s_-]+(.+)$/i);
-  if (m && m[2].trim()) return m[2].trim();
+  // Razdvajač može biti razmak ili donja crta ("Birograf_1060x795_..."). Skida se samo
+  // dimenzija ploče (obe strane ≥ 400 mm), ne dimenzija proizvoda (npr. "482x130mm").
+  const m = baseName.match(/^((?:[^\s_]+[\s_]+){0,2}?)(\d{3,4})\s*[x×]\s*(\d{3,4})(?:mm)?[\s_-]+(.+)$/i);
+  if (m && m[4].trim() && Number(m[2]) >= 400 && Number(m[3]) >= 400) return m[4].trim();
   return baseName;
 }
 
