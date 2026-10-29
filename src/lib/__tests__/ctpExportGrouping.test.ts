@@ -34,3 +34,21 @@ describe("CTP grupisanje za izvoz", () => {
     expect(l).toEqual(["DIG-2026-000045", "DIG-2026-000101", "DIG-2026-000120"]);
   });
 });
+
+import { jobBaseName as jb2, groupEntriesForExport as g2 } from "../ctpExportGrouping";
+import { describe as d2, it as i2, expect as e2 } from "vitest";
+d2("brojač tabaka", () => {
+  i2("spaja 'tabaci 01.new' ... 'tabaci 26.new' u jednu stavku", () => {
+    const entries = Array.from({ length: 26 }, (_, k) => ({
+      filename: `26512_ed_primary st 1 2027_tabaci ${String(k + 1).padStart(2, "0")}.new.pdf`,
+      quantity: 4, format_name: "745x605",
+    }));
+    const g = g2(entries, () => 100);
+    e2(g).toHaveLength(1);
+    e2(g[0].quantity).toBe(104);
+    e2(g[0].baseName).toBe("26512_ed_primary st 1 2027_tabaci");
+  });
+  i2("ne dira godinu u nazivu", () => {
+    e2(jb2("26500_ED_eaq 1-2027 large_tabaci.pdf")).toBe("26500_ED_eaq 1-2027 large_tabaci");
+  });
+});

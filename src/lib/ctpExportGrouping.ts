@@ -6,8 +6,13 @@
 export function jobBaseName(filename: string): string {
   let name = (filename || "").trim();
   name = name.replace(/\.(pdf|tif|tiff|ps|eps|1bit|len)$/i, "");
-  name = name.replace(/[._\s-]p\d{1,5}$/i, "");
   name = name.replace(/[\s_.-]*preps\b/gi, "");
+  name = name.replace(/\.new$/i, "");
+  name = name.replace(/[._\s-]p\d{1,5}$/i, "");
+  // Završni brojač tabaka: "tabaci 01", "tabak 2", "_03" (1-2 cifre).
+  name = name.replace(/([\s_-]+(?:tabaci|tabak|tab)?)[\s_-]*\d{1,2}$/i, (_m, w: string) =>
+    /tab/i.test(w) ? w.replace(/[\s_-]+$/, "") : "",
+  );
   return name.replace(/\s{2,}/g, " ").trim();
 }
 
