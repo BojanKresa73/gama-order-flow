@@ -9,6 +9,7 @@ function pageStrippedName(filename: string): string {
   name = name.replace(/[\s_.-]*preps\b/gi, "");
   name = name.replace(/\.new$/i, "");
   name = name.replace(/[._\s-]p\d{1,5}$/i, "");
+  name = name.replace(/[._\s-]p\d{1,5}(?=\s*-\s*copy$)/i, "");
   return name.replace(/\s{2,}/g, " ").trim();
 }
 
@@ -19,6 +20,12 @@ export function jobBaseName(filename: string): string {
   name = name.replace(/[\s_.-]*preps\b/gi, "");
   name = name.replace(/\.new$/i, "");
   name = name.replace(/[._\s-]p\d{1,5}$/i, "");
+  // ".p0001 - Copy": oznaka strane ispred "- Copy" (Copy ostaje).
+  name = name.replace(/[._\s-]p\d{1,5}(?=\s*-\s*copy$)/i, "");
+  // Tabak + strana A/B na kraju: "_001_A", "_014_B".
+  name = name.replace(/[\s_-]+\d{1,3}[\s_-]?[ab]$/i, "");
+  // Brojač tabaka u sredini naziva: "TAB 01    05 10 2026" -> "TAB 05 10 2026".
+  name = name.replace(/\b(tabaci|tabak|tab)\s*\d{1,2}(?=\s)/gi, "$1");
   // Završni brojač tabaka: "tabaci 01", "tabak 2", "_03" (1-2 cifre).
   name = name.replace(/([\s_-]+(?:tabaci|tabak|tab)?)[\s_-]*\d{1,2}$/i, (_m, w: string) =>
     /tab/i.test(w) ? w.replace(/[\s_-]+$/, "") : "",
