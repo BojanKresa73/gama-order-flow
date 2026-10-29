@@ -2,6 +2,16 @@
 // Fajlovi koji se razlikuju samo po oznaci strane/signature (".p0001", ".p0002"...)
 // spajaju se u jednu stavku sa zbirom ploča.
 
+/** Naziv bez ekstenzije, Preps, .new i ".pNNNN" — ali sa brojem tabaka. */
+function pageStrippedName(filename: string): string {
+  let name = (filename || "").trim();
+  name = name.replace(/\.(pdf|tif|tiff|ps|eps|1bit|len)$/i, "");
+  name = name.replace(/[\s_.-]*preps\b/gi, "");
+  name = name.replace(/\.new$/i, "");
+  name = name.replace(/[._\s-]p\d{1,5}$/i, "");
+  return name.replace(/\s{2,}/g, " ").trim();
+}
+
 /** Koren naziva posla: bez ekstenzije, bez oznake Preps i bez završne oznake ".pNNNN". */
 export function jobBaseName(filename: string): string {
   let name = (filename || "").trim();
@@ -61,6 +71,12 @@ export function groupEntriesForExport<T extends GroupableEntry>(
     } else {
       map.set(key, { baseName: base, format_name: e.format_name, quantity: qty, price, entries: [e], merged: false });
     }
+  }
+  // Ako se u grupi nije menjao brojač tabaka (npr. jedan "tabak 04" u više .pNNNN strana),
+  // zadrži pun naziv sa brojem — brojač se skida samo kad se spajaju različiti tabaci.
+  for (const g of map.values()) {
+    const names = new Set(g.entries.map((e) => pageStrippedName(e.filename).toLowerCase()));
+    if (names.size === 1) g.baseName = pageStrippedName(g.entries[0].filename);
   }
   return [...map.values()];
 }
