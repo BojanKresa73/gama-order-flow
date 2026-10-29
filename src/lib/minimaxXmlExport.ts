@@ -129,11 +129,14 @@ export function generateMinimaxOrderXml(workOrder: WorkOrderData): string {
     (client.pib ? truncate(client.pib.replace(/\D/g, ""), 30) : 
      truncate(client.name.replace(/[^A-Za-z0-9]/g, "").toUpperCase(), 30));
 
-  // Build NarociloVrstice - svaki fajl je posebna stavka
-  const vrsticeXml = workOrder.file_entries
-    .filter(entry => entry.format_name) // samo stavke sa formatom
-    .map(entry => {
-      const formatName = entry.format_name!;
+  // Build NarociloVrstice - fajlovi istog posla (.p0001, .p0002...) spajaju se u jednu stavku
+  const withFormat = workOrder.file_entries.filter(entry => entry.format_name);
+  const groups = groupEntriesForExport(withFormat, (entry) =>
+    getPriceForFormat(entry.format_name!, workOrder.client_plate_prices, nbsRate, workOrder.has_mono_pricing, entry.quantity),
+  );
+  const vrsticeXml = groups
+    .map(group => {
+      const formatName = group.format_name!;
       const minimaxSifra = getMinimaxArtikalSifra(formatName);
       const minimaxNaziv = getMinimaxArtikalNaziv(formatName);
       
@@ -142,16 +145,15 @@ export function generateMinimaxOrderXml(workOrder: WorkOrderData): string {
         return "";
       }
       
-      // Cena iz cenovnika klijenta (EUR -> RSD po kursu NBS)
-      const priceRsd = getPriceForFormat(formatName, workOrder.client_plate_prices, nbsRate, workOrder.has_mono_pricing, entry.quantity);
+      const priceRsd = group.price;
       
-      // Opis: "Usluga: [naziv klijenta kraci] [format] [broj naloga] [naziv fajla]"
-      // Primer: "Usluga: dbox 1060x795 RN-0056-2025 FLAMMAT Kutije za hepo 21mm..."
+      // Opis: "Usluga: [naziv klijenta kraci] [format] [broj naloga] [naziv posla] (N ploča)"
       const clientShort = getClientShortName(client.name);
-      const posaoOpis = `Usluga: ${clientShort} ${formatName} ${orderNumber} ${truncate(entry.filename, 60)}`;
+      const jobName = group.merged
+        ? `${truncate(group.baseName, 60)} (${group.quantity} ploča)`
+        : truncate(group.entries[0].filename, 60);
+      const posaoOpis = `Usluga: ${clientShort} ${formatName} ${orderNumber} ${jobName}`;
       
-      // Koristi pun Minimax naziv artikla (CTcP QUANTUM PREMIUM PLATE...)
-      // Minimax će prikazati i šifru i ovaj naziv
       const artikalDisplay = minimaxNaziv;
       
       return `
@@ -160,7 +162,7 @@ export function generateMinimaxOrderXml(workOrder: WorkOrderData): string {
         <NazivArtikla>${escapeXml(artikalDisplay)}</NazivArtikla>
         <MerskaEnota>Kom</MerskaEnota>
         <Opis>${escapeXml(posaoOpis)}</Opis>
-        <Kolicina>${(entry.quantity || 1).toFixed(6)}</Kolicina>
+        <Kolicina>${group.quantity.toFixed(6)}</Kolicina>
         <OdstotekPopusta>0.00</OdstotekPopusta>
         <Cena>${formatPrice(priceRsd)}</Cena>
       </NarociloVrstica>`;

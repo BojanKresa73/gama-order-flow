@@ -413,9 +413,9 @@ const WorkOrderDetails = () => {
         <div className="container mx-auto px-4 py-4 flex items-center justify-between">
           <div className="flex items-center gap-4">
             <Button variant="ghost" onClick={() => {
-              const navEntries = performance?.getEntriesByType?.('navigation') as PerformanceNavigationTiming[] | undefined;
-              const isDirectNav = navEntries?.[0]?.type === 'navigate';
-              if (window.history.length > 2 && !isDirectNav) {
+              // React Router upisuje idx u history.state; idx > 0 znači da postoji prethodna stranica u aplikaciji
+              const idx = (window.history.state as { idx?: number } | null)?.idx ?? 0;
+              if (idx > 0) {
                 navigate(-1);
               } else {
                 navigate('/work-orders');
