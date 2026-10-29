@@ -2,6 +2,7 @@ import { format } from "date-fns";
 import { supabase } from "@/integrations/supabase/client";
 import { fetchNbsEurRate } from "./nbsExchangeRate";
 import { generateMinimaxOrderXml, type WorkOrderData } from "./minimaxXmlExport";
+import { compareOrderNumbers } from "./ctpExportGrouping";
 
 /**
  * Batch Minimax XML Export
@@ -205,7 +206,8 @@ export async function exportBatchToMinimax(workOrderIds: string[]): Promise<Batc
     };
   }
 
-  // Generate combined XML
+  // Nalozi idu redom po broju naloga
+  validOrders.sort((a, b) => compareOrderNumbers(a.display_order_number || a.order_number, b.display_order_number || b.order_number));
   const xml = generateBatchMinimaxXml(validOrders);
   
   // Create filename

@@ -2,12 +2,24 @@
 // Fajlovi koji se razlikuju samo po oznaci strane/signature (".p0001", ".p0002"...)
 // spajaju se u jednu stavku sa zbirom ploča.
 
-/** Koren naziva posla: bez ekstenzije i bez završne oznake ".pNNNN". */
+/** Koren naziva posla: bez ekstenzije, bez oznake Preps i bez završne oznake ".pNNNN". */
 export function jobBaseName(filename: string): string {
   let name = (filename || "").trim();
   name = name.replace(/\.(pdf|tif|tiff|ps|eps|1bit|len)$/i, "");
   name = name.replace(/[._\s-]p\d{1,5}$/i, "");
-  return name.trim();
+  name = name.replace(/[\s_.-]*preps\b/gi, "");
+  return name.replace(/\s{2,}/g, " ").trim();
+}
+
+/**
+ * Naziv posla za fakturu: uklanja početni prefiks "klijent dimenzija" (npr. "dunav 745x605 ")
+ * koji operater doda pri montaži — klijent i format se već navode u opisu stavke.
+ * Prefiks se skida samo ako se dimenzija pojavi među prve 3 reči i iza nje ostane tekst.
+ */
+export function invoiceJobName(baseName: string): string {
+  const m = baseName.match(/^((?:\S+\s+){0,2}?)\d{3,4}\s*[x×]\s*\d{3,4}(?:mm)?[\s_-]+(.+)$/i);
+  if (m && m[2].trim()) return m[2].trim();
+  return baseName;
 }
 
 export interface GroupableEntry {
@@ -46,4 +58,9 @@ export function groupEntriesForExport<T extends GroupableEntry>(
     }
   }
   return [...map.values()];
+}
+
+/** Redosled naloga u izvozu: po broju naloga, rastuće. */
+export function compareOrderNumbers(a?: string | null, b?: string | null): number {
+  return (a || "").localeCompare(b || "", "sr", { numeric: true });
 }
