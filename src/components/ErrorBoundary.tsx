@@ -23,6 +23,14 @@ export class ErrorBoundary extends Component<Props, State> {
 
   componentDidCatch(error: Error, errorInfo: ErrorInfo) {
     console.error("ErrorBoundary caught:", error, errorInfo);
+    const msg = String(error?.message || "");
+    if (/dynamically imported module|Importing a module script failed|Loading chunk|ChunkLoadError/i.test(msg)) {
+      const last = Number(sessionStorage.getItem("chunk-reload-at") || 0);
+      if (Date.now() - last > 30000) {
+        sessionStorage.setItem("chunk-reload-at", String(Date.now()));
+        window.location.reload();
+      }
+    }
   }
 
   render() {

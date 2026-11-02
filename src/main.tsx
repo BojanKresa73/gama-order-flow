@@ -98,4 +98,26 @@ setupServiceWorkers().catch((error) => {
   console.log("Service worker setup failed:", error);
 });
 
+// Posle nove verzije stari delovi aplikacije više ne postoje na serveru —
+// umesto praznog ekrana, jednom automatski osveži (zaštita od petlje).
+const RELOAD_KEY = "chunk-reload-at";
+function recoverFromStaleChunk() {
+  const last = Number(sessionStorage.getItem(RELOAD_KEY) || 0);
+  if (Date.now() - last < 30000) return;
+  sessionStorage.setItem(RELOAD_KEY, String(Date.now()));
+  navigator.serviceWorker?.getRegistrations?.()
+    .then((regs) => Promise.all(regs.filter((r) => new URL(r.scope).pathname === "/").map((r) => r.update().catch(() => {}))))
+    .finally(() => window.location.reload());
+}
+window.addEventListener("vite:preloadError", (e) => {
+  e.preventDefault();
+  recoverFromStaleChunk();
+});
+window.addEventListener("unhandledrejection", (e) => {
+  const msg = String((e.reason && (e.reason.message || e.reason)) || "");
+  if (/dynamically imported module|Importing a module script failed|Loading chunk|ChunkLoadError/i.test(msg)) {
+    recoverFromStaleChunk();
+  }
+});
+
 createRoot(document.getElementById("root")!).render(<App />);
