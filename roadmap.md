@@ -1,7 +1,7 @@
 # Roadmap
 
-- [ ] Ispraviti otvaranje „Svi nalozi“ bez menjanja poslovnih podataka
-- [ ] Vratiti postojeće minimume 10/20 EUR u brzom kalkulatoru i proveriti obračun
+- [x] Ispraviti otvaranje „Svi nalozi“ bez menjanja poslovnih podataka; provereno sa stvarnim nalozima
+- [ ] Vratiti minimume 10/20 EUR u brzom kalkulatoru — čeka potvrdu na koje usluge i obračune se odnose
 
 - [x] Naći uzrok usporenja (zaostali newsletter cron zadatak, svaki minut od 24.08.)
 - [x] Ugasiti zaostali cron zadatak `newsletter_9113711d`
