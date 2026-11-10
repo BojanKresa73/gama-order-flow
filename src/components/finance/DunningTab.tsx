@@ -1,3 +1,4 @@
+import { useSyncFreshness } from "@/hooks/useSyncFreshness";
 import { useMemo, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
@@ -26,6 +27,7 @@ const cellValue = (p: any, key: SortKey): string | number => {
 
 export function DunningTab() {
   const qc = useQueryClient();
+  const freshness = useSyncFreshness();
   const { data, isLoading, isError, error, refetch } = useQuery({
     queryKey: ["mm-aging"],
     queryFn: async () => { const { data, error } = await supabase.rpc("mm_receivables_aging" as any); if (error) throw error; return data as any; },
@@ -82,6 +84,9 @@ export function DunningTab() {
   };
   const doPreview = async (p: any) => { try { setPreview((await call({ partner_ids: [p.partner_minimax_id], preview: true })).html); } catch (e: any) { toast.error(e.message); } };
   const send = async (ids: number[], test: boolean) => {
+    if (!test && (freshness.isLoading || freshness.error || freshness.data?.stale || !freshness.data)) {
+      toast.error("Prvo osvežite podatke iz Minimaxa; stanje dugovanja nije ažurno."); return;
+    }
     if (!ids.length) return toast.error("Izaberite klijente");
     if (!test && !confirm(`Poslati opomenu za ${ids.length} klijenata na njihove email adrese?`)) return;
     setBusy(true);

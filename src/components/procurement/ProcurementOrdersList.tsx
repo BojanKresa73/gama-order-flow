@@ -1,3 +1,4 @@
+import { procurementTotals } from "@/lib/procurementMoney";
 import { useState, useEffect } from "react";
 import { useMutation } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
@@ -49,7 +50,7 @@ export function ProcurementOrdersList({ orders, onUpdate, onEdit }: ProcurementO
   const [editingOrder, setEditingOrder] = useState<string | null>(null);
   const [editValues, setEditValues] = useState<Record<string, any>>({});
   // Fixed USD to EUR rate (Google: 1 USD ≈ 0.84 EUR)
-  const usdToEur = 0.84;
+
 
   const toggleExpand = (orderId: string) => {
     const newSet = new Set(expandedOrders);
@@ -113,7 +114,7 @@ export function ProcurementOrdersList({ orders, onUpdate, onEdit }: ProcurementO
       const areaM2 = (item.width_mm * item.height_mm * item.quantity) / 1_000_000;
       itemsTotal += areaM2 * (item.price_per_m2 || 0);
     });
-    return itemsTotal + (order.transport_cost || 0) + (order.other_costs || 0);
+    return procurementTotals(itemsTotal, Number(order.transport_cost || 0) + Number(order.other_costs || 0), order.usd_to_eur).totalUsd;
   };
 
   const calculateTotalPlates = (order: any) => {
@@ -128,7 +129,7 @@ export function ProcurementOrdersList({ orders, onUpdate, onEdit }: ProcurementO
     }, 0);
     if (totalAreaM2 === 0) return null;
     const totalCost = calculateOrderTotal(order);
-    return totalCost / totalAreaM2;
+    return totalCost == null ? null : totalCost / totalAreaM2;
   };
 
   const calculateTransitDuration = (order: any) => {
@@ -298,8 +299,8 @@ export function ProcurementOrdersList({ orders, onUpdate, onEdit }: ProcurementO
                           const priceUsd = calculateFinalPricePerM2(order);
                           if (priceUsd == null) return "-";
                           const usdStr = priceUsd.toFixed(4).replace('.', ',');
-                          const priceEur = priceUsd * usdToEur;
-                          return `${usdStr} $ / ${priceEur.toFixed(4).replace('.', ',')} €`;
+                          const priceEur = order.usd_to_eur > 0 ? priceUsd * order.usd_to_eur : null;
+                          return `${usdStr} $${priceEur == null ? "" : " / " + priceEur.toFixed(4).replace(".", ",") + " €"}`;
                         })()}
                       </p>
                     </div>
@@ -339,7 +340,7 @@ export function ProcurementOrdersList({ orders, onUpdate, onEdit }: ProcurementO
                     })}
                     <TableRow className="font-bold bg-muted/30">
                       <TableCell colSpan={3}>UKUPNO (sa svim troškovima)</TableCell>
-                      <TableCell className="text-right">{calculateOrderTotal(order).toFixed(2)} $</TableCell>
+                      <TableCell className="text-right">{(calculateOrderTotal(order) == null ? "— kurs nije unet" : calculateOrderTotal(order)!.toFixed(2))} $</TableCell>
                     </TableRow>
                   </TableBody>
                 </Table>

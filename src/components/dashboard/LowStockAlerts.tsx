@@ -11,18 +11,21 @@ import { useNavigate } from "react-router-dom";
 export const LowStockAlerts = () => {
   const navigate = useNavigate();
 
-  const { data: lowStock, isLoading } = useQuery({
+  const { data: lowStock, isLoading, error } = useQuery({
     queryKey: ["low-stock-alerts"],
     staleTime: 60_000,
     queryFn: async () => {
-      const { data } = await supabase
+      const { data, error } = await supabase
         .from("plate_formats")
         .select("id, format_name, current_stock, low_stock_threshold")
         .order("current_stock", { ascending: true });
 
-      return data?.filter((f) => f.current_stock < f.low_stock_threshold) || [];
+      if (error) throw error;
+      return data?.filter((f) => f.current_stock <= f.low_stock_threshold) || [];
     },
   });
+
+  if (error) return <Card className="p-6 text-destructive">Stanje zaliha nije učitano.</Card>;
 
   if (isLoading) {
     return (
@@ -56,7 +59,7 @@ export const LowStockAlerts = () => {
         <CardContent className="flex-1 pt-4 flex items-center justify-center">
           <div className="text-center bg-green-50 dark:bg-green-950 rounded-lg p-6 w-full">
             <p className="text-sm text-green-800 dark:text-green-300 font-medium">
-              Sve zalihe su u redu ✓
+              Nema zaliha ispod ručno postavljenog minimuma. Za rokove nabavke pogledajte prognozu.
             </p>
           </div>
         </CardContent>

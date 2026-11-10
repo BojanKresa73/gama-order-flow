@@ -47,18 +47,15 @@ export function ClientOrderCard({ order, index, onChangePriority, searchQuery }:
       const items: FileItem[] = [];
 
       if (order.order_type === "ctp") {
-        const { data } = await supabase
-          .from("file_entries")
-          .select("id, filename, quantity, plate_formats(format_name)")
-          .eq("work_order_id", order.id)
-          .order("created_at");
+        const { data, error } = await supabase.rpc("portal_ctp_items" as any, { p_order_id: order.id });
+        if (error) throw error;
         
-        (data || []).forEach((f: any) => {
+        ((data || []) as any[]).forEach((f: any) => {
           items.push({
             id: f.id,
             name: f.filename,
             qty: f.quantity || 0,
-            details: f.plate_formats?.format_name || "",
+            details: f.format_name || "",
           });
         });
       } else if (order.order_type === "film") {

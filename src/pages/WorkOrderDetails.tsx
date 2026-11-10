@@ -546,7 +546,7 @@ const WorkOrderDetails = () => {
                           {emailStatus.status === "error" && (
                             <span className="text-destructive">📧 Greška: {emailStatus.error_msg}</span>
                           )}
-                          {emailStatus.status === "pending" && "📧 Čeka slanje"}
+                          {["pending", "queued_retry"].includes(emailStatus.status) && "📧 Čeka slanje / ponovni pokušaj"}
                         </p>
                       </div>
                     )}

@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { ArrowLeft, Package, AlertTriangle, Plus, Trash2 } from "lucide-react";
+import { useAuthz } from "@/hooks/useAuthz";
 import { useToast } from "@/hooks/use-toast";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
@@ -27,6 +28,14 @@ const Inventory = () => {
   const [newFormatName, setNewFormatName] = useState("");
   const [newLowStockThreshold, setNewLowStockThreshold] = useState(10);
   const [newCurrentStock, setNewCurrentStock] = useState(0);
+  const [adjustment, setAdjustment] = useState<any>(null);
+  const [quantity, setQuantity] = useState(0);
+  const [kind, setKind] = useState("receipt");
+  const [reason, setReason] = useState("");
+  const [target, setTarget] = useState("");
+  const [saving, setSaving] = useState(false);
+  const { isAdmin, isOp } = useAuthz();
+  const canManage = isAdmin || isOp;
   const navigate = useNavigate();
   const { toast } = useToast();
 
@@ -84,28 +93,22 @@ const Inventory = () => {
     setPendingByFormat(map);
   };
 
-  const updateStock = async (id: string, newStock: number) => {
-    try {
-      const { error } = await supabase
-        .from("plate_formats")
-        .update({ current_stock: newStock })
-        .eq("id", id);
-
-      if (error) throw error;
-
-      toast({
-        title: "Uspeh",
-        description: "Stanje je ažurirano",
-      });
-
-      fetchPlateFormats();
-    } catch (error: any) {
-      toast({
-        title: "Greška",
-        description: error.message,
-        variant: "destructive",
-      });
+  const saveAdjustment = async () => {
+    if (!adjustment || !Number.isInteger(quantity) || quantity < 0 || reason.trim().length < 3) {
+      toast({ title: "Unesite ispravnu količinu i razlog", variant: "destructive" }); return;
     }
+    setSaving(true);
+    try {
+      const { error } = await supabase.rpc("adjust_plate_stock" as any, {
+        p_id: adjustment.id, p_expected: adjustment.current_stock, p_quantity: quantity,
+        p_kind: kind, p_reason: reason.trim(), p_target: kind === "cut" ? target : null,
+      });
+      if (error) throw error;
+      setAdjustment(null);
+      await fetchPlateFormats();
+      toast({ title: "Promena lagera sačuvana sa razlogom" });
+    } catch (e: any) { toast({ title: "Promena nije sačuvana", description: e.message, variant: "destructive" }); }
+    finally { setSaving(false); }
   };
 
   const deleteFormat = async (id: string, formatName: string) => {
@@ -223,7 +226,7 @@ const Inventory = () => {
               </CardTitle>
               <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
                 <DialogTrigger asChild>
-                  <Button className="gap-2">
+                  <Button className="gap-2" disabled={!canManage}>
                     <Plus className="h-4 w-4" />
                     Dodaj novi format
                   </Button>
@@ -281,7 +284,7 @@ const Inventory = () => {
                   <TableHead>Format</TableHead>
                   <TableHead>Trenutno stanje</TableHead>
                   <TableHead>Na putu (Kina)</TableHead>
-                  <TableHead>Ukupno dostupno</TableHead>
+                  <TableHead>Lager + naručeno</TableHead>
                   <TableHead>Minimalno stanje</TableHead>
                   <TableHead>Status</TableHead>
                   <TableHead>Akcije</TableHead>
@@ -296,12 +299,7 @@ const Inventory = () => {
                   <TableRow key={format.id}>
                     <TableCell className="font-medium">{format.format_name}</TableCell>
                     <TableCell>
-                      <Input
-                        type="number"
-                        value={format.current_stock}
-                        onChange={(e) => updateStock(format.id, parseInt(e.target.value))}
-                        className="w-24"
-                      />
+                      {format.current_stock.toLocaleString("sr-RS")}
                     </TableCell>
                     <TableCell>
                       {pendingQty > 0 ? (
@@ -332,29 +330,10 @@ const Inventory = () => {
                       )}
                     </TableCell>
                     <TableCell>
-                      <div className="flex gap-2">
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          onClick={() => updateStock(format.id, format.current_stock + 10)}
-                        >
-                          +10
-                        </Button>
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          onClick={() => updateStock(format.id, Math.max(0, format.current_stock - 10))}
-                        >
-                          -10
-                        </Button>
-                        <Button
-                          size="sm"
-                          variant="destructive"
-                          onClick={() => deleteFormat(format.id, format.format_name)}
-                        >
-                          <Trash2 className="h-4 w-4" />
-                        </Button>
-                      </div>
+                      {canManage && <div className="flex gap-2">
+                        <Button size="sm" variant="outline" onClick={() => { setAdjustment({...format}); setQuantity(0); setKind("receipt"); setReason(""); setTarget(""); }}>Promena lagera</Button>
+                        <Button size="sm" variant="destructive" onClick={() => deleteFormat(format.id, format.format_name)}><Trash2 className="h-4 w-4" /></Button>
+                      </div>}
                     </TableCell>
                   </TableRow>
                   );
@@ -373,13 +352,24 @@ const Inventory = () => {
                     Na putu: <strong>{Object.values(pendingByFormat).reduce((s, p) => s + p.qty, 0).toLocaleString('sr-RS')}</strong>
                   </span>
                   <span className="text-lg font-semibold">
-                    Ukupno dostupno: {(plateFormats.reduce((sum, f) => sum + (f.current_stock || 0), 0) + Object.values(pendingByFormat).reduce((s, p) => s + p.qty, 0)).toLocaleString('sr-RS')}
+                    Lager + naručeno: {(plateFormats.reduce((sum, f) => sum + (f.current_stock || 0), 0) + Object.values(pendingByFormat).reduce((s, p) => s + p.qty, 0)).toLocaleString('sr-RS')}
                   </span>
                 </div>
               </div>
             )}
           </CardContent>
         </Card>
+        <Dialog open={!!adjustment} onOpenChange={(open) => !open && !saving && setAdjustment(null)}>
+          <DialogContent><DialogHeader><DialogTitle>Promena lagera — {adjustment?.format_name}</DialogTitle><DialogDescription>Trenutno: {adjustment?.current_stock}. Prijem robe evidentirajte jednom; status „Stiglo” u nabavci sam ne povećava lager.</DialogDescription></DialogHeader>
+            <Label>Vrsta promene</Label><select className="border rounded p-2 bg-background" value={kind} onChange={e=>setKind(e.target.value)}>
+              <option value="receipt">Prijem</option><option value="count">Popis — novo ukupno stanje</option><option value="waste">Škart</option><option value="cut">Sečenje 1:1 u drugi format</option>
+            </select>
+            {kind === "cut" && <><Label>Ciljni format (jedna ploča daje jednu ploču)</Label><select className="border rounded p-2 bg-background" value={target} onChange={e=>setTarget(e.target.value)}><option value="">Izaberite</option>{plateFormats.filter(f=>f.id!==adjustment?.id).map(f=><option key={f.id} value={f.id}>{f.format_name}</option>)}</select></>}
+            <Label>{kind === "count" ? "Prebrojano ukupno stanje" : "Količina promene"}</Label><Input type="number" min="0" step="1" value={quantity} onChange={e=>setQuantity(Number(e.target.value))} />
+            <Label>Razlog / broj prijemnice</Label><Input value={reason} onChange={e=>setReason(e.target.value)} />
+            <DialogFooter><Button disabled={saving || (kind === "cut" && !target)} onClick={saveAdjustment}>{saving ? "Čuvanje…" : "Sačuvaj promenu"}</Button></DialogFooter>
+          </DialogContent>
+        </Dialog>
       </main>
     </div>
   );

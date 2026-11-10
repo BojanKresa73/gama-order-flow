@@ -7,7 +7,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { ArrowLeft, Package, Plus, TrendingUp, Ship, Calendar } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ProcurementOrdersList } from "@/components/procurement/ProcurementOrdersList";
-import { ProcurementForecast } from "@/components/procurement/ProcurementForecast";
+
 import { NewProcurementDialog } from "@/components/procurement/NewProcurementDialog";
 import { ChinaOrderRecommendation } from "@/components/procurement/ChinaOrderRecommendation";
 
@@ -154,7 +154,7 @@ const Procurement = () => {
 
           <TabsContent value="forecast" className="space-y-4">
             <ChinaOrderRecommendation plateFormats={plateFormats || []} orders={orders || []} />
-            <ProcurementForecast plateFormats={plateFormats || []} orders={orders || []} />
+
           </TabsContent>
 
           <TabsContent value="orders">

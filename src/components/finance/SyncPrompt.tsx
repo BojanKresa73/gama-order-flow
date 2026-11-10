@@ -1,3 +1,4 @@
+import { useSyncFreshness } from "@/hooks/useSyncFreshness";
 import { useEffect, useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
@@ -10,6 +11,7 @@ const fmt = (s?: string | null) => s ? new Date(s).toLocaleString("sr-RS", { tim
 
 export function SyncPrompt() {
   const qc = useQueryClient();
+  const freshness = useSyncFreshness();
   const [open, setOpen] = useState(false);
   const [last, setLast] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
@@ -40,14 +42,17 @@ export function SyncPrompt() {
       for (const [label, b] of steps) {
         setProgress(label);
         let r = await call({ ...b, restart: true });
+        let attempts = 0;
         while (!r.done) {
+          if (++attempts > 1000) throw new Error("Preuzimanje traje predugo; pokušajte ponovo.");
           if (r.integrity_error) throw new Error(`${label}: odstupanje broja dokumenata`);
           r = await call(b);
         }
       }
       setProgress("Stavke knjiženja");
       let r = await call({ step: "journal_details" });
-      while (r.remaining > 0) { setProgress(`Stavke knjiženja (preostalo ${r.remaining})`); r = await call({ step: "journal_details" }); }
+      let detailAttempts = 0;
+      while (r.remaining > 0) { if (++detailAttempts > 1000) throw new Error("Stavke knjiženja nisu završene; pokušajte ponovo."); setProgress(`Stavke knjiženja (preostalo ${r.remaining})`); r = await call({ step: "journal_details" }); }
       setProgress("Povezivanje dokumenata");
       await call({ step: "link_vat" });
       await qc.invalidateQueries();
@@ -59,13 +64,18 @@ export function SyncPrompt() {
     } finally { setBusy(false); setProgress(""); }
   };
 
-  return (
+  return (<>
+    <div className="mx-4 mt-4 p-3 rounded border space-y-2" role="status">
+      <p className={freshness.error || freshness.data?.stale ? "text-orange-700" : "text-muted-foreground"}>
+      {freshness.isLoading ? "Provera ažurnosti…" : freshness.error ? "Ažurnost nije potvrđena." : `Poslednje osvežavanje svih potrebnih izvora: ${fmt(freshness.data?.last)}. ${freshness.data?.stale ? "Podaci nisu ažurni za današnju naplatu; osvežite pre slanja opomena." : "Podaci su osveženi u poslednja 24 sata."}`}
+      </p><Button size="sm" variant="outline" disabled={busy} onClick={()=>setOpen(true)}>Osveži podatke iz Minimaxa</Button>
+    </div>
     <AlertDialog open={open} onOpenChange={(o) => !busy && setOpen(o)}>
       <AlertDialogContent>
         <AlertDialogHeader>
           <AlertDialogTitle>Sinhronizacija sa Minimaxom</AlertDialogTitle>
           <AlertDialogDescription>
-            Poslednje osvežavanje podataka iz Minimaxa: <b>{fmt(last)}</b>.<br />
+            Poslednje osvežavanje podataka iz Minimaxa: <b>{fmt(freshness.data?.last)}</b>.<br />
             Da li želite da sada sinhronizujete podatke? Iz Minimaxa se samo čita, ništa se ne menja.
           </AlertDialogDescription>
         </AlertDialogHeader>
@@ -75,6 +85,6 @@ export function SyncPrompt() {
           <Button disabled={busy} onClick={run}>Da, sinhronizuj</Button>
         </AlertDialogFooter>
       </AlertDialogContent>
-    </AlertDialog>
+    </AlertDialog></>
   );
 }

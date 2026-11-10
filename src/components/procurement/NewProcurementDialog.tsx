@@ -20,6 +20,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { procurementTotals } from "@/lib/procurementMoney";
 import { useToast } from "@/hooks/use-toast";
 
 interface NewProcurementDialogProps {
@@ -45,12 +46,15 @@ export function NewProcurementDialog({
   editOrder,
 }: NewProcurementDialogProps) {
   const { toast } = useToast();
+  const [newOrderId, setNewOrderId] = useState(() => crypto.randomUUID());
   const [supplierName, setSupplierName] = useState("");
   const [orderDate, setOrderDate] = useState(new Date().toISOString().split("T")[0]);
   const [expectedArrival, setExpectedArrival] = useState("");
   const [actualArrival, setActualArrival] = useState("");
   const [transportCost, setTransportCost] = useState<number>(0);
   const [otherCosts, setOtherCosts] = useState<number>(0);
+  const [usdToEur, setUsdToEur] = useState<string>("");
+  const [status, setStatus] = useState("ordered");
   const [notes, setNotes] = useState("");
   const [items, setItems] = useState<OrderItem[]>([
     { plate_format_id: "", quantity: 0, price_per_m2: 0 },
@@ -67,6 +71,8 @@ export function NewProcurementDialog({
       setTransportCost(editOrder.transport_cost || 0);
       setOtherCosts(editOrder.other_costs || 0);
       setNotes(editOrder.notes || "");
+      setUsdToEur(editOrder.usd_to_eur == null ? "" : String(editOrder.usd_to_eur));
+      setStatus(editOrder.status || "ordered");
       const existingItems = (editOrder.procurement_order_items || []).map((item: any) => ({
         id: item.id,
         plate_format_id: item.plate_format_id || "",
@@ -80,6 +86,7 @@ export function NewProcurementDialog({
   }, [editOrder, open]);
 
   const resetForm = () => {
+    setNewOrderId(crypto.randomUUID());
     setSupplierName("");
     setOrderDate(new Date().toISOString().split("T")[0]);
     setExpectedArrival("");
@@ -87,6 +94,8 @@ export function NewProcurementDialog({
     setTransportCost(0);
     setOtherCosts(0);
     setNotes("");
+    setUsdToEur("");
+    setStatus("ordered");
     setItems([{ plate_format_id: "", quantity: 0, price_per_m2: 0 }]);
   };
 
@@ -95,13 +104,9 @@ export function NewProcurementDialog({
     if (match) {
       let w = parseInt(match[1]);
       let h = parseInt(match[2]);
-      if (w < 200 && h < 200) {
-        w *= 10;
-        h *= 10;
-      }
       return { width: w, height: h };
     }
-    return { width: 1000, height: 700 };
+    throw new Error("Nepoznat format ploče");
   };
 
   const saveMutation = useMutation({
@@ -113,89 +118,17 @@ export function NewProcurementDialog({
       const validItems = items.filter((i) => i.plate_format_id && i.quantity > 0);
       if (validItems.length === 0) throw new Error("Dodajte bar jednu stavku");
 
-      if (isEditing) {
-        // Update order
-        const { error: orderError } = await supabase
-          .from("procurement_orders")
-          .update({
-            supplier_name: supplierName.trim(),
-            order_date: orderDate,
-            expected_arrival_date: expectedArrival || null,
-            actual_arrival_date: actualArrival || null,
-            transport_cost: transportCost,
-            other_costs: otherCosts,
-            notes: notes.trim() || null,
-            ...(actualArrival ? { status: "arrived" } : {}),
-          })
-          .eq("id", editOrder.id);
-
-        if (orderError) throw orderError;
-
-        // Delete old items and re-insert
-        const { error: deleteError } = await supabase
-          .from("procurement_order_items")
-          .delete()
-          .eq("procurement_order_id", editOrder.id);
-
-        if (deleteError) throw deleteError;
-
-        const itemsToInsert = validItems.map((item) => {
-          const format = plateFormats.find((f) => f.id === item.plate_format_id);
-          const dims = parseDimensions(format?.format_name || "");
-          return {
-            procurement_order_id: editOrder.id,
-            plate_format_id: item.plate_format_id,
-            quantity: item.quantity,
-            price_per_m2: item.price_per_m2,
-            width_mm: dims.width,
-            height_mm: dims.height,
-          };
-        });
-
-        const { error: itemsError } = await supabase
-          .from("procurement_order_items")
-          .insert(itemsToInsert);
-
-        if (itemsError) throw itemsError;
-      } else {
-        // Create order
-        const { data: order, error: orderError } = await supabase
-          .from("procurement_orders")
-          .insert({
-            supplier_name: supplierName.trim(),
-            order_date: orderDate,
-            expected_arrival_date: expectedArrival || null,
-            actual_arrival_date: actualArrival || null,
-            transport_cost: transportCost,
-            other_costs: otherCosts,
-            notes: notes.trim() || null,
-            created_by: user.id,
-            ...(actualArrival ? { status: "arrived" } : {}),
-          })
-          .select()
-          .single();
-
-        if (orderError) throw orderError;
-
-        const itemsToInsert = validItems.map((item) => {
-          const format = plateFormats.find((f) => f.id === item.plate_format_id);
-          const dims = parseDimensions(format?.format_name || "");
-          return {
-            procurement_order_id: order.id,
-            plate_format_id: item.plate_format_id,
-            quantity: item.quantity,
-            price_per_m2: item.price_per_m2,
-            width_mm: dims.width,
-            height_mm: dims.height,
-          };
-        });
-
-        const { error: itemsError } = await supabase
-          .from("procurement_order_items")
-          .insert(itemsToInsert);
-
-        if (itemsError) throw itemsError;
-      }
+      if (validItems.length !== items.length || validItems.some(i => !Number.isInteger(i.quantity) || !Number.isFinite(i.price_per_m2) || i.price_per_m2 < 0)) throw new Error("Proverite sve stavke, količine i cene");
+      if (usdToEur && !(Number(usdToEur) > 0)) throw new Error("Kurs mora biti pozitivan");
+      const { error } = await supabase.rpc("save_procurement" as any, {
+        p_id: editOrder?.id || newOrderId, p_expected: editOrder?.updated_at || null,
+        p_order: { supplier_name: supplierName.trim(), order_date: orderDate,
+          expected_arrival_date: expectedArrival || null, actual_arrival_date: actualArrival || null,
+          status, transport_cost: transportCost, other_costs: otherCosts, notes: notes.trim() || null,
+          usd_to_eur: usdToEur ? Number(usdToEur) : null },
+        p_items: validItems,
+      });
+      if (error) throw error;
     },
     onSuccess: () => {
       toast({ title: isEditing ? "Narudžbina ažurirana" : "Narudžbina kreirana" });
@@ -232,7 +165,8 @@ export function NewProcurementDialog({
     return areaM2 * item.price_per_m2;
   };
 
-  const grandTotal = items.reduce((sum, item) => sum + calculateItemTotal(item), 0) + transportCost + otherCosts;
+  const money = procurementTotals(items.reduce((sum, item) => sum + calculateItemTotal(item), 0), transportCost + otherCosts, Number(usdToEur) || null);
+  const grandTotal = money.totalUsd;
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -242,6 +176,9 @@ export function NewProcurementDialog({
         </DialogHeader>
 
         <div className="space-y-6">
+          <div className="text-sm text-muted-foreground">Ploče su u USD, transport i ostali troškovi u EUR. Status „Stiglo” ne menja lager: prijem evidentirajte u Inventaru jednom.</div>
+          <Label>Status</Label><select className="border rounded p-2 bg-background" value={status} onChange={e=>setStatus(e.target.value)}>{[["ordered","Naručeno"],["in_transit","Na brodu"],["customs","Carina"],["arrived","Stiglo"],["cancelled","Otkazano"]].map(([v,l])=><option key={v} value={v}>{l}</option>)}</select>
+          <Label>Kurs za ovu nabavku: 1 USD = EUR (ostavite prazno ako nije potvrđen)</Label><Input type="number" min="0.0001" step="0.0001" value={usdToEur} onChange={e=>setUsdToEur(e.target.value)} />
           {/* Basic Info */}
           <div className="grid grid-cols-2 gap-4">
             <div className="col-span-2 sm:col-span-1">
@@ -367,7 +304,7 @@ export function NewProcurementDialog({
             {/* Total */}
             <div className="flex justify-between items-center mt-4 pt-4 border-t text-lg font-bold">
               <span>Ukupno (sa troškovima):</span>
-              <span>{grandTotal.toFixed(2)} $</span>
+              <span>{(grandTotal == null ? "— (unesite kurs)" : grandTotal.toFixed(2))} $</span>
             </div>
           </div>
 

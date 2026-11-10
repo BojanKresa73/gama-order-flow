@@ -1,13 +1,6 @@
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 
-// Extend ServiceWorkerRegistration for Push API
-declare global {
-  interface ServiceWorkerRegistration {
-    readonly pushManager: any;
-  }
-}
-
 // VAPID public key - must match the one in secrets
 const VAPID_PUBLIC_KEY = "BGqBeaUsz8cxj7WNHV1Q1PuWbJr8elaE5jN3MHp14JVXvYj6AohezdJEyPf50l3uF39VXFMwS6q2hId2mgPh-SE";
 
