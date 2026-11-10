@@ -1,5 +1,8 @@
 # Roadmap
 
+- [ ] Ispraviti otvaranje „Svi nalozi“ bez menjanja poslovnih podataka
+- [ ] Vratiti postojeće minimume 10/20 EUR u brzom kalkulatoru i proveriti obračun
+
 - [x] Naći uzrok usporenja (zaostali newsletter cron zadatak, svaki minut od 24.08.)
 - [x] Ugasiti zaostali cron zadatak `newsletter_9113711d`
 - [x] Isključiti HIBP proveru lozinke (tajmauti od 10s pri prijavi -> 504)
