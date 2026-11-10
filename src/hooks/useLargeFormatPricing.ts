@@ -21,6 +21,7 @@ export interface MaterialWithPrice {
   id: string;
   name: string;
   category: string;
+  format_type?: "roll" | "sheet" | null;
   usage_count: number;
   price?: MaterialPrice;
 }
@@ -33,7 +34,7 @@ export function useLargeFormatMaterialsWithPrices() {
     queryFn: async () => {
       const { data: materials, error: matError } = await supabaseGDC
         .from("large_format_materials")
-        .select("id, name, category, usage_count")
+        .select("id, name, category, format_type, usage_count")
         .eq("is_active", true)
         .order("usage_count", { ascending: false });
 
