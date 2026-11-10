@@ -26,6 +26,7 @@ import { useKasiranjeSettings } from "@/hooks/useKasiranjeSettings";
 import { computeKasiranjeCostEur } from "@/lib/kasiranjeCost";
 import { QuoteDialog } from "@/components/calculator/QuoteDialog";
 import type { QuoteItemPdf } from "@/lib/quotePdf";
+import { applyLargeFormatMinimum } from "@/lib/largeFormatMinimum";
 
 interface Props {
   variant?: "button" | "tile";
@@ -196,7 +197,7 @@ export function QuickPriceCalculator({
   };
 
   const openQuoteFromCalc = () => {
-    if (!hasMaterial) { toast.error("Izaberi materijal"); return; }
+    if (!hasMaterial || calculationError) { toast.error(calculationError || "Izaberi materijal"); return; }
     setQuoteItems([{
       materialName: material?.name ?? "",
       widthCm, heightCm, qty, printSides,
@@ -269,6 +270,12 @@ export function QuickPriceCalculator({
 
   const customPriceEur = customPriceStr === "" ? null : Number(customPriceStr);
   const hasMaterial = !!material;
+  const validFormat = material?.format_type === "roll" || material?.format_type === "sheet";
+  const calculationError = hasMaterial && !validFormat
+    ? "U cenovniku nedostaje vrsta materijala (rolna ili ploča). Obračun nije dostupan."
+    : hasMaterial && (qty <= 0 || areaPerUnitM2 <= 0)
+      ? "Unesite pozitivne dimenzije i količinu."
+      : "";
 
   const result = useMemo(() => {
     const kasi = kasiranje
@@ -285,7 +292,7 @@ export function QuickPriceCalculator({
     const kasiRevenuePerUnit = qty > 0 ? kasiRevenueTotal / qty : 0;
     const kasiCostPerUnit = qty > 0 ? kasiCostTotal / qty : 0;
 
-    if (!hasMaterial) {
+    if (!hasMaterial || calculationError) {
       return {
         materialCostPerUnit: 0, tonerCostPerUnit: 0, baseCostPerUnit: 0,
         calculatedUnitPrice: 0, pricelistUnitPrice: 0, unitPrice: 0, lineTotal: 0,
@@ -298,11 +305,11 @@ export function QuickPriceCalculator({
     const tonerCostPerUnit = tonerEur * sidesMult * areaPerUnitM2;
     const finishingPerUnit = qty > 0 ? finishingEur / qty : 0;
     const baseCostPerUnit = materialCostPerUnit + tonerCostPerUnit + finishingPerUnit + kasiCostPerUnit;
-    const calculatedUnitPrice = baseCostPerUnit * (1 + markup / 100) + kasiRevenuePerUnit - kasiCostPerUnit;
-    const pricelistUnitPrice = tierPricePerM2 * areaPerUnitM2 + finishingPerUnit + kasiRevenuePerUnit;
+    const calculatedUnitPrice = applyLargeFormatMinimum((baseCostPerUnit * (1 + markup / 100) + kasiRevenuePerUnit - kasiCostPerUnit) * qty, material?.format_type).totalPrice / qty;
+    const pricelistUnitPrice = applyLargeFormatMinimum((tierPricePerM2 * areaPerUnitM2 + finishingPerUnit + kasiRevenuePerUnit) * qty, material?.format_type).totalPrice / qty;
     let unitPrice = calculatedUnitPrice;
     if (priceSource === "pricelist") unitPrice = pricelistUnitPrice;
-    else if (priceSource === "custom" && customPriceEur != null) unitPrice = customPriceEur;
+    else if (priceSource === "custom" && customPriceEur != null) unitPrice = applyLargeFormatMinimum(customPriceEur * qty, material?.format_type).totalPrice / qty;
     const lineTotal = unitPrice * qty;
     const profitPerUnit = unitPrice - baseCostPerUnit;
     return {
@@ -313,7 +320,7 @@ export function QuickPriceCalculator({
       tonerCostTotal: tonerCostPerUnit * qty,
       kasi, kasiRevenueTotal, kasiCostTotal,
     };
-  }, [hasMaterial, areaPerUnitM2, totalAreaM2, qty, supplierCostPerM2, tonerEur, finishingEur, markup, customPriceEur, printSides, priceSource, tierPricePerM2, kasiranje, kasiranjeResolved.film, kasiranjeResolved.tonerPerM2Eur, kasiranjeResolved.labor]);
+  }, [hasMaterial, calculationError, material?.format_type, areaPerUnitM2, totalAreaM2, qty, supplierCostPerM2, tonerEur, finishingEur, markup, customPriceEur, printSides, priceSource, tierPricePerM2, kasiranje, kasiranjeResolved.film, kasiranjeResolved.tonerPerM2Eur, kasiranjeResolved.labor]);
 
   if (!isSuper && !isAdmin && !canUse) return null;
 
@@ -352,7 +359,7 @@ export function QuickPriceCalculator({
   };
 
   const addToList = () => {
-    if (!hasMaterial) { toast.error("Izaberi materijal"); return; }
+    if (!hasMaterial || calculationError) { toast.error(calculationError || "Izaberi materijal"); return; }
     const snap = buildSnapshot();
     const item: ListItem = { ...snap, id: crypto.randomUUID() };
     setItems((prev) => [...prev, item]);
@@ -374,7 +381,7 @@ export function QuickPriceCalculator({
       });
       lines.push(`UKUPNO: ${fmtEur(listTotal)}   Profit: ${fmtEur(listProfit)}`);
     } else {
-      if (!hasMaterial) { toast.error("Nema šta da se kopira"); return; }
+      if (!hasMaterial || calculationError) { toast.error(calculationError || "Nema šta da se kopira"); return; }
       lines.push(
         `Brzi kalkulator — ${material?.name ?? ""}`,
         `Dimenzije: ${widthCm} × ${heightCm} cm  |  Kol: ${qty}  |  Štampa: ${printSides}`,
@@ -643,7 +650,9 @@ export function QuickPriceCalculator({
                     <div className="text-xs text-muted-foreground">
                       Ukupno (izvor: {priceSource === "margin" ? "marža" : priceSource === "pricelist" ? "cenovnik" : "custom"})
                     </div>
-                    <div className="text-2xl font-bold text-primary">{fmtEur(result.lineTotal)}</div>
+                    <div className="text-2xl font-bold text-primary">{calculationError ? "—" : fmtEur(result.lineTotal)}</div>
+                    {calculationError && <p role="alert" className="text-sm text-destructive">{calculationError}</p>}
+                    {hasMaterial && validFormat && <p className="text-xs text-muted-foreground">Minimalna naplata po stavci: {fmtEur(material?.format_type === "sheet" ? 20 : 10)} (bez PDV-a)</p>}
                   </div>
                   <div className="text-right">
                     <div className="text-xs text-muted-foreground">Profit ukupno</div>
@@ -654,10 +663,10 @@ export function QuickPriceCalculator({
             </Card>
 
             <div className="flex flex-wrap justify-end gap-2">
-              <Button type="button" variant="outline" size="sm" disabled={!hasMaterial} onClick={addToList}>
+              <Button type="button" variant="outline" size="sm" disabled={!hasMaterial || !!calculationError} onClick={addToList}>
                 <Plus className="h-4 w-4 mr-2" /> Dodaj na listu
               </Button>
-              <Button type="button" variant="outline" size="sm" disabled={!hasMaterial} onClick={openQuoteFromCalc}>
+              <Button type="button" variant="outline" size="sm" disabled={!hasMaterial || !!calculationError} onClick={openQuoteFromCalc}>
                 <FileText className="h-4 w-4 mr-2" /> Napravi ponudu
               </Button>
               <Button type="button" size="sm" onClick={copyAll}>
