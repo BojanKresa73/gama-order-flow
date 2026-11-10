@@ -154,7 +154,7 @@ const WorkOrders = () => {
 
       let query = supabase
         .from("work_orders")
-        .select(`*, clients (name), profiles!work_orders_created_by_fkey (full_name), email_job_latest_status (status, error_msg), file_entries (quantity, closed_by, filename), film_jobs (computed_total_m, file_name), digital_jobs (file_name)`)
+        .select(`*, clients (name), profiles!work_orders_created_by_fkey (full_name), file_entries (quantity, closed_by, filename), film_jobs (computed_total_m, file_name), digital_jobs (file_name)`)
         .is("deleted_at", null);
 
       if (fileOrderIds) query = query.in("id", fileOrderIds);

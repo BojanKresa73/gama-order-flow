@@ -3312,6 +3312,7 @@ export type Database = {
           supplier_name: string
           transport_cost: number | null
           updated_at: string
+          usd_to_eur: number | null
         }
         Insert: {
           actual_arrival_date?: string | null
@@ -3326,6 +3327,7 @@ export type Database = {
           supplier_name: string
           transport_cost?: number | null
           updated_at?: string
+          usd_to_eur?: number | null
         }
         Update: {
           actual_arrival_date?: string | null
@@ -3340,6 +3342,7 @@ export type Database = {
           supplier_name?: string
           transport_cost?: number | null
           updated_at?: string
+          usd_to_eur?: number | null
         }
         Relationships: [
           {
@@ -4817,50 +4820,7 @@ export type Database = {
           status: string | null
           work_order_id: string | null
         }
-        Relationships: [
-          {
-            foreignKeyName: "email_jobs_work_order_id_fkey"
-            columns: ["work_order_id"]
-            isOneToOne: false
-            referencedRelation: "v_ctp_items"
-            referencedColumns: ["work_order_id"]
-          },
-          {
-            foreignKeyName: "email_jobs_work_order_id_fkey"
-            columns: ["work_order_id"]
-            isOneToOne: false
-            referencedRelation: "work_orders"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "email_jobs_work_order_id_fkey"
-            columns: ["work_order_id"]
-            isOneToOne: false
-            referencedRelation: "work_orders_ctp"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "email_jobs_work_order_id_fkey"
-            columns: ["work_order_id"]
-            isOneToOne: false
-            referencedRelation: "work_orders_digitala"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "email_jobs_work_order_id_fkey"
-            columns: ["work_order_id"]
-            isOneToOne: false
-            referencedRelation: "work_orders_filmovanje"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "email_jobs_work_order_id_fkey"
-            columns: ["work_order_id"]
-            isOneToOne: false
-            referencedRelation: "work_orders_razno"
-            referencedColumns: ["id"]
-          },
-        ]
+        Relationships: []
       }
       v_ctp_daily: {
         Row: {
@@ -5386,6 +5346,17 @@ export type Database = {
         Args: { p_notification_id: string }
         Returns: boolean
       }
+      adjust_plate_stock: {
+        Args: {
+          p_expected: number
+          p_id: string
+          p_kind: string
+          p_quantity: number
+          p_reason: string
+          p_target?: string
+        }
+        Returns: number
+      }
       admin_list_users: {
         Args: { p_limit?: number; p_offset?: number; p_search?: string }
         Returns: {
@@ -5420,6 +5391,8 @@ export type Database = {
         }
         Returns: undefined
       }
+      can_manage_operations: { Args: never; Returns: boolean }
+      can_read_operations: { Args: never; Returns: boolean }
       close_digital_work_order: {
         Args: { p_user_id: string; p_work_order_id: string }
         Returns: Json
@@ -5584,6 +5557,7 @@ export type Database = {
           order_type: string
         }[]
       }
+      get_planning_consumption: { Args: never; Returns: Json }
       get_plate_usage_last_12_months: {
         Args: never
         Returns: {
@@ -5654,8 +5628,21 @@ export type Database = {
       next_complaint_number: { Args: never; Returns: string }
       next_pasted_quote_number: { Args: never; Returns: string }
       next_quote_number: { Args: never; Returns: string }
+      portal_ctp_items: {
+        Args: { p_order_id: string }
+        Returns: {
+          filename: string
+          format_name: string
+          id: string
+          quantity: number
+        }[]
+      }
       refresh_plate_usage_stats: { Args: never; Returns: undefined }
       run_system_maintenance: { Args: never; Returns: undefined }
+      save_procurement: {
+        Args: { p_expected: string; p_id: string; p_items: Json; p_order: Json }
+        Returns: string
+      }
       search_work_order_ids: {
         Args: { p_include_notes?: boolean; p_needle: string }
         Returns: string[]
