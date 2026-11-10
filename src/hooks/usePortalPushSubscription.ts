@@ -4,7 +4,7 @@ import { supabase } from "@/integrations/supabase/client";
 // VAPID public key - must match the one in secrets
 const VAPID_PUBLIC_KEY = "BGqBeaUsz8cxj7WNHV1Q1PuWbJr8elaE5jN3MHp14JVXvYj6AohezdJEyPf50l3uF39VXFMwS6q2hId2mgPh-SE";
 
-function urlBase64ToUint8Array(base64String: string): Uint8Array {
+function urlBase64ToUint8Array(base64String: string): Uint8Array<ArrayBuffer> {
   const padding = "=".repeat((4 - (base64String.length % 4)) % 4);
   const base64 = (base64String + padding).replace(/-/g, "+").replace(/_/g, "/");
   const rawData = window.atob(base64);
