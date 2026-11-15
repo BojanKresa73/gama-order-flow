@@ -5420,6 +5420,24 @@ export type Database = {
         Returns: undefined
       }
       expire_old_quotes: { Args: never; Returns: undefined }
+      gama_mcp_bridge_find_orders_v1: {
+        Args: { p_limit?: number; p_query: string; p_since?: string }
+        Returns: Json
+      }
+      gama_mcp_bridge_summary_v1: { Args: { p_since?: string }; Returns: Json }
+      gama_mcp_bridge_uninvoiced_v1: {
+        Args: { p_limit?: number; p_offset?: number; p_since?: string }
+        Returns: Json
+      }
+      gama_mcp_find_orders_v1: {
+        Args: { p_limit?: number; p_query: string; p_since?: string }
+        Returns: Json
+      }
+      gama_mcp_summary_v1: { Args: { p_since?: string }; Returns: Json }
+      gama_mcp_uninvoiced_v1: {
+        Args: { p_limit?: number; p_offset?: number; p_since?: string }
+        Returns: Json
+      }
       generate_order_number: { Args: never; Returns: string }
       get_client_ctp_monthly: {
         Args: { p_client_id: string; p_year: number }
