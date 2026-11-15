@@ -61,3 +61,6 @@ verify_jwt = false
 
 [functions.send-ctp-monthly-report]
 verify_jwt = false
+
+[functions.gama-chatgpt-readonly]
+verify_jwt = false
